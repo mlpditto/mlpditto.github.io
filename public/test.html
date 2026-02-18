@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
     <meta charset="UTF-8">
     <title>Test Firebase</title>
 </head>
+
 <body style="padding: 20px; font-family: sans-serif;">
     <h2>🔍 ทดสอบการเชื่อมต่อ Firebase</h2>
     <div id="status">⏳ กำลังเริ่มทดสอบ...</div>
@@ -12,26 +14,19 @@
 
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
 
     <script>
-        function log(msg, color='black') {
+        function log(msg, color = 'black') {
             const div = document.getElementById('logs');
             div.innerHTML += `<div style="color:${color}">${msg}</div>`;
             console.log(msg);
         }
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyCfdIENxDbWB30k4TZQfhnbxvpc2217xtU",
-            authDomain: "fkb-front-kanban.firebaseapp.com",
-            projectId: "fkb-front-kanban",
-            storageBucket: "fkb-front-kanban.firebasestorage.app",
-            messagingSenderId: "135805270397",
-            appId: "1:135805270397:web:ef5f4e23fef49175af3414"
-        };
-
         try {
             log("1. เริ่มต้น Firebase...", "blue");
-            firebase.initializeApp(firebaseConfig);
+            // firebase is already initialized in firebase-config.js
+            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
             log("✅ Initialize สำเร็จ", "green");
 
             const db = firebase.firestore();
@@ -57,4 +52,5 @@
         }
     </script>
 </body>
+
 </html>

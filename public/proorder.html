@@ -151,6 +151,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
 </head>
 
 <body class="text-gray-800 h-screen flex flex-col">
@@ -694,8 +695,6 @@
 
     <script>
         // --- 1. Auth Guard (Security) ---
-        const firebaseConfig = { apiKey: "AIzaSyCfdIENxDbWB30k4TZQfhnbxvpc2217xtU", authDomain: "fkb-front-kanban.firebaseapp.com", projectId: "fkb-front-kanban", storageBucket: "fkb-front-kanban.firebasestorage.app", messagingSenderId: "135805270397", appId: "1:135805270397:web:ef5f4e23fef49175af3414" };
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
 
