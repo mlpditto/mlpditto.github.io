@@ -1648,7 +1648,7 @@
                                         <td class="p-1">
                                             <div class="flex items-center gap-2">
                                                 <input type="text" class="table-input text-xs text-left flex-1" value="${escapeAttribute(item.note)}" onchange="updateItemField('${item.id}', 'note', this.value)">
-                                                <button onclick="openInvoiceModal('${item.id}')" class="btn-xs bg-indigo-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-600 hover:text-white" title="ออกใบกำกับภาษี"><i class="fa-solid fa-file-invoice"></i></button>
+                                                <button onclick="openInvoiceModal('${item.id}')" class="btn-xs bg-indigo-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all" title="ออกใบกำกับภาษีออนไลน์"><i class="fa-solid fa-file-invoice"></i></button>
                                             </div>
                                         </td>
                                     </tr>
@@ -1888,7 +1888,17 @@
 
         // --- EXPORT, SORT, FILTER ---
         function exportToExcel(filterType) { let items = globalData.filter(i => i.type === filterType); if (items.length === 0) return showToast("ไม่มีข้อมูล", true); generateExcelFile(items, `BillPro_${filterType.toUpperCase()}`); }
-        function exportDaily(type, dateStr, format) { let items = globalData.filter(i => (type === 'mixed' ? true : i.type === type) && i.date === dateStr); if (items.length === 0) return showToast("ไม่มีข้อมูล", true); items.sort((a, b) => a.orderId.localeCompare(b.orderId)); if (format === 'excel') generateExcelFile(items, `BillPro_${type.toUpperCase()}_${dateStr.replace(/\//g, '-')}`); else printReport(items, type, dateStr); }
+        function exportDaily(type, dateStr, format) {
+            let items = (type === 'mixed') ? globalData.filter(i => i.date === dateStr) : globalData.filter(i => i.type === type && i.date === dateStr);
+            // If some are selected, only export selected. Otherwise export all in this section.
+            const selected = items.filter(i => i.isSelected);
+            if (selected.length > 0) items = selected;
+
+            if (items.length === 0) return showToast("ไม่มีข้อมูล", true);
+            items.sort((a, b) => a.orderId.localeCompare(b.orderId));
+            if (format === 'excel') generateExcelFile(items, `BillPro_${type.toUpperCase()}_${dateStr.replace(/\//g, '-')}`);
+            else printReport(items, type, dateStr);
+        }
         function exportToPDF(filterType) { let items = globalData.filter(i => i.type === filterType); if (items.length === 0) return showToast("ไม่มีข้อมูล", true); items.sort((a, b) => a.rawDate - b.rawDate); printReport(items, filterType, "All Dates"); }
         function generateExcelFile(items, filename) { let table = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"></head><body><table border="1"><thead><tr><th>#</th><th>Date</th><th>Order ID</th><th>Qty</th><th>Base</th><th>VAT</th><th>Total</th><th>Tracking</th><th>INV</th><th>Time</th><th>Note</th></tr></thead><tbody>`; items.forEach((i, idx) => { table += `<tr><td>${idx + 1}</td><td>${i.date}</td><td style='mso-number-format:"\\@"'>${i.orderId}</td><td>${i.qty}</td><td>${i.base.toFixed(2)}</td><td>${i.vat.toFixed(2)}</td><td>${i.total.toFixed(2)}</td><td>${i.tracking}</td><td style='mso-number-format:"\\@"'>${i.invoiceId}</td><td>${i.time}</td><td>${i.note}</td></tr>`; }); table += `</tbody></table></body></html>`; const blob = new Blob([table], { type: 'application/vnd.ms-excel' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${filename}.xls`; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
         function printReport(items, type, dateStr) {
@@ -1918,7 +1928,13 @@
 
         function bulkAction(type, action) {
             let targetItems = (type === 'mixed') ? globalData.filter(i => i.isSelected) : globalData.filter(i => i.type === type && i.isSelected);
-            if (targetItems.length === 0) return showToast("กรุณาเลือกรายการก่อน", true);
+
+            // If no items are selected, default to ALL visible items in this category
+            if (targetItems.length === 0) {
+                targetItems = (type === 'mixed') ? filteredViewData : globalData.filter(i => i.type === type && filteredViewData.some(f => f.id === i.id));
+            }
+
+            if (targetItems.length === 0) return showToast("ไม่พบรายการที่จะทำรายการ", true);
 
             if (action === 'delete') {
                 if (!confirm(`ยืนยันลบ ${targetItems.length} รายการ?`)) return;
