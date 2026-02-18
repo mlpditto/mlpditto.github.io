@@ -153,9 +153,15 @@
                 <!-- Record Form Side -->
                 <div class="lg:col-span-1">
                     <section class="glass p-6 rounded-3xl shadow-xl sticky top-28 border border-white/20">
-                        <div class="w-8 h-8 rounded-lg bg-lineman/10 flex items-center justify-center pt-1"><i
-                                id="form-icon" class="fas fa-plus text-lineman text-sm"></i></div>
-                        <span id="form-title">บันทึกยอดขายใหม่</span>
+                        <h2 class="text-lg font-black mb-6 flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-lineman/10 flex items-center justify-center pt-1">
+                                <i id="form-icon" class="fas fa-plus text-lineman text-sm"></i>
+                            </div>
+                            <span id="form-title">บันทึกยอดขายใหม่</span>
+                            <span id="autosave-status"
+                                class="ml-auto text-[9px] font-bold text-slate-400 opacity-0 transition-opacity uppercase tracking-widest">
+                                <i class="fas fa-save mr-1"></i> Draft Saved
+                            </span>
                         </h2>
                         <form id="salesForm" class="space-y-4">
                             <div class="grid grid-cols-2 gap-4">
@@ -167,9 +173,26 @@
                                 </div>
                                 <div>
                                     <label
-                                        class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">เลขออเดอร์</label>
-                                    <input type="text" id="orderId" placeholder="LM-XXXX" required
+                                        class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">เลขออเดอร์
+                                        (4 หลัก)</label>
+                                    <input type="text" id="orderId" placeholder="0001" required maxlength="4"
                                         class="w-full mt-1 p-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-lineman outline-none transition-all uppercase">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label
+                                        class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">ชื่อลูกค้า</label>
+                                    <input type="text" id="customerName" placeholder="ชื่อลูกค้า"
+                                        class="w-full mt-1 p-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-lineman outline-none transition-all">
+                                </div>
+                                <div>
+                                    <label
+                                        class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">เบอร์โทร
+                                        (Optional)</label>
+                                    <input type="tel" id="customerPhone" placeholder="08x-xxx-xxxx"
+                                        class="w-full mt-1 p-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-lineman outline-none transition-all">
                                 </div>
                             </div>
 
@@ -207,68 +230,63 @@
                                     placeholder="เช่น ข้าวผัด 2, กะเพรา 1..."></textarea>
                             </div>
 
-                            <div class="flex gap-2 mt-4">
-                                <button type="submit" id="submitBtn"
-                                    class="flex-1 py-4 bg-lineman hover:bg-green-600 text-white rounded-2xl font-bold shadow-lg shadow-green-500/20 transition-all transform active:scale-95">
-                                    <i class="fas fa-check-circle mr-2"></i> บันทึกข้อมูล
-                                </button>
-                                <button type="button" id="cancelEditBtn" onclick="cancelEdit()"
-                                    class="hidden px-6 py-4 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-2xl font-bold transition-all transform active:scale-95">
-                                    ยกเลิก
-                                </button>
-                            </div>
-                        </form>
-                    </section>
+                            <button type="submit" id="submitBtn"
+                                class="w-full py-4 bg-lineman hover:bg-green-600 text-white rounded-2xl font-bold shadow-lg shadow-green-500/20 transition-all transform active:scale-95">
+                                <i class="fas fa-check-circle mr-2"></i> บันทึกยอดขาย
+                            </button>
                 </div>
+                </form>
+                </section>
+            </div>
 
-                <!-- Sales List Side -->
-                <div class="lg:col-span-2">
-                    <div class="glass rounded-3xl shadow-xl overflow-hidden border border-white/20">
-                        <div
-                            class="p-6 border-b border-slate-100 dark:border-slate-700 flex flex-wrap justify-between items-center gap-4 bg-white/50 dark:bg-slate-800/50">
-                            <div>
-                                <h2 class="font-black text-lg flex items-center gap-3">
-                                    <div class="w-8 h-8 rounded-lg bg-lineman/10 flex items-center justify-center"><i
-                                            class="fas fa-history text-lineman text-sm"></i></div>
-                                    ประวัติยอดขาย
-                                </h2>
-                                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
-                                    Transaction History</p>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <input type="month" id="monthFilter" onchange="renderUI()"
-                                    class="text-xs p-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-lineman outline-none">
-                                <button onclick="openImportModal()"
-                                    class="px-4 py-2.5 rounded-xl bg-lineman/10 text-lineman font-bold hover:bg-lineman hover:text-white transition-all text-xs border border-lineman/20">
-                                    <i class="fas fa-file-import mr-2"></i> นำเข้าจาก CSV
-                                </button>
-                                <button onclick="exportSales()"
-                                    class="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 text-slate-400 hover:text-blue-500 shadow-sm border border-slate-100 dark:border-slate-700 transition-all">
-                                    <i class="fas fa-file-export"></i>
-                                </button>
-                            </div>
+            <!-- Sales List Side -->
+            <div class="lg:col-span-2">
+                <div class="glass rounded-3xl shadow-xl overflow-hidden border border-white/20">
+                    <div
+                        class="p-6 border-b border-slate-100 dark:border-slate-700 flex flex-wrap justify-between items-center gap-4 bg-white/50 dark:bg-slate-800/50">
+                        <div>
+                            <h2 class="font-black text-lg flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-lg bg-lineman/10 flex items-center justify-center"><i
+                                        class="fas fa-history text-lineman text-sm"></i></div>
+                                ประวัติยอดขาย
+                            </h2>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+                                Transaction History</p>
                         </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse text-sm">
-                                <thead
-                                    class="bg-slate-100/50 dark:bg-slate-800/50 uppercase text-[10px] font-bold text-slate-500 tracking-widest">
-                                    <tr>
-                                        <th class="p-4 border-b dark:border-slate-700">วันที่ / Order</th>
-                                        <th class="p-4 border-b dark:border-slate-700">รายการ / เมนู</th>
-                                        <th class="p-4 border-b dark:border-slate-700 text-right">ยอดรวม (Gross)</th>
-                                        <th class="p-4 border-b dark:border-slate-700 text-right">ยอดจริง (Net)</th>
-                                        <th class="p-4 border-b dark:border-slate-700 text-center">จัดการ</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="salesTable" class="divide-y divide-slate-100 dark:divide-slate-700">
-                                    <!-- Rendered Content -->
-                                </tbody>
-                            </table>
+                        <div class="flex items-center gap-2">
+                            <input type="month" id="monthFilter" onchange="renderUI()"
+                                class="text-xs p-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-lineman outline-none">
+                            <button onclick="openImportModal()"
+                                class="px-4 py-2.5 rounded-xl bg-lineman/10 text-lineman font-bold hover:bg-lineman hover:text-white transition-all text-xs border border-lineman/20">
+                                <i class="fas fa-file-import mr-2"></i> นำเข้าจาก CSV
+                            </button>
+                            <button onclick="exportSales()"
+                                class="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 text-slate-400 hover:text-blue-500 shadow-sm border border-slate-100 dark:border-slate-700 transition-all">
+                                <i class="fas fa-file-export"></i>
+                            </button>
                         </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead
+                                class="bg-slate-100/50 dark:bg-slate-800/50 uppercase text-[10px] font-bold text-slate-500 tracking-widest">
+                                <tr>
+                                    <th class="p-4 border-b dark:border-slate-700">วันที่ / Order</th>
+                                    <th class="p-4 border-b dark:border-slate-700">ลูกค้า / รายการ</th>
+                                    <th class="p-4 border-b dark:border-slate-700 text-right">ยอดรวม (Gross)</th>
+                                    <th class="p-4 border-b dark:border-slate-700 text-right">ยอดจริง (Net)</th>
+                                    <th class="p-4 border-b dark:border-slate-700 text-center">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="salesTable" class="divide-y divide-slate-100 dark:divide-slate-700">
+                                <!-- Rendered Content -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
     </div>
 
     <!-- Scripts -->
@@ -314,6 +332,73 @@
         </div>
     </div>
 
+    <!-- Edit Modal -->
+    <div id="editModal"
+        class="fixed inset-0 bg-black/60 z-[120] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="glass p-6 rounded-3xl shadow-2xl w-full max-w-xl border border-white/20">
+            <h3 class="text-xl font-black mb-6 flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center"><i
+                        class="fas fa-edit text-blue-500 text-lg"></i></div>
+                แก้ไขยอดขาย
+            </h3>
+            <form id="editForm" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label
+                            class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">วันที่ขาย</label>
+                        <input type="date" id="e-recordDate" required
+                            class="w-full mt-1 p-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 outline-none transition-all">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">เลขออเดอร์
+                            (4 หลัก)</label>
+                        <input type="text" id="e-orderId" required maxlength="4"
+                            class="w-full mt-1 p-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 outline-none transition-all uppercase">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label
+                            class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">ชื่อลูกค้า</label>
+                        <input type="text" id="e-customerName"
+                            class="w-full mt-1 p-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 outline-none transition-all">
+                    </div>
+                    <div>
+                        <label
+                            class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">เบอร์โทร</label>
+                        <input type="tel" id="e-customerPhone"
+                            class="w-full mt-1 p-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 outline-none transition-all">
+                    </div>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">ยอดขายเต็ม
+                        (Gross)</label>
+                    <div class="relative">
+                        <input type="number" id="e-grossAmount" step="0.01" required oninput="calculateNetPopup()"
+                            class="w-full mt-1 p-3 pl-8 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 outline-none transition-all font-bold text-lg">
+                        <span class="absolute left-3 top-4 text-slate-400 font-bold">฿</span>
+                    </div>
+                </div>
+                <div class="bg-blue-50/50 dark:bg-slate-800/50 p-4 rounded-2xl flex justify-between items-center">
+                    <span class="text-xs font-bold text-slate-500">ยอดรับสุทธิ (NET)</span>
+                    <span class="text-lg font-black text-blue-600" id="e-calc-net">฿0.00</span>
+                </div>
+                <div>
+                    <label
+                        class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">รายละเอียด</label>
+                    <textarea id="e-notes" rows="2"
+                        class="w-full mt-1 p-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 outline-none transition-all text-xs"></textarea>
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button type="submit"
+                        class="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all">บันทึกการแก้ไข</button>
+                    <button type="button" onclick="closeEditModal()"
+                        class="px-8 py-4 bg-slate-200 dark:bg-slate-700 rounded-2xl font-bold active:scale-95 transition-all">ยกเลิก</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
@@ -329,6 +414,8 @@
         document.addEventListener('DOMContentLoaded', () => {
             initDefaults();
             checkAuth();
+            loadDraft(); // Load draft on startup
+            setupAutosave(); // Activate autosave listeners
         });
 
         function initDefaults() {
@@ -414,7 +501,9 @@
                             <div class="font-black text-slate-700 dark:text-slate-200 uppercase">${record.orderId}</div>
                         </td>
                         <td class="p-4 max-w-[200px]">
-                            <div class="text-xs truncate text-slate-500" title="${record.notes}">${record.notes || '-'}</div>
+                            <div class="font-bold text-xs text-slate-800 dark:text-slate-100">${record.customerName || 'ลูกค้าทั่วไป'}</div>
+                            <div class="text-[10px] text-slate-400">${record.customerPhone || ''}</div>
+                            <div class="text-[10px] truncate text-slate-500 mt-1" title="${record.notes}">${record.notes || '-'}</div>
                         </td>
                         <td class="p-4 text-right">
                             <div class="text-[10px] text-rose-400 font-bold">-฿${record.gp.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
@@ -456,11 +545,13 @@
             const record = {
                 date: document.getElementById('recordDate').value,
                 orderId: document.getElementById('orderId').value,
+                customerName: document.getElementById('customerName').value,
+                customerPhone: document.getElementById('customerPhone').value,
                 gross: gross,
                 gp: gp,
                 net: net,
                 notes: document.getElementById('notes').value,
-                recordedAt: editIndex !== null ? salesData[editIndex].recordedAt : new Date().getTime()
+                recordedAt: new Date().getTime()
             };
 
             if (editIndex !== null) {
@@ -490,37 +581,125 @@
             await window.db.collection('system').doc('lineman_sales').set({ records: salesData });
             showLoading(false);
 
-            cancelEdit(); // Reset form and mode
+            document.getElementById('salesForm').reset();
+            initDefaults();
+            calculateNet();
+            clearDraft(); // Clear local draft
         };
 
+        // Modal Form Submit
+        document.getElementById('editForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const gross = parseFloat(document.getElementById('e-grossAmount').value);
+            const gp = gross * GP_RATE;
+            const net = gross - gp;
+
+            salesData[editIndex] = {
+                ...salesData[editIndex],
+                date: document.getElementById('e-recordDate').value,
+                orderId: document.getElementById('e-orderId').value,
+                customerName: document.getElementById('e-customerName').value,
+                customerPhone: document.getElementById('e-customerPhone').value,
+                gross: gross,
+                gp: gp,
+                net: net,
+                notes: document.getElementById('e-notes').value
+            };
+
+            showLoading(true);
+            await window.db.collection('system').doc('lineman_sales').set({ records: salesData });
+            showLoading(false);
+            closeEditModal();
+            Swal.fire({ icon: 'success', title: 'แก้ไขข้อมูลสำเร็จ', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
+        };
+
+        // --- Autosave System ---
+        function setupAutosave() {
+            const inputs = ['recordDate', 'orderId', 'customerName', 'customerPhone', 'grossAmount', 'notes'];
+            inputs.forEach(id => {
+                document.getElementById(id).addEventListener('input', saveDraft);
+            });
+        }
+
+        function saveDraft() {
+            if (editIndex !== null) return;
+
+            const draft = {
+                date: document.getElementById('recordDate').value,
+                orderId: document.getElementById('orderId').value,
+                customerName: document.getElementById('customerName').value,
+                customerPhone: document.getElementById('customerPhone').value,
+                gross: document.getElementById('grossAmount').value,
+                notes: document.getElementById('notes').value,
+                timestamp: new Date().getTime()
+            };
+            localStorage.setItem('lineman_draft', JSON.stringify(draft));
+
+            // Visual Feedback
+            const status = document.getElementById('autosave-status');
+            status.classList.remove('opacity-0');
+            setTimeout(() => status.classList.add('opacity-0'), 2000);
+        }
+
+        function loadDraft() {
+            const rawDraft = localStorage.getItem('lineman_draft');
+            if (!rawDraft) return;
+
+            const draft = JSON.parse(rawDraft);
+            // Only load if draft is less than 24 hours old
+            if (new Date().getTime() - draft.timestamp > 86400000) {
+                localStorage.removeItem('lineman_draft');
+                return;
+            }
+
+            if (draft.date) document.getElementById('recordDate').value = draft.date;
+            if (draft.orderId) document.getElementById('orderId').value = draft.orderId;
+            if (draft.customerName) document.getElementById('customerName').value = draft.customerName;
+            if (draft.customerPhone) document.getElementById('customerPhone').value = draft.customerPhone;
+            if (draft.gross) {
+                document.getElementById('grossAmount').value = draft.gross;
+                calculateNet();
+            }
+            if (draft.notes) document.getElementById('notes').value = draft.notes;
+        }
+
+        function clearDraft() {
+            localStorage.removeItem('lineman_draft');
+            document.getElementById('autosave-status').classList.add('opacity-0');
+        }
+
         function editRecord(index) {
-            // Because index comes from filtered list in renderUI, we must find the matching item in salesData
             const termMonth = document.getElementById('monthFilter').value;
             const filtered = salesData.filter(r => r.date.startsWith(termMonth));
             const target = filtered[index];
 
-            // Find actual index in salesData
             const actualIndex = salesData.findIndex(r => r.recordedAt === target.recordedAt);
             if (actualIndex === -1) return;
 
             editIndex = actualIndex;
             const record = salesData[actualIndex];
 
-            // Fill form
-            document.getElementById('recordDate').value = record.date;
-            document.getElementById('orderId').value = record.orderId;
-            document.getElementById('grossAmount').value = record.gross;
-            document.getElementById('notes').value = record.notes;
-            calculateNet();
+            // Fill Modal Form
+            document.getElementById('e-recordDate').value = record.date;
+            document.getElementById('e-orderId').value = record.orderId;
+            document.getElementById('e-customerName').value = record.customerName || '';
+            document.getElementById('e-customerPhone').value = record.customerPhone || '';
+            document.getElementById('e-grossAmount').value = record.gross;
+            document.getElementById('e-notes').value = record.notes || '';
+            calculateNetPopup();
 
-            // UI Mode Change
-            document.getElementById('form-title').innerText = "แก้ไขข้อมูลยอดขาย";
-            document.getElementById('form-icon').className = "fas fa-edit text-lineman text-sm";
-            document.getElementById('cancelEditBtn').classList.remove('hidden');
-            document.getElementById('submitBtn').innerHTML = '<i class="fas fa-save mr-2"></i> บันทึกการแก้ไข';
+            document.getElementById('editModal').classList.remove('hidden');
+        }
 
-            // Scroll to form
-            document.querySelector('#salesForm').scrollIntoView({ behavior: 'smooth' });
+        function closeEditModal() {
+            editIndex = null;
+            document.getElementById('editModal').classList.add('hidden');
+        }
+
+        function calculateNetPopup() {
+            const gross = parseFloat(document.getElementById('e-grossAmount').value) || 0;
+            const net = gross - (gross * GP_RATE);
+            document.getElementById('e-calc-net').innerText = `฿${net.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
         }
 
         function cancelEdit() {
