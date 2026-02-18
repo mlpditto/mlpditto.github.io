@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="th" class="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LINE MAN Sales Recorder | Medlife</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#0f172a',
+                        darkCard: '#1e293b',
+                        darkBorder: '#334155',
+                        lineman: '#00B14F' // LINE MAN Green
+                    }
+                }
+            }
+        }
+    </script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .dark .glass {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 dark:bg-darkBg text-slate-800 dark:text-slate-200 transition-colors duration-300 min-h-screen">
+
+    <!-- Loading Overlay -->
+    <div id="loading"
+        class="fixed inset-0 bg-white/80 dark:bg-black/80 z-[100] flex flex-col items-center justify-center backdrop-blur-sm">
+        <div class="w-12 h-12 border-4 border-lineman border-t-transparent rounded-full animate-spin"></div>
+        <p class="mt-4 font-bold text-lineman animate-pulse">กำลังโหลดระบบบันทึกยอดขาย...</p>
+    </div>
+
+    <!-- Login Check UI -->
+    <div id="login-container" class="hidden min-h-screen flex items-center justify-center p-4">
+        <div class="glass p-8 rounded-3xl shadow-2xl w-full max-w-md text-center border border-white/20">
+            <div class="w-20 h-20 bg-lineman/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="fas fa-chart-line text-3xl text-lineman"></i>
+            </div>
+            <h2 class="text-2xl font-bold mb-2 tracking-tight">Access Required</h2>
+            <p class="text-slate-500 dark:text-slate-400 mb-8">กรุณาเข้าสู่ระบบเพื่อบันทึกยอดขาย LINE MAN</p>
+            <a href="admin.html"
+                class="block w-full py-4 bg-lineman hover:bg-green-600 text-white rounded-2xl font-bold shadow-lg transition-all transform active:scale-95">
+                <i class="fas fa-arrow-left mr-2"></i> ไปที่หน้า Admin
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="app-container" class="hidden p-4 md:p-8">
+        <div class="max-w-7xl mx-auto space-y-6">
+
+            <!-- Header -->
+            <nav class="glass sticky top-4 z-50 rounded-3xl shadow-lg border border-white/20 p-4 mb-8">
+                <div class="flex flex-wrap justify-between items-center gap-4">
+                    <div class="flex items-center gap-4">
+                        <a href="admin.html"
+                            class="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-lineman transition-all shadow-sm">
+                            <i class="fas fa-arrow-left text-lg"></i>
+                        </a>
+                        <div
+                            class="w-12 h-12 rounded-2xl bg-lineman flex items-center justify-center text-white shadow-lg">
+                            <i class="fas fa-store text-xl"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-xl md:text-2xl font-black tracking-tight">LINE MAN <span
+                                    class="text-lineman">Sales Recorder</span></h1>
+                            <div
+                                class="flex items-center gap-2 text-[10px] uppercase font-bold tracking-widest text-slate-400">
+                                <span class="text-lineman">Platform Manager</span>
+                                <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+                                <span id="userDisplay">...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <button onclick="toggleTheme()"
+                            class="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 text-slate-400 dark:text-yellow-400 flex items-center justify-center shadow-sm hover:scale-105 transition-all">
+                            <i class="fas fa-moon dark:hidden"></i><i class="fas fa-sun hidden dark:inline"></i>
+                        </button>
+                        <button onclick="logout()"
+                            class="px-6 py-3 rounded-2xl bg-rose-50 dark:bg-rose-900/20 text-rose-500 font-bold hover:bg-rose-100 transition-all text-sm border border-rose-100 dark:border-rose-900/30">
+                            LOGOUT
+                        </button>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Financial Summary Cards -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="glass card-hover p-6 rounded-3xl border-l-[6px] border-lineman">
+                    <p class="text-xs font-bold text-slate-400 uppercase mb-1">ยอดขายวันนี้ (Gross)</p>
+                    <h3 class="text-2xl font-black" id="summary-gross">฿0</h3>
+                    <p class="text-[10px] text-slate-400 mt-1">รวมราคาสินค้าทั้งหมด</p>
+                </div>
+                <div class="glass card-hover p-6 rounded-3xl border-l-[6px] border-rose-500">
+                    <p class="text-xs font-bold text-slate-400 uppercase mb-1">หัก GP วันนี้</p>
+                    <h3 class="text-2xl font-black text-rose-500" id="summary-gp">฿0</h3>
+                    <p class="text-[10px] text-rose-400 mt-1">ค่าธรรมเนียม Platform</p>
+                </div>
+                <div class="glass card-hover p-6 rounded-3xl border-l-[6px] border-blue-500">
+                    <p class="text-xs font-bold text-slate-400 uppercase mb-1">ยอดรับโอน (Net)</p>
+                    <h3 class="text-2xl font-black text-blue-600" id="summary-net">฿0</h3>
+                    <p class="text-[10px] text-blue-400 mt-1">ยอดเงินจริงที่จะได้รับ</p>
+                </div>
+                <div class="glass card-hover p-6 rounded-3xl border-l-[6px] border-purple-500">
+                    <p class="text-xs font-bold text-slate-400 uppercase mb-1">จำนวนออเดอร์</p>
+                    <h3 class="text-2xl font-black text-purple-600" id="summary-count">0</h3>
+                    <p class="text-[10px] text-purple-400 mt-1">รายการขายวันนี้</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Record Form Side -->
+                <div class="lg:col-span-1">
+                    <section class="glass p-6 rounded-3xl shadow-xl sticky top-28 border border-white/20">
+                        <h2 class="text-lg font-black mb-6 flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-lineman/10 flex items-center justify-center"><i
+                                    class="fas fa-plus text-lineman text-sm"></i></div>
+                            บันทึกยอดขายใหม่
+                        </h2>
+                        <form id="salesForm" class="space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label
+                                        class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">วันที่ขาย</label>
+                                    <input type="date" id="recordDate" required
+                                        class="w-full mt-1 p-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-lineman outline-none transition-all">
+                                </div>
+                                <div>
+                                    <label
+                                        class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">เลขออเดอร์</label>
+                                    <input type="text" id="orderId" placeholder="LM-XXXX" required
+                                        class="w-full mt-1 p-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-lineman outline-none transition-all uppercase">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label
+                                    class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">ยอดขายเต็ม
+                                    (Gross Amount)</label>
+                                <div class="relative">
+                                    <input type="number" id="grossAmount" step="0.01" required oninput="calculateNet()"
+                                        class="w-full mt-1 p-3 pl-8 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-lineman outline-none transition-all font-bold text-lg">
+                                    <span class="absolute left-3 top-4 text-slate-400 font-bold">฿</span>
+                                </div>
+                            </div>
+
+                            <div class="bg-slate-100/50 dark:bg-slate-800/50 p-4 rounded-2xl space-y-3">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs font-bold text-slate-500">GP Platform (32.1%)</span>
+                                    <span class="text-sm font-black text-rose-500" id="calc-gp">฿0.00</span>
+                                </div>
+                                <div
+                                    class="flex justify-between items-center border-t border-slate-200 dark:border-slate-700 pt-2">
+                                    <span
+                                        class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase">ยอดรับสุทธิ
+                                        (Net)</span>
+                                    <span class="text-lg font-black text-lineman" id="calc-net">฿0.00</span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label
+                                    class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">รายการเมนู
+                                    / หมายเหตุ</label>
+                                <textarea id="notes" rows="2"
+                                    class="w-full mt-1 p-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-lineman outline-none transition-all placeholder:text-[10px]"
+                                    placeholder="เช่น ข้าวผัด 2, กะเพรา 1..."></textarea>
+                            </div>
+
+                            <button type="submit"
+                                class="w-full py-4 bg-lineman hover:bg-green-600 text-white rounded-2xl font-bold shadow-lg shadow-green-500/20 transition-all transform active:scale-95 mt-4">
+                                <i class="fas fa-check-circle mr-2"></i> บันทึกข้อมูลยอดขาย
+                            </button>
+                        </form>
+                    </section>
+                </div>
+
+                <!-- Sales List Side -->
+                <div class="lg:col-span-2">
+                    <div class="glass rounded-3xl shadow-xl overflow-hidden border border-white/20">
+                        <div
+                            class="p-6 border-b border-slate-100 dark:border-slate-700 flex flex-wrap justify-between items-center gap-4 bg-white/50 dark:bg-slate-800/50">
+                            <div>
+                                <h2 class="font-black text-lg flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-lg bg-lineman/10 flex items-center justify-center"><i
+                                            class="fas fa-history text-lineman text-sm"></i></div>
+                                    ประวัติยอดขาย
+                                </h2>
+                                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+                                    Transaction History</p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <input type="month" id="monthFilter" onchange="renderUI()"
+                                    class="text-xs p-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-lineman outline-none">
+                                <button onclick="exportSales()"
+                                    class="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 text-slate-400 hover:text-blue-500 shadow-sm border border-slate-100 dark:border-slate-700 transition-all">
+                                    <i class="fas fa-file-export"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-sm">
+                                <thead
+                                    class="bg-slate-100/50 dark:bg-slate-800/50 uppercase text-[10px] font-bold text-slate-500 tracking-widest">
+                                    <tr>
+                                        <th class="p-4 border-b dark:border-slate-700">วันที่ / Order</th>
+                                        <th class="p-4 border-b dark:border-slate-700">รายการ / เมนู</th>
+                                        <th class="p-4 border-b dark:border-slate-700 text-right">ยอดรวม (Gross)</th>
+                                        <th class="p-4 border-b dark:border-slate-700 text-right">ยอดจริง (Net)</th>
+                                        <th class="p-4 border-b dark:border-slate-700 text-center">จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="salesTable" class="divide-y divide-slate-100 dark:divide-slate-700">
+                                    <!-- Rendered Content -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <script>
+        let salesData = [];
+        let currentUser = null;
+        const GP_RATE = 0.321; // 30% + VAT 7% of GP = 32.1%
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initDefaults();
+            checkAuth();
+        });
+
+        function initDefaults() {
+            const now = new Date();
+            document.getElementById('recordDate').value = now.toISOString().split('T')[0];
+            document.getElementById('monthFilter').value = now.toISOString().slice(0, 7);
+
+            if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            }
+        }
+
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        }
+
+        function checkAuth() {
+            const timer = setInterval(() => {
+                if (window.auth) {
+                    clearInterval(timer);
+                    window.auth.onAuthStateChanged(user => {
+                        document.getElementById('loading').style.display = 'none';
+                        if (user) {
+                            currentUser = user;
+                            document.getElementById('login-container').style.display = 'none';
+                            document.getElementById('app-container').style.display = 'block';
+                            document.getElementById('userDisplay').innerText = user.email || user.displayName;
+                            syncData();
+                        } else {
+                            document.getElementById('app-container').style.display = 'none';
+                            document.getElementById('login-container').style.display = 'flex';
+                        }
+                    });
+                }
+            }, 100);
+        }
+
+        function syncData() {
+            // Re-use system/lineman_sales specifically
+            window.db.collection('system').doc('lineman_sales').onSnapshot(doc => {
+                if (doc.exists) {
+                    salesData = doc.data().records || [];
+                    renderUI();
+                } else {
+                    window.db.collection('system').doc('lineman_sales').set({ records: [] });
+                }
+            });
+        }
+
+        function calculateNet() {
+            const gross = parseFloat(document.getElementById('grossAmount').value) || 0;
+            const gp = gross * GP_RATE;
+            const net = gross - gp;
+
+            document.getElementById('calc-gp').innerText = `฿${gp.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('calc-net').innerText = `฿${net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+
+        function renderUI() {
+            const termMonth = document.getElementById('monthFilter').value;
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            const filtered = salesData.filter(r => r.date.startsWith(termMonth));
+            const tbody = document.getElementById('salesTable');
+            tbody.innerHTML = '';
+
+            let dailyGross = 0; let dailyGP = 0; let dailyNet = 0; let dailyCount = 0;
+
+            filtered.forEach((record, index) => {
+                const isToday = record.date === todayStr;
+                if (isToday) {
+                    dailyGross += record.gross;
+                    dailyGP += record.gp;
+                    dailyNet += record.net;
+                    dailyCount++;
+                }
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                        <td class="p-4">
+                            <div class="font-[10px] font-bold text-slate-400">${record.date}</div>
+                            <div class="font-black text-slate-700 dark:text-slate-200 uppercase">${record.orderId}</div>
+                        </td>
+                        <td class="p-4 max-w-[200px]">
+                            <div class="text-xs truncate text-slate-500" title="${record.notes}">${record.notes || '-'}</div>
+                        </td>
+                        <td class="p-4 text-right">
+                            <div class="text-[10px] text-rose-400 font-bold">-฿${record.gp.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                            <div class="font-bold text-slate-400">฿${record.gross.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                        </td>
+                        <td class="p-4 text-right">
+                            <div class="font-black text-lineman text-lg">฿${record.net.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                        </td>
+                        <td class="p-4 text-center">
+                            <button onclick="deleteRecord(${index})" class="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-900/20 text-rose-400 hover:text-rose-600 transition-all">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('summary-gross').innerText = `฿${dailyGross.toLocaleString()}`;
+            document.getElementById('summary-gp').innerText = `฿${dailyGP.toLocaleString()}`;
+            document.getElementById('summary-net').innerText = `฿${dailyNet.toLocaleString()}`;
+            document.getElementById('summary-count').innerText = dailyCount;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-20 text-center text-slate-300 font-bold uppercase tracking-widest">No Sales Found</td></tr>`;
+            }
+        }
+
+        document.getElementById('salesForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const gross = parseFloat(document.getElementById('grossAmount').value);
+            const gp = gross * GP_RATE;
+            const net = gross - gp;
+
+            const newRecord = {
+                date: document.getElementById('recordDate').value,
+                orderId: document.getElementById('orderId').value,
+                gross: gross,
+                gp: gp,
+                net: net,
+                notes: document.getElementById('notes').value,
+                recordedAt: new Date().getTime()
+            };
+
+            salesData.unshift(newRecord);
+            // Sort by date desc
+            salesData.sort((a, b) => b.date.localeCompare(a.date) || b.recordedAt - a.recordedAt);
+
+            showLoading(true);
+            await window.db.collection('system').doc('lineman_sales').set({ records: salesData });
+            showLoading(false);
+
+            document.getElementById('grossAmount').value = '';
+            document.getElementById('notes').value = '';
+            document.getElementById('orderId').value = '';
+            calculateNet();
+
+            Swal.fire({ icon: 'success', title: 'บันทึกยอดขายแล้ว', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
+        };
+
+        async function deleteRecord(index) {
+            const res = await Swal.fire({
+                title: 'ยืนยันการลบ?',
+                text: "ยอดขายรายการนี้จะถูกถอนออกจากระบบ",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#e11d48',
+                confirmButtonText: 'ลบทิ้ง'
+            });
+
+            if (res.isConfirmed) {
+                salesData.splice(index, 1);
+                showLoading(true);
+                await window.db.collection('system').doc('lineman_sales').set({ records: salesData });
+                showLoading(false);
+            }
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'flex' : 'none';
+        }
+
+        function exportSales() {
+            const termMonth = document.getElementById('monthFilter').value;
+            const filtered = salesData.filter(r => r.date.startsWith(termMonth));
+            if (filtered.length === 0) return Swal.fire('No Data', 'ไม่มีข้อมูลในช่วงเวลาที่เลือก', 'info');
+
+            const csv = [
+                ['Date', 'Order ID', 'Gross Amount', 'GP Fee (32.1%)', 'Net Amount', 'Notes'],
+                ...filtered.map(r => [r.date, r.orderId, r.gross, r.gp, r.net, `"${r.notes}"`])
+            ].map(e => e.join(",")).join("\n");
+
+            const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute("download", `lineman_sales_${termMonth}.csv`);
+            link.click();
+        }
+
+        function logout() { window.auth.signOut().then(() => window.location.reload()); }
+    </script>
+</body>
+
+</html>

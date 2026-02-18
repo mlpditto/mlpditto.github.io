@@ -300,7 +300,7 @@
         }
 
         function loginWithLINE() { liff.login(); }
-        function loginWithGoogle() { auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider()); }
+        function loginWithGoogle() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
         function showView(id) { ['login-selection-view', 'loading', 'register-view', 'waiting-view', 'main-content'].forEach(v => document.getElementById(v).classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); }
 
         function calcAge(dStr) {
