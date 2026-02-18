@@ -233,6 +233,10 @@
                             <div class="flex items-center gap-2">
                                 <input type="month" id="monthFilter" onchange="renderUI()"
                                     class="text-xs p-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-lineman outline-none">
+                                <button onclick="openImportModal()"
+                                    class="px-4 py-2.5 rounded-xl bg-lineman/10 text-lineman font-bold hover:bg-lineman hover:text-white transition-all text-xs border border-lineman/20">
+                                    <i class="fas fa-file-import mr-2"></i> นำเข้าจาก CSV
+                                </button>
                                 <button onclick="exportSales()"
                                     class="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 text-slate-400 hover:text-blue-500 shadow-sm border border-slate-100 dark:border-slate-700 transition-all">
                                     <i class="fas fa-file-export"></i>
@@ -258,6 +262,26 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <div id="importModal"
+        class="fixed inset-0 bg-black/60 z-[110] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="glass p-6 rounded-3xl shadow-2xl w-full max-w-2xl border border-white/20">
+            <h3 class="text-xl font-black mb-2">นำเข้าข้อมูลจาก LINE MAN Report</h3>
+            <p class="text-xs text-slate-500 mb-4">คัดลอกข้อมูลจากไฟล์ CSV (รวม Header) มาวางในช่องด้านล่างนี้</p>
+
+            <textarea id="csvInput" rows="10"
+                class="w-full p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 outline-none text-xs font-mono mb-4"
+                placeholder="OrderID,OrderTime,SettlementTime,..."></textarea>
+
+            <div class="flex gap-3">
+                <button onclick="processCSV()"
+                    class="flex-1 py-4 bg-lineman text-white rounded-2xl font-bold shadow-lg">เริ่มนำเข้าข้อมูล</button>
+                <button onclick="closeImportModal()"
+                    class="px-8 py-4 bg-slate-200 dark:bg-slate-700 rounded-2xl font-bold">ยกเลิก</button>
             </div>
         </div>
     </div>
@@ -461,6 +485,78 @@
         }
 
         function logout() { window.auth.signOut().then(() => window.location.reload()); }
+
+        // CSV Import Functions
+        function openImportModal() {
+            document.getElementById('importModal').classList.remove('hidden');
+        }
+
+        function closeImportModal() {
+            document.getElementById('importModal').classList.add('hidden');
+            document.getElementById('csvInput').value = '';
+        }
+
+        async function processCSV() {
+            const rawData = document.getElementById('csvInput').value.trim();
+            if (!rawData) return;
+
+            const lines = rawData.split('\n');
+            const recordsToImport = [];
+
+            // ตรวจสอบโครงสร้าง Column (อ้างอิงจากตัวอย่าง csv ที่ให้มา)
+            // OrderID[0], SettlementTime[2], ItemName[3], OrderStatus[7], RevenueAmount[11] 
+
+            lines.forEach((line, index) => {
+                if (index === 0 && line.includes('OrderID')) return; // ข้าม Header
+
+                const cols = line.split(',');
+                if (cols.length < 12) return; // ข้อมูลไม่ครบ
+
+                const orderId = cols[0].trim();
+                const settleTime = cols[2].trim(); // "2026/02/03 16:39:51"
+                const itemName = cols[3].trim().replace(/['"]/g, '');
+                const status = cols[7].trim(); // "FINISH" 
+                const gross = parseFloat(cols[11]) || 0; // RevenueAmount
+
+                // นำเข้าเฉพาะที่สำเร็จ และยังไม่มีในระบบ
+                if (status === 'FINISH') {
+                    const dateOnly = settleTime.split(' ')[0].replace(/\//g, '-');
+                    const gp = gross * GP_RATE;
+                    const net = gross - gp;
+
+                    recordsToImport.push({
+                        date: dateOnly,
+                        orderId: orderId,
+                        gross: gross,
+                        gp: gp,
+                        net: net,
+                        notes: itemName,
+                        recordedAt: new Date().getTime() + index // ป้องกัน timestamp ซ้ำกัน
+                    });
+                }
+            });
+
+            if (recordsToImport.length > 0) {
+                showLoading(true);
+                // รวมข้อมูลใหม่เข้ากับข้อมูลเดิมที่มีอยู่
+                salesData = [...recordsToImport, ...salesData];
+                // เรียงลำดับตามวันที่ใหม่
+                salesData.sort((a, b) => b.date.localeCompare(a.date) || b.recordedAt - a.recordedAt);
+
+                await window.db.collection('system').doc('lineman_sales').set({ records: salesData });
+                showLoading(false);
+                closeImportModal();
+
+                Swal.fire({
+                    icon: 'success',
+                    title: `นำเข้าสำเร็จ ${recordsToImport.length} รายการ`,
+                    text: 'ระบบได้บันทึกยอดขายและหัก GP เรียบร้อยแล้ว',
+                    confirmButtonColor: '#00B14F'
+                });
+            } else {
+                Swal.fire('ไม่พบข้อมูล', 'ไม่พบรายการที่สำเร็จ (FINISH) ในข้อมูลที่วาง', 'warning');
+            }
+        }
     </script>
 </body>
 
