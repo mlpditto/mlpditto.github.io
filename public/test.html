@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Firebase</title>
+</head>
+<body style="padding: 20px; font-family: sans-serif;">
+    <h2>🔍 ทดสอบการเชื่อมต่อ Firebase</h2>
+    <div id="status">⏳ กำลังเริ่มทดสอบ...</div>
+    <hr>
+    <div id="logs" style="background:#f0f0f0; padding:10px; border-radius:5px; font-family:monospace;"></div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+
+    <script>
+        function log(msg, color='black') {
+            const div = document.getElementById('logs');
+            div.innerHTML += `<div style="color:${color}">${msg}</div>`;
+            console.log(msg);
+        }
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCfdIENxDbWB30k4TZQfhnbxvpc2217xtU",
+            authDomain: "fkb-front-kanban.firebaseapp.com",
+            projectId: "fkb-front-kanban",
+            storageBucket: "fkb-front-kanban.firebasestorage.app",
+            messagingSenderId: "135805270397",
+            appId: "1:135805270397:web:ef5f4e23fef49175af3414"
+        };
+
+        try {
+            log("1. เริ่มต้น Firebase...", "blue");
+            firebase.initializeApp(firebaseConfig);
+            log("✅ Initialize สำเร็จ", "green");
+
+            const db = firebase.firestore();
+            log("2. กำลังลองเขียนข้อมูลลง Database...", "blue");
+
+            db.collection("system_test").add({
+                message: "Test Connection",
+                time: new Date().toString()
+            }).then((docRef) => {
+                log(`✅ เขียนข้อมูลสำเร็จ! (ID: ${docRef.id})`, "green");
+                document.getElementById('status').innerText = "🎉 ยินดีด้วย! ระบบเชื่อมต่อ Database ได้สมบูรณ์";
+                document.getElementById('status').style.color = "green";
+                document.getElementById('status').style.fontWeight = "bold";
+            }).catch((error) => {
+                log(`❌ เขียนข้อมูลล้มเหลว: ${error.message}`, "red");
+                log(`Code: ${error.code}`, "red");
+                document.getElementById('status').innerText = "❌ เกิดข้อผิดพลาด (ดู Log ด้านล่าง)";
+                document.getElementById('status').style.color = "red";
+            });
+
+        } catch (e) {
+            log(`❌ Error ร้ายแรง: ${e.message}`, "red");
+        }
+    </script>
+</body>
+</html>

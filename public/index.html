@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Medlife Service</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai+Looped:wght@300;400;500;600;700&display=swap');
+
+        body {
+            font-family: 'IBM Plex Sans Thai Looped', sans-serif;
+        }
+
+        .active-tab {
+            color: #2563eb;
+            border-top: 4px solid #2563eb;
+            background: #eff6ff;
+        }
+
+        .inactive-tab {
+            color: #9ca3af;
+            background: #ffffff;
+            border-top: 4px solid transparent;
+        }
+
+        ::-webkit-scrollbar {
+            width: 0px;
+            background: transparent;
+        }
+
+        .login-btn {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .login-btn:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 font-sans pb-28">
+    <div id="app" class="max-w-md mx-auto bg-white min-h-screen shadow-2xl relative overflow-hidden">
+
+        <div class="bg-gradient-to-r from-blue-600 to-blue-500 p-4 text-white text-center shadow-md sticky top-0 z-20">
+            <h1 class="font-bold text-lg tracking-wide">Medlife Plus Pharmacy</h1>
+            <p id="user-display" class="text-xs opacity-90 font-light tracking-wide">กรุณาเข้าสู่ระบบ</p>
+        </div>
+
+        <div id="login-selection-view"
+            class="hidden flex flex-col items-center justify-center min-h-[80vh] px-8 text-center animate-fade-in">
+            <div class="bg-blue-50 p-6 rounded-full mb-6 shadow-inner"><i
+                    class="fas fa-user-circle text-6xl text-blue-500"></i></div>
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">ยินดีต้อนรับ</h2>
+            <p class="text-gray-500 text-sm mb-10">กรุณาเลือกช่องทางเข้าสู่ระบบเพื่อใช้งาน</p>
+            <div class="w-full space-y-4">
+                <button onclick="loginWithLINE()"
+                    class="login-btn w-full bg-[#06C755] text-white p-4 rounded-2xl font-bold shadow-lg flex items-center justify-center gap-3"><i
+                        class="fab fa-line text-2xl"></i> Login with LINE</button>
+                <button onclick="loginWithGoogle()"
+                    class="login-btn w-full bg-white text-gray-700 border border-gray-200 p-4 rounded-2xl font-bold shadow-sm flex items-center justify-center gap-3"><img
+                        src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" class="w-6 h-6"> Sign in
+                    with Google</button>
+            </div>
+        </div>
+
+        <div id="loading" class="flex flex-col items-center justify-center h-[80vh]">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+            <p class="text-gray-500 animate-pulse">กำลังตรวจสอบสิทธิ์...</p>
+        </div>
+
+        <div id="register-view" class="hidden p-8 flex flex-col justify-center min-h-[80vh]">
+            <div class="text-center mb-8">
+                <img id="profile-img" src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                    class="w-24 h-24 rounded-full border-4 border-blue-100 shadow-lg mx-auto mb-4 object-cover">
+                <h2 class="text-2xl font-bold text-gray-800">ข้อมูลสมาชิก</h2>
+                <p class="text-gray-500 text-sm">กรุณาระบุข้อมูลเพื่อรอการอนุมัติ</p>
+            </div>
+            <form id="reg-form" class="space-y-4">
+                <div><label class="text-xs text-gray-400 ml-1 font-bold uppercase">ชื่อ-นามสกุล</label><input
+                        type="text" id="reg-name"
+                        class="w-full border border-gray-300 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                        required></div>
+                <div><label class="text-xs text-gray-400 ml-1 font-bold uppercase">เบอร์โทรศัพท์</label><input
+                        type="tel" id="reg-phone"
+                        class="w-full border border-gray-300 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                        required></div>
+                <button type="submit"
+                    class="w-full bg-blue-600 text-white p-4 rounded-xl font-bold shadow-lg hover:bg-blue-700 mt-4 transition">ลงทะเบียนเข้าใช้งาน</button>
+            </form>
+        </div>
+
+        <div id="waiting-view" class="hidden flex flex-col items-center justify-center h-[80vh] px-6 text-center">
+            <div class="text-yellow-400 text-6xl mb-6">⏳</div>
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">รอการอนุมัติ</h2>
+            <p class="text-gray-500">เจ้าหน้าที่กำลังตรวจสอบข้อมูลของคุณ<br>กรุณารอสักครู่ครับ</p>
+            <button onclick="location.reload()"
+                class="mt-8 text-blue-500 text-sm font-bold border border-blue-200 px-6 py-2 rounded-full hover:bg-blue-50 transition">↻
+                รีเฟรชสถานะ</button>
+        </div>
+
+        <div id="main-content" class="hidden">
+            <div id="tab-order" class="p-5 animate-fade-in">
+                <div class="flex items-center mb-6">
+                    <div class="w-1.5 h-8 bg-blue-600 mr-3 rounded-full"></div>
+                    <h2 class="text-2xl font-bold text-gray-800">สั่งสินค้า</h2>
+                </div>
+                <form id="order-form" class="space-y-5">
+                    <div class="bg-blue-50 p-5 rounded-2xl border border-blue-100 shadow-sm">
+                        <label class="text-sm font-bold text-blue-900 mb-3 block"><i
+                                class="fas fa-shipping-fast mr-2"></i> ข้อมูลจัดส่ง</label>
+                        <input type="text" id="cust-name" placeholder="ชื่อผู้รับ"
+                            class="w-full p-3 rounded-xl bg-white mb-3 shadow-sm border-none focus:ring-2 focus:ring-blue-300"
+                            required>
+                        <input type="tel" id="cust-phone" placeholder="เบอร์โทรติดต่อ"
+                            class="w-full p-3 rounded-xl bg-white shadow-sm border-none focus:ring-2 focus:ring-blue-300"
+                            required>
+                    </div>
+                    <div class="bg-green-50 p-5 rounded-2xl border border-green-100 shadow-sm">
+                        <label class="text-sm font-bold text-green-900 mb-3 block"><i class="fas fa-pills mr-2"></i>
+                            รายละเอียดสินค้า</label>
+                        <input type="text" id="prod-name" placeholder="ชื่อยา / สินค้า"
+                            class="w-full p-3 rounded-xl bg-white mb-3 shadow-sm border-none focus:ring-2 focus:ring-green-300"
+                            required>
+                        <div class="flex space-x-3">
+                            <input type="number" id="prod-amt" placeholder="จำนวน"
+                                class="w-1/2 p-3 rounded-xl bg-white shadow-sm border-none focus:ring-2 focus:ring-green-300"
+                                required>
+                            <input type="text" id="prod-unit" placeholder="หน่วย"
+                                class="w-1/2 p-3 rounded-xl bg-white shadow-sm border-none focus:ring-2 focus:ring-green-300"
+                                required>
+                        </div>
+                    </div>
+                    <button type="submit"
+                        class="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white p-4 rounded-xl font-bold shadow-lg text-lg">ยืนยันออเดอร์</button>
+                </form>
+            </div>
+
+            <div id="tab-health" class="hidden p-5 animate-fade-in">
+                <div class="flex items-center mb-6">
+                    <div class="w-1.5 h-8 bg-pink-600 mr-3 rounded-full"></div>
+                    <h2 class="text-2xl font-bold text-gray-800">ซักประวัติ</h2>
+                </div>
+                <form id="health-form" class="space-y-4 text-sm">
+                    <div class="bg-white p-5 rounded-2xl border shadow-sm space-y-3">
+                        <h3 class="font-bold text-gray-700 border-b pb-2 text-base">👤 ข้อมูลส่วนตัว</h3>
+                        <div class="grid grid-cols-2 gap-3"><input type="text" id="h-fname" placeholder="ชื่อจริง *"
+                                class="border-gray-200 border p-2.5 rounded-lg bg-gray-50 focus:bg-white"
+                                required><input type="text" id="h-lname" placeholder="นามสกุล *"
+                                class="border-gray-200 border p-2.5 rounded-lg bg-gray-50 focus:bg-white" required>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3"><input type="text" id="h-nickname" placeholder="ชื่อเล่น"
+                                class="border-gray-200 border p-2.5 rounded-lg bg-gray-50"><input type="tel"
+                                id="h-phone-health" placeholder="เบอร์โทร *"
+                                class="border-gray-200 border p-2.5 rounded-lg bg-yellow-50 focus:bg-white" required>
+                        </div>
+                        <textarea id="h-address" placeholder="ที่อยู่ปัจจุบัน"
+                            class="w-full border-gray-200 border p-2.5 rounded-lg bg-gray-50 h-20"></textarea>
+                        <div class="grid grid-cols-2 gap-3"><input type="text" id="h-nationality" placeholder="สัญชาติ"
+                                class="border-gray-200 border p-2.5 rounded-lg bg-gray-50" value="ไทย"><input
+                                type="text" id="h-race" placeholder="เชื้อชาติ"
+                                class="border-gray-200 border p-2.5 rounded-lg bg-gray-50" value="ไทย"></div>
+                        <div class="bg-gray-50 p-3 rounded-xl border border-dashed border-gray-300 text-center"><label
+                                class="text-xs text-gray-500 mb-1 block">วันเดือนปีเกิด</label><input type="date"
+                                id="h-dob" class="w-full border border-gray-300 p-2 rounded-lg bg-white mb-2"
+                                onchange="calcAge(this.value)"><input type="text" id="age-display"
+                                placeholder="อายุ (คำนวณอัตโนมัติ)"
+                                class="w-full text-center text-blue-600 font-bold bg-transparent border-none text-sm"
+                                readonly></div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border shadow-sm space-y-3">
+                        <h3 class="font-bold text-gray-700 border-b pb-2 text-base">📏 กายภาพ</h3>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div><label class="text-[10px] text-gray-400 font-bold">น้ำหนัก (kg)</label><input
+                                    type="number" id="h-weight" placeholder="0"
+                                    class="w-full border border-gray-200 p-2.5 rounded-lg text-center"
+                                    oninput="calcBMI()"></div>
+                            <div><label class="text-[10px] text-gray-400 font-bold">ปอนด์ (lbs)</label><input
+                                    type="text" id="h-lbs" placeholder="0"
+                                    class="w-full border border-gray-200 p-2.5 rounded-lg bg-gray-100 text-center"
+                                    readonly></div>
+                            <div><label class="text-[10px] text-gray-400 font-bold">ส่วนสูง (cm)</label><input
+                                    type="number" id="h-height" placeholder="0"
+                                    class="w-full border border-gray-200 p-2.5 rounded-lg text-center"
+                                    oninput="calcBMI()"></div>
+                            <div><label class="text-[10px] text-blue-400 font-bold">BMI</label><input type="text"
+                                    id="h-bmi" placeholder="-"
+                                    class="w-full border border-blue-200 bg-blue-50 p-2.5 rounded-lg text-center font-bold text-blue-700"
+                                    readonly></div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border shadow-sm space-y-4">
+                        <h3 class="font-bold text-pink-700 border-b pb-2 text-base">🩺 อาการเบื้องต้น</h3>
+                        <textarea id="h-symptoms" placeholder="อาการสำคัญวันนี้ *"
+                            class="w-full border border-pink-200 bg-pink-50 p-3 rounded-xl h-24 focus:bg-white"
+                            required></textarea>
+                        <input type="text" id="h-allergy" placeholder="ประวัติแพ้ยา / อาหาร (ถ้าไม่มีขีด -)"
+                            class="w-full border border-red-200 bg-red-50 p-3 rounded-xl text-red-600 font-bold">
+                    </div>
+                    <div class="flex gap-2">
+                        <button type="submit" id="btn-submit-health"
+                            class="flex-1 bg-gradient-to-r from-pink-600 to-pink-500 text-white p-4 rounded-xl font-bold shadow-lg transition text-lg mb-10">บันทึกประวัติสุขภาพ</button>
+                        <button type="button" id="btn-cancel-edit" onclick="cancelEdit()"
+                            class="hidden w-24 bg-gray-200 text-gray-600 p-4 rounded-xl font-bold shadow transition text-lg mb-10">ยกเลิก</button>
+                    </div>
+                </form>
+
+                <div id="health-history-section" class="mt-8 border-t pt-6 bg-slate-50/50 -mx-5 px-5 pb-10">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-gray-800 text-lg"><i
+                                class="fas fa-history text-pink-500 mr-2"></i>ประวัติที่ส่งแล้ว</h3>
+                        <span class="text-xs text-gray-400 font-light">My History</span>
+                    </div>
+
+                    <div id="history-loading" class="text-center text-gray-400 py-6 hidden">
+                        <i class="fas fa-circle-notch fa-spin text-pink-500 text-2xl mb-2"></i><br>กำลังโหลดข้อมูล...
+                    </div>
+
+                    <div id="history-list" class="space-y-4">
+                        <!-- History Items will be injected here -->
+                    </div>
+
+                    <div id="history-empty" class="hidden text-center py-10 opacity-50">
+                        <i class="fas fa-clipboard-list text-4xl text-gray-300 mb-2"></i>
+                        <p class="text-sm text-gray-500">ยังไม่มีประวัติการส่งข้อมูล</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="bottom-nav"
+            class="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg flex justify-around hidden z-30 pb-safe">
+            <button onclick="switchTab('order')" id="btn-tab-order"
+                class="active-tab w-1/2 py-3 flex flex-col items-center transition-all"><span
+                    class="text-2xl mb-1">🛒</span><span class="text-xs font-bold">สั่งสินค้า</span></button>
+            <button onclick="switchTab('health')" id="btn-tab-health"
+                class="inactive-tab w-1/2 py-3 flex flex-col items-center transition-all"><span
+                    class="text-2xl mb-1">📋</span><span class="text-xs font-bold">ซักประวัติ</span></button>
+        </div>
+    </div>
+
+    <script>
+        const liffId = "2008999002-KiowNNUL";
+        const firebaseConfig = { apiKey: "AIzaSyCfdIENxDbWB30k4TZQfhnbxvpc2217xtU", authDomain: "fkb-front-kanban.firebaseapp.com", projectId: "fkb-front-kanban", storageBucket: "fkb-front-kanban.firebasestorage.app", messagingSenderId: "135805270397", appId: "1:135805270397:web:ef5f4e23fef49175af3414" };
+
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore(), auth = firebase.auth();
+        let currentUID = null, profileTemp = { name: '', img: '' };
+
+        async function main() {
+            // แก้ไขอาการค้างใน Firefox: ตั้ง Timeout 5 วินาที
+            const authTimeout = setTimeout(() => { if (!currentUID) showView('login-selection-view'); }, 5000);
+
+            auth.onAuthStateChanged(async (user) => {
+                if (user) {
+                    clearTimeout(authTimeout); currentUID = user.uid;
+                    profileTemp = { name: user.displayName || 'Google User', img: user.photoURL };
+                    checkUserStatus(user.uid);
+                } else {
+                    try {
+                        await liff.init({ liffId });
+                        if (liff.isLoggedIn()) {
+                            clearTimeout(authTimeout); const p = await liff.getProfile();
+                            currentUID = p.userId; profileTemp = { name: p.displayName || 'Unknown User', img: p.pictureUrl };
+                            checkUserStatus(p.userId);
+                        } else { clearTimeout(authTimeout); showView('login-selection-view'); }
+                    } catch (e) { clearTimeout(authTimeout); showView('login-selection-view'); }
+                }
+            });
+        }
+
+        function checkUserStatus(uid) {
+            showView('loading');
+            db.collection('users').doc(uid).onSnapshot(doc => {
+                if (!doc.exists) {
+                    showView('register-view');
+                    document.getElementById('profile-img').src = profileTemp.img || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+                    document.getElementById('reg-name').value = profileTemp.name;
+                } else {
+                    const d = doc.data();
+                    if (d.status === 'pending') showView('waiting-view');
+                    else if (d.status === 'approved') {
+                        showView('main-content');
+                        document.getElementById('bottom-nav').classList.remove('hidden');
+                        document.getElementById('user-display').innerText = `User: ${d.displayName}`;
+                        document.getElementById('cust-name').value = d.displayName;
+                        document.getElementById('cust-phone').value = d.phone;
+                        document.getElementById('cust-phone').value = d.phone;
+                        document.getElementById('h-phone-health').value = d.phone;
+                        loadUserHistory(d.phone); // Load history when user is approved
+                    }
+                }
+            });
+        }
+
+        function loginWithLINE() { liff.login(); }
+        function loginWithGoogle() { auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider()); }
+        function showView(id) { ['login-selection-view', 'loading', 'register-view', 'waiting-view', 'main-content'].forEach(v => document.getElementById(v).classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); }
+
+        function calcAge(dStr) {
+            if (!dStr) return; const d = new Date(dStr), n = new Date();
+            let y = n.getFullYear() - d.getFullYear(), m = n.getMonth() - d.getMonth(), day = n.getDate() - d.getDate();
+            if (day < 0) { m--; day += new Date(n.getFullYear(), n.getMonth(), 0).getDate(); }
+            if (m < 0) { y--; m += 12; }
+            document.getElementById('age-display').value = `${y}ปี ${m}เดือน ${day}วัน`;
+        }
+
+        function calcBMI() {
+            const w = parseFloat(document.getElementById('h-weight').value), h = parseFloat(document.getElementById('h-height').value);
+            if (w) document.getElementById('h-lbs').value = (w * 2.20462).toFixed(1);
+            if (w && h) document.getElementById('h-bmi').value = (w / ((h / 100) ** 2)).toFixed(2);
+        }
+
+        function switchTab(t) {
+            const orderTab = document.getElementById('tab-order'), healthTab = document.getElementById('tab-health');
+            const btnOrder = document.getElementById('btn-tab-order'), btnHealth = document.getElementById('btn-tab-health');
+            if (t === 'order') {
+                orderTab.classList.remove('hidden'); healthTab.classList.add('hidden');
+                btnOrder.className = "active-tab w-1/2 py-3 flex flex-col items-center transition-all";
+                btnHealth.className = "inactive-tab w-1/2 py-3 flex flex-col items-center transition-all";
+            } else {
+                orderTab.classList.add('hidden'); healthTab.classList.remove('hidden');
+                btnOrder.className = "inactive-tab w-1/2 py-3 flex flex-col items-center transition-all";
+                btnHealth.className = "active-tab w-1/2 py-3 flex flex-col items-center transition-all";
+            }
+        }
+
+        document.getElementById('reg-form').addEventListener('submit', e => {
+            e.preventDefault();
+            db.collection('users').doc(currentUID).set({
+                displayName: document.getElementById('reg-name').value, phone: document.getElementById('reg-phone').value,
+                uid: currentUID, pictureUrl: profileTemp.img || "", status: 'pending', createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => location.reload());
+        });
+
+        document.getElementById('order-form').addEventListener('submit', e => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            const originalText = btn.innerText;
+            btn.disabled = true; btn.innerText = "กำลังบันทึก...";
+
+            db.collection('tasks').add({
+                type: 'order', customerName: document.getElementById('cust-name').value, customerPhone: document.getElementById('cust-phone').value,
+                productName: document.getElementById('prod-name').value, amount: document.getElementById('prod-amt').value, unit: document.getElementById('prod-unit').value,
+                status: 'Backlog', createdBy: profileTemp.name, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+                alert("สั่งสินค้าเรียบร้อย");
+                document.getElementById('order-form').reset();
+            }).catch(error => {
+                alert("เกิดข้อผิดพลาด: " + error.message);
+            }).finally(() => {
+                btn.disabled = false; btn.innerText = originalText;
+            });
+        });
+
+
+
+        let editingTaskId = null;
+
+        document.getElementById('health-form').addEventListener('submit', e => {
+            e.preventDefault(); const v = id => document.getElementById(id).value;
+            const btn = document.getElementById('btn-submit-health');
+            const originalText = editingTaskId ? "บันทึกการแก้ไข" : "บันทึกประวัติสุขภาพ";
+            btn.disabled = true; btn.innerText = "กำลังบันทึก...";
+
+            const formData = {
+                type: 'health',
+                uid: currentUID, // Add UID for tracking
+                firstName: v('h-fname'), lastName: v('h-lname'), phone: v('h-phone-health'),
+                nickname: v('h-nickname'), dob: v('h-dob'), ageDisplay: v('age-display'),
+                weight: v('h-weight'), height: v('h-height'), bmi: v('h-bmi'),
+                symptoms: v('h-symptoms'), allergy: v('h-allergy'),
+                // Don't overwrite status if editing, unless necessary. For now, keep existing logic or default.
+                // If editing, we update. If new, we set status 'Recorded'.
+            };
+
+            if (!editingTaskId) {
+                formData.status = 'Recorded';
+                formData.createdBy = profileTemp.name;
+                formData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+
+                db.collection('tasks').add(formData).then(() => {
+                    alert("บันทึกประวัติเรียบร้อย");
+                    cancelEdit(); // Reset form
+                }).catch(error => {
+                    alert("เกิดข้อผิดพลาด: " + error.message);
+                }).finally(() => {
+                    btn.disabled = false; btn.innerText = originalText;
+                });
+            } else {
+                formData.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+                db.collection('tasks').doc(editingTaskId).update(formData).then(() => {
+                    alert("แก้ไขข้อมูลเรียบร้อย");
+                    cancelEdit(); // Reset form
+                }).catch(error => {
+                    alert("เกิดข้อผิดพลาด: " + error.message);
+                }).finally(() => {
+                    btn.disabled = false; btn.innerText = originalText;
+                });
+            }
+        });
+
+        function loadUserHistory(phone) {
+            if (!phone) return;
+            const container = document.getElementById('history-list');
+            const loading = document.getElementById('history-loading');
+            const emptyState = document.getElementById('history-empty');
+
+            loading.classList.remove('hidden');
+            container.innerHTML = '';
+            emptyState.classList.add('hidden');
+
+            // Real-time listener
+            db.collection('tasks')
+                .where('type', '==', 'health')
+                .where('phone', '==', phone)
+                .orderBy('createdAt', 'desc')
+                .limit(20)
+                .onSnapshot(snapshot => {
+                    loading.classList.add('hidden');
+                    container.innerHTML = '';
+
+                    if (snapshot.empty) {
+                        emptyState.classList.remove('hidden');
+                        return;
+                    }
+
+                    emptyState.classList.add('hidden');
+
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        const date = data.createdAt ? new Date(data.createdAt.seconds * 1000).toLocaleDateString('th-TH', {
+                            year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                        }) : 'N/A';
+
+                        // SOAP Data Preparation (With explicit checks)
+                        // S: Subjective
+                        const s_sym = data.symptoms ? `<div class="mb-1"><span class="font-bold text-pink-600">S (อาการ):</span> ${data.symptoms}</div>` : '';
+                        const s_alg = data.allergy ? `<div class="mb-1"><span class="font-bold text-red-500">Allergy (แพ้):</span> ${data.allergy}</div>` : '';
+
+                        // O: Objective
+                        const o_data = `Wait: ${data.weight || '-'} kg, Ht: ${data.height || '-'} cm, BMI: ${data.bmi || '-'}`;
+                        const o_block = `<div class="mb-1"><span class="font-bold text-blue-600">O (ร่างกาย):</span> ${o_data}</div>`;
+
+                        // A: Assessment
+                        const a_block = data.diagnosis ? `<div class="mt-2 p-2 bg-blue-50/50 border border-blue-100 rounded text-xs text-blue-800"><span class="font-bold">A (วินิจฉัย):</span> ${data.diagnosis}</div>` : '';
+
+                        // P: Plan
+                        const p_block = data.prescription ? `<div class="mt-1 p-2 bg-green-50/50 border border-green-100 rounded text-xs text-green-800"><span class="font-bold">P (รักษา/ยา):</span> ${data.prescription}</div>` : '';
+
+                        const div = document.createElement('div');
+                        div.className = 'bg-white p-4 rounded-xl shadow-sm border border-gray-100 relative hover:shadow-md transition';
+                        div.innerHTML = `
+                            <div class="flex justify-between items-start mb-3 border-b pb-2">
+                                <div class="flex items-center gap-2">
+                                    <i class="far fa-calendar-alt text-gray-400"></i>
+                                    <span class="text-xs font-bold text-gray-600">${date}</span>
+                                </div>
+                                <span class="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${data.status === 'Done' ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-orange-600'}">${data.status || 'Received'}</span>
+                            </div>
+                            <div class="text-sm text-gray-700">
+                                ${s_sym}
+                                ${s_alg}
+                                ${o_block}
+                                ${a_block}
+                                ${p_block}
+                            </div>
+                            <div class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onclick="editTask('${doc.id}')" class="text-gray-400 hover:text-pink-500 bg-white rounded-full p-1 shadow-sm border">
+                                    <i class="fas fa-pen"></i>
+                                </button>
+                            </div>
+                            <!-- Mobile Edit Button (Visible always contextually or explicitly) -->
+                            <button onclick="editTask('${doc.id}')" class="w-full mt-3 py-2 text-xs font-bold text-pink-500 border border-pink-100 rounded-lg hover:bg-pink-50 flex items-center justify-center gap-1 md:hidden">
+                                <i class="fas fa-edit"></i> แก้ไขข้อมูล
+                            </button>
+                        `;
+                        container.appendChild(div);
+                    });
+                });
+        }
+
+        async function editTask(id) {
+            try {
+                const doc = await db.collection('tasks').doc(id).get();
+                if (!doc.exists) return;
+                const data = doc.data();
+
+                editingTaskId = id;
+                document.getElementById('btn-submit-health').innerText = "บันทึกการแก้ไข";
+                document.getElementById('btn-cancel-edit').classList.remove('hidden');
+
+                // Populate Form
+                const s = (id, val) => { if (document.getElementById(id)) document.getElementById(id).value = val || ''; }
+                s('h-fname', data.firstName);
+                s('h-lname', data.lastName);
+                s('h-nickname', data.nickname);
+                s('h-phone-health', data.phone);
+                s('h-dob', data.dob);
+                s('age-display', data.ageDisplay);
+                s('h-weight', data.weight);
+                s('h-height', data.height);
+                s('h-bmi', data.bmi);
+                s('h-symptoms', data.symptoms);
+                s('h-allergy', data.allergy);
+
+                // Calculate Lbs if needed
+                if (data.weight) document.getElementById('h-lbs').value = (data.weight * 2.20462).toFixed(1);
+
+                document.querySelector('#tab-health').scrollIntoView({ behavior: 'smooth' });
+                showToast("กำลังแก้ไขข้อมูล...");
+            } catch (e) {
+                console.error(e);
+                alert("ไม่สามารถดึงข้อมูลได้");
+            }
+        }
+
+        function cancelEdit() {
+            editingTaskId = null;
+            document.getElementById('health-form').reset();
+            document.getElementById('btn-submit-health').innerText = "บันทึกประวัติสุขภาพ";
+            document.getElementById('btn-cancel-edit').classList.add('hidden');
+
+            // Restore user data that shouldn't disappear
+            if (profileTemp.name) {
+                // Actually, checkUserStatus usually fills this. Or just leave it blank and let user refill.
+                // Better: re-fetch user data or just leave it blank.
+                // Let's manually trigger a reload of basic info if we can, 
+                // or just assume the user will re-enter or it stays blank like a fresh form.
+                // But wait, the name/phone comes from profile.
+                if (currentUID) {
+                    db.collection('users').doc(currentUID).get().then(doc => {
+                        if (doc.exists) {
+                            const d = doc.data();
+                            document.getElementById('h-phone-health').value = d.phone;
+                        }
+                    });
+                }
+            }
+        }
+
+        function showToast(msg) {
+            // Simple toast generic implementation if not exists, or just alert. 
+            // Since this file doesn't have showToast visible in recent view_file, using alert is safer or console.
+            // But let's act like we didn't call it if I didn't see it. 
+            // I'll leave it out or define it.
+            // Actually, I'll just skip showToast to avoid ReferenceError.
+        }
+
+        main();
+    </script>
+</body>
+
+</html>

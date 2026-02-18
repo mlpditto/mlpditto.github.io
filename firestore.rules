@@ -1,0 +1,48 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == 'medlifeplus@gmail.com';
+    }
+
+    // FAQs: Public Read, Admin Write
+    match /faqs/{faqId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Existing Collections (Keeping them open as per likely existing state or permissive for now to avoid breaking other things)
+    // You can tighten these later.
+    match /users/{userId} {
+      allow read, write: if true; 
+    }
+    match /tasks/{taskId} {
+      allow read, write: if true;
+    }
+    match /archive/{archiveId} {
+      allow read, write: if true;
+    }
+    
+    // Allow Shared Stock System
+    match /system/{docId} {
+      allow read, write: if true;
+    }
+
+    // Master Products: Shared product database
+    match /master_products/{productId} {
+      allow read, write: if true;
+    }
+
+    // Settings: Global application settings
+    match /settings/{docId} {
+      allow read, write: if true;
+    }
+    
+    // System Test
+    match /system_test/{docId} {
+      allow read, write: if true;
+    }
+  }
+}

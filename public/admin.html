@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLP HUB</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai+Looped:wght@300;400;500;600;700&display=swap');
+
+        body {
+            font-family: 'IBM Plex Sans Thai Looped', sans-serif;
+        }
+
+        .hidden-el {
+            display: none !important;
+        }
+
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        .nav-btn {
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: bold;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .nav-active {
+            background-color: #2563eb;
+            color: white;
+            box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
+        }
+
+        .nav-inactive {
+            background-color: white;
+            color: #4b5563;
+            border: 1px solid #e5e7eb;
+        }
+
+        .kanban-column {
+            min-height: 400px;
+        }
+
+        .drag-over {
+            background-color: rgba(37, 99, 235, 0.05);
+            border: 2px dashed #2563eb;
+        }
+
+        /* Mobile Column Transitions */
+        .mobile-col {
+            transition: all 0.3s ease;
+        }
+
+        .mobile-col-expanded {
+            flex: 1 0 85% !important;
+            min-width: 85% !important;
+        }
+
+        .mobile-col-collapsed {
+            flex: 1 0 5% !important;
+            min-width: 5% !important;
+            overflow: hidden;
+            opacity: 0.7;
+        }
+
+        .mobile-col-collapsed .kanban-column {
+            display: none;
+        }
+
+        /* Hide cards in collapsed */
+        .mobile-col-collapsed h3 {
+            font-size: 0.6rem;
+            transform: rotate(-90deg);
+            white-space: nowrap;
+            margin-top: 2rem;
+        }
+    </style>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+</head>
+
+<body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
+
+    <div id="loading-section"
+        class="flex flex-col items-center justify-center h-screen absolute inset-0 bg-gray-100 z-[200]">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
+        <p class="text-gray-600 font-bold">กำลังตรวจสอบสิทธิ์...</p>
+    </div>
+
+    <div id="login-section"
+        class="hidden flex items-center justify-center h-screen absolute inset-0 bg-gray-100 z-[100]">
+        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center">
+            <h2 class="text-2xl font-bold mb-6 text-indigo-700">Admin Access</h2>
+            <div class="space-y-4">
+                <button onclick="loginWithGoogle()"
+                    class="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 p-3 rounded-xl font-bold text-gray-700 hover:bg-gray-50 transition shadow-sm">
+                    <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" class="w-6 h-6"> Sign in
+                    with Google
+                </button>
+                <button onclick="loginWithLINE()"
+                    class="w-full flex items-center justify-center gap-3 bg-[#06C755] text-white p-3 rounded-xl font-bold hover:bg-[#05b34c] transition shadow-md">
+                    <i class="fab fa-line text-2xl"></i> Login with LINE
+                </button>
+            </div>
+            <p id="login-error" class="text-red-500 text-xs mt-4 hidden">ขออภัย คุณไม่มีสิทธิ์เข้าถึงส่วนนี้</p>
+        </div>
+    </div>
+
+    <div id="dashboard-section" class="hidden flex flex-col h-full">
+        <header class="bg-white shadow p-2 flex justify-between items-center z-40 border-b shrink-0">
+            <div class="flex items-center space-x-2">
+                <h1 class="text-lg font-bold text-gray-800 px-2 tracking-tighter">MLP HUB</h1>
+                <div class="flex bg-gray-100 p-1 rounded-lg gap-1">
+                    <button class="nav-btn nav-active"><i class="fas fa-columns"></i> TASK</button>
+                    <a href="faq.html" target="_blank" id="nav-faq" class="nav-btn nav-inactive hover:bg-gray-50"><i
+                            class="fas fa-question-circle"></i> FAQ</a>
+                    <div class="w-px bg-gray-300 h-6 mx-1"></div>
+                    <a href="history.html" target="_blank" id="nav-history"
+                        class="nav-btn nav-inactive hover:border-pink-300"><i
+                            class="fas fa-file-medical-alt text-pink-600"></i> History</a>
+                    <a href="proorder.html" target="_blank" id="nav-a-order"
+                        class="nav-btn nav-inactive hover:border-teal-300"><i class="fas fa-capsules text-teal-600"></i>
+                        A.Order</a>
+                    <a href="Sales Analytics.html" target="_blank" id="nav-sales-analytics"
+                        class="nav-btn nav-inactive hover:border-blue-300"><i
+                            class="fas fa-chart-line text-blue-600"></i>
+                        S.Analytics</a>
+                    <a href="TMTP-Manager.html" target="_blank" id="nav-tmtp"
+                        class="nav-btn nav-inactive hover:border-teal-300"><i class="fas fa-capsules text-teal-600"></i>
+                        TMTP</a>
+                    <a href="return-log-int.html" target="_blank" id="nav-return"
+                        class="nav-btn nav-inactive hover:border-indigo-300"><i
+                            class="fas fa-undo-alt text-indigo-600"></i> RETURN</a>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 px-2">
+                <button onclick="openLiffPreview()"
+                    class="text-gray-500 hover:text-green-600 px-2 py-1 text-xs font-bold flex items-center gap-1 transition"
+                    title="จำลองหน้าจอ LINE LIFF">
+                    <i class="fab fa-line text-lg"></i> Preview
+                </button>
+                <button onclick="openArchiveModal()" id="btn-archive"
+                    class="text-gray-500 hover:text-indigo-600 px-2 py-1 text-xs font-bold flex items-center gap-1 transition"><i
+                        class="fas fa-archive"></i> Archive</button>
+                <button onclick="openUserManagement()" id="btn-user-mgmt"
+                    class="text-gray-500 hover:text-blue-600 p-2 text-lg flex items-center justify-center relative transition"
+                    title="จัดการผู้ใช้">
+                    <i class="fas fa-users-cog"></i>
+                    <span id="user-notif"
+                        class="hidden absolute top-1.5 right-1.5 bg-red-500 w-2.5 h-2.5 rounded-full border-2 border-white"></span>
+                </button>
+                <button onclick="logout()"
+                    class="text-red-500 text-xs border border-red-200 px-3 py-1.5 rounded font-bold hover:bg-red-50">Logout</button>
+            </div>
+        </header>
+
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <div class="px-4 py-2 bg-gray-50 border-b flex justify-between items-center shrink-0">
+                <h2 class="font-bold text-gray-600 text-sm uppercase tracking-wider">Kanban Board</h2>
+                <button onclick="openAddTaskModal()"
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow-md transition active:scale-95">
+                    <i class=\"fas fa-plus mr-1\"></i> เพิ่มงานใหม่
+                </button>
+            </div>
+            <div id="kanban-container"
+                class="flex-1 overflow-x-auto p-4 flex space-x-2 md:space-x-4 min-w-full md:min-w-[1200px] custom-scroll transition-all">
+                <div id="col-wrap-backlog"
+                    class="mobile-col w-1/4 bg-gray-200/50 p-2 rounded-xl flex flex-col min-w-[25%] md:min-w-0"
+                    ondragover="allowDrop(event)" ondrop="handleDrop(event, 'Backlog')"
+                    onclick="toggleMobileColumn('backlog')">
+                    <h3 class="font-bold text-center p-2 text-xs uppercase bg-gray-200 rounded-lg mb-2 truncate">Backlog
+                    </h3>
+                    <div id="col-backlog" class="kanban-column space-y-2 overflow-y-auto flex-1 p-1 custom-scroll">
+                    </div>
+                </div>
+                <div id="col-wrap-doing"
+                    class="mobile-col w-1/4 bg-blue-50 p-2 rounded-xl flex flex-col min-w-[25%] md:min-w-0"
+                    ondragover="allowDrop(event)" ondrop="handleDrop(event, 'Doing')"
+                    onclick="toggleMobileColumn('doing')">
+                    <h3
+                        class="font-bold text-center p-2 text-xs uppercase text-blue-700 bg-blue-100 rounded-lg mb-2 truncate">
+                        Doing</h3>
+                    <div id="col-doing" class="kanban-column space-y-2 overflow-y-auto flex-1 p-1 custom-scroll"></div>
+                </div>
+                <div id="col-wrap-review"
+                    class="mobile-col w-1/4 bg-purple-50 p-2 rounded-xl flex flex-col min-w-[25%] md:min-w-0"
+                    ondragover="allowDrop(event)" ondrop="handleDrop(event, 'Review')"
+                    onclick="toggleMobileColumn('review')">
+                    <h3
+                        class="font-bold text-center p-2 text-xs uppercase text-purple-700 bg-purple-100 rounded-lg mb-2 truncate">
+                        Review</h3>
+                    <div id="col-review" class="kanban-column space-y-2 overflow-y-auto flex-1 p-1 custom-scroll"></div>
+                </div>
+                <div id="col-wrap-done"
+                    class="mobile-col w-1/4 bg-green-50 p-2 rounded-xl flex flex-col min-w-[25%] md:min-w-0"
+                    ondragover="allowDrop(event)" ondrop="handleDrop(event, 'Done')"
+                    onclick="toggleMobileColumn('done')">
+                    <h3
+                        class="font-bold text-center p-2 text-xs uppercase text-green-700 bg-green-100 rounded-lg mb-2 truncate">
+                        Done</h3>
+                    <div id="col-done" class="kanban-column space-y-2 overflow-y-auto flex-1 p-1 custom-scroll"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="user-modal"
+        class="hidden-el fixed inset-0 bg-black/60 backdrop-blur-[2px] z-[110] flex justify-center items-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl h-[70vh] flex flex-col overflow-hidden">
+            <div class="bg-blue-600 p-4 text-white flex justify-between items-center">
+                <h2 class="font-bold flex items-center gap-2"><i class="fas fa-user-check"></i> จัดการสิทธิ์พนักงาน</h2>
+                <button onclick="closeModal('user-modal')" class="hover:bg-blue-700 p-1 rounded-full transition"><i
+                        class="fas fa-times"></i></button>
+            </div>
+            <div id="user-list" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 custom-scroll">
+                <p class="text-center py-10 text-gray-400">กำลังโหลดรายชื่อ...</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="task-modal"
+        class="hidden-el fixed inset-0 bg-black/60 backdrop-blur-[2px] z-[110] flex justify-center items-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-sm md:max-w-2xl shadow-2xl overflow-hidden transition-all">
+            <div class="bg-indigo-600 p-4 text-white flex justify-between items-center">
+                <h2 class="font-bold" id="modal-title">จัดการ Task</h2>
+                <button onclick="closeModal('task-modal')"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="task-id">
+                <div><label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">ชื่อลูกค้า</label><input
+                        type="text" id="task-name"
+                        class="w-full border p-2.5 rounded-xl bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                </div>
+                <div><label
+                        class="block text-[10px] font-bold text-gray-400 uppercase mb-1">รายละเอียดงาน</label><textarea
+                        id="task-detail"
+                        class="w-full border p-2.5 rounded-xl bg-gray-50 h-24 focus:ring-2 focus:ring-indigo-500 outline-none transition"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div><label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">เบอร์โทร</label><input
+                            type="tel" id="task-phone" class="w-full border p-2.5 rounded-xl bg-gray-50 outline-none">
+                    </div>
+                    <div><label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Deadline</label><input
+                            type="datetime-local" id="task-deadline"
+                            class="w-full border p-2.5 rounded-xl bg-gray-50 text-[10px] outline-none"></div>
+                </div>
+                <button onclick="saveTask()"
+                    class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-indigo-700 transition">บันทึกข้อมูล</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="archive-modal"
+        class="hidden-el fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] flex justify-center items-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl h-[70vh] flex flex-col overflow-hidden">
+            <div class="bg-gray-800 p-4 text-white flex justify-between items-center">
+                <h2 class="font-bold flex items-center gap-2"><i class="fas fa-box-archive"></i> งานที่เก็บถาวร
+                    (Archive)</h2>
+                <button onclick="closeModal('archive-modal')"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="archive-list" class="flex-1 overflow-y-auto p-4 space-y-2 bg-gray-100 custom-scroll"></div>
+        </div>
+    </div>
+
+    <!-- LIFF Preview Modal -->
+    <div id="liff-preview-modal"
+        class="hidden-el fixed inset-0 bg-black/80 backdrop-blur-sm z-[150] flex justify-center items-center p-4">
+        <div
+            class="relative w-[375px] h-[750px] bg-white rounded-[3rem] shadow-2xl border-[8px] border-gray-800 overflow-hidden flex flex-col">
+            <!-- Notch -->
+            <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-40 h-6 bg-gray-800 rounded-b-xl z-20">
+            </div>
+
+            <!-- Header -->
+            <div class="bg-gray-800 text-white p-4 pt-8 flex justify-between items-center shrink-0">
+                <h3 class="font-bold text-sm">LINE LIFF Preview</h3>
+                <button onclick="closeModal('liff-preview-modal')" class="text-gray-400 hover:text-white"><i
+                        class="fas fa-times"></i></button>
+            </div>
+
+            <!-- Iframe -->
+            <div class="flex-1 bg-white relative">
+                <iframe src="index.html" class="w-full h-full border-none" id="liff-frame"></iframe>
+            </div>
+
+            <!-- Home Indicator -->
+            <div class="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-32 h-1 bg-gray-300 rounded-full z-20">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const LIFF_ID = "2008999002-KiowNNUL";
+        const firebaseConfig = { apiKey: "AIzaSyCfdIENxDbWB30k4TZQfhnbxvpc2217xtU", authDomain: "fkb-front-kanban.firebaseapp.com", projectId: "fkb-front-kanban", storageBucket: "fkb-front-kanban.firebasestorage.app", messagingSenderId: "135805270397", appId: "1:135805270397:web:ef5f4e23fef49175af3414" };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore(), auth = firebase.auth();
+        const ALLOWED_ADMINS = ['medlifeplus@gmail.com'];
+        let allTasksCache = {};
+
+        auth.onAuthStateChanged(async (user) => {
+            if (user && ALLOWED_ADMINS.includes(user.email)) {
+                setupDashboard(true); // Is Super Admin
+            } else { await checkLiffAuth(); }
+        });
+
+        async function checkLiffAuth() {
+            try {
+                await liff.init({ liffId: LIFF_ID });
+                if (liff.isLoggedIn()) {
+                    const profile = await liff.getProfile();
+                    try {
+                        const userDoc = await db.collection('users').doc(profile.userId).get();
+                        const userData = userDoc.data();
+                        // Allow if role is admin OR status is approved
+                        if (userDoc.exists) {
+                            if (userData.role === 'admin') {
+                                setupDashboard(true);
+                            } else if (userData.status === 'approved') {
+                                setupDashboard(false);
+                            } else {
+                                // User logged in but not approved/admin
+                                showAccessDenied(profile.displayName);
+                            }
+                        } else {
+                            showAccessDenied(profile.displayName, true);
+                        }
+                    } catch (dbError) {
+                        alert("Database Error: " + dbError.message);
+                        showLogin();
+                    }
+                } else {
+                    // Not logged in
+                    showLogin();
+                }
+            } catch (e) {
+                alert("LIFF Error: " + e.message);
+                showLogin();
+            }
+        }
+
+        function showAccessDenied(name, allowRegister = false) {
+            document.getElementById('loading-section').classList.add('hidden');
+            document.getElementById('login-section').classList.remove('hidden');
+
+            const errorEl = document.getElementById('login-error');
+            errorEl.classList.remove('hidden');
+
+            if (allowRegister) {
+                errorEl.innerHTML = `
+                    <p class="mb-2">สวัสดีคุณ ${name} คุณยังไม่ได้ลงทะเบียน</p>
+                    <button onclick="registerUser()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-indigo-700 transition">
+                        <i class="fas fa-user-plus mr-1"></i> ขอสิทธิ์เข้าใช้งาน (Register)
+                    </button>
+                `;
+            } else {
+                errorEl.innerText = `ขออภัย คุณ (${name}) ไม่มีสิทธิ์เข้าถึงส่วนนี้ (รอการอนุมัติ)`;
+            }
+        }
+
+        async function registerUser() {
+            try {
+                if (!liff.isLoggedIn()) {
+                    alert("กรุณา Login ก่อนลงทะเบียน");
+                    return;
+                }
+                const profile = await liff.getProfile();
+                const confirmReg = confirm(`ยืนยันการขอสิทธิ์ใช้งานในชื่อ "${profile.displayName}"?`);
+                if (!confirmReg) return;
+
+                document.getElementById('loading-section').classList.remove('hidden'); // Show loading
+
+                await db.collection('users').doc(profile.userId).set({
+                    displayName: profile.displayName,
+                    pictureUrl: profile.pictureUrl,
+                    status: 'pending', // Waiting for admin approval
+                    registeredAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                alert("ส่งคำขอเรียบร้อย! โปรดรอแอดมินอนุมัติ");
+                location.reload(); // Reload to re-check status
+            } catch (e) {
+                console.error(e);
+                alert("เกิดข้อผิดพลาด: " + e.message);
+                document.getElementById('loading-section').classList.add('hidden');
+            }
+        }
+
+        function setupDashboard(isAdmin) {
+            document.getElementById('loading-section').classList.add('hidden');
+            document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('dashboard-section').classList.remove('hidden');
+
+            // Toggle features based on role
+            if (!isAdmin) {
+                ['nav-faq', 'nav-a-order', 'nav-sales-analytics', 'nav-tmtp', 'nav-return', 'btn-archive', 'btn-user-mgmt'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.classList.add('hidden-el');
+                });
+            }
+
+            initKanban();
+            if (isAdmin) monitorUsers(); // Only admins see user management updates
+        }
+
+        function showLogin() {
+            document.getElementById('loading-section').classList.add('hidden');
+            document.getElementById('login-section').classList.remove('hidden');
+        }
+
+        function initKanban() {
+            db.collection("tasks").where("type", "==", "order").onSnapshot(s => {
+                allTasksCache = {};
+                ['backlog', 'doing', 'review', 'done'].forEach(i => document.getElementById(`col-${i}`).innerHTML = '');
+                s.forEach(doc => {
+                    const data = doc.data();
+                    allTasksCache[doc.id] = data;
+                    renderCard(doc.id, data);
+                });
+            });
+        }
+
+        function renderCard(id, d) {
+            const status = (d.status || 'Backlog').toLowerCase();
+            const col = document.getElementById(`col-${status}`);
+            if (!col) return;
+            const isEdited = !!d.updatedBy;
+            const el = document.createElement('div');
+            // Modified: Larger font and padding for desktop (md:)
+            el.className = `${isEdited ? 'bg-yellow-50' : 'bg-white'} p-3 md:p-5 rounded-xl shadow-sm mb-3 border-l-4 border-indigo-500 text-sm md:text-base cursor-grab active:cursor-grabbing transition hover:shadow-md`;
+            el.draggable = true; el.id = `card-${id}`;
+            el.ondragstart = (e) => e.dataTransfer.setData("text", id);
+
+            const archiveBtn = status === 'done' ? `<button onclick="archiveNow('${id}')" class="text-indigo-400 hover:text-indigo-700 p-1"><i class="fas fa-box-archive"></i></button>` : '';
+            const deadlineTag = d.deadline ? `<div class="text-[9px] md:text-xs text-orange-600 font-bold mt-1 bg-orange-100 px-1.5 rounded w-max">${new Date(d.deadline).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })}</div>` : '';
+
+            // Checkbox Helpers (Removal of onchange auto-save)
+            const isChecked = (field, val) => (d[field] && (Array.isArray(d[field]) ? d[field].includes(val) : d[field] === val)) ? 'checked' : '';
+            const isRadioChecked = (field, val) => (d[field] === val) ? 'checked' : '';
+
+            // Badge Generators
+            let badgesHtml = '';
+
+            // Payment Badges
+            if (d.paymentStatus === 'Paid') badgesHtml += `<span class="bg-green-100 text-green-700 text-[10px] px-1.5 py-0.5 rounded mr-1 border border-green-200">ชำระแล้ว</span>`;
+            if (d.paymentMethod) badgesHtml += `<span class="bg-blue-50 text-blue-600 text-[10px] px-1.5 py-0.5 rounded mr-1 border border-blue-100">${d.paymentMethod}</span>`;
+            if (d.billStatus && Array.isArray(d.billStatus)) {
+                d.billStatus.forEach(s => {
+                    let label = s === 'Notified' ? 'แจ้งยอดแล้ว' : (s === 'NoSummary' ? 'ยังไม่สรุป' : 'รอค่าส่ง');
+                    let color = s === 'Notified' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600';
+                    badgesHtml += `<span class="${color} text-[10px] px-1.5 py-0.5 rounded mr-1 border">${label}</span>`;
+                });
+            }
+
+            // Photo Badges
+            if (d.photoStatus && Array.isArray(d.photoStatus)) {
+                d.photoStatus.forEach(s => {
+                    let label = s === 'SentLOA' ? 'ส่ง LOA' : (s === 'SentLINE' ? 'ส่ง LINE' : 'ยังไม่ถ่าย');
+                    let color = s === 'NotTaken' ? 'bg-red-100 text-red-600' : 'bg-indigo-100 text-indigo-600';
+                    badgesHtml += `<span class="${color} text-[10px] px-1.5 py-0.5 rounded mr-1 border flex items-center"><i class="fas fa-camera mr-1"></i> ${label}</span>`;
+                });
+            }
+
+            // Shipping Badge
+            if (d.shippingStatus) {
+                let color = d.shippingStatus.includes('NEXT DAY') ? 'bg-orange-100 text-orange-700' : 'bg-teal-100 text-teal-700';
+                let icon = 'fa-truck';
+                if (d.shippingStatus.includes('RIDER')) icon = 'fa-motorcycle';
+                else if (d.shippingStatus.includes('FRONT')) icon = 'fa-store';
+
+                badgesHtml += `<span class="${color} text-[10px] px-1.5 py-0.5 rounded mr-1 border flex items-center"><i class="fas ${icon} mr-1"></i> ${d.shippingStatus.split(' ')[0]}</span>`;
+            }
+
+            // Counter Calculation
+            let counterHtml = '';
+            if (d.createdAt) {
+                const createdDate = d.createdAt.toDate ? d.createdAt.toDate() : new Date(d.createdAt.seconds * 1000);
+                const diffTime = Math.abs(new Date() - createdDate);
+                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                const colorClass = diffDays >= 7 ? 'text-red-600 bg-red-50 border-red-200' : (diffDays >= 3 ? 'text-orange-600 bg-orange-50 border-orange-200' : 'text-green-600 bg-green-50 border-green-200');
+                const flagHtml = diffDays > 7 ? '<i class="fas fa-flag text-red-500 ml-1 animate-pulse"></i>' : '';
+                counterHtml = `<span class="flex items-center gap-1 text-[10px] font-bold ${colorClass} px-2 py-0.5 rounded-full border shadow-sm">
+                    <i class="far fa-clock"></i> ${diffDays} วัน${flagHtml}
+                </span>`;
+            }
+
+            el.innerHTML = `
+                <div class="flex justify-between items-start mb-1">
+                    <div class="flex items-center flex-wrap gap-2">
+                        <div class="font-bold text-gray-800 leading-tight md:text-lg">${d.customerName || 'ทั่วไป'}</div>
+                        ${counterHtml}
+                    </div>
+                    <div class="flex gap-1 items-center">
+                        <button onclick="toggleChecklist('${id}')" class="text-blue-500 hover:text-blue-700 p-1" title="เปิด Checklist"><i class="fas fa-plus-circle text-lg md:text-xl"></i></button>
+                        <button onclick="copyToClipboard('${id}', this)" class="text-gray-400 hover:text-blue-600 p-1" title="คัดลอกข้อมูล"><i class="fas fa-copy text-sm md:text-base"></i></button>
+                        <button onclick="openEditModal('${id}')" class="text-gray-300 hover:text-indigo-600 p-1" title="แก้ไข"><i class="fas fa-edit text-xs md:text-sm"></i></button>
+                        ${archiveBtn}
+                    </div>
+                </div>
+                <div class="text-[11px] md:text-sm text-gray-500 line-clamp-2">${d.productName || '-'}</div>
+                ${deadlineTag}
+                
+                <!-- Badges Row -->
+                <div class="flex flex-wrap gap-y-1 mt-2">${badgesHtml}</div>
+
+                <!-- Expandable Checklist Section -->
+                <div id="checklist-${id}" class="hidden mt-3 pt-3 border-t border-gray-200 text-xs md:text-sm space-y-3 bg-gray-50 p-3 rounded-lg shadow-inner">
+                    <form id="form-check-${id}" onsubmit="saveTaskChecklist(event, '${id}')">
+                        <!-- Payment Status -->
+                        <div class="mb-3">
+                            <div class="font-bold text-gray-700 mb-1 border-b pb-1">สถานะการเงิน</div>
+                            <div class="grid grid-cols-2 gap-y-1 gap-x-2">
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" name="paymentStatus" value="Paid" ${isChecked('paymentStatus', 'Paid')}> <span class="text-green-700 font-bold">ชำระเงินแล้วทาง</span></label>
+                                <label class="flex items-center gap-1 ml-4 text-gray-600 cursor-pointer"><input type="radio" name="paymentMethod" value="LPM" ${isRadioChecked('paymentMethod', 'LPM')}> LPM</label>
+                                <label class="flex items-center gap-1 ml-4 text-gray-600 cursor-pointer"><input type="radio" name="paymentMethod" value="SCB415" ${isRadioChecked('paymentMethod', 'SCB415')}> SCB415</label>
+                                <label class="flex items-center gap-1 ml-4 text-gray-600 cursor-pointer"><input type="radio" name="paymentMethod" value="QR" ${isRadioChecked('paymentMethod', 'QR')}> QR CREDIT</label>
+                                <label class="flex items-center gap-1 ml-4 text-gray-600 cursor-pointer"><input type="radio" name="paymentMethod" value="KTB" ${isRadioChecked('paymentMethod', 'KTB')}> KTB</label>
+                                
+                                <label class="flex items-center gap-1 col-span-2 mt-1 cursor-pointer"><input type="checkbox" name="billStatus" value="Notified" ${isChecked('billStatus', 'Notified')}> <span class="text-purple-700 font-medium">แจ้งยอดแล้ว รอชำระเงิน</span></label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" name="billStatus" value="NoSummary" ${isChecked('billStatus', 'NoSummary')}> ยังไม่ได้สรุปยอด</label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" name="billStatus" value="WaitCalc" ${isChecked('billStatus', 'WaitCalc')}> รอคำนวณค่าส่ง</label>
+                            </div>
+                        </div>
+
+                        <!-- Photo Status -->
+                        <div class="mb-3">
+                            <div class="font-bold text-gray-700 mb-1 border-b pb-1">สถานะรูปภาพ</div>
+                            <div class="space-y-1">
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" name="photoStatus" value="SentLOA" ${isChecked('photoStatus', 'SentLOA')}> ถ่ายภาพแล้ว ส่งลูกค้าทาง LOA แล้ว</label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" name="photoStatus" value="SentLINE" ${isChecked('photoStatus', 'SentLINE')}> ถ่ายภาพแล้ว ส่ง LINE ORDER แล้ว</label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" name="photoStatus" value="NotTaken" ${isChecked('photoStatus', 'NotTaken')}> <span class="text-red-500">ยังไม่ได้ถ่ายภาพ</span></label>
+                            </div>
+                        </div>
+
+                        <!-- Shipping Status -->
+                        <div class="mb-3">
+                            <div class="font-bold text-gray-700 mb-1 border-b pb-1">การจัดส่ง</div>
+                            <div class="space-y-1">
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="shippingStatus" value="SPU-FRONT-S" ${isRadioChecked('shippingStatus', 'SPU-FRONT-S')}> SPU-FRONT-S ลูกค้ารับเองหน้าร้าน</label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="shippingStatus" value="SPU-FRONT-O" ${isRadioChecked('shippingStatus', 'SPU-FRONT-O')}> SPU-FRONT-O ลูกค้าให้ผู้อื่นรับแทน</label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="shippingStatus" value="SPU-RIDER-LL" ${isRadioChecked('shippingStatus', 'SPU-RIDER-LL')}> SPU-RIDER-LL LALAMOVE</label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="shippingStatus" value="SPU-RIDER-LM" ${isRadioChecked('shippingStatus', 'SPU-RIDER-LM')}> SPU-RIDER-LM LINEMAN</label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="shippingStatus" value="SPU-RIDER-G" ${isRadioChecked('shippingStatus', 'SPU-RIDER-G')}> SPU-RIDER-G GRAB</label>
+                                
+                                <hr class="my-1 border-gray-300">
+                                
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="shippingStatus" value="NEXT DAY-ThP" ${isRadioChecked('shippingStatus', 'NEXT DAY-ThP')}> NEXT DAY-ThP (THAIPOST)</label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="shippingStatus" value="NEXT DAY-KEX" ${isRadioChecked('shippingStatus', 'NEXT DAY-KEX')}> NEXT DAY-KEX (KERRY)</label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="shippingStatus" value="NEXT DAY-SPX" ${isRadioChecked('shippingStatus', 'NEXT DAY-SPX')}> NEXT DAY-SPX (Shopee)</label>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg font-bold shadow hover:bg-blue-700 transition">บันทึกข้อมูล (Save)</button>
+                    </form>
+                </div>
+
+                <div class="text-[9px] md:text-xs text-gray-400 mt-2 border-t pt-1">
+                    โดย: ${d.createdBy || 'Unknown'} 
+                    ${isEdited ? `<span class="text-blue-500 italic">| แก้: ${d.updatedBy}</span>` : ''}
+                </div>
+                
+                <div class="mt-2 flex justify-between items-center">
+                    <div class="flex gap-4">
+                        <button onclick="moveStep('${id}', '${d.status}', -1)" class="text-gray-300 hover:text-indigo-600 transition"><i class="fas fa-chevron-left fa-lg"></i></button>
+                        <button onclick="moveStep('${id}', '${d.status}', 1)" class="text-gray-300 hover:text-indigo-600 transition"><i class="fas fa-chevron-right fa-lg"></i></button>
+                    </div>
+                    <span class="text-[10px] md:text-xs text-gray-400">${d.customerPhone || ''}</span>
+                </div>`;
+            col.appendChild(el);
+        }
+
+        function toggleChecklist(id) {
+            document.getElementById(`checklist-${id}`).classList.toggle('hidden');
+        }
+
+        async function copyToClipboard(id, btn) {
+            const d = allTasksCache[id];
+            if (!d) return;
+
+            let text = `📌 รายละเอียดงาน: ${d.customerName || 'ทั่วไป'}\n`;
+            text += `📦 งาน: ${d.productName || '-'}\n`;
+            if (d.customerPhone) text += `📞 เบอร์โทร: ${d.customerPhone}\n`;
+            if (d.deadline) text += `⏰ Deadline: ${new Date(d.deadline).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })}\n`;
+            text += `🚩 สถานะ: ${d.status || 'Backlog'}\n`;
+
+            text += `\n💰 การเงิน: ${d.paymentStatus === 'Paid' ? '✅ ชำระแล้ว' : '❌ ยังไม่ชำระ'}`;
+            if (d.paymentMethod) text += ` (${d.paymentMethod})`;
+
+            if (d.billStatus && d.billStatus.length > 0) {
+                const labels = d.billStatus.map(s => {
+                    if (s === 'Notified') return 'แจ้งยอดแล้ว';
+                    if (s === 'NoSummary') return 'ยังไม่สรุป';
+                    if (s === 'WaitCalc') return 'รอค่าส่ง';
+                    return s;
+                });
+                text += `\n📝 บิล: ${labels.join(', ')}`;
+            }
+
+            if (d.photoStatus && d.photoStatus.length > 0) {
+                const labels = d.photoStatus.map(s => {
+                    if (s === 'SentLOA') return 'ส่ง LOA';
+                    if (s === 'SentLINE') return 'ส่ง LINE';
+                    if (s === 'NotTaken') return 'ยังไม่ถ่าย';
+                    return s;
+                });
+                text += `\n📸 รูปภาพ: ${labels.join(', ')}`;
+            }
+
+            if (d.shippingStatus) {
+                text += `\n🚚 การจัดส่ง: ${d.shippingStatus}`;
+            }
+
+            try {
+                await navigator.clipboard.writeText(text);
+                const icon = btn.querySelector('i');
+                const originalClass = icon.className;
+                icon.className = 'fas fa-check text-green-500 text-sm md:text-base';
+                setTimeout(() => {
+                    icon.className = originalClass;
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy: ', err);
+                alert('ไม่สามารถคัดลอกได้');
+            }
+        }
+
+        async function saveTaskChecklist(e, id) {
+            e.preventDefault();
+            const form = e.target;
+            const data = new FormData(form);
+
+            // Extract values
+            const updates = {
+                paymentStatus: data.get('paymentStatus') || 'Unpaid',
+                paymentMethod: data.get('paymentMethod') || null,
+                billStatus: data.getAll('billStatus'),
+                photoStatus: data.getAll('photoStatus'),
+                shippingStatus: data.get('shippingStatus') || null
+            };
+
+            const btn = form.querySelector('button[type="submit"]');
+            const originalText = btn.innerText;
+            btn.innerText = "Saving..."; btn.disabled = true;
+
+            try {
+                await db.collection("tasks").doc(id).update(updates);
+                // alert("บันทึกสำเร็จ"); // Optional: Remove alert for smoother flow, or keep it short.
+                // toggleChecklist(id); // User asked NOT to close immediately.
+            } catch (err) {
+                alert("Error: " + err.message);
+            } finally {
+                btn.innerText = "บันทึกข้อมูล (Save)"; btn.disabled = false;
+            }
+        }
+
+        async function archiveNow(id) {
+            if (!confirm("ย้ายงานนี้เข้า Archive หรือไม่?")) return;
+            try {
+                const docRef = db.collection("tasks").doc(id);
+                const doc = await docRef.get();
+                if (doc.exists) {
+                    await db.collection("archive").doc(id).set({ ...doc.data(), archivedAt: firebase.firestore.FieldValue.serverTimestamp() });
+                    await docRef.delete();
+                }
+            } catch (e) { alert("Error: " + e.message); }
+        }
+
+        function openUserManagement() { document.getElementById('user-modal').classList.remove('hidden-el'); }
+        function monitorUsers() {
+            db.collection("users").onSnapshot(snap => {
+                const list = document.getElementById('user-list');
+                const notif = document.getElementById('user-notif');
+                let pendingCount = 0; list.innerHTML = '';
+                snap.forEach(doc => {
+                    const u = doc.data();
+                    if (u.status !== 'approved') pendingCount++;
+
+                    const isApproved = u.status === 'approved';
+                    const statusColor = isApproved ? 'bg-green-100 text-green-700 border-green-200' : 'bg-yellow-100 text-yellow-700 border-yellow-200';
+                    const statusIcon = isApproved ? '<i class="fas fa-check-circle"></i>' : '<i class="fas fa-clock"></i>';
+                    const displayStatus = u.status || 'Checking';
+
+                    list.innerHTML += `
+                        <div class="bg-white p-3 rounded-xl border flex justify-between items-center shadow-sm hover:shadow-md transition">
+                            <div class="flex items-center gap-3">
+                                <div class="relative">
+                                    <img src="${u.pictureUrl || 'https://via.placeholder.com/40'}" class="w-10 h-10 rounded-full border border-gray-200 shadow-sm object-cover">
+                                    <div class="absolute -bottom-1 -right-1 text-[10px] bg-white rounded-full border p-0.5">${statusIcon}</div>
+                                </div>
+                                <div>
+                                    <p class="font-bold text-sm text-gray-800">${u.displayName}</p>
+                                    <span class="text-[9px] px-2 py-0.5 rounded-full uppercase font-bold border ${statusColor}">${displayStatus}</span>
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                ${!isApproved ? `<button onclick="approveUser('${doc.id}')" class="bg-blue-600 hover:bg-blue-700 text-white text-[10px] px-3 py-1.5 rounded-lg font-bold shadow transition"><i class="fas fa-user-check mr-1"></i> อนุมัติ</button>` : ''}
+                                <button onclick="deleteUser('${doc.id}')" class="text-gray-300 hover:text-red-500 p-2 transition"><i class="fas fa-trash-alt"></i></button>
+                            </div>
+                        </div>`;
+                });
+                notif.classList.toggle('hidden', pendingCount === 0);
+            });
+        }
+
+        function approveUser(id) {
+            db.collection("users").doc(id).update({ status: 'approved' })
+                .then(() => alert("อนุมัติผู้ใช้เรียบร้อย"))
+                .catch(e => alert("เกิดข้อผิดพลาด: " + e.message));
+        }
+        function deleteUser(id) {
+            if (confirm("ลบผู้ใช้งานนี้?")) {
+                db.collection("users").doc(id).delete()
+                    .catch(e => alert("ลบไม่สำเร็จ: " + e.message));
+            }
+        }
+        function moveStep(id, current, dir) { const steps = ['Backlog', 'Doing', 'Review', 'Done']; let idx = steps.indexOf(current) + dir; if (idx >= 0 && idx < 4) db.collection("tasks").doc(id).update({ status: steps[idx] }); }
+        function allowDrop(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+        function handleDrop(e, status) { e.preventDefault(); e.currentTarget.classList.remove('drag-over'); db.collection("tasks").doc(e.dataTransfer.getData("text")).update({ status: status }); }
+        function openAddTaskModal() { document.getElementById('task-id').value = ''; document.getElementById('task-name').value = ''; document.getElementById('task-detail').value = ''; document.getElementById('task-phone').value = ''; document.getElementById('task-deadline').value = ''; document.getElementById('modal-title').innerText = "เพิ่มงานใหม่"; document.getElementById('task-modal').classList.remove('hidden-el'); }
+        function openEditModal(id) { db.collection("tasks").doc(id).get().then(doc => { const d = doc.data(); document.getElementById('task-id').value = id; document.getElementById('task-name').value = d.customerName || ''; document.getElementById('task-detail').value = d.productName || ''; document.getElementById('task-phone').value = d.customerPhone || ''; document.getElementById('task-deadline').value = d.deadline || ''; document.getElementById('modal-title').innerText = "แก้ไขข้อมูล"; document.getElementById('task-modal').classList.remove('hidden-el'); }); }
+        function saveTask() { const id = document.getElementById('task-id').value; const data = { customerName: document.getElementById('task-name').value, productName: document.getElementById('task-detail').value, customerPhone: document.getElementById('task-phone').value, deadline: document.getElementById('task-deadline').value, type: 'order' }; if (id) { data.updatedBy = "Admin"; db.collection("tasks").doc(id).update(data); } else { data.status = 'Backlog'; data.createdBy = "Admin"; data.createdAt = firebase.firestore.FieldValue.serverTimestamp(); db.collection("tasks").add(data); } closeModal('task-modal'); }
+        function openArchiveModal() {
+            document.getElementById('archive-modal').classList.remove('hidden-el');
+            db.collection("archive").orderBy("archivedAt", "desc").limit(50).onSnapshot(s => {
+                const list = document.getElementById('archive-list');
+                list.innerHTML = '';
+                s.forEach(doc => {
+                    const d = doc.data();
+                    let durationHtml = '';
+                    if (d.createdAt && d.archivedAt) {
+                        const start = d.createdAt.toDate ? d.createdAt.toDate() : new Date(d.createdAt.seconds * 1000);
+                        const end = d.archivedAt.toDate ? d.archivedAt.toDate() : new Date(d.archivedAt.seconds * 1000);
+                        const diffDays = Math.floor((end - start) / (1000 * 60 * 60 * 24));
+                        durationHtml = `<span class="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-[9px] font-bold border ml-2"><i class="fas fa-hourglass-half"></i> ${diffDays} วัน</span>`;
+                    }
+
+                    list.innerHTML += `
+                        <div class="bg-white p-3 rounded-xl border mb-2 shadow-sm transition hover:shadow-md">
+                            <div class="flex justify-between items-center cursor-pointer" onclick="toggleArchiveItem('${doc.id}')">
+                                <div class="flex-1">
+                                    <div class="flex items-center">
+                                        <div class="font-bold text-sm text-gray-800">${d.customerName}</div>
+                                        ${durationHtml}
+                                    </div>
+                                    <div class="text-[10px] text-gray-500 flex gap-2">
+                                        <span><i class="far fa-clock"></i> ${new Date(d.archivedAt.seconds * 1000).toLocaleDateString('th-TH')}</span>
+                                        ${d.customerPhone ? `<span class="text-blue-500"><i class="fas fa-phone"></i> ${d.customerPhone}</span>` : ''}
+                                    </div>
+                                    <div id="summary-${doc.id}" class="text-xs text-gray-400 mt-1 truncate w-48 md:w-64">${d.productName || 'ไม่มีรายละเอียด'}</div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button onclick="restoreFromArchive('${doc.id}'); event.stopPropagation();" class="text-green-600 font-bold border px-2 py-1 rounded-lg text-[10px] hover:bg-green-50">Restore</button>
+                                    <i id="icon-${doc.id}" class="fas fa-chevron-down text-gray-300 transition-transform"></i>
+                                </div>
+                            </div>
+                            <div id="detail-${doc.id}" class="hidden mt-3 pt-2 border-t text-xs text-gray-600">
+                                <div class="font-bold mb-1">รายละเอียดงาน:</div>
+                                <div class="bg-gray-50 p-2 rounded whitespace-pre-line">${d.productName || '-'}</div>
+                            </div>
+                        </div>`;
+                });
+            });
+        }
+
+        function toggleArchiveItem(id) {
+            const detail = document.getElementById(`detail-${id}`);
+            const summary = document.getElementById(`summary-${id}`);
+            const icon = document.getElementById(`icon-${id}`);
+
+            if (detail.classList.contains('hidden')) {
+                detail.classList.remove('hidden');
+                summary.classList.add('hidden');
+                icon.style.transform = 'rotate(180deg)';
+            } else {
+                detail.classList.add('hidden');
+                summary.classList.remove('hidden');
+                icon.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        async function restoreFromArchive(id) { const doc = await db.collection("archive").doc(id).get(); const data = doc.data(); delete data.archivedAt; data.status = 'Backlog'; await db.collection("tasks").doc(id).set(data); await db.collection("archive").doc(id).delete(); }
+        function loginWithGoogle() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
+        function loginWithLINE() { liff.login({ redirectUri: window.location.href }); }
+        function openLiffPreview() {
+            document.getElementById('liff-preview-modal').classList.remove('hidden-el');
+            // Reload iframe to refresh content
+            const iframe = document.getElementById('liff-frame');
+            iframe.src = iframe.src;
+        }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden-el'); }
+        function logout() { auth.signOut(); if (liff.isLoggedIn()) liff.logout(); location.reload(); }
+
+        let activeMobileCol = null;
+        function toggleMobileColumn(colName) {
+            // Only effective on mobile screens (< 768px)
+            if (window.innerWidth >= 768) return;
+
+            const cols = ['backlog', 'doing', 'review', 'done'];
+
+            // If clicking already active column, reset to equal view
+            if (activeMobileCol === colName) {
+                activeMobileCol = null;
+                cols.forEach(c => {
+                    const el = document.getElementById(`col-wrap-${c}`);
+                    el.classList.remove('mobile-col-expanded', 'mobile-col-collapsed');
+                });
+                return;
+            }
+
+            activeMobileCol = colName;
+            cols.forEach(c => {
+                const el = document.getElementById(`col-wrap-${c}`);
+                if (c === colName) {
+                    el.classList.add('mobile-col-expanded');
+                    el.classList.remove('mobile-col-collapsed');
+                } else {
+                    el.classList.add('mobile-col-collapsed');
+                    el.classList.remove('mobile-col-expanded');
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>

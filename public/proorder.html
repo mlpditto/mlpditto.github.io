@@ -1,0 +1,1650 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProOrder Manager (v4.15)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai+Looped:wght@300;400;500;600;700&display=swap');
+
+        body {
+            font-family: 'IBM Plex Sans Thai Looped', sans-serif;
+            overflow: hidden;
+            background-color: #f3f4f6;
+        }
+
+        .hidden-el {
+            display: none !important;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.2s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        .rotate-icon {
+            transition: transform 0.2s;
+        }
+
+        @keyframes highlightPulse {
+            0% {
+                background-color: #fef08a;
+            }
+
+            100% {
+                background-color: transparent;
+            }
+        }
+
+        .highlight-active {
+            animation: highlightPulse 2s ease-out;
+        }
+
+        .flash-success {
+            animation: flashGreen 1.5s ease-out !important;
+        }
+
+        .flash-update {
+            animation: flashBlue 1.5s ease-out !important;
+        }
+
+        @keyframes flashGreen {
+            0% {
+                background-color: #dcfce7;
+                border-color: #22c55e;
+            }
+
+            100% {
+                background-color: white;
+                border-color: #e5e7eb;
+            }
+        }
+
+        @keyframes flashBlue {
+            0% {
+                background-color: #dbeafe;
+                border-color: #3b82f6;
+            }
+
+            100% {
+                background-color: white;
+                border-color: #e5e7eb;
+            }
+        }
+
+        .card-selected {
+            border-color: #f97316 !important;
+            border-left-width: 4px !important;
+            background-color: #fff7ed !important;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            background-color: white;
+            min-width: 140px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            z-index: 50;
+            border-radius: 0.5rem;
+            border: 1px solid #e5e7eb;
+            overflow: hidden;
+        }
+
+        .show-dropdown {
+            display: block;
+            animation: fadeIn 0.1s ease-out;
+        }
+
+        @media print {
+            @page {
+                size: A4;
+                margin: 10mm;
+            }
+
+            body>* {
+                display: none !important;
+            }
+
+            #printArea {
+                display: block !important;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                visibility: visible !important;
+            }
+
+            #printArea * {
+                visibility: visible !important;
+            }
+        }
+    </style>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+</head>
+
+<body class="text-gray-800 h-screen flex flex-col">
+
+    <div id="masterProductModal"
+        class="hidden-el fixed inset-0 bg-black bg-opacity-60 z-[80] flex items-center justify-center p-4 backdrop-blur-sm no-print">
+        <!-- Datalists for suggestions -->
+        <datalist id="list-master-units"></datalist>
+        <datalist id="list-master-companies"></datalist>
+
+        <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl fade-in flex flex-col overflow-hidden">
+            <div class="bg-teal-600 text-white p-4 flex justify-between items-center shrink-0">
+                <h2 class="text-lg font-bold flex items-center gap-2"><i class="fas fa-database"></i> ข้อมูลสินค้า
+                    (Master Data)</h2>
+                <button onclick="closeModal('masterProductModal')" class="text-teal-200 hover:text-white"><i
+                        class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6 bg-gray-50 space-y-4">
+                <input type="hidden" id="master-original-name">
+                <input type="hidden" id="master-session-id">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">ชื่อสินค้า (ในระบบ)</label>
+                    <input type="text" id="master-name" class="w-full p-3 border rounded-xl bg-white font-bold"
+                        placeholder="ระบุชื่อสินค้า">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">หน่วยหลัก</label>
+                        <input type="text" id="master-unit" list="list-master-units"
+                            class="w-full p-3 border rounded-xl bg-white" placeholder="เช่น กล่อง, ขวด">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">ขั้นต่ำการสั่ง</label>
+                        <input type="number" id="master-min-qty" class="w-full p-3 border rounded-xl bg-white"
+                            placeholder="0">
+                    </div>
+                </div>
+                <div id="master-all-units" class="flex flex-wrap gap-1.5 pt-1">
+                    <!-- Unit suggestion buttons -->
+                </div>
+
+                <div class="border-t pt-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-xs font-bold text-gray-500 uppercase">ราคาแยกตามบริษัทจำหน่าย</label>
+                        <button onclick="addMasterPriceRow()"
+                            class="text-xs bg-teal-50 text-teal-600 border border-teal-200 px-2 py-1 rounded hover:bg-teal-100 font-bold">+
+                            เพิ่มบริษัท</button>
+                    </div>
+                    <div id="master-prices-list" class="space-y-2">
+                        <!-- Rows added here -->
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 bg-white border-t flex flex-col gap-2">
+                <div class="flex gap-3">
+                    <button onclick="closeModal('masterProductModal')"
+                        class="flex-1 py-3 bg-gray-100 rounded-xl font-bold text-gray-600">ปิด</button>
+                    <button onclick="saveMasterProduct()"
+                        class="flex-1 py-3 bg-teal-600 text-white rounded-xl font-bold shadow-lg shadow-teal-100">บันทึกข้อมูลหลัก</button>
+                </div>
+                <button onclick="moveCurrentProductFromModal()"
+                    class="w-full py-2.5 bg-blue-50 text-blue-600 rounded-xl font-bold border border-blue-100 hover:bg-blue-600 hover:text-white transition-all flex items-center justify-center gap-2">
+                    <i class="fas fa-exchange-alt"></i> ย้ายบริษัทที่วิเคราะห์
+                </button>
+                <button onclick="removeCurrentProductFromModal()"
+                    class="w-full py-2.5 bg-red-50 text-red-600 rounded-xl font-bold border border-red-100 hover:bg-red-600 hover:text-white transition-all flex items-center justify-center gap-2">
+                    <i class="fas fa-trash-alt"></i> ลบรายการนี้ออกจากการวิเคราะห์
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="auth-guard" class="fixed inset-0 bg-gray-100 z-[999] flex flex-col items-center justify-center">
+        <i class="fas fa-spinner fa-spin text-4xl text-teal-600 mb-4"></i>
+        <p class="text-gray-500">Checking Access...</p>
+    </div>
+
+    <header class="bg-teal-700 text-white px-6 py-3 shadow-md z-50 shrink-0 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <a href="admin.html" target="_blank"
+                class="bg-teal-800 hover:bg-teal-900 text-white px-3 py-2 rounded-lg transition mr-2"
+                title="กลับหน้า Admin">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <div class="bg-white/10 p-2 rounded-lg"><i class="fas fa-notes-medical text-xl"></i></div>
+            <div>
+                <h1 class="text-lg font-bold leading-tight">ระบบสั่งยา</h1>
+                <p class="text-[10px] text-teal-200 opacity-90 font-light">v4.15</p>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="document.getElementById('fileInput').click()"
+                class="flex items-center gap-2 bg-teal-800 hover:bg-teal-900 text-white px-3 py-1.5 rounded-md text-sm transition shadow-sm border border-teal-600"><i
+                    class="fas fa-folder-open"></i><span class="hidden sm:inline">Open</span></button>
+            <button onclick="saveJSON()"
+                class="flex items-center gap-2 bg-teal-800 hover:bg-teal-900 text-white px-3 py-1.5 rounded-md text-sm transition shadow-sm border border-teal-600"><i
+                    class="fas fa-save"></i><span class="hidden sm:inline">Save</span></button>
+            <button onclick="showChangelogModal()"
+                class="flex items-center gap-2 bg-teal-800 hover:bg-teal-900 text-white px-3 py-1.5 rounded-md text-sm transition shadow-sm border border-teal-600"><i
+                    class="fas fa-history"></i><span class="hidden sm:inline">Log</span></button>
+            <button onclick="clearAllData()"
+                class="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-md text-sm transition shadow-sm border border-red-500 ml-2 font-bold"><i
+                    class="fas fa-trash-alt"></i><span class="hidden sm:inline">Clear All</span></button>
+            <input type="file" id="fileInput" class="hidden-el" accept=".json" onchange="loadJSON(this)">
+        </div>
+    </header>
+
+    <div class="flex-1 flex overflow-hidden relative">
+        <div id="panel-input"
+            class="w-full lg:w-1/5 flex flex-col border-r-4 border-gray-200 bg-white h-full transition-all absolute lg:relative z-10 shadow-xl lg:shadow-none">
+            <div class="p-3 bg-gray-50 border-b border-gray-200 shrink-0 space-y-2 shadow-sm z-20 relative">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-xs font-bold text-gray-500 flex items-center gap-1 uppercase tracking-wide"><i
+                            class="fas fa-pills text-teal-600"></i> รายการยา</span>
+                    <div class="flex items-center gap-2">
+                        <span id="leftPanelCount"
+                            class="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">0</span>
+                    </div>
+                </div>
+                <div class="flex gap-1">
+                    <div class="relative flex-1"><i
+                            class="fas fa-search absolute left-2 top-2.5 text-gray-400 text-xs"></i><input type="text"
+                            id="searchInput" placeholder="ค้นหา..."
+                            class="w-full pl-7 pr-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white text-xs"
+                            oninput="handleSearch(this.value)"></div><button onclick="showAddMedicineForm()"
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg shadow-sm transition active:scale-95 flex items-center gap-1 font-bold whitespace-nowrap text-xs"><i
+                            class="fas fa-plus"></i></button>
+                </div>
+                <div class="relative group">
+                    <div class="absolute top-2 left-2 text-purple-500 pointer-events-none text-xs"><i
+                            class="fas fa-magic"></i></div><textarea id="quickPasteArea" rows="4"
+                        class="w-full pl-7 pr-2 py-2 border-2 border-purple-100 rounded-lg focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-50 bg-purple-50/30 text-xs transition-all resize-none placeholder-purple-300"
+                        placeholder="วางข้อมูลที่นี่ (Paste)..." onpaste="handleQuickPaste(event)"></textarea>
+                    <div id="pasteFeedback"
+                        class="absolute bottom-1 right-1 text-[9px] font-bold text-teal-700 bg-teal-100 px-2 py-0.5 rounded-full border border-teal-200 opacity-0 transition-opacity duration-300 pointer-events-none shadow-sm transform translate-y-0 whitespace-nowrap z-10">
+                        รอข้อมูล...</div>
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto p-3 bg-gray-50/50">
+                <div id="productList" class="space-y-3 pb-24 lg:pb-4"></div>
+            </div>
+            <div
+                class="lg:hidden p-3 bg-white border-t border-gray-200 shrink-0 flex justify-between items-center shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+                <span class="text-xs text-gray-500">รวม</span><span class="font-bold text-teal-700 text-base"
+                    id="mobileTotalLeft">0 ฿</span>
+            </div>
+        </div>
+        <div id="panel-analysis"
+            class="w-full lg:w-4/5 flex flex-col bg-gray-100 h-full absolute lg:relative transform translate-x-full lg:translate-x-0 transition-transform duration-300 z-20">
+            <div class="bg-white p-3 border-b border-gray-200 shadow-sm shrink-0 z-20">
+                <div class="flex justify-between items-center mb-2">
+                    <h2 class="text-base font-bold text-indigo-800 flex items-center gap-2"><i
+                            class="fas fa-chart-pie"></i> วิเคราะห์ผล <span id="autoSaveIndicator"
+                            class="text-[10px] font-normal text-gray-400 opacity-0 transition-opacity"><i
+                                class="fas fa-save"></i> Saved</span></h2>
+                    <div class="flex items-center gap-2">
+                        <button onclick="openMasterExplorer()"
+                            class="px-3 py-1.5 bg-white text-teal-600 rounded-lg text-xs font-bold shadow-sm border border-teal-100 hover:bg-teal-50 transition flex items-center gap-1.5">
+                            <i class="fas fa-database"></i> MASTER
+                        </button>
+                        <button onclick="openCompanyExplorer()"
+                            class="px-3 py-1.5 bg-white text-indigo-600 rounded-lg text-xs font-bold shadow-sm border border-indigo-100 hover:bg-indigo-50 transition flex items-center gap-1.5">
+                            <i class="fas fa-building"></i> COMPANY
+                        </button>
+                        <button onclick="openLabModal()"
+                            class="px-4 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold shadow-sm border border-indigo-200 hover:bg-indigo-200 transition flex items-center gap-2">
+                            <i class="fas fa-vial"></i> LAB
+                        </button>
+                        <div class="relative group">
+                            <button onclick="toggleExportMenu()"
+                                class="text-xs bg-gray-800 text-white border border-gray-800 px-3 py-1.5 rounded-md hover:bg-gray-700 transition font-bold flex items-center gap-1.5 shadow-sm">Export
+                                <i class="fas fa-caret-down ml-1"></i></button>
+                            <div id="exportMenu" class="dropdown-content mt-1"><button onclick="exportToPDF()"><i
+                                        class="fas fa-file-pdf text-red-500 w-4"></i> PDF Document</button><button
+                                    onclick="exportToExcel()"><i class="fas fa-file-excel text-green-500 w-4"></i> Excel
+                                    File</button></div>
+                        </div>
+                    </div>
+                </div>
+                <div
+                    class="flex items-center justify-between bg-gradient-to-r from-indigo-600 to-indigo-700 text-white p-2.5 rounded-lg shadow-md mb-2">
+                    <div>
+                        <div class="text-[10px] text-indigo-200 font-light">ยอดรวมสุทธิ</div>
+                        <div class="text-xl font-bold" id="dashGrandTotal">0 ฿</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-[10px] text-indigo-200 font-light">จำนวน</div>
+                        <div class="text-lg font-semibold" id="dashTotalItems">0</div>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between gap-2">
+                    <div class="flex p-0.5 bg-gray-100 rounded-lg border border-gray-200 w-auto"><button
+                            onclick="switchDashTab('all')" id="dTab-all"
+                            class="px-3 py-1.5 text-[10px] rounded-md font-bold text-white bg-indigo-600 shadow-sm transition">ALL</button><button
+                            onclick="switchDashTab('company')" id="dTab-company"
+                            class="px-3 py-1.5 text-[10px] rounded-md font-bold text-gray-500 hover:text-indigo-600 transition flex items-center gap-1">By
+                            Company <span id="companyCountBadge"
+                                class="bg-black/10 px-1.5 py-0.5 rounded-full text-[9px]">0</span></button></div>
+                    <div class="flex gap-1.5"><button onclick="copyOrder()"
+                            class="text-[10px] text-teal-700 bg-teal-50 border border-teal-200 px-3 py-1.5 rounded-md hover:bg-teal-100 transition font-bold flex items-center gap-1"><i
+                                class="far fa-copy"></i> Copy ALL</button><button onclick="copyOrderByCompany()"
+                            class="text-[10px] text-orange-700 bg-orange-50 border border-orange-200 px-3 py-1.5 rounded-md hover:bg-orange-100 transition font-bold flex items-center gap-1.5"><i
+                                class="fas fa-building"></i> Copy-D</button></div>
+                </div>
+            </div>
+            <div id="alphabetJumpContainer"
+                class="hidden-el bg-white px-3 py-1.5 border-b border-gray-200 shrink-0 space-y-1 shadow-[0_2px_5px_rgba(0,0,0,0.02)] z-10">
+                <div id="azBar" class="overflow-x-auto whitespace-nowrap flex gap-1 pb-1 scrollbar-hide"></div>
+                <div id="companyJumpBar"
+                    class="hidden-el bg-indigo-50/50 p-1 rounded-lg border border-indigo-100 overflow-x-auto whitespace-nowrap flex gap-1.5 pb-1 scrollbar-hide">
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto p-4 relative" id="analysisContentArea">
+                <div id="dContent-all" class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 min-h-[100px]">
+                    <div id="dList-all" class="text-sm space-y-2"></div>
+                </div>
+                <div id="dContent-company" class="hidden-el space-y-3 pb-24 lg:pb-4"></div>
+                <div id="emptyState"
+                    class="hidden-el absolute inset-0 flex flex-col items-center justify-center text-gray-400 pointer-events-none">
+                    <i class="fas fa-chart-bar text-5xl mb-3 opacity-20"></i>
+                    <p class="text-xs">ยังไม่มีข้อมูลวิเคราะห์</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div
+        class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex text-center z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] h-14">
+        <button onclick="showPanel('input')" id="nav-input"
+            class="flex-1 h-full text-teal-600 border-t-2 border-teal-600 bg-teal-50 flex flex-col items-center justify-center gap-1"><i
+                class="fas fa-list-ul text-lg"></i><span class="text-[10px] font-bold">รายการยา</span></button><button
+            onclick="showPanel('analysis')" id="nav-analysis"
+            class="flex-1 h-full text-gray-400 border-t-2 border-transparent flex flex-col items-center justify-center gap-1"><i
+                class="fas fa-chart-pie text-lg"></i><span class="text-[10px] font-bold">วิเคราะห์</span></button>
+    </div>
+
+    <div id="moveModal"
+        class="hidden-el fixed inset-0 bg-black bg-opacity-60 z-[70] flex items-center justify-center p-4 backdrop-blur-sm no-print">
+        <div class="bg-white rounded-2xl w-full max-w-sm shadow-2xl fade-in overflow-hidden">
+            <div class="bg-blue-600 text-white p-3 flex justify-between items-center">
+                <h3 class="font-bold">ย้ายรายการสินค้าไปที่...</h3>
+                <button onclick="closeModal('moveModal')" class="text-blue-200 hover:text-white"><i
+                        class="fas fa-times"></i></button>
+            </div>
+            <div class="p-3 border-b bg-gray-50">
+                <div class="relative">
+                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                    <input type="text" id="move-company-search" oninput="filterMoveCompanies()"
+                        placeholder="ค้นหาชื่อบริษัท..."
+                        class="w-full pl-8 pr-4 py-2 border rounded-xl text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+            </div>
+            <input type="hidden" id="moveItemId">
+            <div class="p-4 max-h-[50vh] overflow-y-auto space-y-2" id="moveCompanyList"></div>
+        </div>
+    </div>
+    <div id="labModal"
+        class="hidden-el fixed inset-0 bg-black bg-opacity-60 z-[70] flex items-center justify-center p-4 backdrop-blur-sm no-print">
+        <div class="bg-white rounded-2xl w-full max-w-2xl h-[80vh] shadow-2xl fade-in flex flex-col overflow-hidden">
+            <div class="bg-purple-700 text-white p-4 flex justify-between items-center shrink-0">
+                <h2 class="text-lg font-bold flex items-center gap-2"><i class="fas fa-flask"></i> LAB Mode</h2><button
+                    onclick="closeModal('labModal')" class="text-purple-200 hover:text-white"><i
+                        class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="flex-1 flex flex-col p-5 bg-gray-50 overflow-hidden">
+                <div class="shrink-0 mb-4"><label
+                        class="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Input
+                        Data</label><textarea id="labPasteArea" rows="4"
+                        class="w-full p-3 border-2 border-purple-100 rounded-xl focus:outline-none focus:border-purple-500 bg-white text-sm resize-none shadow-sm"
+                        placeholder="วางข้อมูลเพื่อทดสอบ..." onpaste="handleLabPaste(event)"></textarea></div>
+                <div class="flex justify-between items-center mb-2 shrink-0">
+                    <h3 class="text-sm font-bold text-gray-700 flex items-center gap-2">Output <span
+                            class="bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full text-xs"
+                            id="labCount">0</span></h3><span id="cleanModeBadge"
+                        class="hidden-el bg-purple-600 text-white px-2 py-0.5 rounded text-[10px] font-bold tracking-wider animate-pulse">CLEAN
+                        MODE ACTIVE</span>
+                    <div class="flex gap-2"><button onclick="cleanLabData()"
+                            class="text-xs bg-white text-gray-600 border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition font-medium"><i
+                                class="fas fa-broom"></i> CLEAN</button><button onclick="clearLabData()"
+                            class="text-xs bg-white text-red-500 border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-50 transition font-medium"><i
+                                class="fas fa-eraser"></i> CLEAR</button><button onclick="copyLabData()"
+                            class="text-xs bg-white text-blue-600 border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition font-medium"
+                            title="Copy"><i class="far fa-copy"></i></button>
+                        <div class="w-px bg-gray-300 mx-1"></div><button onclick="sortLabData()"
+                            class="text-xs bg-purple-600 text-white border border-purple-600 px-4 py-1.5 rounded-lg hover:bg-purple-700 transition font-bold shadow-md"><i
+                                class="fas fa-sort-alpha-down"></i> SORT A-Z</button>
+                    </div>
+                </div>
+                <div id="labOutput"
+                    class="flex-1 bg-white border border-gray-200 rounded-xl p-4 overflow-y-auto text-sm space-y-1 font-mono shadow-inner transition-colors duration-300">
+                    <div class="text-gray-400 text-center mt-10">รอข้อมูล...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="addMedicineModal"
+        class="hidden-el fixed inset-0 bg-black bg-opacity-60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm no-print">
+        <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl fade-in">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">เพิ่มยาใหม่</h2>
+            <div class="space-y-4"><input type="text" id="newMedicineName" placeholder="ชื่อยา"
+                    class="w-full p-3 border rounded-xl bg-gray-50"><input type="text" id="newMedicineCompany"
+                    placeholder="บริษัท" class="w-full p-3 border rounded-xl bg-gray-50">
+                <div class="flex gap-3"><input type="number" id="newMedicineQty" value="1"
+                        class="w-1/3 p-3 border rounded-xl text-center font-bold"><input type="text"
+                        id="newMedicineUnit" placeholder="หน่วย"
+                        class="w-2/3 p-3 border rounded-xl text-center bg-gray-50"></div><input type="number"
+                    id="newMedicinePrice" placeholder="ราคา" class="w-full p-3 border rounded-xl bg-gray-50">
+            </div>
+            <div class="mt-6 flex gap-3"><button onclick="closeModal('addMedicineModal')"
+                    class="flex-1 py-3 bg-gray-100 rounded-xl font-bold">ยกเลิก</button><button
+                    onclick="addCustomMedicine()"
+                    class="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg">ยืนยัน</button></div>
+        </div>
+    </div>
+    <div id="editNameModal"
+        class="hidden-el fixed inset-0 bg-black bg-opacity-60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm no-print">
+        <div class="bg-white rounded-2xl p-6 max-w-xl w-full shadow-2xl fade-in">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">แก้ไขรายการ</h2><input type="hidden" id="editMedicineId">
+            <div class="space-y-4">
+                <div><label class="block text-xs text-gray-500 font-bold mb-1">ชื่อรายการ</label><input type="text"
+                        id="editMedicineNameInput"
+                        class="w-full p-3 border rounded-xl font-bold text-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div><label class="block text-xs text-gray-500 font-bold mb-1">บริษัท</label><input type="text"
+                        id="editMedicineCompanyInput"
+                        class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                        placeholder="ระบุบริษัท"></div>
+                <div class="flex gap-3">
+                    <div class="w-1/2"><label class="block text-xs text-gray-500 font-bold mb-1">หน่วยนับ</label><input
+                            type="text" id="editMedicineUnitInput"
+                            class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                            placeholder="หน่วย"></div>
+                    <div class="w-1/2"><label class="block text-xs text-gray-500 font-bold mb-1">ราคา</label><input
+                            type="number" id="editMedicinePriceInput"
+                            class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                            placeholder="ราคา"></div>
+                </div>
+            </div>
+            <div class="mt-6 flex gap-3"><button onclick="closeModal('editNameModal')"
+                    class="flex-1 py-3 bg-gray-100 rounded-xl font-bold">ยกเลิก</button><button onclick="saveEditName()"
+                    class="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg">บันทึก</button></div>
+        </div>
+    </div>
+    <div id="changelogModal"
+        class="hidden-el fixed inset-0 bg-black bg-opacity-60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm no-print">
+        <div class="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] shadow-2xl fade-in flex flex-col overflow-hidden">
+            <div class="bg-teal-700 text-white p-4 flex justify-between items-center shrink-0">
+                <h2 class="text-lg font-bold"><i class="fas fa-history"></i> ประวัติการพัฒนา</h2><button
+                    onclick="closeModal('changelogModal')" class="text-teal-200 hover:text-white"><i
+                        class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6 bg-gray-50 text-sm">
+                <div class="relative border-l-2 border-gray-200 ml-3 space-y-6">
+                    <div class="ml-6 relative"><span
+                            class="absolute -left-[31px] top-0 flex items-center justify-center w-8 h-8 bg-teal-500 rounded-full ring-4 ring-white text-white"><i
+                                class="fas fa-search text-xs"></i></span>
+                        <h3 class="font-bold text-gray-900">v4.15 Search Fix</h3>
+                        <p class="text-xs text-gray-500">Current</p>
+                        <ul class="list-disc pl-4 mt-1 text-gray-600">
+                            <li><b>Update in Search:</b> แก้ไขลดจำนวนยาแล้วไม่หลุดจากหน้าค้นหา</li>
+                        </ul>
+                    </div>
+                    <div class="ml-6 relative"><span
+                            class="absolute -left-[31px] top-0 flex items-center justify-center w-8 h-8 bg-red-600 rounded-full ring-4 ring-white text-white"><i
+                                class="fas fa-trash-alt text-xs"></i></span>
+                        <h3 class="font-bold text-gray-900">v4.14 Clear All</h3>
+                        <ul class="list-disc pl-4 mt-1 text-gray-600">
+                            <li><b>Clear Button:</b> เพิ่มปุ่มล้างข้อมูลทั้งหมดใน Header ด้านบน</li>
+                        </ul>
+                    </div>
+                    <div class="ml-6 relative"><span
+                            class="absolute -left-[31px] top-0 flex items-center justify-center w-8 h-8 bg-purple-500 rounded-full ring-4 ring-white text-white"><i
+                                class="fas fa-clone text-xs"></i></span>
+                        <h3 class="font-bold text-gray-900">v4.11 Smart Paste</h3>
+                        <ul class="list-disc pl-4 mt-1 text-gray-600">
+                            <li><b>Auto Merge:</b> วางข้อมูลซ้ำจะรวมยอดให้อัตโนมัติ</li>
+                            <li><b>Smart Feedback:</b> แจ้งเตือน +X รายการใหม่ / ↻Y รายการเดิม</li>
+                        </ul>
+                    </div>
+                    <div class="ml-6 relative"><span
+                            class="absolute -left-[31px] top-0 flex items-center justify-center w-8 h-8 bg-green-500 rounded-full ring-4 ring-white text-white"><i
+                                class="fas fa-filter text-xs"></i></span>
+                        <h3 class="font-bold text-gray-900">v4.10 Filter Persistence</h3>
+                        <ul class="list-disc pl-4 mt-1 text-gray-600">
+                            <li>Filter Memory, Active State</li>
+                        </ul>
+                    </div>
+                    <div class="ml-6 relative"><span
+                            class="absolute -left-[31px] top-0 flex items-center justify-center w-8 h-8 bg-blue-500 rounded-full ring-4 ring-white text-white"><i
+                                class="fas fa-exchange-alt text-xs"></i></span>
+                        <h3 class="font-bold text-gray-900">v4.9 Item Transfer</h3>
+                        <ul class="list-disc pl-4 mt-1 text-gray-600">
+                            <li>ย้ายสินค้าข้ามบริษัทได้</li>
+                        </ul>
+                    </div>
+                    <div class="ml-6 relative"><span
+                            class="absolute -left-[31px] top-0 flex items-center justify-center w-8 h-8 bg-pink-500 rounded-full ring-4 ring-white text-white"><i
+                                class="fas fa-save text-xs"></i></span>
+                        <h3 class="font-bold text-gray-900">v4.8 State Persistence</h3>
+                        <ul class="list-disc pl-4 mt-1 text-gray-600">
+                            <li>จำค่าเปิด/ปิด Accordion</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="p-3 bg-white border-t shrink-0"><button onclick="closeModal('changelogModal')"
+                    class="w-full py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200">ปิด</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Master Explorer Modal -->
+    <div id="masterExplorerModal"
+        class="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 hidden-el backdrop-blur-sm">
+        <div class="bg-white w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="bg-teal-600 text-white p-4 flex justify-between items-center shrink-0">
+                <h2 class="text-lg font-bold flex items-center gap-2"><i class="fas fa-database"></i> Master Database
+                    Explorer</h2>
+                <button onclick="closeModal('masterExplorerModal')" class="text-teal-200 hover:text-white"><i
+                        class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="p-4 border-b bg-gray-50 shrink-0">
+                <div class="relative">
+                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <input type="text" id="master-explorer-search" oninput="renderMasterExplorer()"
+                        placeholder="ค้นหาชื่อสินค้าในฐานข้อมูล..."
+                        class="w-full pl-10 pr-4 py-2 border rounded-xl focus:ring-2 focus:ring-teal-500 outline-none">
+                </div>
+            </div>
+            <div id="master-explorer-list" class="flex-1 overflow-y-auto p-4 space-y-2 bg-white">
+                <!-- Items list -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Company Explorer Modal -->
+    <div id="companyExplorerModal"
+        class="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 hidden-el backdrop-blur-sm">
+        <div class="bg-white w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
+            <div class="bg-indigo-600 text-white p-4 flex justify-between items-center shrink-0">
+                <div class="flex items-center gap-3">
+                    <h2 class="text-lg font-bold flex items-center gap-2"><i class="fas fa-building"></i> Company
+                        Registry</h2>
+                    <button id="mergeCompaniesBtn" onclick="initiateMergeCompanies()"
+                        class="hidden-el bg-white text-indigo-600 px-3 py-1 rounded-lg text-xs font-bold hover:bg-indigo-50 transition shadow-sm animate-pulse">
+                        <i class="fas fa-object-group"></i> รวม (<span id="mergeCount">0</span>)
+                    </button>
+                </div>
+                <button onclick="closeModal('companyExplorerModal')" class="text-indigo-200 hover:text-white"><i
+                        class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="p-4 border-b bg-gray-50 shrink-0">
+                <div class="relative">
+                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <input type="text" id="company-explorer-search" oninput="renderCompanyExplorer()"
+                        placeholder="ค้นหาชื่อบริษัท..."
+                        class="w-full pl-10 pr-4 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <p class="text-[10px] text-gray-400 mt-2 ml-1">*เลือกมากกว่า 1 บริษัทเพื่อรวมข้อมูล</p>
+            </div>
+            <div id="company-explorer-list" class="flex-1 overflow-y-auto p-4 space-y-2 bg-white">
+                <!-- Companies list -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Merge Selection Modal -->
+    <div id="mergeSelectionModal"
+        class="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4 hidden-el backdrop-blur-sm">
+        <div class="bg-white w-full max-w-md rounded-2xl overflow-hidden shadow-2xl flex flex-col animate-bounce-in">
+            <div
+                class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 flex justify-between items-center shrink-0">
+                <h3 class="font-bold flex items-center gap-2"><i class="fas fa-random"></i> เลือกชื่อหลักที่ต้องการใช้
+                </h3>
+                <button onclick="closeModal('mergeSelectionModal')" class="text-white/70 hover:text-white"><i
+                        class="fas fa-times"></i></button>
+            </div>
+            <div class="p-4 bg-gray-50 text-sm text-gray-600 border-b">
+                ข้อมูลของบริษัทที่เลือกจะถูกย้ายมายังชื่อที่คุณเลือกด้านล่าง:
+            </div>
+            <div id="merge-candidates-list" class="flex-1 overflow-y-auto p-4 space-y-2 bg-white max-h-[50vh]">
+                <!-- Candidate buttons will go here -->
+            </div>
+            <div class="p-3 bg-gray-100 border-t items-center shrink-0">
+                <label class="text-xs font-bold text-gray-500 block mb-1">หรือระบุชื่อใหม่:</label>
+                <div class="flex gap-2">
+                    <input type="text" id="merge-custom-name"
+                        class="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        placeholder="ระบุชื่อบริษัทใหม่...">
+                    <button onclick="confirmMergeCustom()"
+                        class="bg-purple-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-purple-700 transition">ตกลง</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Company Correction Modal -->
+    <div id="companyCorrectionModal"
+        class="fixed inset-0 bg-black/60 z-[80] flex items-center justify-center p-4 hidden-el backdrop-blur-sm">
+        <div class="bg-white w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl flex flex-col animate-bounce-in">
+            <div class="bg-orange-500 text-white p-4 flex justify-between items-center shrink-0">
+                <h3 class="font-bold flex items-center gap-2"><i class="fas fa-exclamation-triangle"></i>
+                    ตรวจพบชื่อบริษัทคล้ายกัน</h3>
+                <button onclick="skipCompanyCorrections()" class="text-white/70 hover:text-white"><i
+                        class="fas fa-times"></i></button>
+            </div>
+            <div class="p-4 bg-orange-50 text-sm text-orange-800 border-b border-orange-100">
+                ระบบพบชื่อบริษัทใหม่ที่คล้ายกับชื่อที่มีอยู่ ต้องการเปลี่ยนไปใช้ชื่อเดิมหรือไม่?
+            </div>
+            <div id="correction-list" class="flex-1 overflow-y-auto p-4 space-y-3 bg-white max-h-[50vh]">
+                <!-- List -->
+            </div>
+            <div class="p-4 bg-gray-50 border-t flex gap-3 justify-end items-center shrink-0">
+                <button onclick="skipCompanyCorrections()"
+                    class="px-4 py-2 text-gray-500 hover:text-gray-700 text-sm font-bold">ใช้ชื่อใหม่
+                    (ไม่เปลี่ยน)</button>
+                <button onclick="applyCompanyCorrections()"
+                    class="px-6 py-2 bg-orange-600 text-white rounded-lg font-bold text-sm hover:bg-orange-700 shadow flex items-center gap-2">
+                    <i class="fas fa-check"></i> ยืนยันแก้ไข
+                </button>
+            </div>
+        </div>
+    </div>
+    <div id="printArea" class="hidden-el">
+        <div class="p-8 font-serif">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold mb-2">ใบสั่งซื้อสินค้า</h1>
+                <p class="text-gray-600" id="printDate"></p>
+            </div>
+            <div id="printContent"></div>
+            <div class="mt-8 pt-8 border-t-2 border-gray-300 flex justify-between items-end">
+                <div class="text-sm text-gray-500">
+                    <p>ผู้สั่งซื้อ: _______________________</p>
+                </div>
+                <div class="text-right">
+                    <div class="text-xl font-bold">ยอดรวมสุทธิ</div>
+                    <div class="text-3xl font-bold text-black mt-1" id="printGrandTotal">0.00 ฿</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. Auth Guard (Security) ---
+        const firebaseConfig = { apiKey: "AIzaSyCfdIENxDbWB30k4TZQfhnbxvpc2217xtU", authDomain: "fkb-front-kanban.firebaseapp.com", projectId: "fkb-front-kanban", storageBucket: "fkb-front-kanban.firebasestorage.app", messagingSenderId: "135805270397", appId: "1:135805270397:web:ef5f4e23fef49175af3414" };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        auth.onAuthStateChanged(user => {
+            if (user && user.email === 'medlifeplus@gmail.com') {
+                document.getElementById('auth-guard').classList.add('hidden'); // Unlock
+            } else {
+                window.location.href = 'admin.html'; // Redirect back if not logged in
+            }
+        });
+
+        // --- 2. ProOrder Logic ---
+        let products = []; let cart = {}; let sortMode = 'time'; let companyGroups = {}; let labItems = []; let labCleanMode = false;
+        let expandedCompanies = new Set();
+        let currentFilterChar = 'ALL';
+        let uniqueUnits = new Set();
+        let uniqueCompanies = new Set();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadState(); // LOAD DATA ON STARTUP
+            renderProducts(products); refreshDashboard();
+            window.onclick = function (event) {
+                if (!event.target.matches('.relative button') && !event.target.matches('.relative button *')) {
+                    var dropdowns = document.getElementsByClassName("dropdown-content");
+                    for (var i = 0; i < dropdowns.length; i++) {
+                        var openDropdown = dropdowns[i];
+                        if (openDropdown.classList.contains('show-dropdown')) { openDropdown.classList.remove('show-dropdown'); }
+                    }
+                }
+            }
+        });
+
+        // --- LOCAL STORAGE LOGIC ---
+        function saveState() {
+            localStorage.setItem('proOrder_products', JSON.stringify(products));
+            localStorage.setItem('proOrder_cart', JSON.stringify(cart));
+            // Show auto-save indicator
+            const ind = document.getElementById('autoSaveIndicator');
+            if (ind) { ind.classList.remove('opacity-0'); setTimeout(() => ind.classList.add('opacity-0'), 1500); }
+        }
+
+        function loadState() {
+            const p = localStorage.getItem('proOrder_products');
+            const c = localStorage.getItem('proOrder_cart');
+            if (p && c) {
+                try {
+                    products = JSON.parse(p);
+                    cart = JSON.parse(c);
+                    updateSummary();
+                } catch (e) { console.error("Load Error", e); }
+            }
+        }
+
+        function clearAllData() {
+            if (!confirm("⚠️ ยืนยันล้างข้อมูลทั้งหมด?\n\nข้อมูลที่ไม่ได้บันทึกไฟล์จะหายไปถาวร")) return;
+            products = [];
+            cart = {};
+            companyGroups = {};
+            expandedCompanies.clear();
+            currentFilterChar = 'ALL';
+            saveState(); // Clear Storage
+            renderProducts(products);
+            updateSummary();
+            refreshDashboard();
+        }
+
+        // Dropdown & Panel
+        function toggleExportMenu() { document.getElementById("exportMenu").classList.toggle("show-dropdown"); }
+        function autoResize(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
+
+        // --- Core ---
+        // --- Paste & Correction Logic ---
+        let pendingPasteItems = [];
+        let pendingCorrections = [];
+        let textAreaTempRef = null;
+
+        function handleQuickPaste(e) {
+            setTimeout(() => {
+                const t = document.getElementById('quickPasteArea'); const v = t.value; if (!v || !v.trim()) return;
+                try {
+                    const newItems = parseImportText(v);
+                    if (newItems.length > 0) {
+                        t.style.height = 'auto';
+                        checkAndProcessPaste(newItems, t); // CHANGED: Validate before add
+                    }
+                } catch (err) { console.error("Paste Error:", err); }
+            }, 50);
+        }
+
+        function normalizeCompName(name) {
+            if (!name) return '';
+            return name.toLowerCase()
+                .replace(/[\.,\-\(\)\[\]]/g, ' ')
+                .replace(/\b(co|ltd|limited|corp|company|inc|part|store|shop)\b/g, '')
+                .replace(/\s+/g, '')
+                .trim();
+        }
+
+        function checkAndProcessPaste(items, textArea) {
+            // Collect known companies (from Session + Explorer + Suggestion Cache)
+            const known = new Set();
+            products.forEach(p => { if (p.company) known.add(p.company); });
+            if (allCompaniesData && allCompaniesData.size > 0) allCompaniesData.forEach(c => known.add(c));
+            if (uniqueCompanies && uniqueCompanies.size > 0) uniqueCompanies.forEach(c => known.add(c));
+
+            // Only if we have something to compare against
+            if (known.size === 0) {
+                finalizePaste(items, textArea);
+                return;
+            }
+
+            const corrections = [];
+            const checkedNewComps = new Set();
+
+            items.forEach(item => {
+                const c = item.company;
+                if (!c || known.has(c) || checkedNewComps.has(c)) return;
+
+                const normC = normalizeCompName(c);
+                if (normC.length < 3) return; // Too short to matter
+
+                // Find match
+                for (let existing of known) {
+                    const normE = normalizeCompName(existing);
+                    // Match Logic: Identical normalized string OR Substring with small length diff
+                    if (normE === normC || (normC.includes(normE) && normC.length - normE.length < 5) || (normE.includes(normC) && normE.length - normC.length < 5)) {
+                        corrections.push({ original: c, suggested: existing });
+                        checkedNewComps.add(c);
+                        break; // Found one best match
+                    }
+                }
+            });
+
+            if (corrections.length > 0) {
+                pendingPasteItems = items;
+                pendingCorrections = corrections;
+                textAreaTempRef = textArea;
+                showCorrectionModal(corrections);
+            } else {
+                finalizePaste(items, textArea);
+            }
+        }
+
+        function showCorrectionModal(corrections) {
+            const list = document.getElementById('correction-list');
+            list.innerHTML = corrections.map((c, i) => `
+                <div class="flex items-center gap-3 p-3 border rounded-xl bg-gray-50 hover:bg-white hover:shadow-sm transition select-none cursor-pointer" onclick="document.getElementById('correct-check-${i}').click()">
+                    <input type="checkbox" id="correct-check-${i}" checked class="w-5 h-5 text-orange-600 rounded focus:ring-orange-500 shrink-0 pointer-events-none">
+                    <div class="flex-1 text-sm pointer-events-none">
+                        <div class="flex items-center gap-2 mb-1 flex-wrap">
+                            <span class="text-red-500 line-through decoration-red-500/50">${c.original}</span>
+                            <i class="fas fa-arrow-right text-gray-300 text-xs"></i>
+                            <span class="font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded border border-green-200">${c.suggested}</span>
+                        </div>
+                        <div class="text-[10px] text-gray-400">พบชื่อเดิมในระบบ</div>
+                    </div>
+                </div>
+             `).join('');
+            document.getElementById('companyCorrectionModal').classList.remove('hidden-el');
+        }
+
+        function applyCompanyCorrections() {
+            // Map corrections
+            const correctionMap = {};
+            pendingCorrections.forEach((c, i) => {
+                const chk = document.getElementById(`correct-check-${i}`);
+                if (chk && chk.checked) {
+                    correctionMap[c.original] = c.suggested;
+                }
+            });
+
+            // Apply to items
+            pendingPasteItems.forEach(item => {
+                if (correctionMap[item.company]) {
+                    item.company = correctionMap[item.company];
+                }
+            });
+
+            closeModal('companyCorrectionModal');
+            finalizePaste(pendingPasteItems, textAreaTempRef);
+        }
+
+        function skipCompanyCorrections() {
+            closeModal('companyCorrectionModal');
+            finalizePaste(pendingPasteItems, textAreaTempRef);
+        }
+
+        function finalizePaste(items, textArea) {
+            const result = batchAddProducts(items);
+            renderProducts(products); updateSummary(); refreshDashboard();
+            saveState();
+            if (textArea) textArea.value = '';
+            const feedback = document.getElementById('pasteFeedback');
+            // Show feedback
+            if (feedback) {
+                feedback.innerHTML = `<i class="fas fa-check-circle"></i> +${result.added} ใหม่<br><i class="fas fa-sync-alt"></i> ↻${result.updated} เดิม`;
+                feedback.classList.remove('opacity-0', 'translate-y-1');
+                setTimeout(() => feedback.classList.add('opacity-0', 'translate-y-1'), 4000);
+            }
+            const badge = document.getElementById('leftPanelCount');
+            if (badge) { badge.classList.add('scale-150'); setTimeout(() => badge.classList.remove('scale-150'), 300); }
+
+            // Reset
+            pendingPasteItems = [];
+            pendingCorrections = [];
+            textAreaTempRef = null;
+        }
+
+        function parseImportText(raw) {
+            const lines = raw.split('\n'); const items = [];
+            lines.forEach(l => {
+                l = l.trim(); if (!l) return;
+                let n = l, q = 1, u = "", comp = "";
+
+                // Pattern 1: P-xxxx : Company : Name Quantity
+                const pMatch = l.match(/^(.*?)P-\d+\s*:\s*(.*?)(?=\s+\d+\s*-\s*\d+|$)/);
+                // Pattern 2: Name x Quantity Unit (e.g. Para x 10 Tab)
+                const xMatch = l.match(/^(.*?)\s+[xX×*]\s*(\d+)\s*(.*)$/);
+                // Pattern 3: Name Quantity Unit (e.g. Para 10 Tab)
+                const sMatch = l.match(/^(.*?)\s+(\d+)\s*(.*)$/);
+
+                if (pMatch) {
+                    comp = pMatch[1].replace(/^[A-Za-z0-9-]+\s*:\s*/, '').trim();
+                    n = pMatch[2].trim();
+                    const nm = l.match(/(\d+)$/); if (nm) q = parseInt(nm[1]);
+                } else if (xMatch) {
+                    n = xMatch[1].trim();
+                    q = parseInt(xMatch[2]);
+                    if (xMatch[3]) u = xMatch[3].trim();
+                } else if (sMatch) {
+                    n = sMatch[1].trim();
+                    q = parseInt(sMatch[2]);
+                    if (sMatch[3]) u = sMatch[3].trim();
+                } else {
+                    n = l; q = 1;
+                }
+
+                // Clean up name from trailing slashes for units
+                const uMatch = n.match(/\/([A-Za-z]+)$/);
+                if (uMatch && !u) {
+                    let ex = uMatch[1].toUpperCase();
+                    if (['BOX', 'BOTTLE', 'STRIPS', 'PIECES', 'TUBE', 'TAB'].includes(ex)) u = ex.charAt(0) + ex.slice(1).toLowerCase();
+                    n = n.replace(/\/([A-Za-z]+)$/, '');
+                }
+
+                n = n.trim(); if (n) { items.push({ name: n, qty: q, price: 0, unit: u, company: comp }); }
+            });
+            return items;
+        }
+
+        function batchAddProducts(newItems) {
+            let added = 0, updated = 0;
+            newItems.forEach(item => {
+                const existingProduct = products.find(p => p.name === item.name);
+                if (existingProduct) {
+                    cart[existingProduct.id] = (cart[existingProduct.id] || 0) + item.qty;
+                    products = products.filter(p => p.id !== existingProduct.id); products.unshift(existingProduct);
+                    setTimeout(() => { const card = document.getElementById(`card-${existingProduct.id}`); if (card) card.classList.add('flash-update'); }, 100);
+                    updated++;
+                } else {
+                    const id = `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                    products.unshift({ id: id, name: item.name, price: item.price, unit: item.unit, company: item.company });
+                    cart[id] = item.qty;
+                    setTimeout(() => { const card = document.getElementById(`card-${id}`); if (card) card.classList.add('flash-success'); }, 100);
+                    added++;
+                }
+                // Auto-record to Master Database
+                recordToMaster(item.name, item.unit, item.company, item.price);
+            });
+            return { added, updated };
+        }
+
+        async function recordToMaster(name, unit = "", company = "", price = 0) {
+            if (!name) return;
+            const docRef = db.collection('master_products').doc(name);
+            try {
+                const doc = await docRef.get();
+                if (!doc.exists) {
+                    const data = {
+                        name: name,
+                        unit: unit,
+                        units: unit ? [unit] : [],
+                        minQty: 0,
+                        prices: {}
+                    };
+                    if (company) {
+                        const priceKey = unit ? `${company}_${unit}` : company;
+                        data.prices[priceKey] = price || 0;
+                    }
+                    await docRef.set(data);
+                } else {
+                    const d = doc.data();
+                    const updates = {};
+
+                    // Maintain distinct units array
+                    let existingUnits = d.units || [];
+                    if (unit && !existingUnits.includes(unit)) {
+                        existingUnits.push(unit);
+                        updates.units = existingUnits;
+                    }
+                    if (unit && !d.unit) updates.unit = unit;
+
+                    if (company) {
+                        const priceKey = unit ? `${company}_${unit}` : company;
+                        if (!d.prices || d.prices[priceKey] === undefined || (price > 0 && d.prices[priceKey] !== price)) {
+                            updates[`prices.${priceKey}`] = price || (d.prices && d.prices[priceKey]) || 0;
+                        }
+                    }
+
+                    if (Object.keys(updates).length > 0) {
+                        await docRef.update(updates);
+                    }
+                }
+            } catch (err) { console.error("Master Record Error", err); }
+        }
+
+        function addCustomMedicine() { const n = document.getElementById('newMedicineName').value.trim(), c = document.getElementById('newMedicineCompany').value.trim(), u = document.getElementById('newMedicineUnit').value.trim(), q = parseInt(document.getElementById('newMedicineQty').value) || 1, p = parseFloat(document.getElementById('newMedicinePrice').value) || 0; if (!n) return alert('ระบุชื่อ'); batchAddProducts([{ name: n, company: c, unit: u, qty: q, price: p }]); renderProducts(products); updateSummary(); refreshDashboard(); saveState(); closeModal('addMedicineModal'); }
+        function saveJSON() { if (products.length === 0) return alert('ไม่มีข้อมูล'); const d = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ timestamp: new Date(), products, cart })); const a = document.createElement('a'); a.href = d; a.download = "order_" + new Date().toISOString().slice(0, 10) + ".json"; document.body.appendChild(a); a.click(); a.remove(); }
+        function loadJSON(i) { const f = i.files[0]; if (!f) return; const r = new FileReader(); r.onload = e => { try { const d = JSON.parse(e.target.result); if (d.products && d.cart) { products = d.products || []; cart = d.cart || {}; renderProducts(products); updateSummary(); refreshDashboard(); saveState(); } else { alert('❌ รูปแบบไฟล์ไม่ถูกต้อง'); } } catch (x) { alert('❌ ไม่สามารถอ่านไฟล์ได้'); console.error(x); } i.value = ''; }; r.readAsText(f); }
+        function showPanel(panelName) { const right = document.getElementById('panel-analysis'); const navInput = document.getElementById('nav-input'); const navAnalysis = document.getElementById('nav-analysis'); if (panelName === 'input') { right.classList.add('translate-x-full'); navInput.classList.add('text-teal-600', 'bg-teal-50', 'border-teal-600'); navInput.classList.remove('text-gray-400', 'border-transparent'); navAnalysis.classList.remove('text-indigo-600', 'bg-indigo-50', 'border-indigo-600'); navAnalysis.classList.add('text-gray-400', 'border-transparent'); } else { right.classList.remove('translate-x-full'); navAnalysis.classList.add('text-indigo-600', 'bg-indigo-50', 'border-indigo-600'); navAnalysis.classList.remove('text-gray-400', 'border-transparent'); navInput.classList.remove('text-teal-600', 'bg-teal-50', 'border-teal-600'); navInput.classList.add('text-gray-400', 'border-transparent'); } }
+
+        // --- LAB MODE ---
+        function openLabModal() { document.getElementById('labModal').classList.remove('hidden-el'); document.getElementById('labPasteArea').value = ''; document.getElementById('labOutput').innerHTML = '<div class="text-gray-400 text-center mt-10">รอข้อมูล...</div>'; document.getElementById('labCount').innerText = '0'; labItems = []; labCleanMode = false; document.getElementById('labOutput').classList.remove('clean-mode-active'); document.getElementById('cleanModeBadge').classList.add('hidden-el'); document.getElementById('labPasteArea').focus(); }
+        function handleLabPaste(e) { setTimeout(() => { const val = e.target.value; if (!val.trim()) return; const items = parseImportText(val); if (items.length > 0) { labItems = items; renderLabItems(labItems, labCleanMode); e.target.value = ''; } }, 50); }
+        function renderLabItems(items, isClean) { const container = document.getElementById('labOutput'); let displayItems = items; if (isClean) { displayItems = items.filter(item => { const n = item.name.trim(); if (/^[-=_*]+$/.test(n) || n.includes('------------------') || /^[🏢📦💰🛒]/.test(n) || n.includes('รวม:') || !n) return false; return true; }); } if (displayItems.length === 0) { container.innerHTML = '<div class="text-gray-400 text-center mt-10">ไม่มีข้อมูล</div>'; document.getElementById('labCount').innerText = '0'; return; } let html = ''; displayItems.forEach((item, index) => { const displayName = isClean ? item.name.replace(/^\d+\.\s*/, '') : item.name; if (isClean) { html += `<div class="border-b border-gray-100 py-1">${displayName} x ${item.qty} ${item.unit || ''}</div>`; } else { const priceTxt = item.price > 0 ? `(${item.price.toLocaleString()}.-)` : ''; const companyTxt = item.company ? `<span class="text-xs text-gray-400">[${item.company}]</span>` : ''; html += `<div class="border-b border-gray-100 py-1 flex justify-between"><div><span class="text-gray-400 text-xs w-6 inline-block">${index + 1}.</span> ${displayName} ${companyTxt}</div><div class="font-bold text-gray-600">${item.qty} ${item.unit || ''} ${priceTxt}</div></div>`; } }); container.innerHTML = html; document.getElementById('labCount').innerText = displayItems.length; }
+        function sortLabData() { if (labItems.length === 0) return; labItems.sort((a, b) => { let nameA = a.name.toLowerCase(), nameB = b.name.toLowerCase(); if (labCleanMode) { nameA = nameA.replace(/^\d+\.\s*/, '').trim(); nameB = nameB.replace(/^\d+\.\s*/, '').trim(); } return nameA.localeCompare(nameB); }); renderLabItems(labItems, labCleanMode); }
+        function cleanLabData() { if (labItems.length === 0) return; labCleanMode = !labCleanMode; const output = document.getElementById('labOutput'), badge = document.getElementById('cleanModeBadge'); if (labCleanMode) { output.classList.add('clean-mode-active'); badge.classList.remove('hidden-el'); } else { output.classList.remove('clean-mode-active'); badge.classList.add('hidden-el'); } renderLabItems(labItems, labCleanMode); }
+        function clearLabData() { labItems = []; document.getElementById('labOutput').innerHTML = '<div class="text-gray-400 text-center mt-10">รอข้อมูล...</div>'; document.getElementById('labCount').innerText = '0'; labCleanMode = false; document.getElementById('labOutput').classList.remove('clean-mode-active'); document.getElementById('cleanModeBadge').classList.add('hidden-el'); }
+        function copyLabData() { if (labItems.length === 0) return; let text = ""; const displayItems = labCleanMode ? labItems.filter(item => { const n = item.name.trim(); return !(/^[-=_*]+$/.test(n) || n.includes('------------------') || /^[🏢📦💰🛒]/.test(n) || n.includes('รวม:') || !n); }) : labItems; displayItems.forEach((item, i) => { const displayName = labCleanMode ? item.name.replace(/^\d+\.\s*/, '') : item.name; if (labCleanMode) text += `${displayName} x ${item.qty} ${item.unit || ''}\n`; else { const p = item.price > 0 ? ` (${item.price}.-)` : ''; text += `${i + 1}. ${displayName} x ${item.qty} ${item.unit || ''} ${p}\n`; } }); navigator.clipboard.writeText(text).then(() => alert('คัดลอกแล้ว!')); }
+
+        // --- HIGHLIGHT & MOVE LOGIC ---
+        // --- EXPLORER LOGIC ---
+        let allMasterData = [];
+        async function openMasterExplorer() {
+            document.getElementById('masterExplorerModal').classList.remove('hidden-el');
+            const list = document.getElementById('master-explorer-list');
+            list.innerHTML = '<div class="text-center py-10"><i class="fas fa-circle-notch fa-spin text-teal-500 text-2xl"></i><p class="mt-2 text-gray-400">กำลังโหลดฐานข้อมูล...</p></div>';
+            try {
+                const snap = await db.collection('master_products').orderBy('name').get();
+                allMasterData = snap.docs.map(doc => doc.data());
+                renderMasterExplorer();
+            } catch (err) { list.innerHTML = `<div class="text-red-500 p-4">${err.message}</div>`; }
+        }
+
+        function renderMasterExplorer() {
+            const search = document.getElementById('master-explorer-search').value.toLowerCase().trim();
+            const list = document.getElementById('master-explorer-list');
+            const filtered = allMasterData.filter(x => x.name.toLowerCase().includes(search));
+
+            if (filtered.length === 0) { list.innerHTML = '<div class="text-center py-10 text-gray-400">ไม่พบสินค้า</div>'; return; }
+
+            list.innerHTML = filtered.map(x => `
+                <div onclick="openMasterProductModal('${x.name.replace(/'/g, "\\'")}')" class="p-3 border rounded-xl hover:bg-teal-50 hover:border-teal-200 transition cursor-pointer flex justify-between items-center group">
+                    <div>
+                        <div class="font-bold text-gray-700">${x.name}</div>
+                        <div class="text-[10px] text-gray-400">หน่วยหลัก: ${x.unit || '-'} | ขั้นต่ำ: ${x.minQty || 0}</div>
+                    </div>
+                    <i class="fas fa-chevron-right text-gray-200 group-hover:text-teal-400"></i>
+                </div>
+            `).join('');
+        }
+
+        let allCompaniesData = new Set();
+        let selectedCompanies = new Set();
+
+        async function openCompanyExplorer() {
+            document.getElementById('companyExplorerModal').classList.remove('hidden-el');
+            selectedCompanies.clear();
+            updateMergeButton();
+            const list = document.getElementById('company-explorer-list');
+            list.innerHTML = '<div class="text-center py-10"><i class="fas fa-circle-notch fa-spin text-indigo-500 text-2xl"></i></div>';
+
+            try {
+                allCompaniesData.clear();
+                // Get from current session
+                products.forEach(p => { if (p.company) allCompaniesData.add(p.company); });
+                // Get from Master DB
+                const snap = await db.collection('master_products').limit(500).get();
+                snap.forEach(doc => {
+                    const d = doc.data();
+                    if (d.prices) Object.keys(d.prices).forEach(k => allCompaniesData.add(k.split('_')[0]));
+                });
+                renderCompanyExplorer();
+            } catch (err) { renderCompanyExplorer(); } // Show what we have even if fetch fails
+        }
+
+        function renderCompanyExplorer() {
+            const search = document.getElementById('company-explorer-search').value.toLowerCase().trim();
+            const list = document.getElementById('company-explorer-list');
+            const sorted = Array.from(allCompaniesData).sort();
+            const filtered = sorted.filter(x => x.toLowerCase().includes(search));
+
+            if (filtered.length === 0) { list.innerHTML = '<div class="text-center py-10 text-gray-400">ไม่พบชื่อบริษัท</div>'; return; }
+
+            list.innerHTML = filtered.map(c => {
+                const isSelected = selectedCompanies.has(c);
+                const safeName = c.replace(/'/g, "\\'");
+                return `
+                <div class="p-3 border rounded-xl bg-gray-50 flex justify-between items-center ${isSelected ? 'ring-2 ring-indigo-500 bg-indigo-50' : ''}">
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <input type="checkbox" onchange="toggleCompanySelect('${safeName}')" ${isSelected ? 'checked' : ''} class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500">
+                        <span class="font-bold text-gray-700 truncate">${c}</span>
+                    </div>
+                    <button onclick="copyToClipboard('${safeName}')" class="text-[10px] bg-white border px-3 py-1.5 rounded-lg hover:bg-gray-100 font-bold text-gray-500 shrink-0">
+                        <i class="far fa-copy mr-1"></i> COPY
+                    </button>
+                </div>
+            `}).join('');
+        }
+
+        function toggleCompanySelect(name) {
+            if (selectedCompanies.has(name)) {
+                selectedCompanies.delete(name);
+            } else {
+                selectedCompanies.add(name);
+            }
+            renderCompanyExplorer(); // Re-render to update UI state
+            updateMergeButton();
+        }
+
+        function updateMergeButton() {
+            const btn = document.getElementById('mergeCompaniesBtn');
+            const count = document.getElementById('mergeCount');
+            if (selectedCompanies.size >= 2) {
+                btn.classList.remove('hidden-el');
+                count.innerText = selectedCompanies.size;
+            } else {
+                btn.classList.add('hidden-el');
+            }
+        }
+
+        function initiateMergeCompanies() {
+            const modal = document.getElementById('mergeSelectionModal');
+            const list = document.getElementById('merge-candidates-list');
+            const candidates = Array.from(selectedCompanies).sort();
+
+            let html = '';
+            candidates.forEach(c => {
+                const safeName = c.replace(/'/g, "\\'");
+                html += `<button onclick="confirmMerge('${safeName}')" class="w-full text-left p-3 border rounded-xl hover:bg-indigo-50 hover:border-indigo-300 transition flex items-center gap-3 group">
+                    <span class="w-6 h-6 rounded-full border-2 border-gray-300 flex items-center justify-center group-hover:border-indigo-500 group-hover:bg-indigo-500 group-hover:text-white transition">
+                        <i class="fas fa-check opacity-0 group-hover:opacity-100 text-xs"></i>
+                    </span>
+                    <span class="font-bold text-gray-700">${c}</span>
+                </button>`;
+            });
+            list.innerHTML = html;
+            document.getElementById('merge-custom-name').value = '';
+            modal.classList.remove('hidden-el');
+        }
+
+        function confirmMergeCustom() {
+            const params = document.getElementById('merge-custom-name').value.trim();
+            if (!params) return alert('กรุณาระบุชื่อพนักงานขายใหม่');
+            confirmMerge(params);
+        }
+
+        async function confirmMerge(targetName) {
+            if (!confirm(`ยืนยันรวมข้อมูล ${selectedCompanies.size} บริษัทเป็น "${targetName}"?\nการกระทำนี้ไม่สามารถย้อนกลับได้`)) return;
+
+            // 1. Update Session Products
+            let updatedCount = 0;
+            const sourceNames = Array.from(selectedCompanies);
+
+            products.forEach(p => {
+                if (p.company && sourceNames.includes(p.company)) {
+                    p.company = targetName;
+                    updatedCount++;
+                }
+            });
+
+            // 2. Update Master DB (Best Effort)
+            try {
+                // Fetch all docs that might be relevant? 
+                // Since firestore doesn't support OR queries for array keys easily, allow user to know we update Master DB partially or full?
+                // For safety and performance, we'll iterate through our loaded products to find relevant Master items.
+                // We will try to update Master Products that are currently known (in session or recently fetched).
+
+                // Fetch Master Products that match source names (Optimization: Limit attempts)
+                // Actually, the structure uses company name in map keys `prices`.
+                // We'll iterate all current products to find their master docs and update them.
+
+                // Simple Approach: Find master products for ALL products in current session.
+                const uniqueProductNames = new Set(products.map(p => p.name));
+
+                // Batch Update
+                const batch = db.batch();
+                let batchCount = 0;
+
+                // We need to check Master DB for these products
+                // Since we can't query by Map Key, we can only update documents we know about.
+                // Or we scan the `master_products` collection. If it's small (<1000), a full scan is okay.
+                // Assuming it's relatively small for this user.
+
+                const snapshot = await db.collection('master_products').limit(1000).get();
+                snapshot.forEach(doc => {
+                    const d = doc.data();
+                    let needsUpdate = false;
+                    const updates = {};
+
+                    // Check prices map
+                    if (d.prices) {
+                        const newPrices = { ...d.prices };
+                        Object.keys(d.prices).forEach(key => {
+                            const [comp, unit] = key.split('_');
+                            if (sourceNames.includes(comp) && comp !== targetName) {
+                                // Found a price from a source company
+                                const priceVal = d.prices[key];
+                                const newKey = unit ? `${targetName}_${unit}` : targetName;
+
+                                // Remove old key logic handled by just rewriting the map usually, but since dot notation update...
+                                // Firestore field deletion: updates[`prices.${key}`] = firebase.firestore.FieldValue.delete();
+                                // Add new key: updates[`prices.${newKey}`] = priceVal;
+
+                                delete newPrices[key];
+                                newPrices[newKey] = priceVal;
+                                needsUpdate = true;
+                            }
+                        });
+                        if (needsUpdate) updates.prices = newPrices;
+                    }
+
+                    if (needsUpdate) {
+                        batch.update(doc.ref, updates);
+                        batchCount++;
+                    }
+                });
+
+                if (batchCount > 0) await batch.commit();
+
+            } catch (err) {
+                console.error("Master Merge Error", err);
+                alert("รวมข้อมูลใน Session สำเร็จ แต่การอัปเดต Master DB ขัดข้อง: " + err.message);
+            }
+
+            // Clean up UI
+            closeModal('mergeSelectionModal');
+            selectedCompanies.clear();
+            allCompaniesData.add(targetName);
+            sourceNames.forEach(n => { if (n !== targetName) allCompaniesData.delete(n); });
+
+            // Re-render
+            updateSummary();
+            refreshDashboard();
+            saveState();
+            renderCompanyExplorer();
+            updateMergeButton();
+
+            alert(`รวมข้อมูลสำเร็จ! (${updatedCount} รายการ)`);
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('คัดลอกแล้ว!');
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
+        }
+
+        function highlightItem(id) {
+            document.querySelectorAll('.highlight-active').forEach(el => el.classList.remove('highlight-active')); document.querySelectorAll('.card-selected').forEach(el => el.classList.remove('card-selected')); const card = document.getElementById(`card-${id}`); if (card) card.classList.add('card-selected'); switchDashTab('company'); const product = products.find(p => p.id == id); if (product) { const compName = product.company || 'ไม่ระบุ'; const safeComp = compName.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-_\u0E00-\u0E7F]/g, ''); if (!expandedCompanies.has(safeComp)) expandedCompanies.add(safeComp); refreshDashboard(); setTimeout(() => { const row = document.getElementById(`right-item-${id}`); if (row) { row.scrollIntoView({ behavior: 'smooth', block: 'center' }); row.classList.add('highlight-active', 'bg-yellow-100'); setTimeout(() => row.classList.remove('bg-yellow-100'), 2000); } }, 100); }
+        }
+        function openMoveModal(id) {
+            const p = products.find(x => x.id == id);
+            if (!p) return;
+
+            document.getElementById('moveItemId').value = id;
+            document.getElementById('move-company-search').value = ''; // Reset search
+
+            renderMoveCompanyList();
+            document.getElementById('moveModal').classList.remove('hidden-el');
+        }
+
+        function renderMoveCompanyList(filter = '') {
+            const id = document.getElementById('moveItemId').value;
+            const p = products.find(x => x.id == id);
+            if (!p) return;
+
+            const existingComps = new Set();
+            products.forEach(prod => { if (prod.company) existingComps.add(prod.company); });
+            const comps = Array.from(existingComps).sort();
+            const listEl = document.getElementById('moveCompanyList');
+
+            listEl.innerHTML = '';
+            const filteredComps = comps.filter(c => c !== p.company && c.toLowerCase().includes(filter.toLowerCase()));
+
+            if (filteredComps.length === 0) {
+                listEl.innerHTML = `<div class="text-center text-gray-400 py-4 text-xs">ไม่พบรายการบริษัท${filter ? 'ที่ค้นหา' : ''}</div>`;
+            } else {
+                filteredComps.forEach(c => {
+                    const btn = document.createElement('button');
+                    btn.className = "w-full text-left px-4 py-3 bg-gray-50 hover:bg-blue-50 border border-gray-200 rounded-lg transition flex justify-between items-center group";
+                    btn.innerHTML = `<span class="font-bold text-gray-700 group-hover:text-blue-700 text-xs">${c}</span> <i class="fas fa-chevron-right text-gray-300 group-hover:text-blue-400"></i>`;
+                    btn.onclick = () => confirmMove(id, c);
+                    listEl.appendChild(btn);
+                });
+            }
+        }
+
+        function filterMoveCompanies() {
+            const val = document.getElementById('move-company-search').value.trim();
+            renderMoveCompanyList(val);
+        }
+        function confirmMove(id, newComp) { const p = products.find(x => x.id == id); if (p) { p.company = newComp; renderProducts(products); updateSummary(); const safeComp = newComp.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-_\u0E00-\u0E7F]/g, ''); expandedCompanies.add(safeComp); refreshDashboard(); saveState(); closeModal('moveModal'); setTimeout(() => highlightItem(id), 300); } }
+        function deleteCompany(cName) { if (!confirm(`ยืนยันลบรายการทั้งหมดของ "${cName}" หรือไม่?`)) return; products = products.filter(p => { const isMatch = (p.company || 'ไม่ระบุ') === cName; if (isMatch) delete cart[p.id]; return !isMatch; }); renderProducts(products); updateSummary(); refreshDashboard(); saveState(); }
+
+        function renderProducts(list) {
+            const c = document.getElementById('productList');
+            if (list.length === 0) { c.innerHTML = `<div class="text-center py-10 text-gray-400"><i class="fas fa-magic text-5xl mb-3 opacity-30"></i><p>เริ่มใช้งาน</p></div>`; return; }
+            c.innerHTML = list.map(p => {
+                const q = cart[p.id] || 0; if (q === 0 && Object.keys(cart).length > 0 && !cart[p.id]) return '';
+                const badge = p.company ? `<div class="text-[10px] text-orange-500 mb-0.5"><i class="fas fa-building text-[10px]"></i> ${p.company}</div>` : '';
+                return `<div class="flex justify-between items-start p-3 border rounded-lg transition-all duration-200 bg-white ${q > 0 ? 'border-teal-500 shadow-sm ring-1 ring-teal-100' : 'border-gray-200'}" id="card-${p.id}" onclick="handleCardClick('${p.id}')">
+                        <div class="flex-1 pr-2 cursor-pointer">
+                            ${badge}
+                            <div class="mb-1"><span class="font-bold text-gray-800 text-base leading-tight break-words">${p.name}</span></div>
+                            <div class="text-sm font-bold text-teal-700">${p.price > 0 ? p.price.toLocaleString() + ' ฿' : ''}</div>
+                        </div>
+                        <div class="flex flex-col items-end gap-2 pointer-events-auto">
+                            <div class="flex items-center gap-1 bg-gray-50 p-1 rounded-lg border border-gray-100">
+                                <button onclick="event.stopPropagation(); updateCart('${p.id}',1)" class="w-6 h-6 rounded-md flex items-center justify-center font-bold text-xs bg-teal-600 text-white hover:bg-teal-700 transition shadow-sm"><i class="fas fa-plus"></i></button>
+                                <span class="w-6 text-center font-bold text-sm text-gray-700" id="qty-${p.id}">${q > 0 ? q : ''}</span>
+                                <button onclick="event.stopPropagation(); updateCart('${p.id}',-1)" class="w-6 h-6 rounded-md flex items-center justify-center font-bold text-xs bg-white border border-gray-300 text-gray-500 hover:text-red-500 hover:border-red-300 transition shadow-sm"><i class="fas fa-minus"></i></button>
+                            </div>
+                            <button onclick="event.stopPropagation(); openEditNameModal('${p.id}')" class="w-10 h-10 rounded-xl flex items-center justify-center bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white transition-all"><i class="fas fa-pen text-sm"></i></button>
+                            <button onclick="event.stopPropagation(); removeProduct('${p.id}')" class="w-10 h-10 rounded-xl flex items-center justify-center bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all border border-red-100 shadow-sm" title="ลบรายการ"><i class="fas fa-trash-alt text-sm"></i></button>
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        function handleCardClick(id) {
+            highlightItem(id);
+            const p = products.find(x => x.id == id);
+            if (p) openMasterProductModal(p.name, id);
+        }
+
+        async function openMasterProductModal(name, sessionId = null) {
+            document.getElementById('master-name').value = name;
+            document.getElementById('master-original-name').value = name;
+            document.getElementById('master-session-id').value = sessionId || "";
+            document.getElementById('master-prices-list').innerHTML = '<p class="text-center py-4 text-gray-400 text-xs">กำลังโหลด...</p>';
+
+            // Refresh Suggestions
+            refreshMasterSuggestions();
+
+            document.getElementById('masterProductModal').classList.remove('hidden-el');
+
+            try {
+                const doc = await db.collection('master_products').doc(name).get();
+                const sessionProd = products.find(p => p.name === name); // Search current list
+
+                if (doc.exists) {
+                    const d = doc.data();
+                    document.getElementById('master-unit').value = d.unit || (sessionProd ? sessionProd.unit : '');
+                    document.getElementById('master-min-qty').value = d.minQty || 0;
+                    renderUnitSuggestions(d.units || []);
+
+                    let prices = d.prices || {};
+                    // Adapt old price format to new if needed
+                    const normalizedPrices = [];
+                    Object.entries(prices).forEach(([key, price]) => {
+                        const parts = key.split('_');
+                        normalizedPrices.push({
+                            company: parts[0],
+                            unit: parts[1] || d.unit || '',
+                            price: price
+                        });
+                    });
+
+                    // Add current session if not there
+                    if (sessionProd && sessionProd.company) {
+                        const exists = normalizedPrices.find(p => p.company === sessionProd.company && p.unit === sessionProd.unit);
+                        if (!exists) normalizedPrices.push({ company: sessionProd.company, unit: sessionProd.unit || '', price: sessionProd.price || 0 });
+                    }
+                    renderMasterPrices(normalizedPrices);
+                } else {
+                    document.getElementById('master-unit').value = sessionProd ? sessionProd.unit : '';
+                    document.getElementById('master-min-qty').value = 0;
+                    renderUnitSuggestions([]);
+
+                    const normalizedPrices = [];
+                    if (sessionProd && sessionProd.company) {
+                        normalizedPrices.push({ company: sessionProd.company, unit: sessionProd.unit || '', price: sessionProd.price || 0 });
+                    }
+                    renderMasterPrices(normalizedPrices);
+                }
+                // Refresh suggestions again after potentially getting more data
+                refreshMasterSuggestions();
+            } catch (err) { console.error(err); }
+        }
+
+        function renderUnitSuggestions(units) {
+            const container = document.getElementById('master-all-units');
+            if (units.length === 0) { container.innerHTML = ''; return; }
+            container.innerHTML = units.map(u => `<button onclick="document.getElementById('master-unit').value='${u}'" class="text-[10px] bg-white border border-gray-200 px-2 py-1 rounded-md hover:bg-teal-50 hover:border-teal-200 transition text-gray-600">${u}</button>`).join('');
+        }
+
+        async function refreshMasterSuggestions() {
+            uniqueUnits.clear();
+            uniqueCompanies.clear();
+
+            products.forEach(p => {
+                if (p.unit) uniqueUnits.add(p.unit);
+                if (p.company) uniqueCompanies.add(p.company);
+            });
+
+            try {
+                const snapshot = await db.collection('master_products').limit(300).get();
+                snapshot.forEach(doc => {
+                    const d = doc.data();
+                    if (d.unit) uniqueUnits.add(d.unit);
+                    if (d.units) d.units.forEach(u => uniqueUnits.add(u));
+                    if (d.prices) Object.keys(d.prices).forEach(k => uniqueCompanies.add(k.split('_')[0]));
+                });
+            } catch (err) { console.error("Suggestion Fetch Error", err); }
+
+            const unitList = document.getElementById('list-master-units');
+            const compList = document.getElementById('list-master-companies');
+
+            unitList.innerHTML = Array.from(uniqueUnits).sort().map(u => `<option value="${u}">`).join('');
+            compList.innerHTML = Array.from(uniqueCompanies).sort().map(c => `<option value="${c}">`).join('');
+        }
+
+        function renderMasterPrices(pricesArray) {
+            const container = document.getElementById('master-prices-list');
+            container.innerHTML = '';
+            pricesArray.forEach(p => {
+                addMasterPriceRow(p.company, p.price, p.unit);
+            });
+            if (pricesArray.length === 0) {
+                container.innerHTML = '<p class="text-center py-4 text-gray-400 text-xs">ยังไม่มีข้อมูลราคา</p>';
+            }
+        }
+
+        function addMasterPriceRow(comp = '', price = '', unit = '') {
+            const container = document.getElementById('master-prices-list');
+            if (container.querySelector('p')) container.innerHTML = '';
+            const div = document.createElement('div');
+            div.className = "flex gap-2 items-center bg-white p-2 rounded-lg border border-gray-100 shadow-sm";
+            div.innerHTML = `
+                <input type="text" placeholder="บริษัท" list="list-master-companies" class="w-1/3 p-2 border rounded-md text-xs" value="${comp}">
+                <input type="text" placeholder="หน่วย" list="list-master-units" class="w-1/4 p-2 border rounded-md text-xs" value="${unit}">
+                <input type="number" placeholder="ราคา" class="flex-1 p-2 border rounded-md text-xs text-right font-bold" value="${price}">
+                <button onclick="this.parentElement.remove()" class="text-red-300 hover:text-red-500 p-1"><i class="fas fa-times"></i></button>
+            `;
+            container.appendChild(div);
+        }
+
+        async function saveMasterProduct() {
+            const originalName = document.getElementById('master-original-name').value;
+            const newName = document.getElementById('master-name').value.trim();
+            const unit = document.getElementById('master-unit').value.trim();
+            const minQty = parseInt(document.getElementById('master-min-qty').value) || 0;
+
+            if (!newName) return alert('กรุณาระบุชื่อสินค้า');
+
+            const priceRows = document.getElementById('master-prices-list').children;
+            const prices = {};
+            const unitsSet = new Set();
+            if (unit) unitsSet.add(unit);
+
+            for (let row of priceRows) {
+                const inputs = row.querySelectorAll('input');
+                const c = inputs[0].value.trim();
+                const u = inputs[1].value.trim();
+                const p = parseFloat(inputs[2].value) || 0;
+                if (c) {
+                    const key = u ? `${c}_${u}` : c;
+                    prices[key] = p;
+                    if (u) unitsSet.add(u);
+                }
+            }
+
+            try {
+                const batch = db.batch();
+                const newDocRef = db.collection('master_products').doc(newName);
+
+                // If name changed, we need to create new and delete old
+                if (newName !== originalName && originalName) {
+                    if (!confirm(`คุณกำลังเปลี่ยนชื่อสินค้าจาก "${originalName}" เป็น "${newName}"\nระบบจะย้ายข้อมูลทั้งหมดไปยังชื่อใหม่และลบชื่อเดิมทิ้ง ตกลงหรือไม่?`)) return;
+
+                    const oldDocRef = db.collection('master_products').doc(originalName);
+                    batch.set(newDocRef, {
+                        name: newName, unit, minQty, prices, units: Array.from(unitsSet)
+                    });
+                    batch.delete(oldDocRef);
+                } else {
+                    batch.set(newDocRef, {
+                        name: newName, unit, minQty, prices, units: Array.from(unitsSet)
+                    }, { merge: true });
+                }
+
+                await batch.commit();
+                alert('บันทึกข้อมูลหลักสำเร็จ');
+
+                // Sync current session products
+                products.forEach(p => {
+                    if (p.name === originalName) {
+                        p.name = newName;
+                        p.unit = unit;
+                        const key = p.unit ? `${p.company}_${p.unit}` : p.company;
+                        if (prices[key] !== undefined) p.price = prices[key];
+                    }
+                });
+
+                // If name changed, update current modal state so subsequent saves work
+                document.getElementById('master-original-name').value = newName;
+
+                renderActiveView();
+                updateSummary();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        function removeCurrentProductFromModal() {
+            const id = document.getElementById('master-session-id').value;
+            const name = document.getElementById('master-original-name').value;
+
+            // If we have an ID from the session, use it. Otherwise find by name.
+            let targetId = id;
+            if (!targetId) {
+                const p = products.find(x => x.name === name);
+                if (p) targetId = p.id;
+            }
+
+            if (targetId) {
+                if (confirm(`ยืนยันลบ "${name}" ออกจากการวิเคราะห์นี้?\n(ข้อมูลสินค้าหลักในฐานข้อมูลจะไม่หาย)`)) {
+                    removeProduct(targetId);
+                    closeModal('masterProductModal');
+                }
+            } else {
+                alert("ไม่พบรายการนี้ในรายการสั่งซื้อปัจจุบัน");
+            }
+        }
+
+        function moveCurrentProductFromModal() {
+            const id = document.getElementById('master-session-id').value;
+            if (id) {
+                closeModal('masterProductModal');
+                setTimeout(() => openMoveModal(id), 100);
+            } else {
+                alert("รายการนี้ยังไม่ได้ถูกเพิ่มเข้าในการวิเคราะห์ปัจจุบัน");
+            }
+        }
+
+        function renderActiveView() {
+            const v = document.getElementById('searchInput').value;
+            const t = v.toLowerCase().trim();
+            if (t) {
+                renderProducts(products.filter(p => p.name.toLowerCase().includes(t) || (p.company && p.company.toLowerCase().includes(t))));
+            } else {
+                renderProducts(products);
+            }
+        }
+
+        function removeProduct(id) { delete cart[id]; products = products.filter(p => p.id != id); renderActiveView(); updateSummary(); refreshDashboard(); saveState(); }
+        function updateCart(id, chg) { let n = (cart[id] || 0) + chg; if (n <= 0) { delete cart[id]; products = products.filter(p => p.id != id); } else { cart[id] = n; } renderActiveView(); updateSummary(); refreshDashboard(); saveState(); }
+        function updateSummary() { let t = 0, c = 0; for (const [id, q] of Object.entries(cart)) { const p = products.find(x => x.id == id); if (p && q > 0) { t += p.price * q; c++; } } document.getElementById('leftPanelCount').innerText = c; document.getElementById('mobileTotalLeft').innerText = t.toLocaleString() + ' ฿'; document.getElementById('dashGrandTotal').innerText = t.toLocaleString() + ' ฿'; document.getElementById('dashTotalItems').innerText = c; }
+        function handleSearch(v) { setTimeout(() => { const t = v.toLowerCase().trim(); renderProducts(products.filter(p => p.name.toLowerCase().includes(t) || (p.company && p.company.toLowerCase().includes(t)))); }, 250); }
+        function toggleSort() { sortMode = sortMode === 'time' ? 'az' : 'time'; const b = document.getElementById('sortBtn'); if (b) { if (sortMode === 'az') { b.innerHTML = '<i class="fas fa-sort-alpha-down"></i> A-Z'; b.classList.add('bg-indigo-50', 'text-indigo-700', 'border-indigo-200'); } else { b.innerHTML = '<i class="fas fa-clock"></i> TIME'; b.classList.remove('bg-indigo-50', 'text-indigo-700', 'border-indigo-200'); } } refreshDashboard(); }
+
+        function refreshDashboard() {
+            const items = getActiveItems();
+            const emptyState = document.getElementById('emptyState');
+            if (items.length === 0) { if (emptyState) emptyState.classList.remove('hidden-el'); } else { if (emptyState) emptyState.classList.add('hidden-el'); }
+            if (sortMode === 'az') items.sort((a, b) => a.name.localeCompare(b.name));
+            let allH = items.map((x, i) => {
+                const s = x.price * x.qty;
+                const safeName = x.name.replace(/'/g, "\\'");
+                return `<div class="flex justify-between py-2 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition cursor-pointer px-1 rounded" onclick="openMasterProductModal('${safeName}', '${x.id}')">
+                    <div class="flex-1">
+                        <div class="font-bold text-gray-700 text-sm">${i + 1}. ${x.name}</div>
+                        <div class="text-xs text-gray-400">${x.company || '-'}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-bold text-indigo-600 text-sm">${x.qty} ${x.unit || ''}</div>
+                        <div class="text-xs text-gray-500">${s > 0 ? s.toLocaleString() + ' ฿' : ''}</div>
+                    </div>
+                </div>`
+            }).join('');
+            document.getElementById('dList-all').innerHTML = allH;
+            companyGroups = {}; items.forEach(x => { const c = x.company || 'ไม่ระบุ'; if (!companyGroups[c]) companyGroups[c] = []; companyGroups[c].push(x); });
+            document.getElementById('companyCountBadge').innerText = Object.keys(companyGroups).length;
+            const letters = new Set(); Object.keys(companyGroups).forEach(c => letters.add(c.charAt(0).toUpperCase()));
+            const sortedLetters = Array.from(letters).sort();
+            let azHtml = `<button onclick="filterJumpBar('ALL')" class="px-2 py-1 ${currentFilterChar === 'ALL' ? 'bg-indigo-600 text-white' : 'bg-white text-indigo-600 border border-indigo-200'} rounded text-[10px] font-bold shadow-sm transition">ALL</button>`;
+            sortedLetters.forEach(l => { const isActive = currentFilterChar === l; azHtml += `<button onclick="filterJumpBar('${l}')" class="px-2 py-1 ${isActive ? 'bg-indigo-600 text-white' : 'bg-white text-indigo-600 border border-indigo-200'} rounded text-[10px] font-bold hover:bg-indigo-50 transition">${l}</button>`; });
+            document.getElementById('azBar').innerHTML = azHtml;
+            filterJumpBar(currentFilterChar);
+        }
+
+        function filterJumpBar(char) {
+            currentFilterChar = char; const allComps = Object.keys(companyGroups).sort();
+            const filtered = (char === 'ALL') ? allComps : allComps.filter(c => c.charAt(0).toUpperCase() === char);
+            let compJumpHtml = '';
+            filtered.forEach(c => { const compId = 'comp-' + c.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-_\u0E00-\u0E7F]/g, ''); compJumpHtml += `<button onclick="scrollToCompany('${compId}')" class="px-2 py-1 bg-white text-indigo-600 border border-indigo-200 rounded-full text-[10px] font-bold hover:bg-indigo-50 transition whitespace-nowrap">${c}</button>`; });
+            const bar2 = document.getElementById('companyJumpBar'); bar2.innerHTML = compJumpHtml; bar2.classList.remove('hidden-el');
+            renderCompanyList(filtered);
+        }
+
+        function scrollToCompany(id) { const el = document.getElementById(id); if (el) { const header = el.querySelector('.cursor-pointer'); if (header) { const list = el.querySelector('.hidden-el'); if (list) toggleCompanyList(id.replace('comp-', ''), header); } el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('ring-2', 'ring-indigo-300'); setTimeout(() => el.classList.remove('ring-2', 'ring-indigo-300'), 1000); } }
+
+        function renderCompanyList(compKeys) {
+            let cH = '';
+            compKeys.forEach(c => {
+                let ct = 0, l = ''; const sub = companyGroups[c]; if (sortMode === 'az') sub.sort((a, b) => a.name.localeCompare(b.name));
+                sub.forEach((x, k) => {
+                    const s = x.price * x.qty; ct += s;
+                    const safeName = x.name.replace(/'/g, "\\'");
+                    l += `<li id="right-item-${x.id}" class="flex justify-between items-center text-xs py-1.5 text-gray-600 border-b border-gray-50 last:border-0 rounded px-2 group hover:bg-gray-50 transition cursor-pointer" onclick="openMasterProductModal('${safeName}', '${x.id}')">
+                        <div class="flex-1"><span>${k + 1}. ${x.name} x ${x.qty} ${x.unit || ''}</span></div>
+                        <div class="flex items-center gap-2">
+                             <span>${s > 0 ? s.toLocaleString() : ''}</span>
+                             <div class="flex gap-1 ml-2">
+                                 <button onclick="event.stopPropagation(); openMoveModal('${x.id}')" class="w-8 h-8 flex items-center justify-center rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white transition-all opacity-100 lg:opacity-0 lg:group-hover:opacity-100"><i class="fas fa-exchange-alt"></i></button>
+                                 <button onclick="event.stopPropagation(); removeProduct('${x.id}')" class="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all opacity-100 lg:opacity-0 lg:group-hover:opacity-100 border border-red-100"><i class="fas fa-times"></i></button>
+                             </div>
+                        </div>
+                    </li>`;
+                });
+                const safeComp = c.replace(/'/g, "\\'"); const compId = 'comp-' + c.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-_\u0E00-\u0E7F]/g, '');
+                const isOpen = expandedCompanies.has(safeComp.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-_\u0E00-\u0E7F]/g, ''));
+                const hiddenClass = isOpen ? '' : 'hidden-el'; const rotateStyle = isOpen ? 'rotate(90deg)' : 'rotate(0deg)';
+                cH += `<div id="${compId}" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"><div class="bg-indigo-50 px-3 py-2 border-b border-indigo-100 flex justify-between items-center cursor-pointer select-none group hover:bg-indigo-100 transition" onclick="toggleCompanyList('${compId.replace('comp-', '')}', this)"><div class="flex items-center gap-2 overflow-hidden text-indigo-900"><i class="fas fa-chevron-right text-indigo-400 text-[10px] rotate-icon transition-transform duration-200 group-hover:text-indigo-600" style="transform: ${rotateStyle}"></i><i class="fas fa-building text-indigo-500 text-xs"></i><span class="font-bold text-sm truncate">${c}</span><span class="text-[10px] text-indigo-400 font-normal">(${sub.length} รายการ)</span></div><div class="flex items-center gap-2 shrink-0"><span class="font-bold text-indigo-700 text-xs">${ct.toLocaleString()} ฿</span><div class="flex gap-1"><button onclick="event.stopPropagation(); copySingleCompany('${safeComp}')" class="text-[9px] bg-white border border-gray-300 text-gray-500 hover:border-indigo-300 hover:text-indigo-600 px-2 py-0.5 rounded shadow-sm font-bold tracking-wide uppercase transition">Copy</button><button onclick="event.stopPropagation(); copySingleCompanyClean('${safeComp}')" class="text-[9px] bg-white border border-teal-300 text-teal-600 hover:border-teal-400 hover:text-teal-700 px-2 py-0.5 rounded shadow-sm font-bold tracking-wide uppercase transition">Clean</button><button onclick="event.stopPropagation(); deleteCompany('${safeComp}')" class="text-[9px] bg-white border border-gray-300 text-gray-400 hover:border-red-300 hover:text-red-500 px-2 py-0.5 rounded shadow-sm transition" title="ลบบริษัทนี้"><i class="fas fa-trash-alt"></i></button></div></div></div><div id="list-${compId.replace('comp-', '')}" class="${hiddenClass} p-3 bg-white"><ul class="space-y-0.5">${l}</ul></div></div>`;
+            });
+            document.getElementById('dContent-company').innerHTML = cH;
+        }
+
+        function toggleCompanyList(id, header) { const list = document.getElementById(`list-${id}`); const icon = header.querySelector('.rotate-icon'); if (list.classList.contains('hidden-el')) { list.classList.remove('hidden-el'); icon.style.transform = 'rotate(90deg)'; expandedCompanies.add(id); } else { list.classList.add('hidden-el'); icon.style.transform = 'rotate(0deg)'; expandedCompanies.delete(id); } }
+        function switchDashTab(t) { document.getElementById('dContent-all').classList.add('hidden-el'); document.getElementById('dContent-company').classList.add('hidden-el'); document.getElementById('alphabetJumpContainer').classList.add('hidden-el'); document.getElementById('dTab-all').className = "px-3 py-1.5 text-[10px] rounded-md font-bold text-gray-500 hover:text-indigo-600 transition"; document.getElementById('dTab-company').className = "px-3 py-1.5 text-[10px] rounded-md font-bold text-gray-500 hover:text-indigo-600 transition flex items-center gap-1"; document.getElementById(`dContent-${t}`).classList.remove('hidden-el'); if (t === 'company') { document.getElementById('dTab-company').className = "px-3 py-1.5 text-[10px] rounded-md font-bold text-white bg-indigo-600 shadow-sm transition flex items-center gap-1"; document.getElementById('alphabetJumpContainer').classList.remove('hidden-el'); } else { document.getElementById('dTab-all').className = "px-3 py-1.5 text-[10px] rounded-md font-bold text-white bg-indigo-600 shadow-sm transition"; } }
+        function showAddMedicineForm() { document.getElementById('addMedicineModal').classList.remove('hidden-el'); document.getElementById('newMedicineName').focus(); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden-el'); }
+        function showChangelogModal() { document.getElementById('changelogModal').classList.remove('hidden-el'); }
+        function addCustomMedicine() { const n = document.getElementById('newMedicineName').value.trim(), c = document.getElementById('newMedicineCompany').value.trim(), u = document.getElementById('newMedicineUnit').value.trim(), q = parseInt(document.getElementById('newMedicineQty').value) || 1, p = parseFloat(document.getElementById('newMedicinePrice').value) || 0; if (!n) return alert('ระบุชื่อ'); batchAddProducts([{ name: n, company: c, unit: u, qty: q, price: p }]); renderProducts(products); updateSummary(); refreshDashboard(); saveState(); closeModal('addMedicineModal'); }
+        function addProductAndAddToCart(n, q, p = 0, u = "", c = "") { const id = `custom-${Date.now()}-${Math.floor(Math.random() * 1000)}`; products.unshift({ id, name: n, price: p, unit: u, company: c }); cart[id] = q; renderProducts(products); updateCart(id, 0); }
+        function openEditNameModal(id) { const p = products.find(x => x.id == id); if (!p) return; document.getElementById('editMedicineId').value = id; document.getElementById('editMedicineNameInput').value = p.name; document.getElementById('editMedicineCompanyInput').value = p.company || ""; document.getElementById('editMedicineUnitInput').value = p.unit || ""; document.getElementById('editMedicinePriceInput').value = p.price > 0 ? p.price : ''; document.getElementById('editNameModal').classList.remove('hidden-el'); }
+        function saveEditName() { const id = document.getElementById('editMedicineId').value, p = products.find(x => x.id == id); if (p) { p.name = document.getElementById('editMedicineNameInput').value.trim(); p.company = document.getElementById('editMedicineCompanyInput').value.trim(); p.unit = document.getElementById('editMedicineUnitInput').value.trim(); p.price = parseFloat(document.getElementById('editMedicinePriceInput').value) || 0; renderProducts(products); updateCart(id, 0); saveState(); closeModal('editNameModal'); } }
+        function getActiveItems() { const a = []; for (const [id, q] of Object.entries(cart)) { const p = products.find(x => x.id == id); if (p && q > 0) a.push({ ...p, qty: q }); } return a; }
+
+        function copyOrder() { const i = getActiveItems(); if (i.length === 0) return alert('เลือกยาก่อน'); if (sortMode === 'az') i.sort((a, b) => a.name.localeCompare(b.name)); let t = "🛒 *รายการสั่งยา*\n------------------\n", s = 0; i.forEach((x, k) => { t += `${k + 1}. ${x.name} x ${x.qty}${x.unit ? ' ' + x.unit : ''}`; if (x.price > 0) { t += ` (${(x.price * x.qty).toLocaleString()}.-)`; s += x.price * x.qty; } t += '\n'; }); t += `------------------\n💰 *รวม: ${s.toLocaleString()} บาท*\n📅 ${new Date().toLocaleDateString('th-TH')}`; copyToClipboard(t); }
+        function copyOrderByCompany() { const i = getActiveItems(); if (i.length === 0) return alert('เลือกยาก่อน'); const g = {}; i.forEach(x => { const c = x.company || 'ไม่ระบุ'; if (!g[c]) g[c] = []; g[c].push(x); }); let t = "📦 *แยกบริษัท*\n", s = 0; Object.keys(g).sort().forEach(c => { t += `\n🏢 *${c}*\n------------------\n`; const sb = g[c]; if (sortMode === 'az') sb.sort((a, b) => a.name.localeCompare(b.name)); sb.forEach((x, k) => { t += `${k + 1}. ${x.name} x ${x.qty}${x.unit ? ' ' + x.unit : ''}`; if (x.price > 0) { t += ` (${(x.price * x.qty).toLocaleString()}.-)`; s += x.price * x.qty; } t += '\n'; }); }); t += `\n==================\n💰 *รวม: ${s.toLocaleString()} บาท*`; copyToClipboard(t); }
+        function copySingleCompany(cName) { const i = getActiveItems().filter(x => (x.company || 'ไม่ระบุ') === cName); if (i.length === 0) return; if (sortMode === 'az') i.sort((a, b) => a.name.localeCompare(b.name)); let t = `🏢 *${cName}*\n------------------\n`, s = 0; i.forEach((x, k) => { t += `${k + 1}. ${x.name} x ${x.qty}${x.unit ? ' ' + x.unit : ''}`; if (x.price > 0) { t += ` (${(x.price * x.qty).toLocaleString()}.-)`; s += x.price * x.qty; } t += '\n'; }); t += `------------------\n💰 *ยอดรวม: ${s.toLocaleString()} บาท*`; copyToClipboard(t); }
+        function copySingleCompanyClean(cName) { const i = getActiveItems().filter(x => (x.company || 'ไม่ระบุ') === cName); if (i.length === 0) return; if (sortMode === 'az') i.sort((a, b) => a.name.localeCompare(b.name)); let t = `🏢 *${cName}*\n------------------\n`, s = 0; i.forEach((x, k) => { t += `${x.name} x ${x.qty}${x.unit ? ' ' + x.unit : ''}`; if (x.price > 0) { t += ` (${(x.price * x.qty).toLocaleString()}.-)`; s += x.price * x.qty; } t += '\n'; }); t += `------------------\n💰 *ยอดรวม: ${s.toLocaleString()} บาท*`; copyToClipboard(t); }
+        function copyToClipboard(t) { navigator.clipboard.writeText(t).then(() => alert('✅ คัดลอกแล้ว')).catch(() => alert('❌ Copy ไม่ได้')); }
+        function exportToPDF() { const i = getActiveItems(); if (i.length === 0) return alert('ไม่มีรายการ'); const g = {}; i.forEach(x => { const c = x.company || 'ทั่วไป'; if (!g[c]) g[c] = []; g[c].push(x); }); let h = '', s = 0; Object.keys(g).sort().forEach(c => { h += `<div class="mb-6"><h3 class="font-bold border-b border-black mb-2">${c}</h3><table class="w-full text-sm text-left border-collapse"><thead><tr class="bg-gray-100 border-b"><th class="py-1">รายการ</th><th class="py-1 text-center">จำนวน</th><th class="py-1 text-right">ราคา</th><th class="py-1 text-right">รวม</th></tr></thead><tbody>`; const sb = g[c]; sb.sort((a, b) => a.name.localeCompare(b.name)); sb.forEach(x => { let ss = x.price * x.qty; s += ss; h += `<tr class="border-b border-gray-100"><td class="py-1">${x.name}</td><td class="py-1 text-center">${x.qty} ${x.unit || ''}</td><td class="py-1 text-right">${x.price > 0 ? x.price.toLocaleString() : '-'}</td><td class="py-1 text-right">${ss > 0 ? ss.toLocaleString() : '-'}</td></tr>`; }); h += `</tbody></table></div>`; }); document.getElementById('printContent').innerHTML = h; document.getElementById('printGrandTotal').innerText = s.toLocaleString() + ' ฿'; document.getElementById('printDate').innerText = `วันที่: ${new Date().toLocaleDateString('th-TH')}`; window.print(); }
+        function exportToExcel() { const items = getActiveItems(); if (items.length === 0) return alert('ไม่มีรายการ'); if (sortMode === 'az') items.sort((a, b) => a.name.localeCompare(b.name)); let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"></head><body><table><thead><tr><th>ลำดับ</th><th>บริษัท</th><th>รายการยา</th><th>จำนวน</th><th>หน่วย</th><th>ราคาต่อหน่วย</th><th>ราคารวม</th></tr></thead><tbody>`; items.forEach((x, i) => { html += `<tr><td>${i + 1}</td><td>${x.company || '-'}</td><td>${x.name}</td><td>${x.qty}</td><td>${x.unit || ''}</td><td>${x.price > 0 ? x.price : ''}</td><td>${x.price > 0 ? x.price * x.qty : ''}</td></tr>`; }); html += `</tbody></table></body></html>`; const blob = new Blob([html], { type: 'application/vnd.ms-excel' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'medicine_order.xls'; document.body.appendChild(a); a.click(); a.remove(); }
+    </script>
+</body>
+
+</html>

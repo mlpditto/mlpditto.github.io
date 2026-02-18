@@ -1,0 +1,11 @@
+  const firebaseConfig = {
+    apiKey: "AIzaSyCfdIENxDbWB30k4TZQfhnbxvpc2217xtU",
+    authDomain: "fkb-front-kanban.firebaseapp.com",
+    projectId: "fkb-front-kanban",
+    storageBucket: "fkb-front-kanban.firebasestorage.app",
+    messagingSenderId: "135805270397",
+    appId: "1:135805270397:web:ef5f4e23fef49175af3414",
+    measurementId: "G-SS039Q7L2B"
+  };
+
+2008999002-KiowNNUL

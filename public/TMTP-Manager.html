@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="th" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TMTP Manager v6.8</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Prompt', 'sans-serif'] },
+                    colors: {
+                        primary: '#3b82f6',
+                        dark: { bg: '#0f172a', card: '#1e293b', border: '#334155', text: '#f1f5f9' }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Base Styles */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .dark ::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+
+        .dark ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+
+        .hover-lift {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .hover-lift:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .table-input {
+            width: 100%;
+            background: transparent;
+            border: 1px solid transparent;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        .table-input:focus {
+            outline: none;
+            background-color: white;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        .dark .table-input:focus {
+            background-color: #1e293b;
+            border-color: #60a5fa;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .row-highlight {
+            background-color: #fef9c3 !important;
+        }
+
+        .dark .row-highlight {
+            background-color: #422006 !important;
+        }
+
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .custom-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #3b82f6;
+            border-radius: 4px;
+        }
+
+        .grad-blue {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        }
+
+        /* --- FIXED CSS SECTIONS (Replaced @apply to fix VS Code Errors) --- */
+
+        /* .btn-secondary replacement */
+        .btn-secondary {
+            padding: 8px 16px;
+            border-radius: 0.75rem;
+            /* rounded-xl */
+            border: 2px solid #e2e8f0;
+            /* border-slate-200 */
+            color: #475569;
+            /* text-slate-600 */
+            font-weight: 700;
+            font-size: 0.75rem;
+            /* text-xs */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+            cursor: pointer;
+            background-color: transparent;
+        }
+
+        .btn-secondary:hover {
+            background-color: #f8fafc;
+            /* hover:bg-slate-50 */
+        }
+
+        .dark .btn-secondary {
+            border-color: #475569;
+            /* dark:border-slate-600 */
+            color: #cbd5e1;
+            /* dark:text-slate-300 */
+        }
+
+        .dark .btn-secondary:hover {
+            background-color: #334155;
+            /* dark:hover:bg-slate-700 */
+        }
+
+        /* .btn-xs replacement */
+        .btn-xs {
+            padding: 4px 12px;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            transition: transform 0.1s;
+            cursor: pointer;
+        }
+
+        .btn-xs:active {
+            transform: scale(0.95);
+        }
+
+        /* .nav-fab replacement */
+        .nav-fab {
+            width: 3rem;
+            height: 3rem;
+            background-color: #334155;
+            /* bg-slate-700 */
+            color: white;
+            border-radius: 9999px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+        }
+
+        .nav-fab:hover {
+            background-color: #1e293b;
+            /* hover:bg-slate-800 */
+        }
+
+        .dark .nav-fab {
+            background-color: #475569;
+            /* dark:bg-slate-600 */
+        }
+
+        .dark .nav-fab:hover {
+            background-color: #64748b;
+            /* dark:hover:bg-slate-500 */
+        }
+
+        @media print {
+            body>* {
+                display: none !important;
+            }
+
+            #printArea,
+            #printArea * {
+                display: block !important;
+                visibility: visible !important;
+            }
+
+            #printArea {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0;
+                padding: 20px;
+                background: white;
+                color: black;
+                font-family: 'Prompt', sans-serif;
+                font-size: 12pt;
+                z-index: 9999;
+            }
+
+            #printArea table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 20px;
+                display: table !important;
+            }
+
+            #printArea th,
+            #printArea td {
+                display: table-cell !important;
+                border: 1px solid #000;
+                padding: 6px;
+                text-align: center;
+                font-size: 10pt;
+            }
+
+            #printArea th {
+                background-color: #f3f4f6 !important;
+                /* Fixed print color adjust warning */
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-800 dark:bg-dark-bg dark:text-dark-text transition-colors duration-300 pb-32">
+
+    <div id="loadingOverlay"
+        class="fixed inset-0 bg-white/80 dark:bg-black/80 z-[100] flex flex-col items-center justify-center hidden backdrop-blur-sm">
+        <div class="loader mb-4"></div>
+        <p class="font-bold text-slate-600 dark:text-slate-300 animate-pulse">Processing...</p>
+    </div>
+
+    <nav
+        class="bg-white/90 dark:bg-dark-card/90 backdrop-blur-md border-b border-slate-200 dark:border-dark-border sticky top-0 z-50">
+        <div class="max-w-[98%] mx-auto px-4">
+            <div class="flex flex-wrap justify-between h-16 items-center gap-4">
+                <div class="flex items-center gap-3">
+                    <a href="admin.html" target="_blank"
+                        class="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300 dark:hover:border-blue-500 flex items-center justify-center transition-all shadow-sm group"
+                        title="กลับหน้า Admin">
+                        <i class="fa-solid fa-arrow-left group-hover:-translate-x-1 transition-transform"></i>
+                    </a>
+                    <div class="w-10 h-10 rounded-xl grad-blue flex items-center justify-center text-white shadow-lg">
+                        <i class="fa-solid fa-list-check text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold leading-tight">TMTP <span
+                                class="text-blue-500 dark:text-blue-400">Manager</span></h1>
+                        <p onclick="openChangelog()"
+                            class="text-[10px] text-slate-400 font-medium uppercase tracking-wider cursor-pointer hover:text-blue-500 transition-colors">
+                            v6.8 <i class="fa-solid fa-circle-info ml-1"></i></p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                        <button onclick="switchTab('dashboard')" id="tab-dashboard"
+                            class="px-4 py-1.5 rounded-lg text-sm font-bold bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm transition-all"><i
+                                class="fa-solid fa-table-list mr-2"></i> Table</button>
+                        <button onclick="switchTab('graphs')" id="tab-graphs"
+                            class="px-4 py-1.5 rounded-lg text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-slate-700 transition-all"><i
+                                class="fa-solid fa-chart-bar mr-2"></i> Graphs</button>
+                        <button onclick="openEmailModal()" id="tab-draft"
+                            class="px-4 py-1.5 rounded-lg text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-slate-700 transition-all"><i
+                                class="fa-solid fa-envelope-open-text mr-2"></i> DRAFT</button>
+                    </div>
+                    <button onclick="toggleTheme()"
+                        class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-yellow-400 hover:bg-slate-200 transition-colors flex items-center justify-center"><i
+                            id="themeIcon" class="fa-solid fa-moon"></i></button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-[98%] mx-auto px-4 py-6 space-y-6">
+
+        <div id="view-dashboard" class="fade-in">
+            <div id="dropZone"
+                class="bg-white dark:bg-dark-card rounded-3xl shadow-sm border-2 border-dashed border-slate-200 dark:border-dark-border p-6 hover:border-blue-400 dark:hover:border-blue-500 transition-all group mb-8">
+                <div class="flex flex-col md:flex-row justify-between items-end gap-4 mb-4">
+                    <div>
+                        <label class="text-lg font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+                            <span
+                                class="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm font-bold">1</span>
+                            Data Input
+                        </label>
+                        <p class="text-xs text-slate-400 mt-1 ml-10">Paste text or Drag & Drop JSON file</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <label class="btn-secondary cursor-pointer bg-white dark:bg-slate-800"><i
+                                class="fa-solid fa-folder-open text-yellow-500 mr-2"></i> Open <input type="file"
+                                id="fileInput" accept=".json" class="hidden" onchange="loadDataFromJSON(event)"></label>
+                        <button onclick="saveDataToJSON()" class="btn-secondary bg-white dark:bg-slate-800"><i
+                                class="fa-solid fa-floppy-disk text-blue-500 mr-2"></i> Save</button>
+                    </div>
+                </div>
+                <textarea id="rawData" rows="4"
+                    class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-sm font-mono text-slate-700 dark:text-slate-300 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all placeholder-slate-400"
+                    placeholder="วางข้อมูลที่นี่..."></textarea>
+
+                <div class="mt-6 flex flex-wrap gap-3 items-center">
+                    <button onclick="processData()"
+                        class="grad-blue hover:opacity-90 text-white font-bold py-2 px-6 rounded-xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2 text-sm"><i
+                            class="fa-solid fa-bolt"></i> ประมวลผล</button>
+
+                    <div class="flex rounded-lg shadow-sm ml-2" role="group">
+                        <button onclick="exportToPDF('telemed')"
+                            class="px-3 py-2 text-xs font-bold text-white bg-blue-600 border border-blue-600 rounded-l-lg hover:bg-blue-700 flex items-center">MED
+                            PDF</button>
+                        <button onclick="exportToExcel('telemed')"
+                            class="px-3 py-2 text-xs font-bold text-blue-700 bg-white dark:bg-slate-800 border border-blue-600 dark:border-blue-500 rounded-r-lg hover:bg-blue-50 dark:hover:bg-slate-700 flex items-center">XLS</button>
+                    </div>
+                    <div class="flex rounded-lg shadow-sm" role="group">
+                        <button onclick="exportToPDF('telepharmacy')"
+                            class="px-3 py-2 text-xs font-bold text-white bg-green-600 border border-green-600 rounded-l-lg hover:bg-green-700 flex items-center">PHARM
+                            PDF</button>
+                        <button onclick="exportToExcel('telepharmacy')"
+                            class="px-3 py-2 text-xs font-bold text-green-700 bg-white dark:bg-slate-800 border border-green-600 dark:border-green-500 rounded-r-lg hover:bg-green-50 dark:hover:bg-slate-700 flex items-center">XLS</button>
+                    </div>
+
+                    <div class="ml-auto flex items-center gap-2">
+                        <button onclick="copyRawInput()"
+                            class="px-3 py-2 rounded-xl border-2 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                            title="Copy Input"><i class="fa-regular fa-copy"></i></button>
+                        <button onclick="tkoFilter()"
+                            class="px-4 py-2 rounded-xl border-2 border-orange-200 dark:border-orange-500 text-orange-600 dark:text-orange-400 font-bold hover:bg-orange-50 dark:hover:bg-slate-800 transition-colors text-sm flex items-center gap-2"><i
+                                class="fa-solid fa-filter"></i> TKO</button>
+                        <button onclick="clearData()"
+                            class="px-6 py-2 rounded-xl border-2 border-slate-200 dark:border-slate-500 text-slate-500 dark:text-slate-300 font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-sm">CLEAR</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="outputSection" class="hidden space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div
+                        class="bg-white dark:bg-dark-card p-5 rounded-2xl shadow-sm border-l-4 border-emerald-500 flex justify-between items-center hover-lift">
+                        <div>
+                            <p class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase">ยอดรวม (Filtered)
+                            </p>
+                            <h3 class="text-2xl font-bold text-slate-800 dark:text-white mt-1" id="globalTotal">0.00
+                            </h3>
+                        </div>
+                        <div class="text-right">
+                            <div
+                                class="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mb-1 ml-auto">
+                                <i class="fa-solid fa-sack-dollar"></i>
+                            </div><span class="text-sm font-bold text-slate-500 dark:text-slate-400"><span
+                                    id="globalCount">0</span> บิล</span>
+                        </div>
+                    </div>
+                    <div
+                        class="bg-white dark:bg-dark-card p-5 rounded-2xl shadow-sm border-l-4 border-blue-500 flex justify-between items-center hover-lift">
+                        <div>
+                            <p class="text-xs font-bold text-blue-500 uppercase flex items-center gap-1"><i
+                                    class="fa-solid fa-user-doctor"></i> MED</p>
+                            <h3 class="text-xl font-bold text-slate-800 dark:text-white mt-1" id="globalTelemed">0.00
+                            </h3>
+                        </div>
+                        <div class="text-right"><span
+                                class="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg text-xs font-bold"
+                                id="globalTelemedCount">0 Bills</span></div>
+                    </div>
+                    <div
+                        class="bg-white dark:bg-dark-card p-5 rounded-2xl shadow-sm border-l-4 border-green-500 flex justify-between items-center hover-lift">
+                        <div>
+                            <p class="text-xs font-bold text-green-500 uppercase flex items-center gap-1"><i
+                                    class="fa-solid fa-pills"></i> PHARMACY</p>
+                            <h3 class="text-xl font-bold text-slate-800 dark:text-white mt-1" id="globalPharm">0.00
+                            </h3>
+                        </div>
+                        <div class="text-right"><span
+                                class="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 px-2 py-1 rounded-lg text-xs font-bold"
+                                id="globalPharmCount">0 Bills</span></div>
+                    </div>
+                    <div
+                        class="bg-white dark:bg-dark-card p-5 rounded-2xl shadow-sm border-l-4 border-purple-500 flex justify-between items-center hover-lift">
+                        <div>
+                            <p class="text-xs font-bold text-purple-500 uppercase flex items-center gap-1"><i
+                                    class="fa-solid fa-notes-medical"></i> NHSO</p>
+                            <h3 class="text-xl font-bold text-slate-800 dark:text-white mt-1" id="globalNhso">0.00
+                            </h3>
+                        </div>
+                        <div class="text-right"><span
+                                class="bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 px-2 py-1 rounded-lg text-xs font-bold"
+                                id="globalNhsoCount">0 Bills</span></div>
+                    </div>
+                </div>
+
+                <div id="navigatorBar"
+                    class="sticky top-20 z-40 bg-white/90 dark:bg-dark-card/90 backdrop-blur-md border border-slate-200 dark:border-dark-border rounded-xl p-2 shadow-lg flex flex-wrap gap-3 items-center justify-between transition-all">
+                    <div class="relative group flex-1 max-w-md">
+                        <i
+                            class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors"></i>
+                        <input type="text" id="searchInput" onkeyup="handleSearch()"
+                            placeholder="ค้นหา: INV, Order, ชื่อ, Med, Pharm..."
+                            class="pl-9 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:border-blue-500 dark:focus:border-blue-500 dark:text-white w-full transition-all shadow-sm">
+                    </div>
+                    <div id="dateNavContainer"
+                        class="flex flex-wrap gap-2 items-center flex-1 overflow-x-auto no-scrollbar justify-end"></div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="toggleDateSort()" id="btnSort"
+                            class="bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 px-3 py-2 rounded-lg text-xs font-bold shadow-sm transition-colors flex items-center gap-2">SORT
+                            <i class="fa-solid fa-arrow-down-wide-short"></i></button>
+                        <button onclick="toggleMergeView()" id="btnMerge"
+                            class="bg-slate-700 hover:bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-bold shadow-sm transition-colors flex items-center gap-2"><i
+                                class="fa-solid fa-object-group"></i> Merge: OFF</button>
+                    </div>
+                </div>
+
+                <div id="dailyContainer" class="space-y-8 min-h-[300px]"></div>
+            </div>
+        </div>
+
+        <div id="view-graphs" class="hidden fade-in">
+            <div
+                class="bg-white dark:bg-dark-card rounded-3xl shadow-sm border border-slate-100 dark:border-dark-border p-8">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-slate-800 dark:text-slate-200 flex items-center gap-3">
+                        <div
+                            class="w-10 h-10 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                            <i class="fa-solid fa-chart-simple"></i>
+                        </div> Sales Chart
+                    </h2>
+                    <div class="flex items-center gap-2">
+                        <div class="bg-slate-100 dark:bg-slate-800 p-1 rounded-lg flex mr-4">
+                            <button onclick="setChartMode('daily')" id="btnChartDaily"
+                                class="px-3 py-1 text-xs font-bold rounded-md transition-colors bg-white dark:bg-slate-600 shadow-sm text-blue-600 dark:text-blue-300">รายวัน</button>
+                            <button onclick="setChartMode('bill')" id="btnChartBill"
+                                class="px-3 py-1 text-xs font-bold rounded-md transition-colors text-slate-500 dark:text-slate-400 hover:text-slate-700">รายบิล</button>
+                        </div>
+                        <div class="flex gap-2">
+                            <span
+                                class="flex items-center text-xs font-bold text-orange-500 bg-orange-50 dark:bg-orange-900/20 px-3 py-1 rounded-full">
+                                <div class="w-2 h-2 rounded-full bg-orange-500 mr-2"></div> Total
+                            </span>
+                            <span
+                                class="flex items-center text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-full">
+                                <div class="w-2 h-2 rounded-full bg-blue-500 mr-2"></div> MED
+                            </span>
+                            <span
+                                class="flex items-center text-xs font-bold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-full">
+                                <div class="w-2 h-2 rounded-full bg-green-500 mr-2"></div> PHARM
+                            </span>
+                            <span
+                                class="flex items-center text-xs font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 px-3 py-1 rounded-full">
+                                <div class="w-2 h-2 rounded-full bg-purple-500 mr-2"></div> NHSO
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="h-[500px] w-full relative mb-8"><canvas id="salesChart"></canvas></div>
+                <div id="graphStats"
+                    class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 border-t border-slate-100 dark:border-slate-700 pt-8">
+                </div>
+            </div>
+        </div>
+
+
+    </main>
+
+    <div id="emailModal"
+        class="fixed inset-0 bg-black/60 hidden z-[60] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+        <div
+            class="bg-white dark:bg-dark-card rounded-2xl shadow-2xl w-full max-w-[95%] h-[90vh] flex flex-col overflow-hidden border border-slate-200 dark:border-slate-700">
+            <div
+                class="p-4 border-b border-slate-200 dark:border-slate-700 flex flex-wrap justify-between items-center bg-slate-50 dark:bg-slate-800 shrink-0 gap-4">
+                <div class="flex items-center gap-4">
+                    <h3 class="text-lg font-bold text-slate-700 dark:text-slate-200"><i
+                            class="fa-solid fa-envelope-open-text text-purple-500 mr-2"></i> Draft Email</h3>
+                    <select id="emailDateSelect" onchange="updateEmailDraft(this.value)"
+                        class="text-sm border border-slate-300 rounded-lg px-3 py-1 bg-white dark:bg-slate-700 dark:border-slate-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        <option value="">เลือกวันที่...</option>
+                    </select>
+                </div>
+                <button onclick="closeEmailModal()"
+                    class="text-slate-400 hover:text-red-500 text-xl transition-colors"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="flex-1 flex overflow-hidden">
+                <div
+                    class="flex-1 flex flex-col border-r border-slate-200 dark:border-slate-700 bg-blue-50/20 dark:bg-blue-900/10">
+                    <div
+                        class="p-2 bg-blue-50 dark:bg-blue-900/30 border-b border-blue-100 dark:border-blue-800 flex justify-between items-center">
+                        <span class="font-bold text-blue-700 dark:text-blue-300 text-sm pl-2">MED</span><button
+                            onclick="copyEmailContent('med')"
+                            class="btn-xs bg-blue-600 text-white hover:bg-blue-700">Copy</button>
+                    </div>
+                    <div class="p-6 overflow-y-auto flex-1 outline-none bg-white text-black transition-colors"
+                        contenteditable="true" id="emailPreviewMed"></div>
+                </div>
+                <div
+                    class="flex-1 flex flex-col border-r border-slate-200 dark:border-slate-700 bg-green-50/20 dark:bg-green-900/10">
+                    <div
+                        class="p-2 bg-green-50 dark:bg-green-900/30 border-b border-green-100 dark:border-green-800 flex justify-between items-center">
+                        <span class="font-bold text-green-700 dark:text-green-300 text-sm pl-2">PHARMACY</span><button
+                            onclick="copyEmailContent('pharm')"
+                            class="btn-xs bg-green-600 text-white hover:bg-green-700">Copy</button>
+                    </div>
+                    <div class="p-6 overflow-y-auto flex-1 outline-none bg-white text-black transition-colors"
+                        contenteditable="true" id="emailPreviewPharm"></div>
+                </div>
+                <div class="flex-1 flex flex-col bg-purple-50/20 dark:bg-purple-900/10">
+                    <div
+                        class="p-2 bg-purple-50 dark:bg-purple-900/30 border-b border-purple-100 dark:border-purple-800 flex justify-between items-center">
+                        <span class="font-bold text-purple-700 dark:text-purple-300 text-sm pl-2">NHSO</span><button
+                            onclick="copyEmailContent('nhso')"
+                            class="btn-xs bg-purple-600 text-white hover:bg-purple-700">Copy</button>
+                    </div>
+                    <div class="p-6 overflow-y-auto flex-1 outline-none bg-white text-black transition-colors"
+                        contenteditable="true" id="emailPreviewNhso"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="moveModal"
+        class="fixed inset-0 bg-black/60 hidden z-[60] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+        <div
+            class="bg-white dark:bg-dark-card rounded-2xl shadow-xl p-6 w-full max-w-sm border border-slate-200 dark:border-slate-700 transform transition-all scale-100">
+            <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-4 text-center">ย้ายไปหมวดไหน?</h3>
+            <div class="space-y-3">
+                <button onclick="confirmMove('telemed')"
+                    class="w-full py-4 rounded-xl border-2 border-slate-100 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-500 bg-white dark:bg-slate-800 flex items-center p-4 transition-all group">
+                    <div
+                        class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center mr-4 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-user-doctor"></i>
+                    </div>
+                    <div class="text-left">
+                        <div class="font-bold text-slate-700 dark:text-slate-200">MED</div>
+                        <div class="text-xs text-slate-400">หมวดแพทย์ / Telemedicine</div>
+                    </div>
+                </button>
+                <button onclick="confirmMove('telepharmacy')"
+                    class="w-full py-4 rounded-xl border-2 border-slate-100 dark:border-slate-700 hover:border-green-500 dark:hover:border-green-500 bg-white dark:bg-slate-800 flex items-center p-4 transition-all group">
+                    <div
+                        class="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center mr-4 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-pills"></i>
+                    </div>
+                    <div class="text-left">
+                        <div class="font-bold text-slate-700 dark:text-slate-200">PHARMACY</div>
+                        <div class="text-xs text-slate-400">หมวดเภสัช / Telepharmacy</div>
+                    </div>
+                </button>
+                <button onclick="confirmMove('nhso')"
+                    class="w-full py-4 rounded-xl border-2 border-slate-100 dark:border-slate-700 hover:border-purple-500 dark:hover:border-purple-500 bg-white dark:bg-slate-800 flex items-center p-4 transition-all group">
+                    <div
+                        class="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center mr-4 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-notes-medical"></i>
+                    </div>
+                    <div class="text-left">
+                        <div class="font-bold text-slate-700 dark:text-slate-200">NHSO (สปสช)</div>
+                        <div class="text-xs text-slate-400">หมวด สปสช / เบิกจ่ายตรง</div>
+                    </div>
+                </button>
+            </div>
+            <button onclick="closeMoveModal()"
+                class="w-full mt-4 py-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm font-bold">ยกเลิก</button>
+        </div>
+    </div>
+
+    <div id="printArea" style="display:none;"></div>
+    <div id="copyContainer" style="position: fixed; left: -9999px;"></div>
+    <div class="fixed bottom-8 right-8 flex flex-col gap-2 z-[70]">
+        <button onclick="scrollToTop()" id="goTopBtn" class="nav-fab opacity-0 translate-y-10"><i
+                class="fa-solid fa-arrow-up"></i></button>
+        <button onclick="scrollToBottom()" id="goBottomBtn" class="nav-fab opacity-0 translate-y-10"><i
+                class="fa-solid fa-arrow-down"></i></button>
+    </div>
+    <div id="toast"
+        class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-800/90 dark:bg-slate-100/90 backdrop-blur text-white dark:text-slate-900 px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 transform translate-y-20 opacity-0 transition-all duration-300 z-[80]">
+        <i class="fa-solid fa-circle-check text-green-400 dark:text-green-600"></i><span class="font-bold text-sm"
+            id="toastMsg">...</span>
+    </div>
+
+    <script>
+        // --- GLOBAL VARIABLES ---
+        let globalData = [];
+        let itemsToMove = [];
+        let filteredViewData = [];
+        let currentSort = { key: null, direction: 'asc' };
+        let dateSortOrder = 'desc';
+        let isMergedView = false;
+        let chartInstance = null;
+        let chartMode = 'daily';
+        let searchTerm = "";
+        const staffToRemove = ["T. Trayaporn", "STAFF รัตนา ศิริโชคชัยมงคล", "Thipnaree J", "สุพิชญา โกศลกิตติพงศ์"];
+
+        // --- INIT ---
+        document.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+                document.getElementById('themeIcon').classList.replace('fa-moon', 'fa-sun');
+            }
+            setupDragDrop();
+            document.getElementById('emailDateSelect').addEventListener('change', (e) => updateEmailDraft(e.target.value));
+
+            const savedData = localStorage.getItem('tmtp_data');
+            if (savedData) {
+                try {
+                    const parsed = JSON.parse(savedData);
+                    if (Array.isArray(parsed)) {
+                        globalData = sanitizeLoadedData(parsed);
+                        renderUI();
+                        showToast("กู้คืนข้อมูลเดิมแล้ว");
+                    }
+                } catch (e) { localStorage.removeItem('tmtp_data'); }
+            }
+        });
+
+        // --- HELPERS ---
+        function toggleTheme() {
+            const html = document.documentElement;
+            html.classList.toggle('dark');
+            const isDark = html.classList.contains('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            document.getElementById('themeIcon').className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+        }
+
+        function showLoading() { document.getElementById('loadingOverlay').classList.remove('hidden'); }
+        function hideLoading() { document.getElementById('loadingOverlay').classList.add('hidden'); }
+
+        function showToast(msg, err) {
+            const t = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            t.querySelector('i').className = err ? 'fa-solid fa-circle-exclamation text-red-400' : 'fa-solid fa-circle-check text-green-400';
+            t.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => t.classList.add('translate-y-20', 'opacity-0'), 3000);
+        }
+
+        function formatMoney(n) { return n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+        function escapeAttribute(str) { if (!str) return ""; return String(str).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+        function escapeHtml(text) { if (!text) return ''; return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); }
+
+        function parseDateForSort(d) {
+            if (!d || d === "-") return new Date(0);
+            const parts = d.split('/');
+            if (parts.length !== 3) return new Date(0);
+            return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+        }
+
+        function copyRawInput() {
+            const input = document.getElementById('rawData');
+            if (!input.value) return showToast("ไม่มีข้อมูลให้คัดลอก", true);
+            input.select(); input.setSelectionRange(0, 99999);
+            try {
+                navigator.clipboard.writeText(input.value).then(() => showToast("คัดลอกข้อมูลดิบเรียบร้อย"));
+            } catch (err) {
+                document.execCommand('copy'); showToast("คัดลอกข้อมูลดิบเรียบร้อย");
+            }
+        }
+
+        function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+        function scrollToBottom() { window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }); }
+
+        window.onscroll = function () {
+            const btnTop = document.getElementById("goTopBtn");
+            const btnBot = document.getElementById("goBottomBtn");
+            if (window.scrollY > 300) {
+                btnTop.classList.remove('opacity-0', 'translate-y-20');
+                btnBot.classList.remove('opacity-0', 'translate-y-20');
+            } else {
+                btnTop.classList.add('opacity-0', 'translate-y-20');
+                btnBot.classList.add('opacity-0', 'translate-y-20');
+            }
+        };
+
+        function setupDragDrop() {
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('border-blue-500', 'bg-blue-50', 'dark:bg-blue-900/20');
+            });
+
+            dropZone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('border-blue-500', 'bg-blue-50', 'dark:bg-blue-900/20');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('border-blue-500', 'bg-blue-50', 'dark:bg-blue-900/20');
+                if (e.dataTransfer.files.length) {
+                    fileInput.files = e.dataTransfer.files;
+                    const event = new Event('change');
+                    fileInput.dispatchEvent(event);
+                }
+            });
+        }
+
+        // --- CORE LOGIC ---
+        function updateAllTotals(data) {
+            let gt = 0, gc = 0, gm = 0, gmc = 0, gp = 0, gpc = 0, gn = 0, gnc = 0;
+            const source = data || globalData;
+            source.forEach(i => {
+                gt += i.total; gc++;
+                if (i.type === 'telemed') { gm += i.total; gmc++; }
+                else if (i.type === 'nhso') { gn += i.total; gnc++; }
+                else { gp += i.total; gpc++; }
+            });
+            document.getElementById('globalTotal').innerText = formatMoney(gt);
+            document.getElementById('globalCount').innerText = gc;
+            document.getElementById('globalTelemed').innerText = formatMoney(gm);
+            document.getElementById('globalTelemedCount').innerText = gmc + " Bills";
+            document.getElementById('globalPharm').innerText = formatMoney(gp);
+            document.getElementById('globalPharmCount').innerText = gpc + " Bills";
+            document.getElementById('globalNhso').innerText = formatMoney(gn);
+            document.getElementById('globalNhsoCount').innerText = gnc + " Bills";
+        }
+
+        function updateItemValue(id, input) {
+            const item = globalData.find(i => i.id === id);
+            if (!item) return;
+            const val = parseFloat(input.value.replace(/,/g, '')) || 0;
+            item.total = val; item.base = val / 1.07; item.vat = val - item.base;
+            const tr = input.closest('tr');
+            tr.querySelector('.base-price').value = formatMoney(item.base);
+            tr.querySelector('.vat').value = formatMoney(item.vat);
+            updateAllTotals(filteredViewData);
+            saveToLocal();
+        }
+
+        function updateItemField(id, key, value) {
+            const item = globalData.find(i => i.id === id);
+            if (item) {
+                if (key === 'qty') item[key] = Number(value) || 0;
+                else item[key] = value;
+                saveToLocal();
+            }
+        }
+
+        function clearData() {
+            document.getElementById('rawData').value = '';
+            document.getElementById('searchInput').value = '';
+            searchTerm = ''; globalData = []; filteredViewData = [];
+            renderUI(); saveToLocal(); showToast("ล้างข้อมูลเรียบร้อย");
+        }
+
+        function handleSort(key) {
+            if (currentSort.key === key) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.key = key;
+                currentSort.direction = 'asc';
+            }
+            renderUI();
+        }
+
+        function switchTab(tName) {
+            const tabs = ['dashboard', 'graphs']; // logs removed
+            tabs.forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                const view = document.getElementById(`view-${t}`);
+                if (t === tName) {
+                    view.classList.remove('hidden');
+                    btn.classList.add('bg-white', 'dark:bg-slate-700', 'text-blue-600', 'dark:text-blue-400', 'shadow-sm');
+                    btn.classList.remove('text-slate-500', 'dark:text-slate-400');
+                } else {
+                    view.classList.add('hidden');
+                    btn.classList.remove('bg-white', 'dark:bg-slate-700', 'text-blue-600', 'dark:text-blue-400', 'shadow-sm');
+                    btn.classList.add('text-slate-500', 'dark:text-slate-400');
+                }
+            });
+            if (tName === 'graphs') {
+                setTimeout(() => { renderChart(); renderGraphStats(); }, 150);
+            }
+        }
+
+        function openChangelog() { document.getElementById('changelogModal').classList.remove('hidden'); }
+        function closeChangelog() { document.getElementById('changelogModal').classList.add('hidden'); }
+
+        // --- RENDER UI ---
+        function renderUI() {
+            const container = document.getElementById('dailyContainer');
+            const navContainer = document.getElementById('navigatorBar');
+            const dateNavDiv = document.getElementById('dateNavContainer');
+            const outputSection = document.getElementById('outputSection');
+
+            container.innerHTML = ''; dateNavDiv.innerHTML = '';
+
+            if (globalData.length === 0) {
+                navContainer.classList.add('hidden'); outputSection.classList.remove('hidden'); updateAllTotals([]);
+                container.innerHTML = `<div class="flex flex-col items-center justify-center py-20 text-slate-300 dark:text-slate-600"><i class="fa-solid fa-box-open text-6xl mb-4"></i><p class="text-lg">ยังไม่มีข้อมูล</p></div>`;
+                return;
+            }
+
+            navContainer.classList.remove('hidden'); outputSection.classList.remove('hidden');
+
+            let filteredData = globalData.filter(item => {
+                const searchLower = searchTerm.toLowerCase();
+                return !searchTerm || item.orderId.toLowerCase().includes(searchLower) || item.invoiceId.toLowerCase().includes(searchLower) || item.tracking.toLowerCase().includes(searchLower) || item.note.toLowerCase().includes(searchLower) || item.type.includes(searchLower);
+            });
+
+            filteredViewData = filteredData;
+            updateAllTotals(filteredData);
+
+            if (filteredData.length === 0) {
+                container.innerHTML = `<p class="text-center text-slate-400 py-10">ไม่พบข้อมูลที่ค้นหา</p>`;
+                return;
+            }
+
+            const groups = {};
+            filteredData.forEach(item => { if (!groups[item.date]) groups[item.date] = []; groups[item.date].push(item); });
+            const sortedDates = Object.keys(groups).sort((a, b) => {
+                const da = parseDateForSort(a); const db = parseDateForSort(b);
+                return dateSortOrder === 'asc' ? da - db : db - da;
+            });
+
+            let navHTML = '';
+            sortedDates.forEach((date, idx) => { navHTML += `<a href="#section-${idx}" class="px-3 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 whitespace-nowrap transition-colors">${date}</a>`; });
+            dateNavDiv.innerHTML = navHTML;
+
+            let html = '';
+            sortedDates.forEach((date, idx) => {
+                const items = groups[date];
+                if (currentSort.key) {
+                    items.sort((a, b) => {
+                        let valA = a[currentSort.key] || ""; let valB = b[currentSort.key] || "";
+                        if (currentSort.key === 'orderId') {
+                            const getNum = s => { const m = s.match(/-(\d+)$/); return m ? parseInt(m[1]) : 0; };
+                            valA = getNum(valA); valB = getNum(valB);
+                            return currentSort.direction === 'asc' ? valA - valB : valB - valA;
+                        }
+                        if (valA < valB) return currentSort.direction === 'asc' ? -1 : 1;
+                        if (valA > valB) return currentSort.direction === 'asc' ? 1 : -1;
+                        return 0;
+                    });
+                } else {
+                    items.sort((a, b) => a.orderId.localeCompare(b.orderId));
+                }
+
+                const dayTotal = items.reduce((sum, i) => sum + i.total, 0);
+                html += `<div id="section-${idx}" class="fade-in scroll-mt-36"><div class="flex items-center justify-between mb-4 px-2 border-l-4 border-slate-400 pl-3"><h3 class="text-xl font-bold text-slate-700 dark:text-slate-200"><i class="fa-regular fa-calendar mr-2 text-slate-400"></i> ${date}</h3><span class="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-3 py-1 rounded-lg text-sm font-bold">฿${formatMoney(dayTotal)}</span></div><div class="space-y-6">`;
+
+                if (isMergedView) {
+                    html += renderCategoryTable(items, 'mixed', idx, date);
+                } else {
+                    const medItems = items.filter(i => i.type === 'telemed');
+                    const pharmItems = items.filter(i => i.type === 'telepharmacy');
+                    const nhsoItems = items.filter(i => i.type === 'nhso');
+
+                    if (medItems.length > 0) html += renderCategoryTable(medItems, 'telemed', idx, date);
+                    if (pharmItems.length > 0) html += renderCategoryTable(pharmItems, 'telepharmacy', idx, date);
+                    if (nhsoItems.length > 0) html += renderCategoryTable(nhsoItems, 'nhso', idx, date);
+                }
+                html += `</div></div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function renderCategoryTable(items, type, idx, dateStr) {
+            const tableId = `table-${type}-${idx}`;
+            let themeClass = 'border-slate-200 dark:border-slate-700';
+            let headerClass = 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300';
+            let title = 'MERGED LIST';
+            let icon = 'fa-layer-group';
+
+            if (type === 'telemed') {
+                themeClass = 'border-blue-200 dark:border-blue-900';
+                headerClass = 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300';
+                title = 'MED'; icon = 'fa-user-doctor';
+            } else if (type === 'telepharmacy') {
+                themeClass = 'border-green-200 dark:border-green-900';
+                headerClass = 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300';
+                title = 'PHARMACY'; icon = 'fa-pills';
+            } else if (type === 'nhso') {
+                themeClass = 'border-purple-200 dark:border-purple-900';
+                headerClass = 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300';
+                title = 'NHSO (สปสช)'; icon = 'fa-notes-medical';
+            }
+
+            const total = items.reduce((sum, i) => sum + i.total, 0);
+
+            return `
+                <div class="bg-white dark:bg-dark-card rounded-2xl shadow-sm border ${themeClass} overflow-hidden">
+                    <div class="${headerClass} px-4 py-3 flex flex-wrap justify-between items-center gap-2">
+                        <div class="font-bold flex items-center gap-2"><i class="fa-solid ${icon}"></i> ${title} <span class="opacity-70 text-xs font-normal">(${items.length} items)</span></div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="exportDaily('${type}', '${dateStr}', 'pdf')" class="btn-xs bg-white/50 hover:bg-white dark:bg-black/20 dark:hover:bg-black/40"><i class="fa-solid fa-file-pdf"></i></button>
+                            <button onclick="exportDaily('${type}', '${dateStr}', 'excel')" class="btn-xs bg-white/50 hover:bg-white dark:bg-black/20 dark:hover:bg-black/40"><i class="fa-solid fa-file-excel"></i></button>
+                            <div class="h-4 w-px bg-current opacity-20 mx-1"></div>
+                            <button onclick="bulkAction('${type}', 'highlight')" class="btn-xs" title="Highlight"><i class="fa-solid fa-highlighter"></i></button>
+                            <button onclick="bulkAction('${type}', 'move')" class="btn-xs" title="Move Category"><i class="fa-solid fa-arrows-up-down-left-right"></i> Move</button>
+                            <button onclick="bulkAction('${type}', 'delete')" class="btn-xs hover:text-red-500" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                            <div class="h-4 w-px bg-current opacity-20 mx-1"></div>
+                            <span class="font-mono font-bold text-sm">฿${formatMoney(total)}</span>
+                            <button onclick="copyTable('${tableId}')" class="btn-xs bg-white dark:bg-slate-700 border shadow-sm ml-2">Copy</button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left border-collapse dark:text-slate-300" id="${tableId}">
+                            <thead><tr class="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider border-b border-slate-200 dark:border-slate-700">
+                                <th class="p-2 w-8 text-center"><input type="checkbox" class="custom-checkbox" onchange="toggleSelectAll('${tableId}', this.checked)"></th>
+                                <th class="p-2 w-8 text-center">#</th><th class="p-2 hidden">Date</th>
+                                <th class="p-2 w-36 text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" onclick="handleSort('orderId')">Order ID</th>
+                                <th class="p-2 w-16 text-center">Qty</th><th class="p-2 w-20 text-center text-slate-400">Base</th><th class="p-2 w-16 text-center text-slate-400">VAT</th>
+                                <th class="p-2 w-24 text-center font-bold">Total</th><th class="p-2 w-32 text-center">Track</th>
+                                <th class="p-2 w-44 text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" onclick="handleSort('invoiceId')">INV</th>
+                                <th class="p-2 w-20 text-center">Time</th><th class="p-2 min-w-[200px] text-center">Note</th>
+                            </tr></thead>
+                            <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+                                ${items.map((item, i) => `
+                                    <tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${item.isHighlighted ? 'row-highlight' : ''}">
+                                        <td class="p-2 text-center"><input type="checkbox" class="custom-checkbox" data-id="${item.id}" ${item.isSelected ? 'checked' : ''} onchange="toggleSelect('${item.id}')"></td>
+                                        <td class="p-2 text-center text-slate-400 font-mono text-xs">${i + 1}</td>
+                                        <td class="hidden"><input type="text" class="table-input" value="${item.date}" onchange="updateItemField('${item.id}', 'date', this.value)"></td>
+                                        <td class="p-1"><input type="text" class="table-input font-mono text-center text-xs font-medium ${item.type === 'telemed' ? 'text-blue-600' : 'text-green-600'}" value="${escapeAttribute(item.orderId)}" onchange="updateItemField('${item.id}', 'orderId', this.value)"></td>
+                                        <td class="p-1"><input type="number" class="table-input text-center font-bold text-slate-600 dark:text-slate-400" value="${item.qty}" onchange="updateItemField('${item.id}', 'qty', this.value)"></td>
+                                        <td class="p-1"><input type="text" class="table-input text-right text-slate-400 text-xs base-price" value="${formatMoney(item.base)}" readonly></td>
+                                        <td class="p-1"><input type="text" class="table-input text-right text-slate-400 text-xs vat" value="${formatMoney(item.vat)}" readonly></td>
+                                        <td class="p-1"><input type="text" class="table-input text-right font-bold total-amount" value="${formatMoney(item.total)}" oninput="updateItemValue('${item.id}', this)" onblur="formatInput(this)"></td>
+                                        <td class="p-1"><input type="text" class="table-input text-xs text-center" value="${escapeAttribute(item.tracking)}" onchange="updateItemField('${item.id}', 'tracking', this.value)"></td>
+                                        <td class="p-1"><input type="text" class="table-input font-mono text-xs text-center" value="${escapeAttribute(item.invoiceId)}" onchange="updateItemField('${item.id}', 'invoiceId', this.value)"></td>
+                                        <td class="p-1"><input type="text" class="table-input text-xs text-center" value="${escapeAttribute(item.time)}" onchange="updateItemField('${item.id}', 'time', this.value)"></td>
+                                        <td class="p-1"><input type="text" class="table-input text-xs text-left" value="${escapeAttribute(item.note)}" onchange="updateItemField('${item.id}', 'note', this.value)"></td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- GRAPH LOGIC ---
+        function renderGraphStats() {
+            const container = document.getElementById('graphStats');
+            if (!container) return;
+            container.innerHTML = '';
+            const sortedDates = [...new Set(filteredViewData.map(i => i.date))].sort((a, b) => parseDateForSort(a) - parseDateForSort(b));
+            sortedDates.forEach(date => {
+                const items = filteredViewData.filter(i => i.date === date);
+                const medItems = items.filter(i => i.type === 'telemed');
+                const pharmItems = items.filter(i => i.type === 'telepharmacy');
+                const nhsoItems = items.filter(i => i.type === 'nhso');
+
+                const card = `
+                    <div class="bg-slate-50 dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all">
+                        <div class="flex items-center gap-2 mb-3 border-b border-slate-200 dark:border-slate-700 pb-2">
+                            <div class="bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm">${date.split('/')[0]}</div>
+                            <span class="font-bold text-slate-700 dark:text-slate-200">${date}</span>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="text-blue-600 dark:text-blue-400 font-semibold flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-blue-500"></div> MED</span>
+                                <div class="text-right">
+                                    <span class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded text-xs mr-2 font-bold">${medItems.length} บิล</span>
+                                    <span class="font-bold text-slate-700 dark:text-slate-300">${formatMoney(medItems.reduce((a, b) => a + b.total, 0))}</span>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="text-green-600 dark:text-green-400 font-semibold flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-green-500"></div> PHARM</span>
+                                <div class="text-right">
+                                    <span class="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded text-xs mr-2 font-bold">${pharmItems.length} บิล</span>
+                                    <span class="font-bold text-slate-700 dark:text-slate-300">${formatMoney(pharmItems.reduce((a, b) => a + b.total, 0))}</span>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="text-purple-600 dark:text-purple-400 font-semibold flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-purple-500"></div> NHSO</span>
+                                <div class="text-right">
+                                    <span class="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded text-xs mr-2 font-bold">${nhsoItems.length} บิล</span>
+                                    <span class="font-bold text-slate-700 dark:text-slate-300">${formatMoney(nhsoItems.reduce((a, b) => a + b.total, 0))}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                container.insertAdjacentHTML('beforeend', card);
+            });
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('salesChart');
+            if (!ctx) return;
+            const sortedData = [...filteredViewData].sort((a, b) => (a.rawDate - b.rawDate) || a.orderId.localeCompare(b.orderId));
+            if (sortedData.length === 0) return;
+
+            let labels = [], datasets = [];
+
+            if (chartMode === 'daily') {
+                const dailyData = {};
+                sortedData.forEach(i => {
+                    if (!dailyData[i.date]) dailyData[i.date] = { med: 0, pharm: 0, nhso: 0, total: 0 };
+                    if (i.type === 'telemed') dailyData[i.date].med += i.total;
+                    else if (i.type === 'nhso') dailyData[i.date].nhso += i.total;
+                    else dailyData[i.date].pharm += i.total;
+                    dailyData[i.date].total += i.total;
+                });
+                labels = Object.keys(dailyData).sort((a, b) => parseDateForSort(a) - parseDateForSort(b));
+                datasets = [
+                    { type: 'line', label: 'Total', data: labels.map(d => dailyData[d].total), borderColor: '#f97316', backgroundColor: '#f97316', borderWidth: 2, tension: 0.3, order: 0 },
+                    { type: 'bar', label: 'MED', data: labels.map(d => dailyData[d].med), backgroundColor: '#3b82f6', order: 1 },
+                    { type: 'bar', label: 'PHARMACY', data: labels.map(d => dailyData[d].pharm), backgroundColor: '#10b981', order: 2 },
+                    { type: 'bar', label: 'NHSO', data: labels.map(d => dailyData[d].nhso), backgroundColor: '#a855f7', order: 3 }
+                ];
+            } else {
+                labels = sortedData.map(i => i.invoiceId || i.orderId);
+                const dataPoints = sortedData.map(i => i.total);
+                // Color mapping
+                const bgColors = sortedData.map(i => {
+                    if (i.type === 'telemed') return '#3b82f6';
+                    if (i.type === 'nhso') return '#a855f7';
+                    return '#10b981';
+                });
+                datasets = [{ type: 'bar', label: 'Sales', data: dataPoints, backgroundColor: bgColors, borderWidth: 0, borderRadius: 4 }];
+            }
+
+            if (chartInstance) chartInstance.destroy();
+            chartInstance = new Chart(ctx, {
+                data: { labels: labels, datasets: datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { legend: { display: chartMode === 'daily', position: 'top' } },
+                    scales: { x: { stacked: chartMode === 'daily', ticks: { maxRotation: 90 } }, y: { stacked: chartMode === 'daily', beginAtZero: true } }
+                }
+            });
+        }
+
+        function setChartMode(mode) {
+            chartMode = mode;
+            const btnDaily = document.getElementById('btnChartDaily');
+            const btnBill = document.getElementById('btnChartBill');
+            if (mode === 'daily') {
+                btnDaily.classList.replace('text-slate-500', 'text-blue-600'); btnDaily.classList.add('bg-white', 'shadow-sm');
+                btnBill.classList.replace('text-blue-600', 'text-slate-500'); btnBill.classList.remove('bg-white', 'shadow-sm');
+            } else {
+                btnBill.classList.replace('text-slate-500', 'text-blue-600'); btnBill.classList.add('bg-white', 'shadow-sm');
+                btnDaily.classList.replace('text-blue-600', 'text-slate-500'); btnDaily.classList.remove('bg-white', 'shadow-sm');
+            }
+            renderChart();
+        }
+
+        // --- EMAIL, EXPORT, COPY ---
+        function openEmailModal() {
+            if (globalData.length === 0) return showToast("ไม่มีข้อมูล", true);
+            const dates = [...new Set(globalData.map(i => i.date))].sort((a, b) => parseDateForSort(b) - parseDateForSort(a));
+            const select = document.getElementById('emailDateSelect');
+            select.innerHTML = '<option value="">-- เลือกวันที่ --</option>';
+            dates.forEach(d => { select.innerHTML += `<option value="${d}">${d}</option>`; });
+            if (dates.length > 0) { select.value = dates[0]; updateEmailDraft(dates[0]); }
+            document.getElementById('emailModal').classList.remove('hidden');
+        }
+
+        function updateEmailDraft(dateStr) {
+            let items = globalData.filter(i => i.date === dateStr).sort((a, b) => a.orderId.localeCompare(b.orderId));
+            const medItems = items.filter(i => i.type === 'telemed');
+            const pharmItems = items.filter(i => i.type === 'telepharmacy');
+            const nhsoItems = items.filter(i => i.type === 'nhso');
+
+            document.getElementById('emailPreviewMed').innerHTML = generateEmailHtml(medItems, 'TELEMEDICINE', dateStr);
+            document.getElementById('emailPreviewPharm').innerHTML = generateEmailHtml(pharmItems, 'TELEPHARMACY', dateStr);
+            document.getElementById('emailPreviewNhso').innerHTML = generateEmailHtml(nhsoItems, 'NHSO (สปสช)', dateStr);
+        }
+
+        function closeEmailModal() { document.getElementById('emailModal').classList.add('hidden'); }
+
+        function generateEmailHtml(items, title, dateStr) {
+            const safeDate = dateStr || "ไม่ระบุวันที่";
+            const thStyle = 'background-color: #4CAF50; color: white; border: 1px solid #999; padding: 4px; font-size: 11px; text-align: center; white-space: nowrap;';
+            const tdStyle = 'border: 1px solid #ccc; padding: 4px; font-size: 11px; vertical-align: top;';
+            const tdCenter = tdStyle + ' text-align: center;';
+            const tdRight = tdStyle + ' text-align: right;';
+            const tdLeft = tdStyle + ' text-align: left;';
+
+            let rows = '';
+            let total = 0;
+            if (items.length > 0) {
+                total = items.reduce((s, i) => s + i.total, 0);
+                rows = items.map((item, idx) => `
+                    <tr>
+                        <td style="${tdCenter}">${idx + 1}</td>
+                        <td style="${tdCenter}">${item.date}</td>
+                        <td style="${tdCenter}">${item.orderId}</td>
+                        <td style="${tdCenter}">${item.qty}</td>
+                        <td style="${tdRight}">${formatMoney(item.base)}</td>
+                        <td style="${tdRight}">${formatMoney(item.vat)}</td>
+                        <td style="${tdRight} font-weight:bold;">${formatMoney(item.total)}</td>
+                        <td style="${tdCenter}">${escapeHtml(item.tracking)}</td>
+                        <td style="${tdCenter}">${item.invoiceId}</td>
+                        <td style="${tdCenter}">${item.time}</td>
+                        <td style="${tdLeft}">${escapeHtml(item.note)}</td>
+                    </tr>
+                `).join('');
+            } else {
+                rows = `<tr><td colspan="11" style="${tdCenter} color:#999;">- ไม่มีรายการ -</td></tr>`;
+            }
+
+            return `
+                <div class="email-content" style="font-family: 'Prompt', sans-serif; font-size: 12px; color: #000;">
+                    <p style="margin: 4px 0;">To: pattharawadi.s@chiiwii.com, thanyarat.c@chiiwii.com</p>
+                    <p style="margin: 4px 0;">Cc: supphakit.s@chiiwii.com, preecha.p@chiiwii.com, accounting@chiiwii.com</p>
+                    <p style="margin: 4px 0;">สรุปยอด ${safeDate} --- ${title}</p>
+                    <p style="margin: 4px 0;">BAR-00003-26-</p>
+                    <p style="margin: 4px 0;">ค่ายา 💊 และค่าส่งสินค้า ยอดรวมชำระเข้า บัญชี บจก. เมดไลฟ์ พลัส</p>
+                    <p style="margin: 4px 0;">(ธนาคารไทยพาณิชย์ เลขที่บัญชี 415-077389-0)</p>
+                    <p style="margin: 4px 0;"><b>${formatMoney(total)} บาท</b></p>
+                    <br>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 11px; color: #000;">
+                        <thead>
+                            <tr>
+                                <th style="${thStyle}">#</th><th style="${thStyle}">Date</th><th style="${thStyle}">Order ID</th><th style="${thStyle}">Qty</th>
+                                <th style="${thStyle}">Base</th><th style="${thStyle}">VAT</th><th style="${thStyle}">Total</th><th style="${thStyle}">Tracking</th>
+                                <th style="${thStyle}">INV</th><th style="${thStyle}">Time</th><th style="${thStyle}">Note</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                    <br><p style="margin: 4px 0;">-----</p>
+                    <div style="font-family: sans-serif; font-size: 12px;">MEDLIFE PLUS CO., LTD.<br>M: (+66)95-750-9723<br>E: medlifeplus@gmail.com<br>A: 198, Putthong apartment Floor 1 Room 102-103, Soi Yothin Pattana, Bang Kapi, Klong jan, Bangkok 10240, Thailand<br>LINE: @medlifeplus</div>
+                </div>
+            `;
+        }
+
+        async function copyEmailContent(side) {
+            let elementId = 'emailPreviewMed';
+            if (side === 'pharm') elementId = 'emailPreviewPharm';
+            if (side === 'nhso') elementId = 'emailPreviewNhso';
+
+            const el = document.getElementById(elementId);
+            if (!el) { showToast("ไม่พบเนื้อหาที่จะคัดลอก", true); return; }
+            try {
+                const htmlContent = el.innerHTML;
+                const textContent = el.innerText;
+                const blobHtml = new Blob([htmlContent], { type: "text/html" });
+                const blobText = new Blob([textContent], { type: "text/plain" });
+                await navigator.clipboard.write([new ClipboardItem({ "text/html": blobHtml, "text/plain": blobText })]);
+                showToast("คัดลอกเรียบร้อย");
+            } catch (err) {
+                const range = document.createRange();
+                range.selectNodeContents(el);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+                document.execCommand('copy');
+                selection.removeAllRanges();
+                showToast("คัดลอกเรียบร้อย (Fallback)");
+            }
+        }
+
+        function copyTable(tableId) {
+            const table = document.getElementById(tableId); if (!table) return;
+            const clone = document.createElement('table'); clone.style.fontFamily = 'Prompt, sans-serif'; clone.style.fontSize = '14pt'; clone.style.borderCollapse = 'collapse';
+            const thead = document.createElement('thead'); const headerRow = document.createElement('tr');
+            ['#', 'Date', 'Order ID', 'Qty', 'Base', 'VAT', 'Total', 'Tracking', 'INV', 'Time', 'Note'].forEach(t => { const th = document.createElement('th'); th.innerText = t; th.style.border = '1px solid #000'; th.style.backgroundColor = '#4CAF50'; th.style.color = '#fff'; th.style.padding = '10px'; th.style.textAlign = 'center'; headerRow.appendChild(th); }); thead.appendChild(headerRow); clone.appendChild(thead);
+            const tbody = document.createElement('tbody'); table.querySelectorAll('tbody tr').forEach(tr => { const newRow = document.createElement('tr'); const inputs = tr.querySelectorAll('input'); const addCell = (val, isText = false, isBold = false, align = 'center') => { const td = document.createElement('td'); td.innerText = val; td.style.border = '1px solid #ddd'; td.style.padding = '10px'; td.style.textAlign = align; td.style.verticalAlign = 'middle'; if (isText) td.setAttribute('style', td.getAttribute('style') + ' mso-number-format:"\\@"'); if (isBold) td.style.fontWeight = 'bold'; newRow.appendChild(td); }; addCell(tr.cells[1].innerText); addCell(inputs[0].value); addCell(inputs[1].value, true); addCell(inputs[2].value); addCell(inputs[3].value); addCell(inputs[4].value); addCell(inputs[5].value, false, true); addCell(inputs[6].value); addCell(inputs[7].value, true); addCell(inputs[8].value); addCell(inputs[9].value, false, false, 'left'); tbody.appendChild(newRow); }); clone.appendChild(tbody);
+            const container = document.getElementById('copyContainer'); container.innerHTML = ''; container.appendChild(clone);
+            const range = document.createRange(); range.selectNode(clone); window.getSelection().removeAllRanges(); window.getSelection().addRange(range); document.execCommand('copy'); window.getSelection().removeAllRanges(); showToast("คัดลอกตารางแล้ว (Paste ได้เลย)");
+        }
+
+        // --- EXPORT, SORT, FILTER ---
+        function exportToExcel(filterType) { let items = globalData.filter(i => i.type === filterType); if (items.length === 0) return showToast("ไม่มีข้อมูล", true); generateExcelFile(items, `BillPro_${filterType.toUpperCase()}`); }
+        function exportDaily(type, dateStr, format) { let items = globalData.filter(i => (type === 'mixed' ? true : i.type === type) && i.date === dateStr); if (items.length === 0) return showToast("ไม่มีข้อมูล", true); items.sort((a, b) => a.orderId.localeCompare(b.orderId)); if (format === 'excel') generateExcelFile(items, `BillPro_${type.toUpperCase()}_${dateStr.replace(/\//g, '-')}`); else printReport(items, type, dateStr); }
+        function exportToPDF(filterType) { let items = globalData.filter(i => i.type === filterType); if (items.length === 0) return showToast("ไม่มีข้อมูล", true); items.sort((a, b) => a.rawDate - b.rawDate); printReport(items, filterType, "All Dates"); }
+        function generateExcelFile(items, filename) { let table = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"></head><body><table border="1"><thead><tr><th>#</th><th>Date</th><th>Order ID</th><th>Qty</th><th>Base</th><th>VAT</th><th>Total</th><th>Tracking</th><th>INV</th><th>Time</th><th>Note</th></tr></thead><tbody>`; items.forEach((i, idx) => { table += `<tr><td>${idx + 1}</td><td>${i.date}</td><td style='mso-number-format:"\\@"'>${i.orderId}</td><td>${i.qty}</td><td>${i.base.toFixed(2)}</td><td>${i.vat.toFixed(2)}</td><td>${i.total.toFixed(2)}</td><td>${i.tracking}</td><td style='mso-number-format:"\\@"'>${i.invoiceId}</td><td>${i.time}</td><td>${i.note}</td></tr>`; }); table += `</tbody></table></body></html>`; const blob = new Blob([table], { type: 'application/vnd.ms-excel' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${filename}.xls`; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
+        function printReport(items, type, dateStr) {
+            let displayName = 'UNKNOWN';
+            if (type === 'telemed') displayName = 'MED';
+            else if (type === 'telepharmacy') displayName = 'PHARMACY';
+            else if (type === 'nhso') displayName = 'NHSO (สปสช)';
+            else if (type === 'mixed') displayName = 'MERGED';
+
+            let printHTML = `<div class="print-header">รายงานสรุป ${displayName} (${dateStr})</div><table><thead><tr><th>#</th><th>Date</th><th>Order ID</th><th>Qty</th><th align="right">Base</th><th align="right">VAT</th><th align="right">Total</th><th>Track</th><th>INV</th><th>Time</th><th>Note</th></tr></thead><tbody>`; let grandTotal = 0; items.forEach((item, idx) => { grandTotal += item.total; printHTML += `<tr><td align="center">${idx + 1}</td><td>${item.date}</td><td>${item.orderId}</td><td align="center">${item.qty}</td><td align="right">${formatMoney(item.base)}</td><td align="right">${formatMoney(item.vat)}</td><td align="right"><b>${formatMoney(item.total)}</b></td><td>${item.tracking}</td><td>${item.invoiceId}</td><td>${item.time}</td><td align="left">${item.note}</td></tr>`; }); printHTML += `<tr class="total-row"><td colspan="6" align="right">รวมทั้งหมด:</td><td align="right">${formatMoney(grandTotal)}</td><td colspan="4"></td></tr></tbody></table>`; const printArea = document.getElementById('printArea'); printArea.innerHTML = printHTML; window.print();
+        }
+
+        function toggleSelect(id, state = null) {
+            const item = globalData.find(x => x.id === id);
+            if (item) {
+                item.isSelected = (state !== null) ? state : !item.isSelected;
+                saveToLocal();
+            }
+        }
+
+        function toggleSelectAll(tableId, checked) {
+            document.querySelectorAll(`#${tableId} tbody input[type="checkbox"]`).forEach(cb => {
+                cb.checked = checked;
+                toggleSelect(cb.getAttribute('data-id'), checked);
+            });
+        }
+
+        function bulkAction(type, action) {
+            let targetItems = (type === 'mixed') ? globalData.filter(i => i.isSelected) : globalData.filter(i => i.type === type && i.isSelected);
+            if (targetItems.length === 0) return showToast("กรุณาเลือกรายการก่อน", true);
+
+            if (action === 'delete') {
+                if (!confirm(`ยืนยันลบ ${targetItems.length} รายการ?`)) return;
+                const idsToRemove = new Set(targetItems.map(i => i.id));
+                globalData = globalData.filter(i => !idsToRemove.has(i.id));
+                renderUI(); saveToLocal(); showToast("ทำรายการสำเร็จ");
+            }
+            else if (action === 'highlight') {
+                targetItems.forEach(i => i.isHighlighted = !i.isHighlighted);
+                renderUI(); saveToLocal(); showToast("ทำรายการสำเร็จ");
+            }
+            else if (action === 'move') {
+                itemsToMove = targetItems;
+                document.getElementById('moveModal').classList.remove('hidden');
+            }
+        }
+
+        function closeMoveModal() {
+            document.getElementById('moveModal').classList.add('hidden');
+            itemsToMove = [];
+        }
+
+        function confirmMove(newType) {
+            if (itemsToMove.length === 0) return closeMoveModal();
+
+            itemsToMove.forEach(i => {
+                i.type = newType;
+                i.isSelected = false;
+            });
+
+            renderUI(); saveToLocal(); showToast(`ย้าย ${itemsToMove.length} รายการเรียบร้อย`);
+            closeMoveModal();
+        }
+        function tkoFilter() { if (globalData.length === 0) return showToast("ไม่มีข้อมูลให้ตรวจสอบ", true); const initialCount = globalData.length; globalData = globalData.filter(item => item.invoiceId && item.invoiceId.trim() !== ""); const removedCount = initialCount - globalData.length; if (removedCount > 0) { renderUI(); showToast(`ลบรายการไร้ INV แล้ว (${removedCount} รายการ)`); saveToLocal(); } else { showToast("ไม่พบรายการที่ไม่มีเลข INV", true); } }
+        function toggleDateSort() { dateSortOrder = dateSortOrder === 'desc' ? 'asc' : 'desc'; document.getElementById('btnSort').innerHTML = `SORT <i class="fa-solid fa-arrow-${dateSortOrder === 'asc' ? 'up' : 'down'}-wide-short"></i>`; renderUI(); }
+        function toggleMergeView() { isMergedView = !isMergedView; const btn = document.getElementById('btnMerge'); if (isMergedView) { btn.innerHTML = '<i class="fa-solid fa-layer-group"></i> Merge: ON'; btn.classList.replace('bg-slate-700', 'bg-orange-600'); btn.classList.replace('hover:bg-slate-800', 'hover:bg-orange-700'); } else { btn.innerHTML = '<i class="fa-solid fa-object-group"></i> Merge: OFF'; btn.classList.replace('bg-orange-600', 'bg-slate-700'); btn.classList.replace('hover:bg-orange-700', 'hover:bg-slate-800'); } renderUI(); }
+        function handleSearch() { searchTerm = document.getElementById('searchInput').value; renderUI(); }
+        function saveToLocal() { localStorage.setItem('tmtp_data', JSON.stringify(globalData)); }
+        function saveDataToJSON() { try { if (globalData.length === 0) return showToast("ไม่มีข้อมูล", true); const dataStr = JSON.stringify(globalData, null, 2); const blob = new Blob([dataStr], { type: "application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `TMTP_Backup_${new Date().toISOString().slice(0, 10)}.json`; document.body.appendChild(a); a.click(); setTimeout(() => { document.body.removeChild(a); window.URL.revokeObjectURL(url); }, 0); showToast("บันทึกไฟล์เรียบร้อย"); } catch (err) { console.error(err); showToast("เกิดข้อผิดพลาดในการบันทึก", true); } }
+        function loadDataFromJSON(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = function (e) { try { const json = JSON.parse(e.target.result); if (!Array.isArray(json)) throw new Error("ไฟล์ไม่ถูกต้อง (Not Array)"); globalData = sanitizeLoadedData(json); renderUI(); saveToLocal(); showToast("โหลดไฟล์สำเร็จ"); event.target.value = ''; } catch (err) { console.error(err); showToast("ไฟล์ไม่ถูกต้อง", true); } }; reader.readAsText(file); }
+        function sanitizeLoadedData(jsonArray) { return jsonArray.map(item => { let rDate; if (item.rawDate) { rDate = new Date(item.rawDate); if (isNaN(rDate.getTime())) rDate = parseDateForSort(item.date || ""); } else { rDate = parseDateForSort(item.date || ""); } return { id: item.id || Math.random().toString(36).substr(2, 9), date: item.date || "-", time: item.time || "", orderId: item.orderId || "-", invoiceId: item.invoiceId || "", qty: Number(item.qty) || 0, base: Number(item.base) || 0, vat: Number(item.vat) || 0, total: Number(item.total) || 0, tracking: item.tracking || "", note: item.note || "", type: item.type || "telepharmacy", rawDate: rDate, isHighlighted: item.isHighlighted || false, isSelected: false }; }); }
+
+        function processData() {
+            showLoading();
+            setTimeout(() => {
+                try {
+                    const raw = document.getElementById('rawData').value;
+                    if (!raw) throw new Error("กรุณาวางข้อมูลก่อนครับ");
+                    globalData = [];
+                    const parts = raw.split(/(?=ORW)/g);
+                    parts.forEach(block => {
+                        if (block.trim().length < 10 || !block.includes("บริษัท ชีวีบริรักษ์")) return;
+                        let orderId = (block.match(/ORW\s*[-]?\s*\d{5}\s*[-]?\s*\d{2}\s*[-]?\s*\d+/i) || ["-"])[0].replace(/\s/g, '');
+                        let invoiceId = (block.match(/INV\s*[-]?\s*\d{5}\s*[-]?\s*\d{2}\s*[-]?\s*\d+/i) || [""])[0].replace(/\s/g, '');
+                        let dateStr = (block.match(/\d{2}\/\d{2}\/\d{4}/) || ["-"])[0];
+                        let timeMatch = block.match(/(\d{2}:\d{2}:\d{2})/);
+                        let timeStr = timeMatch ? timeMatch[1] : "";
+                        let totalAmount = 0;
+                        const moneyMatches = block.match(/[\d,]+\.\d{2}/g);
+                        if (moneyMatches) { const amounts = moneyMatches.map(s => parseFloat(s.replace(/,/g, ''))); totalAmount = Math.max(...amounts); }
+                        let fullText = ""; let qty = 1;
+                        let amountStrMatches = block.match(/[\d,]+\.\d{2}/g);
+                        let amountStr = amountStrMatches ? amountStrMatches.find(s => parseFloat(s.replace(/,/g, '')) === totalAmount) : null;
+                        if (amountStr) {
+                            let splitParts = block.split(amountStr);
+                            if (splitParts.length > 1) {
+                                fullText = splitParts.join(" ").trim();
+                                if (invoiceId) fullText = fullText.replace(invoiceId, '').trim();
+                                if (orderId) fullText = fullText.replace(orderId, '').trim();
+                                if (dateStr) fullText = fullText.replace(dateStr, '').trim();
+                                staffToRemove.forEach(staff => { while (fullText.includes(staff)) fullText = fullText.replace(staff, "").trim(); });
+                                const junkPhrases = ["บริษัท ชีวีบริรักษ์ จำกัด (สำนักงานใหญ่)", "บริษัท ชีวีบริรักษ์ จำกัด", "บริษัท ชีวีบริรักษ์"];
+                                junkPhrases.forEach(phrase => { fullText = fullText.replace(phrase, "").trim(); });
+                                if (timeStr) fullText = fullText.replace(timeStr, "").trim();
+                                let qtyMatches = fullText.match(/-(\d+)(?=\s|$)/g);
+                                if (qtyMatches) { let last = qtyMatches[qtyMatches.length - 1]; let num = parseInt(last.replace('-', '')); if (!isNaN(num) && num > 0) qty = num; }
+                            }
+                        }
+                        let realTracking = "";
+                        let trackMatch = fullText.match(/\b(WB\d{9,}TH|SHIP[A-Z0-9]+|LPM|0\d{9,})\b/i);
+                        if (trackMatch) {
+                            realTracking = trackMatch[0];
+                            // Remove Tracking from Note if it exists
+                            fullText = fullText.replace(realTracking, '').trim();
+                        }
+
+                        let type = "telepharmacy";
+
+                        // Check for [NHSO] tag
+                        if (fullText.includes("[NHSO]") || fullText.includes("[สปสช]")) {
+                            type = "nhso";
+                            // Remove the tag for cleaner Note
+                            fullText = fullText.replace(/\[NHSO\]/gi, '').replace(/\[สปสช\]/gi, '').trim();
+                        } else {
+                            let checkText = fullText.replace(/Total|Baht|THB|Net|Amount|Transfer/gi, '');
+                            if (/[a-zA-Z]/.test(checkText.replace(realTracking, ''))) { type = "telemed"; }
+                        }
+
+                        globalData.push({ id: Math.random().toString(36).substr(2, 9), date: dateStr, time: timeStr, orderId, invoiceId, qty, base: totalAmount / 1.07, vat: totalAmount - (totalAmount / 1.07), total: totalAmount, tracking: realTracking, note: fullText, type, rawDate: parseDateForSort(dateStr), isHighlighted: false, isSelected: false });
+                    });
+                    if (globalData.length === 0) throw new Error("ไม่พบข้อมูลที่ตรงเงื่อนไข");
+                    currentSort = { key: null, direction: 'asc' }; dateSortOrder = 'desc'; isMergedView = false;
+                    renderUI(); saveToLocal(); showToast(`ประมวลผลสำเร็จ ${globalData.length} รายการ`);
+                } catch (err) { showToast(err.message, true); } finally { hideLoading(); }
+            }, 500);
+        }
+        function handleSort(key) { if (currentSort.key === key) { currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc'; } else { currentSort.key = key; currentSort.direction = 'asc'; } renderUI(); }
+    </script>
+</body>
+
+</html>

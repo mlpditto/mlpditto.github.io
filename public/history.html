@@ -1,0 +1,1654 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOAP Note - Patient History</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai+Looped:wght@300;400;500;600;700&display=swap');
+
+        body {
+            font-family: 'IBM Plex Sans Thai Looped', sans-serif;
+            background-color: #f3f4f6;
+        }
+
+        .hidden-el {
+            display: none !important;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        .step-active div {
+            background-color: #06c755;
+            color: white;
+            border-color: #06c755;
+        }
+
+        .step-active span {
+            color: #06c755;
+            font-weight: bold;
+        }
+
+        .step-inactive div {
+            background-color: white;
+            color: #9ca3af;
+            border-color: #e5e7eb;
+        }
+
+        .step-inactive span {
+            color: #9ca3af;
+        }
+
+        .custom-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #06c755;
+        }
+
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+
+            #print-area,
+            #print-area * {
+                visibility: visible;
+            }
+
+            #print-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                padding: 20px;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+</head>
+
+<body class="text-gray-800 h-screen flex flex-col">
+
+    <div id="auth-loading" class="fixed inset-0 bg-gray-100 z-[999] flex flex-col items-center justify-center">
+        <i class="fas fa-spinner fa-spin text-4xl text-green-600 mb-4"></i>
+        <p class="text-gray-500" id="loading-text">Connecting System...</p>
+    </div>
+
+    <div id="import-loading"
+        class="hidden-el fixed inset-0 bg-black bg-opacity-50 z-[1000] flex flex-col items-center justify-center backdrop-blur-sm">
+        <div class="bg-white p-6 rounded-xl shadow-2xl text-center">
+            <i class="fas fa-circle-notch fa-spin text-4xl text-green-600 mb-4"></i>
+            <h3 class="text-xl font-bold mb-2">กำลังประมวลผล...</h3>
+            <p class="text-gray-500 text-sm" id="import-status">Processing...</p>
+        </div>
+    </div>
+
+    <header
+        class="bg-white text-gray-800 px-6 py-3 shadow-md z-50 shrink-0 flex justify-between items-center no-print border-b border-gray-200">
+        <div class="flex items-center gap-3">
+            <div class="bg-green-100 text-green-600 p-2 rounded-lg"><i class="fas fa-file-medical-alt text-xl"></i>
+            </div>
+            <div>
+                <a href="https://fkb-front-kanban.web.app/admin.html" target="_blank" id="btn-back-admin"
+                    class="hidden-el text-gray-400 hover:text-gray-600 text-sm flex items-center gap-1">
+                    <i class="fas fa-external-link-alt"></i> Dashboard</a>
+                <h1 class="text-lg font-bold leading-tight text-gray-700">ระบบทะเบียนประวัติ (SOAP)</h1>
+                <p class="text-[10px] text-gray-400">Medical Record System</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <div id="line-profile"
+                class="hidden-el flex items-center gap-3 bg-green-50 px-3 py-1.5 rounded-full border border-green-200">
+                <img id="user-picture" src="" class="w-8 h-8 rounded-full border border-green-300">
+                <div class="text-sm mr-2">
+                    <div id="user-name" class="font-bold text-gray-700 leading-tight">User</div>
+                    <div class="text-[10px] text-gray-400 cursor-pointer hover:text-red-500" onclick="logout()">
+                        ออกจากระบบ</div>
+                </div>
+            </div>
+
+            <button id="btn-line-login-header" onclick="loginLINE()"
+                class="hidden-el bg-[#06c755] hover:bg-[#05b34c] text-white px-4 py-2 rounded-lg font-bold shadow-sm transition text-sm flex items-center gap-2">
+                <i class="fab fa-line text-lg"></i> Login
+            </button>
+            <button id="btn-google-login-header" onclick="loginGoogle()"
+                class="hidden-el bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 px-4 py-2 rounded-lg font-bold shadow-sm transition text-sm flex items-center gap-2">
+                <i class="fab fa-google text-red-500 text-lg"></i> Login
+            </button>
+
+            <div id="admin-tools" class="hidden-el flex items-center gap-2">
+                <span class="text-xs bg-red-100 text-red-600 px-2 py-1 rounded font-bold">ADMIN</span>
+                <input type="file" id="fileInput" accept=".csv, .xlsx, .xls" class="hidden-el"
+                    onchange="handleFileSelect(this)">
+                <button onclick="document.getElementById('fileInput').click()"
+                    class="bg-gray-100 text-gray-700 hover:bg-gray-200 px-3 py-2 rounded-lg font-bold shadow-sm transition text-sm border border-gray-300">
+                    <i class="fas fa-file-import"></i> Import
+                </button>
+            </div>
+
+            <button id="btn-add-record" onclick="openAddModal()"
+                class="hidden-el bg-green-600 text-white hover:bg-green-700 px-4 py-2 rounded-lg font-bold shadow-lg transition text-sm">
+                <i class="fas fa-plus mr-1"></i> ลงทะเบียนใหม่
+            </button>
+        </div>
+    </header>
+
+    <div class="flex-1 overflow-hidden flex flex-col p-4 w-full mx-auto relative no-print px-6">
+
+        <div id="guest-view" class="flex-1 flex flex-col items-center justify-center text-center p-6">
+            <div class="bg-white p-10 rounded-2xl shadow-lg max-w-md w-full border border-green-100">
+                <div
+                    class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl">
+                    <i class="fas fa-user-lock"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">กรุณาเข้าสู่ระบบ</h2>
+                <p class="text-gray-500 mb-8">เพื่อดูประวัติการรักษาของคุณ หรือบันทึกข้อมูลใหม่<br>โปรด Login ด้วยบัญชี
+                </p>
+                <div class="space-y-3">
+                    <button onclick="loginLINE()"
+                        class="w-full bg-[#06c755] hover:bg-[#05b34c] text-white py-3 rounded-xl font-bold shadow-lg transition text-lg flex items-center justify-center gap-2">
+                        <i class="fab fa-line text-2xl"></i> Login with LINE
+                    </button>
+                    <button onclick="loginGoogle()"
+                        class="w-full bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 py-3 rounded-xl font-bold shadow-md transition text-lg flex items-center justify-center gap-2">
+                        <i class="fab fa-google text-red-500 text-2xl"></i> Login with Google
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="access-denied-view" class="hidden-el flex-1 flex flex-col items-center justify-center text-center p-6">
+            <div class="bg-white p-10 rounded-2xl shadow-lg max-w-md w-full border-t-4 border-yellow-400">
+                <div
+                    class="w-20 h-20 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">รอการอนุมัติ</h2>
+                <p class="text-gray-500 mb-6">บัญชีของคุณ (<span id="denied-email" class="font-bold"></span>)
+                    ยังไม่ได้รับสิทธิ์เข้าใช้งานระบบ SOAP<br><span id="denied-msg">กรุณากดปุ่มด้านล่างเพื่อให้ Admin
+                        อนุมัติ</span></p>
+                <button id="btn-request-access" onclick="requestAccess()"
+                    class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold shadow-lg transition text-lg">
+                    <i class="fas fa-user-plus mr-2"></i> ขอสิทธิ์เข้าใช้งาน
+                </button>
+                <div id="pending-msg" class="hidden-el text-orange-500 font-bold text-lg animate-pulse">
+                    <i class="fas fa-clock mr-2"></i> รอการอนุมัติจาก Admin...
+                </div>
+                <button onclick="logout()"
+                    class="mt-4 text-gray-400 hover:text-red-500 text-sm underline">ออกจากระบบ</button>
+            </div>
+        </div>
+
+        <div id="data-view" class="hidden-el flex-1 flex flex-col h-full">
+            <div
+                class="bg-white p-3 rounded-xl shadow-sm border border-gray-200 mb-4 flex gap-3 shrink-0 items-center justify-between">
+                <div class="relative flex-1">
+                    <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                    <input type="text" id="searchInput" placeholder="ค้นหาชื่อ, เบอร์โทร..."
+                        class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                        oninput="filterHistory()">
+                </div>
+                <button id="btn-bulk-delete" onclick="deleteSelectedMain()"
+                    class="hidden-el bg-red-50 text-red-600 hover:bg-red-100 px-4 py-2 rounded-lg font-bold border border-red-200 transition text-sm">
+                    <i class="fas fa-trash-alt mr-1"></i> ลบที่เลือก (<span id="selected-count-main">0</span>)
+                </button>
+            </div>
+
+            <div class="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+                <div class="overflow-x-auto custom-scroll flex-1">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-gray-50 text-xs font-bold text-gray-500 uppercase sticky top-0 shadow-sm z-10">
+                            <tr>
+                                <th class="p-4 w-10 text-center"><input type="checkbox" id="selectAllMain"
+                                        class="custom-checkbox" onchange="toggleSelectAllMain(this)"></th>
+                                <th class="p-4 w-32">วันที่</th>
+                                <th class="p-4">ผู้ป่วย</th>
+                                <th class="p-4 w-32">เบอร์โทร</th>
+                                <th class="p-4">CC / Diagnosis</th>
+                                <th class="p-4 w-32">ผู้บันทึก</th>
+                                <th class="p-4 text-center w-40">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody" class="text-sm divide-y divide-gray-100">
+                            <tr>
+                                <td colspan="7" class="p-8 text-center text-gray-400">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="p-3 bg-gray-50 border-t flex justify-between items-center text-xs text-gray-600">
+                    <div class="flex items-center gap-2">
+                        <span>แสดง</span>
+                        <select id="rowsPerPage" onchange="changeRowsPerPage(this.value)"
+                            class="border rounded p-1 bg-white outline-none">
+                            <option value="10">10</option>
+                            <option value="20">20</option>
+                            <option value="30">30</option>
+                            <option value="50">50</option>
+                        </select>
+                        <span>รายการ/หน้า</span>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <span id="pageInfo">หน้าที่ 1 จาก 1 (0 รายการ)</span>
+                        <div class="flex gap-1">
+                            <button onclick="changePage(-1)" id="btn-page-prev"
+                                class="px-3 py-1 bg-white border rounded hover:bg-gray-100 disabled:opacity-50"
+                                disabled><i class="fas fa-chevron-left"></i></button>
+                            <button onclick="changePage(1)" id="btn-page-next"
+                                class="px-3 py-1 bg-white border rounded hover:bg-gray-100 disabled:opacity-50"
+                                disabled><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="previewModal"
+        class="hidden-el fixed inset-0 bg-black bg-opacity-60 z-[80] flex justify-center items-center p-4 backdrop-blur-sm no-print">
+        <div class="bg-white rounded-2xl w-full max-w-6xl h-[90vh] flex flex-col shadow-2xl fade-in overflow-hidden">
+            <div class="bg-white border-b p-4 shrink-0 flex justify-between items-center">
+                <h2 class="text-lg font-bold text-green-700 flex items-center gap-2">
+                    <i class="fas fa-list-check"></i> เลือกรายการนำเข้า
+                </h2>
+                <button onclick="closeModal('previewModal')" class="text-gray-400 hover:text-red-500"><i
+                        class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="p-3 bg-gray-50 border-b flex justify-between items-center text-sm">
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="selectAllPreview" class="custom-checkbox"
+                        onchange="toggleSelectAllPreview(this)">
+                    <label for="selectAllPreview" class="font-bold cursor-pointer">เลือกทั้งหมด</label>
+                    <span id="selectedCount" class="text-gray-500 ml-2">(เลือก 0 รายการ)</span>
+                </div>
+            </div>
+            <div class="flex-1 overflow-auto custom-scroll p-0">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead class="bg-gray-100 sticky top-0 shadow-sm text-xs text-gray-600 uppercase">
+                        <tr>
+                            <th class="p-3 w-10 text-center">#</th>
+                            <th class="p-3">Date</th>
+                            <th class="p-3">Name</th>
+                            <th class="p-3">Phone</th>
+                            <th class="p-3">CC</th>
+                            <th class="p-3">Underlying</th>
+                        </tr>
+                    </thead>
+                    <tbody id="previewTableBody" class="divide-y divide-gray-100"></tbody>
+                </table>
+            </div>
+            <div class="p-4 border-t bg-white flex justify-end gap-3 shrink-0">
+                <button onclick="closeModal('previewModal')"
+                    class="px-5 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100">ยกเลิก</button>
+                <button onclick="confirmImport()"
+                    class="px-6 py-2 rounded-lg bg-green-600 text-white font-bold hover:bg-green-700 shadow-md">
+                    <i class="fas fa-check mr-1"></i> ยืนยัน
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="historyModal"
+        class="hidden-el fixed inset-0 bg-black bg-opacity-60 z-[60] flex justify-center items-center p-4 backdrop-blur-sm no-print">
+        <div class="bg-white rounded-2xl w-full h-[95vh] flex flex-col shadow-2xl fade-in overflow-hidden">
+            <div class="bg-white border-b p-4 shrink-0">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold text-green-700 flex items-center gap-2">
+                        <i class="fas fa-file-medical"></i> <span id="modal-title">บันทึกข้อมูล</span>
+                    </h2>
+                    <div class="flex items-center gap-2">
+                        <button onclick="openPatientProfile()" id="btn-related-tasks"
+                            class="hidden-el text-xs bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-1 rounded-full border border-indigo-200 shadow-sm font-bold">
+                            <i class="fas fa-folder-open"></i> แฟ้มประวัติ (Profile)</button>
+                        <button onclick="viewEditHistory()" id="btn-view-logs"
+                            class="hidden-el text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-1 rounded-full"><i
+                                class="fas fa-history"></i> ประวัติ</button>
+                        <button onclick="closeModal('historyModal')" class="text-gray-400 hover:text-red-500"><i
+                                class="fas fa-times text-xl"></i></button>
+                    </div>
+                </div>
+                <div class="flex justify-around items-center px-4 max-w-3xl mx-auto relative">
+                    <div class="absolute left-0 right-0 top-1/2 h-0.5 bg-gray-100 -z-10"></div>
+                    <div onclick="goToPage(1)" id="step-1"
+                        class="step-active flex flex-col items-center gap-1 cursor-pointer bg-white px-2 hover:scale-105 transition">
+                        <div class="w-8 h-8 rounded-full border-2 flex items-center justify-center transition-colors">S
+                        </div><span class="text-xs font-bold">Subjective</span>
+                    </div>
+                    <div onclick="goToPage(2)" id="step-2"
+                        class="step-inactive flex flex-col items-center gap-1 cursor-pointer bg-white px-2 hover:scale-105 transition">
+                        <div class="w-8 h-8 rounded-full border-2 flex items-center justify-center transition-colors">O
+                        </div><span class="text-xs font-bold">Objective</span>
+                    </div>
+                    <div onclick="goToPage(3)" id="step-3"
+                        class="step-inactive flex flex-col items-center gap-1 cursor-pointer bg-white px-2 hover:scale-105 transition">
+                        <div class="w-8 h-8 rounded-full border-2 flex items-center justify-center transition-colors">A
+                        </div><span class="text-xs font-bold">Assessment</span>
+                    </div>
+                    <div onclick="goToPage(4)" id="step-4"
+                        class="step-inactive flex flex-col items-center gap-1 cursor-pointer bg-white px-2 hover:scale-105 transition">
+                        <div class="w-8 h-8 rounded-full border-2 flex items-center justify-center transition-colors">P
+                        </div><span class="text-xs font-bold">Plan</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-6 bg-gray-50 custom-scroll" id="modal-form-container">
+                <form id="historyForm" class="w-full mx-auto space-y-6">
+                    <input type="hidden" id="h-id">
+
+                    <div style="opacity: 0; position: absolute; top: 0; left: 0; height: 0; width: 0; z-index: -1;">
+                        <input type="text" id="spam-check" name="website_url" autocomplete="off" tabindex="-1">
+                    </div>
+
+                    <div id="page-1" class="form-page fade-in">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div id="admin-recorder-box"
+                                class="hidden-el bg-yellow-50 p-4 rounded-xl border border-yellow-200 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="font-bold text-sm text-yellow-800 block mb-1"><i
+                                            class="fas fa-user-tag mr-1"></i> ผู้บันทึก (Display Name):</label>
+                                    <input type="text" id="h-recorder"
+                                        class="w-full border p-2 rounded bg-white text-sm">
+                                </div>
+                                <div>
+                                    <label class="font-bold text-sm text-yellow-800 block mb-1"><i
+                                            class="fas fa-key mr-1"></i> Owner ID (เชื่อมต่อ LINE):</label>
+                                    <input type="text" id="h-owner-id"
+                                        class="w-full border p-2 rounded bg-white text-sm"
+                                        placeholder="Paste LINE User ID here to link...">
+                                </div>
+                            </div>
+
+                            <div class="bg-white p-5 rounded-xl border shadow-sm md:col-span-2">
+                                <h3 class="font-bold text-gray-700 border-b pb-2 mb-3"><i
+                                        class="fas fa-id-card text-green-600"></i> ข้อมูลส่วนตัว</h3>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                                    <input type="tel" id="h-phone" class="border p-2 rounded bg-yellow-50"
+                                        placeholder="เบอร์โทร *" required onchange="checkPhoneHistory()">
+                                    <input type="text" id="h-fname" class="border p-2 rounded" placeholder="ชื่อจริง *"
+                                        required>
+                                    <input type="text" id="h-lname" class="border p-2 rounded" placeholder="นามสกุล *"
+                                        required>
+                                    <input type="text" id="h-nickname" class="border p-2 rounded"
+                                        placeholder="ชื่อเล่น">
+                                </div>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                                    <input type="text" id="h-nation" list="nation-list" class="border p-2 rounded"
+                                        placeholder="สัญชาติ">
+                                    <datalist id="nation-list">
+                                        <option value="ไทย">
+                                    </datalist>
+
+                                    <input type="text" id="h-race" list="race-list" class="border p-2 rounded"
+                                        placeholder="เชื้อชาติ">
+                                    <datalist id="race-list">
+                                        <option value="ไทย">
+                                    </datalist>
+                                    <input type="text" id="h-religion" class="border p-2 rounded" placeholder="ศาสนา">
+                                    <div class="flex gap-2 items-center">
+                                        <div class="flex-1"><label
+                                                class="text-[10px] text-gray-400 block mb-0.5">วันเกิด</label><input
+                                                type="date" id="h-dob" class="w-full border p-1.5 rounded text-xs"
+                                                onchange="calcAgeFromDob()"></div>
+                                        <div class="w-16"><label
+                                                class="text-[10px] text-gray-400 block mb-0.5">อายุ</label><input
+                                                type="number" id="h-age"
+                                                class="w-full border p-1.5 rounded text-center text-sm font-bold text-green-600"
+                                                oninput="calcDobFromAge()"></div>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="h-address">
+                                <div
+                                    class="bg-blue-50 p-3 rounded-lg border border-blue-100 grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
+                                    <div><label class="text-xs text-gray-500">น้ำหนัก (kg)</label><input type="number"
+                                            id="h-weight" class="w-full border p-2 rounded text-center"
+                                            oninput="calcBMI()"></div>
+                                    <div><label class="text-xs text-gray-500">ส่วนสูง (cm)</label><input type="number"
+                                            id="h-height" class="w-full border p-2 rounded text-center"
+                                            oninput="calcBMI()"></div>
+                                    <div><label class="text-xs text-gray-500">BMI</label><input type="text"
+                                            id="h-bmi-val"
+                                            class="w-full bg-white border p-2 rounded text-center font-bold text-blue-700"
+                                            readonly></div>
+                                    <div id="h-bmi-cat"
+                                        class="text-xs font-bold text-center py-2 px-1 rounded bg-white border border-gray-200">
+                                        -</div>
+                                </div>
+                            </div>
+                            <div class="bg-white p-5 rounded-xl border shadow-sm md:col-span-2">
+                                <h3 class="font-bold text-gray-700 border-b pb-2 mb-3"><i
+                                        class="fas fa-comment-medical text-green-600"></i> CC & HPI</h3><textarea
+                                    id="h-cc"
+                                    class="w-full border p-3 rounded-lg h-20 mb-3 focus:ring-2 focus:ring-green-500"
+                                    placeholder="อาการสำคัญ (CC) *"></textarea><textarea id="h-hpi-basic"
+                                    class="w-full border p-2 rounded h-20 bg-white" placeholder="HPI..."></textarea>
+                                <div class="hidden-el"><input id="old-onset"><input id="old-loc"><input
+                                        id="old-dur"><input id="old-char"><input id="old-agg"><input id="old-rad"><input
+                                        id="old-time"><input id="old-sev"></div>
+                            </div>
+                            <div class="bg-white p-5 rounded-xl border shadow-sm md:col-span-2">
+                                <h3 class="font-bold text-gray-700 border-b pb-2 mb-3"><i
+                                        class="fas fa-history text-green-600"></i> PMH & Risk</h3>
+                                <div class="grid grid-cols-3 gap-3 mb-3"><input type="text" id="risk-alc"
+                                        placeholder="แอลกอฮอล์" class="border p-2 rounded text-sm"><input type="text"
+                                        id="risk-smo" placeholder="สูบบุหรี่" class="border p-2 rounded text-sm"><input
+                                        type="text" id="risk-drug" placeholder="สารเสพติด"
+                                        class="border p-2 rounded text-sm"></div><textarea id="h-pmh-basic"
+                                    class="w-full border p-2 rounded h-16"
+                                    placeholder="โรคประจำตัว/ยาประจำตัว"></textarea>
+                                <div class="hidden-el"><input id="hx-med"><input id="hx-surg"><input id="hx-fam"><input
+                                        id="hx-soc"></div>
+                            </div>
+                            <div
+                                class="bg-white p-5 rounded-xl border shadow-sm md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div><label class="block text-xs font-bold mb-1">ROS</label><textarea id="h-ros"
+                                        class="w-full border p-2 rounded h-20" placeholder="..."></textarea></div>
+                                <div><label
+                                        class="block text-xs font-bold mb-1 text-red-600">Allergies/Meds</label><input
+                                        id="h-allergy"
+                                        class="w-full border border-red-200 bg-red-50 p-2 rounded mb-2 text-red-700 font-bold"
+                                        placeholder="แพ้ยา"><input id="h-cur-meds" class="w-full border p-2 rounded"
+                                        placeholder="ยาปัจจุบัน"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="page-2" class="form-page hidden-el fade-in">
+                        <div class="bg-white p-5 rounded-xl border shadow-sm space-y-4">
+                            <h3 class="font-bold text-gray-700 border-b pb-2"><i
+                                    class="fas fa-heartbeat text-red-500"></i> Vitals</h3>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div><label class="text-xs">Temp</label><input type="number" id="vs-temp"
+                                        class="w-full border p-2 rounded" oninput="calcTemp()">
+                                    <div id="vs-temp-f" class="text-[10px] text-gray-400 mt-1"></div>
+                                </div>
+                                <div><label class="text-xs">BP</label><input type="text" id="vs-bp"
+                                        class="w-full border p-2 rounded"></div>
+                                <div><label class="text-xs">Pulse</label><input type="number" id="vs-pulse"
+                                        class="w-full border p-2 rounded"></div>
+                                <div><label class="text-xs">RR</label><input type="number" id="vs-rr"
+                                        class="w-full border p-2 rounded"></div>
+                            </div><textarea id="obj-physical" class="w-full border p-2 rounded h-24"
+                                placeholder="PE..."></textarea><textarea id="obj-lab"
+                                class="w-full border p-2 rounded h-24" placeholder="Labs..."></textarea>
+                            <div class="hidden-el"><input id="link-physical"><input id="link-lab"><input
+                                    id="obj-imaging"><input id="link-imaging"><input id="obj-other"><input
+                                    id="link-other"><input id="link-review"><input id="obj-review"></div>
+                        </div>
+                    </div>
+                    <div id="page-3" class="form-page hidden-el fade-in">
+                        <div class="bg-white p-5 rounded-xl border shadow-sm">
+                            <h3 class="font-bold text-gray-700 border-b pb-2 mb-3"><i
+                                    class="fas fa-clipboard-check text-purple-500"></i> Assessment</h3>
+                            <div><label class="font-bold text-sm text-gray-700 block mb-1">Diagnosis</label><textarea
+                                    id="as-problem" class="w-full border p-3 rounded-lg h-32"></textarea></div>
+                            <div class="mt-4"><label class="font-bold text-sm text-gray-700 block mb-1">Diff
+                                    Dx</label><textarea id="as-diff"
+                                    class="w-full border p-3 rounded-lg h-24"></textarea></div>
+                        </div>
+                    </div>
+                    <div id="page-4" class="form-page hidden-el fade-in">
+                        <div class="bg-white p-5 rounded-xl border shadow-sm">
+                            <h3 class="font-bold text-gray-700 border-b pb-2 mb-3"><i
+                                    class="fas fa-tasks text-teal-500"></i> Plan</h3>
+                            <div><label class="font-bold text-sm text-teal-700 block mb-1">Tx</label><textarea
+                                    id="pl-therapy" class="w-full border p-3 rounded-lg h-32 bg-teal-50"></textarea>
+                            </div>
+                            <div class="mt-3"><label
+                                    class="font-bold text-sm text-gray-700 block mb-1">Refer</label><input id="pl-refer"
+                                    class="w-full border p-2 rounded"></div>
+                            <div class="mt-3"><label
+                                    class="font-bold text-sm text-gray-700 block mb-1">Edu</label><textarea id="pl-edu"
+                                    class="w-full border p-2 rounded h-20"></textarea></div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="p-4 border-t bg-white flex justify-between items-center rounded-b-2xl shrink-0">
+                <button type="button" onclick="saveHistory()"
+                    class="px-5 py-2 rounded-lg bg-green-600 text-white font-bold hover:bg-green-700 shadow-md">
+                    <i class="fas fa-save mr-1"></i> บันทึก
+                </button>
+
+                <div class="flex gap-2">
+                    <button type="button" id="btn-prev" onclick="changeStep(-1)"
+                        class="px-5 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+                        disabled>ย้อนกลับ</button>
+                    <button type="button" id="btn-next" onclick="changeStep(1)"
+                        class="px-6 py-2 rounded-lg bg-green-600 text-white font-bold hover:bg-green-700 shadow-md">ถัดไป
+                        <i class="fas fa-chevron-right ml-1"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="logModal"
+        class="hidden-el fixed inset-0 bg-black bg-opacity-60 z-[70] flex justify-center items-center p-4 backdrop-blur-sm no-print">
+        <div class="bg-white rounded-xl w-full max-w-md shadow-2xl p-5 fade-in">
+            <h3 class="font-bold text-lg mb-3 border-b pb-2">ประวัติการแก้ไข</h3>
+            <div id="log-content" class="text-sm space-y-2 max-h-60 overflow-y-auto"></div>
+            <button onclick="closeModal('logModal')"
+                class="mt-4 w-full bg-gray-100 text-gray-700 py-2 rounded-lg">ปิด</button>
+        </div>
+    </div>
+
+    <!-- Patient Profile Modal (Combined History & Orders) -->
+    <div id="patientProfileModal"
+        class="hidden-el fixed inset-0 bg-black bg-opacity-60 z-[80] flex justify-center items-center p-4 backdrop-blur-sm no-print">
+        <div class="bg-white rounded-2xl w-full max-w-4xl h-[85vh] flex flex-col shadow-2xl fade-in overflow-hidden">
+            <div class="bg-indigo-50 border-b border-indigo-100 p-4 shrink-0 flex justify-between items-center">
+                <h2 class="text-lg font-bold text-indigo-700 flex items-center gap-2">
+                    <i class="fas fa-user-circle"></i> แฟ้มประวัติผู้ป่วย (Patient Profile)
+                </h2>
+                <button onclick="closeModal('patientProfileModal')" class="text-gray-400 hover:text-red-500">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex border-b border-gray-200 bg-white">
+                <button onclick="switchProfileTab('med')" id="tab-med"
+                    class="flex-1 py-3 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50 transition">
+                    <i class="fas fa-file-medical-alt mr-1"></i> ประวัติการรักษา (SOAP)
+                </button>
+                <button onclick="switchProfileTab('order')" id="tab-order"
+                    class="flex-1 py-3 text-sm font-bold text-gray-500 hover:bg-gray-50 transition">
+                    <i class="fas fa-shipping-fast mr-1"></i> ประวัติการสั่งซื้อ (Orders)
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-auto custom-scroll p-0 relative bg-gray-50">
+
+                <!-- Medical History Tab -->
+                <div id="content-med" class="p-4 space-y-3">
+                    <div class="text-center text-gray-400 py-8"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+                </div>
+
+                <!-- Order History Tab -->
+                <div id="content-order" class="hidden-el">
+                    <table
+                        class="w-full text-left border-collapse text-sm bg-white shadow-sm rounded-lg overflow-hidden">
+                        <thead class="bg-gray-100 text-xs text-gray-600 uppercase">
+                            <tr>
+                                <th class="p-3">วันที่</th>
+                                <th class="p-3">สินค้า</th>
+                                <th class="p-3">สถานะ</th>
+                                <th class="p-3">ยอดเงิน</th>
+                            </tr>
+                        </thead>
+                        <tbody id="relatedTasksTableBody" class="divide-y divide-gray-100">
+                            <!-- JS populates this -->
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+            <div class="p-2 bg-white border-t text-[10px] text-gray-400 text-center">
+                ข้อมูลเชื่อมโยงจากเบอร์โทรศัพท์
+            </div>
+        </div>
+    </div>
+
+    <!-- SOAP Detail Preview Modal -->
+    <div id="soapPreviewModal"
+        class="hidden-el fixed inset-0 bg-black bg-opacity-70 z-[90] flex justify-center items-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl w-full max-w-2xl max-h-[80vh] overflow-y-auto p-6 shadow-2xl relative">
+            <button onclick="closeModal('soapPreviewModal')"
+                class="absolute top-4 right-4 text-gray-400 hover:text-red-500"><i
+                    class="fas fa-times text-xl"></i></button>
+            <div id="soap-preview-content"></div>
+        </div>
+    </div>
+
+    <script>
+        // ... (Existing variables) ...
+
+        // --- PROFILE & HISTORY LOGIC ---
+        function openPatientProfile() {
+            const rawPhone = document.getElementById('h-phone').value.trim();
+            if (!rawPhone) return alert("กรุณาระบุเบอร์โทรศัพท์ก่อน");
+
+            document.getElementById('patientProfileModal').classList.remove('hidden-el');
+            switchProfileTab('med'); // Default to Medical History
+        }
+
+        function switchProfileTab(tab) {
+            document.getElementById('content-med').classList.add('hidden-el');
+            document.getElementById('content-order').classList.add('hidden-el');
+
+            document.getElementById('tab-med').className = "flex-1 py-3 text-sm font-bold text-gray-500 hover:bg-gray-50 transition border-b-2 border-transparent";
+            document.getElementById('tab-order').className = "flex-1 py-3 text-sm font-bold text-gray-500 hover:bg-gray-50 transition border-b-2 border-transparent";
+
+            if (tab === 'med') {
+                document.getElementById('content-med').classList.remove('hidden-el');
+                document.getElementById('tab-med').className = "flex-1 py-3 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50 transition";
+                loadMedicalHistory();
+            } else {
+                document.getElementById('content-order').classList.remove('hidden-el');
+                document.getElementById('tab-order').className = "flex-1 py-3 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50 transition";
+                loadOrderHistory();
+            }
+        }
+
+        function loadMedicalHistory() {
+            const rawPhone = document.getElementById('h-phone').value.trim();
+            const container = document.getElementById('content-med');
+            container.innerHTML = '<div class="text-center text-gray-400 py-8"><i class="fas fa-spinner fa-spin mb-2"></i><br>กำลังโหลดประวัติ...</div>';
+
+            db.collection('tasks')
+                .where('type', '==', 'health')
+                .where('phone', '==', rawPhone)
+                .get()
+                .then(snap => {
+                    if (snap.empty) {
+                        container.innerHTML = '<div class="text-center text-gray-400 py-8">ไม่พบประวัติการรักษาเก่า</div>';
+                        return;
+                    }
+
+                    let records = [];
+                    snap.forEach(doc => records.push({ id: doc.id, ...doc.data() }));
+                    records.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+                    container.innerHTML = '';
+                    records.forEach(r => {
+                        const dateStr = r.createdAt ? new Date(r.createdAt.seconds * 1000).toLocaleString('th-TH') : '-';
+                        const isCurrent = r.id === document.getElementById('h-id').value;
+
+                        container.innerHTML += `
+                            <div class="bg-white p-4 rounded-xl border ${isCurrent ? 'border-green-500 ring-1 ring-green-500' : 'border-gray-200 hover:border-indigo-300'} shadow-sm transition group cursor-pointer" onclick="previewSOAP('${r.id}')">
+                                <div class="flex justify-between items-start mb-2">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center font-bold text-xs shadow-sm">
+                                            ${new Date(r.createdAt?.seconds * 1000).getDate()}/${new Date(r.createdAt?.seconds * 1000).getMonth() + 1}
+                                        </div>
+                                        <div>
+                                            <div class="font-bold text-gray-800 text-sm">${dateStr} ${isCurrent ? '<span class="text-xs bg-green-100 text-green-700 px-2 rounded-full">Current</span>' : ''}</div>
+                                            <div class="text-xs text-gray-500">Recorder: ${r.createdBy || '-'}</div>
+                                        </div>
+                                    </div>
+                                    <button class="text-gray-300 group-hover:text-indigo-500"><i class="fas fa-eye"></i></button>
+                                </div>
+                                <div class="space-y-1 text-sm pl-12 border-l-2 border-gray-100 ml-5">
+                                    <p class="text-gray-700"><span class="font-bold text-xs text-blue-500 w-6 inline-block">S:</span> ${r.cc || '-'}</p>
+                                    <p class="text-gray-700"><span class="font-bold text-xs text-red-500 w-6 inline-block">O:</span> T:${r.vitals?.temp || '-'} BP:${r.vitals?.bp || '-'}</p>
+                                    <p class="text-gray-700"><span class="font-bold text-xs text-purple-500 w-6 inline-block">A:</span> ${r.assess?.problem || '-'}</p>
+                                    <p class="text-gray-700"><span class="font-bold text-xs text-teal-500 w-6 inline-block">P:</span> ${r.plan?.therapy || '-'}</p>
+                                </div>
+                            </div>
+                        `;
+                    });
+                });
+        }
+
+        function loadOrderHistory() {
+            const rawPhone = document.getElementById('h-phone').value.trim();
+            const tbody = document.getElementById('relatedTasksTableBody');
+            tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-gray-400"><i class="fas fa-spinner fa-spin text-2xl mb-2"></i><br>กำลังค้นหาข้อมูล...</td></tr>';
+
+            db.collection('tasks')
+                .where('type', '==', 'order')
+                .where('customerPhone', '==', rawPhone)
+                .get()
+                .then(snap => {
+                    if (snap.empty) {
+                        tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-gray-400">ไม่พบประวัติการสั่งซื้อ</td></tr>';
+                        return;
+                    }
+                    let tasks = [];
+                    snap.forEach(doc => tasks.push({ id: doc.id, ...doc.data() }));
+                    tasks.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+                    tbody.innerHTML = '';
+                    tasks.forEach(t => {
+                        const dateStr = t.createdAt ? new Date(t.createdAt.seconds * 1000).toLocaleDateString('th-TH') : '-';
+                        let statusColor = 'bg-gray-100 text-gray-600';
+                        if (t.status === 'Done') statusColor = 'bg-green-100 text-green-700';
+                        else if (t.status === 'Doing') statusColor = 'bg-blue-100 text-blue-700';
+
+                        tbody.innerHTML += `
+                            <tr class="hover:bg-gray-50 border-b last:border-0">
+                                <td class="p-3 text-xs font-mono text-gray-500">${dateStr}</td>
+                                <td class="p-3 font-bold text-gray-700">
+                                    ${t.productName || '-'}
+                                    <div class="text-[10px] font-normal text-gray-400">${t.customerName}</div>
+                                </td>
+                                <td class="p-3"><span class="${statusColor} text-[10px] px-2 py-1 rounded-full font-bold uppercase">${t.status}</span></td>
+                                <td class="p-3 font-mono text-gray-600">${t.totalPrice ? Number(t.totalPrice).toLocaleString() : '-'}</td>
+                            </tr>
+                        `;
+                    });
+                });
+        }
+
+        function previewSOAP(id) {
+            // Find in filteredData first if available, else fetch (but we have enough data from loadMedicalHistory usually? No, full data needed)
+            // Actually, best to just render from what we have or fetch single. 
+            // Since we're in the modal, we might not have 'id' in 'allHistory' if we are editing a new record and viewing old ones.
+            // But 'loadMedicalHistory' fetched the list. We can assume we need to fetch specific details if not fully loaded.
+            // For simplicity, let's just find in allHistory if visible, or fetch.
+
+            // Wait, allHistory might not contain everything if we filtered? 
+            // loadHistoryData loads EVERYTHING (filtered by ownerId). 
+            // So if Admin, we have everything.
+            let d = allHistory.find(x => x.id === id);
+
+            // If not found (e.g. searching not loaded yet), we might need to fetch. 
+            // But for now let's try to use the data we can find.
+            if (!d) {
+                db.collection('tasks').doc(id).get().then(doc => {
+                    if (doc.exists) showSoapPreview(doc.data());
+                });
+            } else {
+                showSoapPreview(d);
+            }
+        }
+
+        function showSoapPreview(d) {
+            const h = d.history || {}, v = d.vitals || {}, o = d.obj || {}, a = d.assess || {}, p = d.plan || {};
+            const html = `
+                <h2 class="text-xl font-bold text-indigo-700 mb-4 border-b pb-2">บันทึกการรักษา</h2>
+                <div class="grid grid-cols-2 gap-4 text-sm mb-4">
+                    <div><b>วันที่:</b> ${new Date(d.createdAt.seconds * 1000).toLocaleString('th-TH')}</div>
+                    <div><b>ผู้บันทึก:</b> ${d.createdBy}</div>
+                </div>
+                
+                <div class="space-y-4">
+                    <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                        <span class="font-bold text-blue-700 block mb-1">Subjective (ข้อมูลผู้ป่วย)</span>
+                        <p class="text-gray-700"><b>CC:</b> ${d.cc || '-'}</p>
+                        <p class="text-gray-700"><b>HPI:</b> ${d.hpi?.basic || '-'}</p>
+                        <p class="text-gray-700"><b>PMH:</b> ${h.pmh || '-'}</p>
+                        <p class="text-gray-700"><b>Allergy:</b> <span class="text-red-600 font-bold">${d.allergy || '-'}</span></p>
+                    </div>
+
+                    <div class="bg-red-50 p-3 rounded-lg border border-red-100">
+                        <span class="font-bold text-red-700 block mb-1">Objective (ผลตรวจ)</span>
+                        <div class="grid grid-cols-2 gap-2 mb-2">
+                             <div>T: ${v.temp || '-'}</div> <div>BP: ${v.bp || '-'}</div>
+                             <div>Pulse: ${v.pulse || '-'}</div> <div>RR: ${v.rr || '-'}</div>
+                        </div>
+                        <p class="text-gray-700"><b>PE:</b> ${o.pe || '-'}</p>
+                        <p class="text-gray-700"><b>Lab:</b> ${o.lab || '-'}</p>
+                    </div>
+
+                    <div class="bg-purple-50 p-3 rounded-lg border border-purple-100">
+                        <span class="font-bold text-purple-700 block mb-1">Assessment (วินิจฉัย)</span>
+                        <p class="text-gray-700"><b>Dx:</b> ${a.problem || '-'}</p>
+                        <p class="text-gray-700"><b>Diff Dx:</b> ${a.diff || '-'}</p>
+                    </div>
+
+                    <div class="bg-teal-50 p-3 rounded-lg border border-teal-100">
+                        <span class="font-bold text-teal-700 block mb-1">Plan (รักษา)</span>
+                        <p class="text-gray-700"><b>Tx:</b> ${p.therapy || '-'}</p>
+                        <p class="text-gray-700"><b>Edu:</b> ${p.edu || '-'}</p>
+                    </div>
+                </div>
+            `;
+            document.getElementById('soap-preview-content').innerHTML = html;
+            document.getElementById('soapPreviewModal').classList.remove('hidden-el');
+        }
+
+
+        const LIFF_ID = "2008999002-KiowNNUL";
+        const firebaseConfig = { apiKey: "AIzaSyCfdIENxDbWB30k4TZQfhnbxvpc2217xtU", authDomain: "fkb-front-kanban.firebaseapp.com", projectId: "fkb-front-kanban", storageBucket: "fkb-front-kanban.firebasestorage.app", messagingSenderId: "135805270397", appId: "1:135805270397:web:ef5f4e23fef49175af3414" };
+
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore(), auth = firebase.auth();
+
+        let allHistory = [], filteredData = [], currentPage = 1, rowsPerPage = 10;
+        let isAdmin = false, isStaff = false;
+        let currentUser = null; // Can be Google User or LINE Profile
+        let lineProfile = null;
+        let currentEditLogs = [], previewData = [];
+
+        // --- ROBUST INITIALIZATION ---
+
+        // 1. Immediate Failsafe (Runs immediately, does not wait for window load)
+        setTimeout(() => {
+            const loader = document.getElementById('auth-loading');
+            if (loader && !loader.classList.contains('hidden-el')) {
+                console.warn("Forcing UI load via global timeout");
+                loader.classList.add('hidden-el');
+                // If no user detected and views are hidden, show guest view
+                if (!currentUser && !isAdmin && !isStaff) {
+                    const guestView = document.getElementById('guest-view');
+                    const dataView = document.getElementById('data-view');
+                    // Only shown if not already logged in
+                    if (guestView && guestView.classList.contains('hidden-el') &&
+                        dataView && dataView.classList.contains('hidden-el')) {
+                        updateUI_Guest();
+                    }
+                }
+            }
+        }, 3500);
+
+        window.onload = function () {
+            // 2. Auth Listener
+            auth.onAuthStateChanged(async user => {
+                if (user && !user.isAnonymous) {
+                    console.log("Google Auth Detected");
+                    currentUser = {
+                        uid: user.uid,
+                        displayName: user.displayName || user.email,
+                        email: user.email,
+                        photoURL: user.photoURL,
+                        provider: 'google'
+                    };
+                    await checkUserRole(user.uid, user.email);
+                }
+            });
+
+            // 3. Initialize LIFF
+            initLiffSafely();
+            loadChoices();
+        };
+
+        async function initLiffSafely() {
+            try {
+                // Race LIFF init with a 2-second timeout
+                await Promise.race([
+                    liff.init({ liffId: LIFF_ID }),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error("LIFF Init Timeout")), 2000))
+                ]);
+
+                if (liff.isLoggedIn()) {
+                    console.log("LIFF Logged In");
+                    const profile = await liff.getProfile();
+                    lineProfile = profile;
+
+                    // Only take over if Google didn't already
+                    if (!currentUser) {
+                        currentUser = {
+                            uid: profile.userId,
+                            displayName: profile.displayName,
+                            email: null,
+                            photoURL: profile.pictureUrl,
+                            provider: 'line'
+                        };
+                        await checkUserRole(profile.userId, profile.displayName);
+                    }
+                } else {
+                    console.log("LIFF Not Logged In");
+                    if (!currentUser) updateUI_Guest();
+                }
+            } catch (err) {
+                console.warn('LIFF Setup incomplete or PC:', err);
+                if (!currentUser) updateUI_Guest();
+            } finally {
+                document.getElementById('auth-loading').classList.add('hidden-el');
+            }
+        }
+
+        async function checkUserRole(uid, email) {
+            try {
+                // Check local admin hardcode first
+                if (email === 'medlifeplus@gmail.com') {
+                    isAdmin = true;
+                    isStaff = true;
+                    updateUI_Admin();
+                    loadHistoryData();
+                    return;
+                }
+                // Removed hardcode to rely on Firestore 'users' collection for consistency, 
+                // BUT keep it if user wants failsafe. Let's use Firestore primarily.
+
+                const doc = await db.collection('users').doc(uid).get();
+                if (doc.exists) {
+                    const d = doc.data();
+                    if (d.role === 'admin') {
+                        isAdmin = true;
+                        isStaff = true;
+                        updateUI_Admin();
+                        loadHistoryData();
+                    } else if (d.status === 'approved') {
+                        isStaff = true;
+                        updateUI_Staff();
+                        loadHistoryData();
+                    } else if (d.status === 'pending') {
+                        showPendingApproval(email);
+                    } else {
+                        // User exists but not approved/pending -> Treat as Patient
+                        updateUI_Patient();
+                    }
+                } else {
+                    // New User -> Treat as Patient (Auto-register logic could be added here if needed, but for now just allow access)
+                    updateUI_Patient();
+                }
+            } catch (e) {
+                console.error("Role Check Error", e);
+                alert("Error checking permissions");
+            }
+        }
+
+
+
+        // --- UI MANAGEMENT ---
+        function updateUI_Admin() {
+            hideAllAuthViews();
+            document.getElementById('data-view').classList.remove('hidden-el');
+            document.getElementById('admin-tools').classList.remove('hidden-el');
+            document.getElementById('btn-back-admin').classList.remove('hidden-el');
+            document.getElementById('btn-add-record').classList.remove('hidden-el');
+
+            // Show Profile
+            document.getElementById('line-profile').classList.remove('hidden-el');
+            document.getElementById('user-name').innerText = currentUser.displayName + " (Admin)";
+            document.getElementById('user-picture').src = currentUser.photoURL || 'https://via.placeholder.com/150';
+        }
+
+        function updateUI_Staff() {
+            hideAllAuthViews();
+            document.getElementById('data-view').classList.remove('hidden-el');
+            document.getElementById('btn-back-admin').classList.remove('hidden-el'); // Staff can go to Dashboard
+            document.getElementById('btn-add-record').classList.remove('hidden-el');
+            document.getElementById('admin-tools').classList.remove('hidden-el'); // Allow Staff to Import as well
+
+            // Show Profile
+            document.getElementById('line-profile').classList.remove('hidden-el');
+            document.getElementById('user-name').innerText = currentUser.displayName + " (Staff)";
+            document.getElementById('user-picture').src = currentUser.photoURL || 'https://via.placeholder.com/150';
+        }
+
+        function updateUI_Patient() {
+            hideAllAuthViews();
+            document.getElementById('data-view').classList.remove('hidden-el');
+
+            // Patient Specifics
+            document.getElementById('btn-add-record').classList.remove('hidden-el'); // Allow adding new record
+            document.getElementById('admin-tools').classList.add('hidden-el');
+            document.getElementById('btn-back-admin').classList.add('hidden-el');
+
+            // Show Profile
+            document.getElementById('line-profile').classList.remove('hidden-el');
+            document.getElementById('user-name').innerText = currentUser.displayName;
+            document.getElementById('user-picture').src = currentUser.photoURL || 'https://via.placeholder.com/150';
+
+            // Load Patient's Data
+            loadHistoryData();
+        }
+
+        function showAccessDenied(email) {
+            hideAllAuthViews();
+            document.getElementById('access-denied-view').classList.remove('hidden-el');
+            document.getElementById('denied-email').innerText = email;
+            document.getElementById('line-profile').classList.remove('hidden-el');
+            if (currentUser) {
+                document.getElementById('user-name').innerText = currentUser.displayName;
+                document.getElementById('user-picture').src = currentUser.photoURL || 'https://via.placeholder.com/150';
+            }
+            // Reset to "Request" state
+            document.getElementById('btn-request-access').classList.remove('hidden-el');
+            document.getElementById('pending-msg').classList.add('hidden-el');
+            document.getElementById('denied-msg').innerText = "กรุณากดปุ่มด้านล่างเพื่อให้ Admin อนุมัติ";
+        }
+
+        function showPendingApproval(email) {
+            showAccessDenied(email);
+            // Switch to "Pending" state
+            document.getElementById('btn-request-access').classList.add('hidden-el');
+            document.getElementById('pending-msg').classList.remove('hidden-el');
+            document.getElementById('denied-msg').innerText = "คำขอของคุณถูกส่งแล้ว";
+        }
+
+        function hideAllAuthViews() {
+            document.getElementById('btn-line-login-header').classList.add('hidden-el');
+            document.getElementById('btn-google-login-header').classList.add('hidden-el');
+            document.getElementById('guest-view').classList.add('hidden-el');
+            document.getElementById('access-denied-view').classList.add('hidden-el');
+            document.getElementById('data-view').classList.add('hidden-el');
+        }
+
+        function updateUI_Guest() {
+            // Only show login buttons
+            document.getElementById('btn-line-login-header').classList.remove('hidden-el');
+            document.getElementById('guest-view').classList.remove('hidden-el');
+
+            // Hide data related
+            document.getElementById('data-view').classList.add('hidden-el');
+            document.getElementById('line-profile').classList.add('hidden-el');
+            document.getElementById('btn-add-record').classList.add('hidden-el');
+            document.getElementById('admin-tools').classList.add('hidden-el');
+            document.getElementById('btn-back-admin').classList.add('hidden-el');
+        }
+
+        // --- LIFF & LOGIN ---
+
+        function loginLINE() { if (!liff.isLoggedIn()) liff.login(); }
+        function loginGoogle() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => alert(e.message)); }
+        function logout() {
+            auth.signOut();
+            if (liff.isLoggedIn()) liff.logout();
+            location.reload();
+        }
+        function requestAccess() {
+            if (!currentUser) return;
+            if (!confirm(`ยืนยันการขอสิทธิ์ใช้งานในชื่อ "${currentUser.displayName}"?`)) return;
+
+            db.collection('users').doc(currentUser.uid).set({
+                displayName: currentUser.displayName,
+                pictureUrl: currentUser.photoURL,
+                email: currentUser.email,
+                status: 'pending',
+                registeredAt: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+                alert("ส่งคำขอเรียบร้อย! โปรดรอแอดมินอนุมัติ");
+                location.reload();
+            }).catch(e => alert("Error: " + e.message));
+        }
+
+        // --- DATA LOAD ---
+        function loadHistoryData() {
+            let query = db.collection("tasks").where("type", "==", "health");
+
+            // If Admin OR Staff, show ALL.
+            // If Patient (not implemented fully here but legacy logic), show Own.
+            if (!isAdmin && !isStaff) {
+                // Should be blocked by UI, but as safety:
+                if (currentUser && currentUser.uid) {
+                    query = query.where("ownerId", "==", currentUser.uid);
+                } else {
+                    return;
+                }
+            }
+            // Note: Staff (isStaff=true) sees ALL, just like Admin.
+            // Editing restriction is handled in editHistory().
+            query.onSnapshot(snap => {
+                allHistory = [];
+                snap.forEach(doc => allHistory.push({ id: doc.id, ...doc.data() }));
+                allHistory.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+                filteredData = [...allHistory];
+                renderTable();
+            });
+        }
+
+        // --- SAVE DATA (FIXED) ---
+        async function checkAuthReady() {
+            if (!auth.currentUser) {
+                try {
+                    await firebase.auth().signInAnonymously();
+                    return true;
+                } catch (e) {
+                    console.warn("Auth Warning (Anonymous Login disabled?):", e);
+                    // Allow to proceed anyway because firestore.rules allows public write for 'tasks'
+                    return true;
+                }
+            }
+            return true;
+        }
+
+        async function saveHistory() {
+            // 1. Security Check
+            if (document.getElementById('spam-check').value !== "") return;
+            if (!document.getElementById('h-fname').value) return alert('กรุณากรอกชื่อ');
+
+            // 2. Ensure Database Auth is Ready
+            const isReady = await checkAuthReady();
+            if (!isReady) return;
+
+            if (!confirm("ยืนยันการบันทึก?")) return;
+
+            const id = document.getElementById('h-id').value;
+            const v = id => document.getElementById(id).value;
+
+            let user = 'Guest';
+            let ownerId = '';
+
+            // User Identity Logic
+            // User Identity Logic
+            if (isAdmin || isStaff) {
+                // Admin/Staff uses their login name as Recorder
+                user = currentUser.displayName || 'Staff';
+
+                // For Owner ID (Patient link):
+                // If editing existing, keep original ownerId (handled in update section)
+                // If creating new:
+                const manualOwner = document.getElementById('h-owner-id').value;
+                if (manualOwner) {
+                    ownerId = manualOwner; // Admin/Staff manually linking
+                } else {
+                    // Creating for self? Or just no link?
+                    // Typically Staff creates for others, so ownerId might be empty or specific.
+                    // Let's leave ownerId empty if not specified, or use current if it's "Self Record".
+                    // User request doesn't specify default owner for Staff creating records. 
+                    // Assuming Staff creates records for patients -> OwnerId should be Patient's Line ID if known.
+                }
+            } else if (currentUser && currentUser.uid) {
+                user = currentUser.displayName;
+                ownerId = currentUser.uid;
+            }
+
+            // if (!isAdmin && !ownerId) return alert("System Error: ไม่พบข้อมูลผู้ใช้งาน (User ID Missing). กรุณาปิดแล้วเปิดใหม่");
+            // Relaxed check because Staff might create record without OwnerID (Patient not on LINE)
+
+            const data = {
+                type: 'health',
+                firstName: v('h-fname'), lastName: v('h-lname'), nickname: v('h-nickname'), phone: v('h-phone'),
+                nationality: v('h-nation'), race: v('h-race'), religion: v('h-religion'), dob: v('h-dob'), address: v('h-address'),
+                weight: v('h-weight'), height: v('h-height'), bmi: v('h-bmi-val'), bmiCat: document.getElementById('h-bmi-cat').innerText,
+                cc: v('h-cc'),
+                hpi: { basic: v('h-hpi-basic'), onset: v('old-onset'), loc: v('old-loc'), dur: v('old-dur'), char: v('old-char'), agg: v('old-agg'), rad: v('old-rad'), time: v('old-time'), sev: v('old-sev') },
+                history: { pmh: v('h-pmh-basic'), alcohol: v('risk-alc'), smoke: v('risk-smo'), drugs: v('risk-drug'), med: v('hx-med'), surg: v('hx-surg'), fam: v('hx-fam'), soc: v('hx-soc') },
+                ros: v('h-ros'), allergy: v('h-allergy'), currentMeds: v('h-cur-meds'),
+                vitals: { temp: v('vs-temp'), bp: v('vs-bp'), pulse: v('vs-pulse'), rr: v('vs-rr') },
+                obj: { pe: v('obj-physical'), linkPe: v('link-physical'), lab: v('obj-lab'), linkLab: v('link-lab'), img: v('obj-imaging'), linkImg: v('link-imaging'), other: v('obj-other'), linkOther: v('link-other'), review: v('obj-review'), linkReview: v('link-review') },
+                assess: { problem: v('as-problem'), diff: v('as-diff') },
+                plan: { therapy: v('pl-therapy'), refer: v('pl-refer'), edu: v('pl-edu') },
+                status: isAdmin ? 'Recorded' : 'Pending'
+            };
+
+            if (id) {
+                // Update Logic
+                if (isAdmin) {
+                    data.createdBy = user;
+                    // If Admin provided an owner ID, update it. If not, preserve existing.
+                    if (ownerId) data.ownerId = ownerId;
+                }
+
+                db.collection('tasks').doc(id).update({
+                    ...data,
+                    editHistory: firebase.firestore.FieldValue.arrayUnion({ timestamp: new Date(), by: user, action: 'Edited' })
+                }).then(() => { alert('แก้ไขเรียบร้อย'); closeModal('historyModal'); });
+            } else {
+                // Create Logic
+                data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                data.createdBy = user;
+                data.ownerId = ownerId; // Save ID for filtering
+                data.editHistory = [{ timestamp: new Date(), by: user, action: 'Created' }];
+
+                db.collection('tasks').add(data).then(() => {
+                    closeModal('historyModal');
+                    alert('บันทึกเรียบร้อย');
+                    saveNewChoices(v('h-nation'), v('h-race')); // Save new choices
+                    if (!isAdmin) { document.getElementById('historyForm').reset(); goToPage(1); loadHistoryData(); }
+                }).catch(e => alert("Error saving: " + e.message));
+            }
+        }
+
+        // --- CHOICES MANAGEMENT ---
+        let loadedNations = new Set(['ไทย']);
+        let loadedRaces = new Set(['ไทย']);
+
+        function loadChoices() {
+            db.collection('settings').doc('choices').get().then(doc => {
+                if (doc.exists) {
+                    const d = doc.data();
+                    if (d.nations) d.nations.forEach(n => loadedNations.add(n));
+                    if (d.races) d.races.forEach(r => loadedRaces.add(r));
+                }
+                updateDataLists();
+            });
+        }
+
+        function saveNewChoices(nation, race) {
+            if (!nation && !race) return;
+            const batch = db.batch();
+            const ref = db.collection('settings').doc('choices');
+            let updates = {};
+            let hasUpdate = false;
+
+            if (nation && !loadedNations.has(nation)) {
+                updates.nations = firebase.firestore.FieldValue.arrayUnion(nation);
+                loadedNations.add(nation);
+                hasUpdate = true;
+            }
+            if (race && !loadedRaces.has(race)) {
+                updates.races = firebase.firestore.FieldValue.arrayUnion(race);
+                loadedRaces.add(race);
+                hasUpdate = true;
+            }
+
+            if (hasUpdate) {
+                ref.set(updates, { merge: true }).then(() => updateDataLists());
+            }
+        }
+
+        function updateDataLists() {
+            const nList = document.getElementById('nation-list');
+            const rList = document.getElementById('race-list');
+            nList.innerHTML = '';
+            rList.innerHTML = '';
+            Array.from(loadedNations).sort().forEach(n => nList.innerHTML += `<option value="${n}">`);
+            Array.from(loadedRaces).sort().forEach(r => rList.innerHTML += `<option value="${r}">`);
+        }
+
+        // --- RENDER TABLE ---
+        function renderTable() {
+            const tbody = document.getElementById('historyTableBody');
+            tbody.innerHTML = '';
+            document.getElementById('selectAllMain').checked = false;
+            updateMainSelection();
+
+            const totalRows = filteredData.length;
+            const maxPage = Math.ceil(totalRows / rowsPerPage) || 1;
+            if (currentPage > maxPage) currentPage = maxPage;
+            if (currentPage < 1) currentPage = 1;
+
+            const start = (currentPage - 1) * rowsPerPage;
+            const slice = filteredData.slice(start, start + rowsPerPage);
+
+            if (slice.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-gray-400">ไม่พบข้อมูลประวัติ</td></tr>';
+            } else {
+                slice.forEach(d => {
+                    let dateStr = '-';
+                    if (d.createdAt) {
+                        const dt = d.createdAt.seconds ? new Date(d.createdAt.seconds * 1000) : new Date(d.createdAt);
+                        if (!isNaN(dt)) dateStr = dt.toLocaleDateString('th-TH');
+                    }
+                    const statusBadge = d.status === 'Pending' ? '<span class="bg-orange-100 text-orange-700 text-[10px] px-2 py-0.5 rounded-full font-bold ml-2">รออนุมัติ</span>' : '';
+                    let rec = d.createdBy || '-';
+                    if (rec === '-' && d.editHistory?.length) rec = d.editHistory[0].by;
+
+                    tbody.innerHTML += `
+                        <tr class="border-b hover:bg-gray-50 bg-white transition">
+                            <td class="p-4 text-center"><input type="checkbox" class="custom-checkbox main-row-select" value="${d.id}" onchange="updateMainSelection()"></td>
+                            <td class="p-4 text-gray-500 text-xs">${dateStr}</td>
+                            <td class="p-4 font-bold text-gray-800 text-sm">${d.firstName} ${d.lastName} ${statusBadge}</td>
+                            <td class="p-4 text-gray-600 text-xs">${d.phone}</td>
+                            <td class="p-4 text-gray-600 truncate max-w-xs text-xs">${d.cc || d.assess?.problem || '-'}</td>
+                            <td class="p-4 text-gray-500 text-xs"><i class="fas fa-user-circle mr-1"></i>${rec}</td>
+                            <td class="p-4 text-center flex justify-center gap-1">
+                                <button onclick="editHistory('${d.id}')" class="bg-yellow-100 text-yellow-600 w-8 h-8 rounded-full hover:bg-yellow-200" title="แก้ไข"><i class="fas fa-pen"></i></button>
+                                <button onclick="viewAndPrint('${d.id}')" class="bg-blue-100 text-blue-600 w-8 h-8 rounded-full hover:bg-blue-200" title="พิมพ์"><i class="fas fa-print"></i></button>
+                                <button onclick="deleteHistory('${d.id}')" class="bg-red-100 text-red-600 w-8 h-8 rounded-full hover:bg-red-200" title="ลบ"><i class="fas fa-trash-alt"></i></button>
+                            </td>
+                        </tr>`;
+                });
+            }
+            document.getElementById('pageInfo').innerText = `หน้าที่ ${currentPage} จาก ${maxPage} (${totalRows} รายการ)`;
+            document.getElementById('btn-page-prev').disabled = (currentPage === 1);
+            document.getElementById('btn-page-next').disabled = (currentPage === maxPage);
+        }
+
+        // --- SHARED FUNCTIONS ---
+        function openAddModal() {
+            // 1. Reset Form
+            document.getElementById('historyForm').reset();
+            document.getElementById('h-id').value = '';
+            document.getElementById('modal-title').innerText = "ลงทะเบียนใหม่";
+            document.getElementById('btn-view-logs').classList.add('hidden-el');
+            document.getElementById('btn-related-tasks').classList.add('hidden-el');
+
+            // 2. Prep Admin Fields
+            if (isAdmin) {
+                document.getElementById('h-recorder').value = "Admin";
+                document.getElementById('admin-recorder-box').classList.remove('hidden-el');
+            } else if (lineProfile) {
+                document.getElementById('h-recorder').value = lineProfile.displayName;
+                document.getElementById('admin-recorder-box').classList.add('hidden-el');
+            } else {
+                // Guest
+                document.getElementById('admin-recorder-box').classList.add('hidden-el');
+            }
+
+            // 3. Show Modal
+            currentEditLogs = [];
+            goToPage(1);
+            document.getElementById('historyModal').classList.remove('hidden-el');
+        }
+
+        async function checkPhoneHistory() {
+            const phone = document.getElementById('h-phone').value.trim();
+            if (!phone) return;
+
+            try {
+                const snap = await db.collection('tasks')
+                    .where('phone', '==', phone)
+                    .orderBy('createdAt', 'desc')
+                    .limit(5)
+                    .get();
+
+                if (!snap.empty) {
+                    let ccs = [];
+                    snap.forEach(doc => {
+                        const d = doc.data();
+                        const dateStr = d.createdAt ? new Date(d.createdAt.seconds * 1000).toLocaleDateString('th-TH') : '-';
+                        if (d.cc) ccs.push(`- [${dateStr}] ${d.cc}`);
+                    });
+
+                    alert(`⚠️ พบประวัติเก่าของเบอร์ ${phone} จำนวน ${snap.size} รายการ (ล่าสุด):\n\n${ccs.join('\n')}`);
+                }
+            } catch (e) {
+                console.error("Check Phone Error", e);
+            }
+        }
+
+        function editHistory(id) {
+            const d = allHistory.find(x => x.id === id); if (!d) return;
+
+            // PERMISSION CHECK
+            if (isAdmin) {
+                // Allowed
+            } else if (isStaff) {
+                // Staff can edit ONLY if they are the Creator
+                if (d.createdBy !== currentUser.displayName) {
+                    return alert(`คุณสามารถแก้ไขได้เฉพาะรายการที่คุณสร้างเองเท่านั้น\n(รายการนี้สร้างโดย: ${d.createdBy})`);
+                }
+            } else {
+                // Regular Patient / Guest
+                if (d.ownerId !== currentUser?.uid && d.createdBy !== 'Guest') {
+                    alert('คุณไม่มีสิทธิ์แก้ไขรายการนี้'); return;
+                }
+            }
+
+            const h = d.history || {}, v = d.vitals || {}, o = d.obj || {}, a = d.assess || {}, p = d.plan || {}, hp = d.hpi || {};
+
+            document.getElementById('h-id').value = d.id;
+            document.getElementById('h-fname').value = d.firstName; document.getElementById('h-lname').value = d.lastName;
+            document.getElementById('h-phone').value = d.phone; document.getElementById('h-nickname').value = d.nickname || '';
+            document.getElementById('h-nation').value = d.nationality || 'ไทย'; document.getElementById('h-race').value = d.race || 'ไทย'; document.getElementById('h-religion').value = d.religion || '';
+            document.getElementById('h-dob').value = d.dob || ''; calcAgeFromDob(); document.getElementById('h-address').value = d.address || '';
+            document.getElementById('h-weight').value = d.weight || ''; document.getElementById('h-height').value = d.height || ''; document.getElementById('h-bmi-val').value = d.bmi || '';
+            document.getElementById('h-cc').value = d.cc || ''; document.getElementById('h-hpi-basic').value = hp.basic || ''; document.getElementById('old-onset').value = hp.onset || '';
+            document.getElementById('h-pmh-basic').value = h.pmh || ''; document.getElementById('risk-alc').value = h.alcohol || '';
+            document.getElementById('h-ros').value = d.ros || ''; document.getElementById('h-allergy').value = d.allergy || ''; document.getElementById('h-cur-meds').value = d.currentMeds || '';
+            document.getElementById('vs-temp').value = v.temp || ''; document.getElementById('vs-bp').value = v.bp || ''; document.getElementById('obj-physical').value = o.pe || ''; document.getElementById('obj-lab').value = o.lab || '';
+            document.getElementById('as-problem').value = a.problem || ''; document.getElementById('as-diff').value = a.diff || '';
+            document.getElementById('pl-therapy').value = p.therapy || ''; document.getElementById('pl-edu').value = p.edu || '';
+
+            document.getElementById('h-recorder').value = d.createdBy || '';
+            document.getElementById('h-owner-id').value = d.ownerId || '';
+
+            if (isAdmin) document.getElementById('admin-recorder-box').classList.remove('hidden-el'); else document.getElementById('admin-recorder-box').classList.add('hidden-el');
+            currentEditLogs = d.editHistory || []; document.getElementById('modal-title').innerText = "แก้ไขข้อมูล";
+            document.getElementById('btn-view-logs').classList.remove('hidden-el');
+            document.getElementById('btn-related-tasks').classList.remove('hidden-el');
+            goToPage(1); document.getElementById('historyModal').classList.remove('hidden-el');
+        }
+
+        function deleteHistory(id) {
+            const d = allHistory.find(x => x.id === id);
+            if (!d) return;
+
+            // Permission Check
+            if (isAdmin) {
+                // Allowed
+            } else if (isStaff) {
+                if (d.createdBy !== currentUser.displayName) {
+                    return alert(`คุณสามารถลบได้เฉพาะรายการที่คุณสร้างเองเท่านั้น\n(รายการนี้สร้างโดย: ${d.createdBy})`);
+                }
+            } else {
+                if (d.ownerId !== currentUser?.uid && d.createdBy !== 'Guest') {
+                    return alert('ไม่มีสิทธิ์ลบรายการนี้');
+                }
+            }
+
+            if (confirm("ลบรายการนี้ถาวร?")) {
+                db.collection('tasks').doc(id).delete().then(() => alert("ลบเรียบร้อย"));
+            }
+        }
+        function viewAndPrint(id) { const d = allHistory.find(x => x.id === id); if (d) { window.open('', '_blank').document.write(`<html><head><title>Medical Record</title><style>body{font-family:sans-serif;padding:20px;max-width:800px;margin:0 auto;}</style></head><body><h1 style="text-align:center">Medical Record</h1><div style="display:grid;grid-template-columns:1fr 1fr;gap:20px"><div><b>Name:</b> ${d.firstName} ${d.lastName}<br><b>PID:</b> ${d.id}<br><b>DOB:</b> ${d.dob}</div><div><b>Vitals:</b> T: ${d.vitals?.temp} | BP: ${d.vitals?.bp}<br><b>Allergy:</b> <span style="color:red">${d.allergy || '-'}</span></div></div><h3>Subjective</h3><p><b>CC:</b> ${d.cc}</p><p><b>HPI:</b> ${d.hpi?.basic}</p><p><b>PMH:</b> ${d.history?.pmh}</p><h3>Objective</h3><p><b>PE:</b> ${d.obj?.pe}</p><p><b>Lab:</b> ${d.obj?.lab}</p><h3>Assessment</h3><p><b>Dx:</b> ${d.assess?.problem}</p><h3>Plan</h3><p><b>Tx:</b> ${d.plan?.therapy}</p><p><b>Edu:</b> ${d.plan?.edu}</p><script>window.print();window.close();<\/script></body></html>`); } }
+
+        // --- UTILS ---
+        function filterHistory() { const t = document.getElementById('searchInput').value.toLowerCase(); filteredData = allHistory.filter(d => (d.firstName && d.firstName.toLowerCase().includes(t)) || (d.phone && d.phone.includes(t))); currentPage = 1; renderTable(); }
+        function changePage(d) { currentPage += d; renderTable(); } function changeRowsPerPage(v) { rowsPerPage = parseInt(v); currentPage = 1; renderTable(); }
+        // --- IMPORT LOGIC ---
+        function handleFileSelect(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            document.getElementById('import-loading').classList.remove('hidden-el');
+            document.getElementById('import-status').innerText = "Reading file...";
+
+            // Check Extension
+            const ext = file.name.split('.').pop().toLowerCase();
+
+            if (ext === 'csv') {
+                Papa.parse(file, {
+                    header: false,
+                    skipEmptyLines: true,
+                    encoding: "UTF-8", // Force UTF-8
+                    complete: function (results) {
+                        processRawData(results.data);
+                    },
+                    error: function (err) {
+                        alert("CSV Read Error: " + err.message);
+                        document.getElementById('import-loading').classList.add('hidden-el');
+                    }
+                });
+            } else if (['xlsx', 'xls'].includes(ext)) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+                    processRawData(jsonData);
+                };
+                reader.onerror = function (e) {
+                    alert("Excel Read Error: " + e.target.error);
+                    document.getElementById('import-loading').classList.add('hidden-el');
+                }
+                reader.readAsArrayBuffer(file);
+            } else {
+                alert("Unsupported file type. Use .csv, .xlsx, or .xls");
+                input.value = "";
+                document.getElementById('import-loading').classList.add('hidden-el');
+            }
+            input.value = ""; // Reset input so same file selection triggers change event
+        }
+
+        function processRawData(rows) {
+            // Remove header if it looks like one (contains "Timestamp" or "ชื่อ")
+            if (rows.length > 0) {
+                const header = rows[0].map(c => String(c).toLowerCase());
+                if (header.some(c => c.includes("timestamp") || c.includes("date") || c.includes("ชื่อ"))) {
+                    rows.shift();
+                }
+            }
+
+            // Filter empty rows
+            previewData = rows.filter(r => r.length > 1 && (r[1] || r[2])); // Must have at least name or something
+
+            if (previewData.length === 0) {
+                alert("No valid data found in file.");
+                document.getElementById('import-loading').classList.add('hidden-el');
+                return;
+            }
+
+            showPreviewModal();
+        }
+
+        function showPreviewModal() {
+            document.getElementById('import-loading').classList.add('hidden-el');
+            const tbody = document.getElementById('previewTableBody');
+            tbody.innerHTML = '';
+            document.getElementById('selectAllPreview').checked = false;
+
+            // Generate Preview Table
+            // Assuming Column Mapping based on typical Google Form export:
+            // 0: Timestamp, 1: Email(skip), 2: Name+Surname, 3: Nickname, 4: Gender, 5: DOB/Age, 6: Phone, 7: Address, 8: CC/Symp, 9: Meds, 10: History, 11: Allergy, 12: Alcohol
+
+            previewData.forEach((row, index) => {
+                // Map columns loosely for preview
+                let dateStr = row[0];
+                // Excel date parser
+                if (typeof row[0] === 'number') {
+                    dateStr = new Date((row[0] - 25569) * 86400 * 1000).toLocaleDateString('th-TH');
+                }
+
+                const name = row[2] || row[1] || "Unknown"; // Adjust based on column guess
+                const phone = row[6] || row[4] || "-"; // Adjust 
+                const cc = row[8] || row[5] || "-"; // Adjust 
+
+                tbody.innerHTML += `
+                    <tr class="border-b transition hover:bg-gray-50">
+                        <td class="p-3 text-center"><input type="checkbox" class="custom-checkbox preview-select" value="${index}" onchange="updatePreviewSelection()"></td>
+                        <td class="p-3 text-xs text-gray-500">${dateStr}</td>
+                        <td class="p-3 text-sm font-bold text-gray-700">${name}</td>
+                        <td class="p-3 text-xs text-gray-600 font-mono">${phone}</td>
+                        <td class="p-3 text-xs text-gray-600 truncate max-w-[150px]">${cc}</td>
+                        <td class="p-3 text-xs text-gray-400 truncate max-w-[100px]">Waiting Import</td>
+                    </tr>
+                `;
+            });
+
+            updatePreviewSelection();
+            document.getElementById('previewModal').classList.remove('hidden-el');
+        }
+
+        function toggleSelectAllPreview(src) {
+            document.querySelectorAll('.preview-select').forEach(cb => cb.checked = src.checked);
+            updatePreviewSelection();
+        }
+
+        function updatePreviewSelection() {
+            const count = document.querySelectorAll('.preview-select:checked').length;
+            document.getElementById('selectedCount').innerText = `(เลือก ${count} รายการ)`;
+        }
+
+        async function confirmImport() {
+            const checkboxes = document.querySelectorAll('.preview-select:checked');
+            const idxs = Array.from(checkboxes).map(cb => parseInt(cb.value));
+
+            if (idxs.length === 0) return alert("กรุณาเลือกรายการที่จะนำเข้า");
+            if (!confirm(`ยืนยันการนำเข้าข้อมูล ${idxs.length} รายการ?`)) return;
+
+            document.getElementById('previewModal').classList.add('hidden-el');
+            document.getElementById('import-loading').classList.remove('hidden-el');
+
+            const user = currentUser ? (currentUser.displayName + " (Import)") : "Admin (Import)";
+            const batchedWrites = [];
+            const BATCH_SIZE = 400; // Firestore limit 500
+
+            let successCount = 0;
+            let errorCount = 0;
+
+            const tasksCollection = db.collection('tasks');
+
+            for (let i of idxs) {
+                const r = previewData[i];
+
+                // --- MAPPING LOGIC (CRITICAL) ---
+                // ADJUST INDICES HERE based on your specific Excel structure
+                // Default Assumption: 
+                // Col 0: Timestamp 
+                // Col 1: Email (ignore)
+                // Col 2: Name Full (Subjective) -> Needs splitting
+                // Col 3: Nickname
+                // Col 4: Gender
+                // Col 5: Age/DOB
+                // Col 6: Phone
+                // Col 7: Address
+                // Col 8: CC / Symptoms
+                // Col 9: Current Meds
+                // Col 10: PMH / History
+                // Col 11: Allergy
+                // Col 12: Alcohol/Smoke
+
+                // Parsing Name
+                let fullName = String(r[2] || r[1] || "").trim();
+                // Clean prefixes
+                fullName = fullName.replace(/^(นาย|นาง|น\.ส\.|ด\.ช\.|ด\.ญ\.|คุณ|Mr\.|Ms\.|Mrs\.)\s*/, "");
+                let nameParts = fullName.split(/\s+/);
+                let fname = nameParts[0];
+                let lname = nameParts.slice(1).join(" ") || "-";
+
+                // Parsing Date (Timestamp) -> CreatedAt
+                let createdAt = new Date();
+                if (r[0]) {
+                    if (typeof r[0] === 'number') createdAt = new Date((r[0] - 25569) * 86400 * 1000);
+                    else {
+                        let d = new Date(r[0]);
+                        if (!isNaN(d)) createdAt = d;
+                    }
+                }
+
+                const docData = {
+                    type: 'health',
+                    firstName: fname,
+                    lastName: lname,
+                    nickname: r[3] || "",
+                    gender: r[4] || "",
+                    phone: String(r[6] || "").replace(/[^0-9]/g, ""), // Clean phone
+                    address: r[7] || "",
+                    cc: r[8] || "",
+                    // Parse Age to Year of Birth roughly if standard DOB not present
+                    dob: (r[5] && !isNaN(r[5]) && r[5] < 120) ? (new Date().getFullYear() - parseInt(r[5])) + "-01-01" : "",
+
+                    currentMeds: r[9] || "",
+                    history: {
+                        pmh: r[10] || "",
+                        alcohol: String(r[12] || "").includes("ดื่ม") ? "Yes" : "No"
+                    },
+                    allergy: r[11] || "",
+
+                    status: 'Recorded', // Default status for imported
+                    createdAt: createdAt,
+                    createdBy: user,
+                    editHistory: [{ timestamp: new Date(), by: user, action: 'Imported' }]
+                };
+
+                // Using Promise.all for parallel adds (faster than batch for < 50 items, but serial or batch safer for large)
+                // Simple approach: Serial await to avoid rate limits on client side
+                try {
+                    await tasksCollection.add(docData);
+                    successCount++;
+                    document.getElementById('import-status').innerText = `Importing ${successCount}/${idxs.length}...`;
+                } catch (e) {
+                    console.error("Import Row Error", e);
+                    errorCount++;
+                }
+            }
+
+            document.getElementById('import-loading').classList.add('hidden-el');
+            alert(`นำเข้าเสร็จสิ้น: สำเร็จ ${successCount} รายการ${errorCount > 0 ? `, ผิดพลาด ${errorCount} รายการ` : ""}`);
+            loadHistoryData(); // Refresh UI
+        }
+        function toggleSelectAllMain(src) { document.querySelectorAll('.main-row-select').forEach(cb => cb.checked = src.checked); updateMainSelection(); } function updateMainSelection() { const n = document.querySelectorAll('.main-row-select:checked').length; document.getElementById('selected-count-main').innerText = n; document.getElementById('btn-bulk-delete').classList.toggle('hidden-el', n === 0); }
+        function deleteSelectedMain() { const ids = Array.from(document.querySelectorAll('.main-row-select:checked')).map(cb => cb.value); if (ids.length && confirm(`ลบ ${ids.length} รายการ?`)) Promise.all(ids.map(id => db.collection('tasks').doc(id).delete())).then(() => alert("ลบแล้ว")); }
+        function viewEditHistory() { const c = document.getElementById('log-content'); c.innerHTML = ''; if (!currentEditLogs.length) c.innerHTML = '<p class="text-center text-gray-400">ไม่มีประวัติ</p>';[...currentEditLogs].sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0)).forEach(l => c.innerHTML += `<div class="flex justify-between border-b pb-1 last:border-0"><span class="text-gray-600">${new Date(l.timestamp.seconds * 1000).toLocaleString('th-TH')}</span><span class="${l.action === 'Created' ? 'text-green-600' : 'text-blue-600'} font-bold">${l.action} <span class="text-gray-400 font-normal">by ${l.by}</span></span></div>`); document.getElementById('logModal').classList.remove('hidden-el'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden-el'); }
+        function changeStep(d) { goToPage(currentStep + d); } function goToPage(p) { if (p < 1 || p > 4) return; currentStep = p; for (let i = 1; i <= 4; i++) { const el = document.getElementById(`page-${i}`), st = document.getElementById(`step-${i}`); if (i === p) { el.classList.remove('hidden-el'); st.className = "step-active flex flex-col items-center gap-1 cursor-pointer bg-white px-2 hover:scale-105 transition"; } else { el.classList.add('hidden-el'); st.className = "step-inactive flex flex-col items-center gap-1 cursor-pointer bg-white px-2 hover:scale-105 transition"; } } document.getElementById('btn-prev').disabled = (p === 1); if (p === 4) document.getElementById('btn-next').classList.add('hidden-el'); else document.getElementById('btn-next').classList.remove('hidden-el'); }
+        function calcAgeFromDob() { const v = document.getElementById('h-dob').value; if (v) { const d = new Date(v), n = new Date(); let a = n.getFullYear() - d.getFullYear(); if (n.getMonth() < d.getMonth() || (n.getMonth() === d.getMonth() && n.getDate() < d.getDate())) a--; document.getElementById('h-age').value = a; } } function calcDobFromAge() { const a = document.getElementById('h-age').value; if (a) document.getElementById('h-dob').value = `${new Date().getFullYear() - parseInt(a)}-01-01`; }
+        function calcBMI() { const w = parseFloat(document.getElementById('h-weight').value), h = parseFloat(document.getElementById('h-height').value); if (w && h) { const b = w / ((h / 100) ** 2); document.getElementById('h-bmi-val').value = b.toFixed(2); const el = document.getElementById('h-bmi-cat'); if (b < 18.5) { el.innerText = "Underweight"; el.className = "text-xs font-bold text-center py-2 px-1 rounded bg-blue-100 text-blue-700"; } else if (b < 25) { el.innerText = "Healthy"; el.className = "text-xs font-bold text-center py-2 px-1 rounded bg-green-100 text-green-700"; } else if (b < 30) { el.innerText = "Overweight"; el.className = "text-xs font-bold text-center py-2 px-1 rounded bg-orange-100 text-orange-700"; } else { el.innerText = "Obesity"; el.className = "text-xs font-bold text-center py-2 px-1 rounded bg-red-100 text-red-700"; } } }
+        function calcTemp() { const t = parseFloat(document.getElementById('vs-temp').value); if (t) { document.getElementById('vs-temp-f').innerText = ((t * 1.8) + 32).toFixed(1) + " °F"; const el = document.getElementById('vs-temp'); if (t > 37.5 || t < 36) el.classList.add('bg-red-50', 'text-red-600', 'font-bold'); else el.classList.remove('bg-red-50', 'text-red-600', 'font-bold'); } }
+    </script>
+</body>
+
+</html>
