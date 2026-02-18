@@ -3,7 +3,7 @@
 // 1. ค่า Config ของโปรเจกต์คุณ
 // 🔒 SECURITY WARNING: API Key นี้เคยรั่วไหลสู่สาธารณะ โปรดนำ API Key ใหม่มาเปลี่ยนที่นี่
 const firebaseConfig = {
-    apiKey: "AIzaSyCfdIENxDbWB30k4TZQfhnbxvpc2217xtU",
+    apiKey: "AIzaSyCSeIW-4e9Op8_LzKYavaxwVdYyHC8Q0nE",
     authDomain: "fkb-front-kanban.firebaseapp.com",
     projectId: "fkb-front-kanban",
     storageBucket: "fkb-front-kanban.firebasestorage.app",
