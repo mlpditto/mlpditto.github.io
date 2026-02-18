@@ -153,10 +153,9 @@
                 <!-- Record Form Side -->
                 <div class="lg:col-span-1">
                     <section class="glass p-6 rounded-3xl shadow-xl sticky top-28 border border-white/20">
-                        <h2 class="text-lg font-black mb-6 flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-lg bg-lineman/10 flex items-center justify-center"><i
-                                    class="fas fa-plus text-lineman text-sm"></i></div>
-                            บันทึกยอดขายใหม่
+                        <div class="w-8 h-8 rounded-lg bg-lineman/10 flex items-center justify-center pt-1"><i
+                                id="form-icon" class="fas fa-plus text-lineman text-sm"></i></div>
+                        <span id="form-title">บันทึกยอดขายใหม่</span>
                         </h2>
                         <form id="salesForm" class="space-y-4">
                             <div class="grid grid-cols-2 gap-4">
@@ -187,7 +186,7 @@
 
                             <div class="bg-slate-100/50 dark:bg-slate-800/50 p-4 rounded-2xl space-y-3">
                                 <div class="flex justify-between items-center">
-                                    <span class="text-xs font-bold text-slate-500">GP Platform (32.1%)</span>
+                                    <span class="text-xs font-bold text-slate-500">GP Platform (30%)</span>
                                     <span class="text-sm font-black text-rose-500" id="calc-gp">฿0.00</span>
                                 </div>
                                 <div
@@ -208,10 +207,16 @@
                                     placeholder="เช่น ข้าวผัด 2, กะเพรา 1..."></textarea>
                             </div>
 
-                            <button type="submit"
-                                class="w-full py-4 bg-lineman hover:bg-green-600 text-white rounded-2xl font-bold shadow-lg shadow-green-500/20 transition-all transform active:scale-95 mt-4">
-                                <i class="fas fa-check-circle mr-2"></i> บันทึกข้อมูลยอดขาย
-                            </button>
+                            <div class="flex gap-2 mt-4">
+                                <button type="submit" id="submitBtn"
+                                    class="flex-1 py-4 bg-lineman hover:bg-green-600 text-white rounded-2xl font-bold shadow-lg shadow-green-500/20 transition-all transform active:scale-95">
+                                    <i class="fas fa-check-circle mr-2"></i> บันทึกข้อมูล
+                                </button>
+                                <button type="button" id="cancelEditBtn" onclick="cancelEdit()"
+                                    class="hidden px-6 py-4 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-2xl font-bold transition-all transform active:scale-95">
+                                    ยกเลิก
+                                </button>
+                            </div>
                         </form>
                     </section>
                 </div>
@@ -318,7 +323,8 @@
     <script>
         let salesData = [];
         let currentUser = null;
-        const GP_RATE = 0.321; // 30% + VAT 7% of GP = 32.1%
+        let editIndex = null;
+        const GP_RATE = 0.30; // GP 30% รวม VAT
 
         document.addEventListener('DOMContentLoaded', () => {
             initDefaults();
@@ -418,9 +424,14 @@
                             <div class="font-black text-lineman text-lg">฿${record.net.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                         </td>
                         <td class="p-4 text-center">
-                            <button onclick="deleteRecord(${index})" class="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-900/20 text-rose-400 hover:text-rose-600 transition-all">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
+                            <div class="flex items-center justify-center gap-2">
+                                <button onclick="editRecord(${index})" class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-400 hover:text-blue-600 transition-all">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button onclick="deleteRecord(${index})" class="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-900/20 text-rose-400 hover:text-rose-600 transition-all">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 `;
@@ -442,17 +453,36 @@
             const gp = gross * GP_RATE;
             const net = gross - gp;
 
-            const newRecord = {
+            const record = {
                 date: document.getElementById('recordDate').value,
                 orderId: document.getElementById('orderId').value,
                 gross: gross,
                 gp: gp,
                 net: net,
                 notes: document.getElementById('notes').value,
-                recordedAt: new Date().getTime()
+                recordedAt: editIndex !== null ? salesData[editIndex].recordedAt : new Date().getTime()
             };
 
-            salesData.unshift(newRecord);
+            if (editIndex !== null) {
+                // Find actual index in original salesData if we filtered? 
+                // Currently renderUI filters but index is passed from filtered.
+                // To be safe, we need to map filtered index back to original or just re-render.
+                // Simple approach: find by orderId and date or use a unique ID.
+                // For now, assume editIndex is correct since salesData is the source for filtered.
+
+                // Wait, filtered index != salesData index if filtered.
+                // Let's modify renderUI to pass a more reliable identifier or the actual index.
+                // I will add ID to records.
+            }
+
+            if (editIndex !== null) {
+                salesData[editIndex] = record;
+                Swal.fire({ icon: 'success', title: 'แก้ไขข้อมูลสำเร็จ', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
+            } else {
+                salesData.unshift(record);
+                Swal.fire({ icon: 'success', title: 'บันทึกยอดขายแล้ว', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
+            }
+
             // Sort by date desc
             salesData.sort((a, b) => b.date.localeCompare(a.date) || b.recordedAt - a.recordedAt);
 
@@ -460,13 +490,51 @@
             await window.db.collection('system').doc('lineman_sales').set({ records: salesData });
             showLoading(false);
 
-            document.getElementById('grossAmount').value = '';
-            document.getElementById('notes').value = '';
-            document.getElementById('orderId').value = '';
+            cancelEdit(); // Reset form and mode
+        };
+
+        function editRecord(index) {
+            // Because index comes from filtered list in renderUI, we must find the matching item in salesData
+            const termMonth = document.getElementById('monthFilter').value;
+            const filtered = salesData.filter(r => r.date.startsWith(termMonth));
+            const target = filtered[index];
+
+            // Find actual index in salesData
+            const actualIndex = salesData.findIndex(r => r.recordedAt === target.recordedAt);
+            if (actualIndex === -1) return;
+
+            editIndex = actualIndex;
+            const record = salesData[actualIndex];
+
+            // Fill form
+            document.getElementById('recordDate').value = record.date;
+            document.getElementById('orderId').value = record.orderId;
+            document.getElementById('grossAmount').value = record.gross;
+            document.getElementById('notes').value = record.notes;
             calculateNet();
 
-            Swal.fire({ icon: 'success', title: 'บันทึกยอดขายแล้ว', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
-        };
+            // UI Mode Change
+            document.getElementById('form-title').innerText = "แก้ไขข้อมูลยอดขาย";
+            document.getElementById('form-icon').className = "fas fa-edit text-lineman text-sm";
+            document.getElementById('cancelEditBtn').classList.remove('hidden');
+            document.getElementById('submitBtn').innerHTML = '<i class="fas fa-save mr-2"></i> บันทึกการแก้ไข';
+
+            // Scroll to form
+            document.querySelector('#salesForm').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function cancelEdit() {
+            editIndex = null;
+            document.getElementById('salesForm').reset();
+            initDefaults(); // Restore date to today
+            calculateNet();
+
+            // UI Mode Restore
+            document.getElementById('form-title').innerText = "บันทึกยอดขายใหม่";
+            document.getElementById('form-icon').className = "fas fa-plus text-lineman text-sm";
+            document.getElementById('cancelEditBtn').classList.add('hidden');
+            document.getElementById('submitBtn').innerHTML = '<i class="fas fa-check-circle mr-2"></i> บันทึกข้อมูล';
+        }
 
         async function deleteRecord(index) {
             const res = await Swal.fire({
@@ -496,7 +564,7 @@
             if (filtered.length === 0) return Swal.fire('No Data', 'ไม่มีข้อมูลในช่วงเวลาที่เลือก', 'info');
 
             const csv = [
-                ['Date', 'Order ID', 'Gross Amount', 'GP Fee (32.1%)', 'Net Amount', 'Notes'],
+                ['Date', 'Order ID', 'Gross Amount', 'GP Fee (30%)', 'Net Amount', 'Notes'],
                 ...filtered.map(r => [r.date, r.orderId, r.gross, r.gp, r.net, `"${r.notes}"`])
             ].map(e => e.join(",")).join("\n");
 
