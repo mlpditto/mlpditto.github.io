@@ -183,26 +183,81 @@
             </nav>
 
             <!-- Financial Summary Cards -->
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div class="glass card-hover p-6 rounded-3xl border-l-[6px] border-lineman">
-                    <p class="text-xs font-bold text-slate-400 uppercase mb-1">ยอดขายวันนี้ (Gross)</p>
-                    <h3 class="text-2xl font-black" id="summary-gross">฿0</h3>
-                    <p class="text-[10px] text-slate-400 mt-1">รวมราคาสินค้าทั้งหมด</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div
+                    class="glass card-hover p-5 rounded-3xl border-l-[6px] border-lineman flex flex-col justify-between">
+                    <div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Gross / GP
+                            (Month)</p>
+                        <div class="flex justify-between items-end mb-1">
+                            <span class="text-2xl font-black" id="summary-gross">฿0</span>
+                            <span class="text-xs font-bold text-rose-500 mb-1" id="summary-gp">฿0</span>
+                        </div>
+                    </div>
+                    <div
+                        class="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-between text-[9px] font-bold text-slate-400">
+                        <span>รายการเดือนนี้</span>
+                        <span class="text-lineman" id="summary-gross-label">--</span>
+                    </div>
                 </div>
-                <div class="glass card-hover p-6 rounded-3xl border-l-[6px] border-rose-500">
-                    <p class="text-xs font-bold text-slate-400 uppercase mb-1">หัก GP วันนี้</p>
-                    <h3 class="text-2xl font-black text-rose-500" id="summary-gp">฿0</h3>
-                    <p class="text-[10px] text-rose-400 mt-1">ค่าธรรมเนียม Platform</p>
+
+                <div
+                    class="glass card-hover p-5 rounded-3xl border-l-[6px] border-blue-500 flex flex-col justify-between">
+                    <div>
+                        <p class="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-3">ยอดรับโอน (Net
+                            Paid)</p>
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-baseline">
+                                <span class="text-[10px] font-bold text-slate-400">เดือนนี้</span>
+                                <span class="text-xl font-black text-blue-600" id="stat-net-month">฿0</span>
+                            </div>
+                            <div class="flex justify-between items-baseline">
+                                <span class="text-[10px] font-bold text-slate-400">ปีนี้</span>
+                                <span class="text-sm font-black text-slate-600 dark:text-slate-300"
+                                    id="stat-net-year">฿0</span>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-[9px] text-blue-400 font-bold mt-2 uppercase">เฉพาะรายการโอนสำเร็จ</p>
                 </div>
-                <div class="glass card-hover p-6 rounded-3xl border-l-[6px] border-blue-500">
-                    <p class="text-xs font-bold text-slate-400 uppercase mb-1">ยอดรับโอน (Net)</p>
-                    <h3 class="text-2xl font-black text-blue-600" id="summary-net">฿0</h3>
-                    <p class="text-[10px] text-blue-400 mt-1">ยอดเงินจริงที่จะได้รับ</p>
+
+                <div
+                    class="glass card-hover p-5 rounded-3xl border-l-[6px] border-purple-500 flex flex-col justify-between">
+                    <div>
+                        <p class="text-[10px] font-black text-purple-500 uppercase tracking-widest mb-3">จำนวนออเดอร์
+                        </p>
+                        <div class="grid grid-cols-3 gap-2 text-center">
+                            <div>
+                                <p class="text-[8px] font-bold text-slate-400 uppercase">วันนี้</p>
+                                <p class="text-lg font-black text-purple-600" id="stat-count-today">0</p>
+                            </div>
+                            <div>
+                                <p class="text-[8px] font-bold text-slate-400 uppercase">เดือนนี้</p>
+                                <p class="text-lg font-black text-slate-700 dark:text-slate-200" id="stat-count-month">0
+                                </p>
+                            </div>
+                            <div>
+                                <p class="text-[8px] font-bold text-slate-400 uppercase">ปีนี้</p>
+                                <p class="text-lg font-black text-slate-400" id="stat-count-year">0</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="glass card-hover p-6 rounded-3xl border-l-[6px] border-purple-500">
-                    <p class="text-xs font-bold text-slate-400 uppercase mb-1">จำนวนออเดอร์</p>
-                    <h3 class="text-2xl font-black text-purple-600" id="summary-count">0</h3>
-                    <p class="text-[10px] text-purple-400 mt-1">รายการขายวันนี้</p>
+
+                <div
+                    class="glass card-hover p-5 rounded-3xl border-l-[6px] border-amber-500 flex flex-col justify-between">
+                    <div>
+                        <p class="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-3">ระยะเวลาเฉลี่ย
+                            (AVG)</p>
+                        <div class="flex flex-col items-center justify-center py-1">
+                            <span class="text-3xl font-black text-amber-600" id="stat-avg-time">--</span>
+                            <span class="text-[9px] font-bold text-slate-400 uppercase mt-1">เวลาเตรียมและจัดส่ง</span>
+                        </div>
+                    </div>
+                    <div class="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div id="stat-avg-progress" class="h-full bg-amber-400 transition-all duration-1000"
+                            style="width: 0%"></div>
+                    </div>
                 </div>
             </div>
 
@@ -226,12 +281,21 @@
                                     class="text-xs p-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-lineman outline-none">
                                 <button onclick="openImportModal()"
                                     class="px-4 py-2.5 rounded-xl bg-lineman/10 text-lineman font-bold hover:bg-lineman hover:text-white transition-all text-xs border border-lineman/20">
-                                    <i class="fas fa-file-import mr-2"></i> นำเข้าจาก CSV
+                                    <i class="fas fa-file-import mr-2"></i> IMPORT
                                 </button>
-                                <button onclick="exportSales()"
-                                    class="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 text-slate-400 hover:text-blue-500 shadow-sm border border-slate-100 dark:border-slate-700 transition-all">
-                                    <i class="fas fa-file-export"></i>
-                                </button>
+                                <div
+                                    class="flex items-center bg-slate-100 dark:bg-slate-800 rounded-xl p-1 border border-slate-200 dark:border-slate-700">
+                                    <button onclick="exportSalesCSV()"
+                                        class="px-3 py-2 rounded-lg text-slate-500 hover:text-blue-500 hover:bg-white dark:hover:bg-slate-700 transition-all text-[10px] font-bold"
+                                        title="Export CSV">
+                                        CSV
+                                    </button>
+                                    <button onclick="exportBackupJSON()"
+                                        class="px-3 py-2 rounded-lg text-slate-500 hover:text-amber-600 hover:bg-white dark:hover:bg-slate-700 transition-all text-[10px] font-bold"
+                                        title="Backup JSON">
+                                        JSON
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         <div id="date-pagination"
@@ -324,11 +388,11 @@
                 </button>
             </h2>
 
-            <form id="salesForm" class="space-y-4">
+            <form id="salesForm" class="space-y-4" novalidate>
                 <div class="grid grid-cols-4 gap-4">
                     <div class="col-span-2">
                         <label class="vibrant-label">วันที่ขาย</label>
-                        <input type="date" id="recordDate" required class="premium-input font-bold">
+                        <input type="date" id="recordDate" class="premium-input font-bold">
                     </div>
                     <div class="col-span-1">
                         <label class="vibrant-label text-center block">เวลาสั่ง</label>
@@ -342,40 +406,46 @@
                                 oninput="if(value.length>2)value=value.slice(0,2); if(value>59)value=59;">
                         </div>
                     </div>
-                    <div class="col-span-1 opacity-40 transition-opacity" id="paid-time-container-add">
-                        <label class="vibrant-label text-center block">เวลารับ</label>
-                        <div class="flex items-center gap-1 premium-input !py-2.5 px-2 bg-emerald-50/50">
-                            <input type="number" id="paidHH" min="0" max="23" placeholder="00"
-                                class="w-full bg-transparent text-center font-bold text-lg outline-none">
+                    <div class="col-span-1 opacity-60 transition-opacity" id="received-time-container-add">
+                        <label class="vibrant-label text-center block text-[10px]">เวลารับสินค้า</label>
+                        <div class="flex items-center gap-1 premium-input !py-2.5 px-2 bg-blue-50/30">
+                            <input type="number" id="receivedHH" min="0" max="23" placeholder="00"
+                                class="w-full bg-transparent text-center font-bold text-lg outline-none"
+                                oninput="if(value.length>2)value=value.slice(0,2); if(value>23)value=23;">
                             <span class="font-bold text-slate-300">:</span>
-                            <input type="number" id="paidMM" min="0" max="59" placeholder="00"
-                                class="w-full bg-transparent text-center font-bold text-lg outline-none">
+                            <input type="number" id="receivedMM" min="0" max="59" placeholder="00"
+                                class="w-full bg-transparent text-center font-bold text-lg outline-none"
+                                oninput="if(value.length>2)value=value.slice(0,2); if(value>59)value=59;">
                         </div>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-3 gap-4">
+                <div class="grid grid-cols-4 gap-4">
+                    <div class="col-span-2">
+                        <label class="vibrant-label">วันที่รับสินค้า (ถ้าต่างจากวันสั่ง)</label>
+                        <input type="date" id="receivedDate" class="premium-input text-sm font-bold">
+                    </div>
                     <div class="col-span-2">
                         <label class="vibrant-label" style="color: #00B14F;">เลขออเดอร์ (เต็ม)</label>
                         <input type="text" id="orderIdFull" placeholder="LME-XXXXXX" oninput="autoFillShortOrderId()"
                             class="premium-input uppercase font-semibold" style="border-color: rgba(0, 177, 79, 0.2);">
                     </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
                     <div class="col-span-1">
                         <label class="vibrant-label">4 หลักท้าย</label>
-                        <input type="text" id="orderId" placeholder="0001" required maxlength="4"
+                        <input type="text" id="orderId" placeholder="0001" maxlength="4"
                             class="premium-input text-center font-black">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="vibrant-label">ชื่อลูกค้า</label>
-                        <input type="text" id="customerName" placeholder="ระบุชื่อลูกค้า" class="premium-input">
                     </div>
                     <div>
                         <label class="vibrant-label">เบอร์โทร (Optional)</label>
                         <input type="tel" id="customerPhone" placeholder="08x-xxx-xxxx" class="premium-input">
                     </div>
+                </div>
+
+                <div>
+                    <label class="vibrant-label">ชื่อลูกค้า</label>
+                    <input type="text" id="customerName" placeholder="ระบุชื่อลูกค้า" class="premium-input">
                 </div>
 
                 <div class="border-t-2 border-slate-100 dark:border-slate-800 pt-5">
@@ -420,7 +490,7 @@
                         <div>
                             <label class="vibrant-label">ยอดรวม (Gross)</label>
                             <div class="relative">
-                                <input type="number" id="grossAmount" step="0.01" required readonly
+                                <input type="number" id="grossAmount" step="0.01" readonly
                                     class="premium-input pl-12 !bg-slate-100 dark:!bg-slate-900 border-dashed !text-slate-400 cursor-not-allowed">
                                 <span class="absolute left-4 top-4 text-slate-400 font-bold">฿</span>
                             </div>
@@ -484,13 +554,15 @@
                         </div>
                         <div>
                             <label
-                                class="text-[10px] uppercase font-black text-slate-400 mb-1.5 block ml-2">เวลาที่ได้รับ</label>
+                                class="text-[10px] uppercase font-black text-slate-400 mb-1.5 block ml-2">เวลารับโอน</label>
                             <div class="flex items-center gap-2 premium-input !py-3">
-                                <input type="number" id="paidHH" min="0" max="23" placeholder="00"
-                                    class="w-full bg-transparent text-center font-black outline-none text-base">
+                                <input type="number" id="transferHH" min="0" max="23" placeholder="00"
+                                    class="w-full bg-transparent text-center font-black outline-none text-base"
+                                    oninput="if(value.length>2)value=value.slice(0,2); if(value>23)value=23;">
                                 <span class="text-slate-300 font-bold">:</span>
-                                <input type="number" id="paidMM" min="0" max="59" placeholder="00"
-                                    class="w-full bg-transparent text-center font-black outline-none text-base">
+                                <input type="number" id="transferMM" min="0" max="59" placeholder="00"
+                                    class="w-full bg-transparent text-center font-black outline-none text-base"
+                                    oninput="if(value.length>2)value=value.slice(0,2); if(value>59)value=59;">
                             </div>
                         </div>
                     </div>
@@ -519,11 +591,11 @@
                     <i class="fas fa-times text-xl"></i>
                 </button>
             </h3>
-            <form id="editForm" class="space-y-4">
+            <form id="editForm" class="space-y-4" novalidate>
                 <div class="grid grid-cols-4 gap-4">
                     <div class="col-span-2">
                         <label class="vibrant-label">วันที่ขาย</label>
-                        <input type="date" id="e-recordDate" required class="premium-input font-bold">
+                        <input type="date" id="e-recordDate" class="premium-input font-bold">
                     </div>
                     <div class="col-span-1">
                         <label class="vibrant-label text-center block">เวลาสั่ง</label>
@@ -537,40 +609,49 @@
                                 oninput="if(value.length>2)value=value.slice(0,2); if(value>59)value=59;">
                         </div>
                     </div>
-                    <div class="col-span-1 opacity-40 transition-opacity" id="paid-time-container-edit">
-                        <label class="vibrant-label text-center block">เวลารับ</label>
-                        <div class="flex items-center gap-1 premium-input !py-2.5 px-2 bg-emerald-50/50">
-                            <input type="number" id="e-paidHH" min="0" max="23" placeholder="00"
-                                class="w-full bg-transparent text-center font-bold text-lg outline-none">
+                    <div class="col-span-1 opacity-60 transition-opacity" id="received-time-container-edit">
+                        <label class="vibrant-label text-center block text-[10px]">เวลารับสินค้า</label>
+                        <div class="flex items-center gap-1 premium-input !py-2.5 px-2 bg-blue-50/30">
+                            <input type="number" id="e-receivedHH" min="0" max="23" placeholder="00"
+                                class="w-full bg-transparent text-center font-bold text-lg outline-none"
+                                oninput="if(value.length>2)value=value.slice(0,2); if(value>23)value=23;">
                             <span class="font-bold text-slate-300 text-sm">:</span>
-                            <input type="number" id="e-paidMM" min="0" max="59" placeholder="00"
-                                class="w-full bg-transparent text-center font-bold text-lg outline-none">
+                            <input type="number" id="e-receivedMM" min="0" max="59" placeholder="00"
+                                class="w-full bg-transparent text-center font-bold text-lg outline-none"
+                                oninput="if(value.length>2)value=value.slice(0,2); if(value>59)value=59;">
                         </div>
                     </div>
                 </div>
-                <div
-                    class="grid grid-cols-3 gap-4 p-4 bg-blue-50/30 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-900/30">
+
+                <div class="grid grid-cols-4 gap-4">
+                    <div class="col-span-2">
+                        <label class="vibrant-label">วันที่รับสินค้า</label>
+                        <input type="date" id="e-receivedDate" class="premium-input text-sm font-bold">
+                    </div>
                     <div class="col-span-2">
                         <label class="vibrant-label" style="color: #3b82f6;">เลขออเดอร์ (เต็ม)</label>
                         <input type="text" id="e-orderIdFull" oninput="autoFillShortOrderIdPopup()"
                             class="premium-input text-sm font-semibold" style="border-color: rgba(59, 130, 246, 0.2);">
                     </div>
-                    <div class="col-span-1">
-                        <label class="vibrant-label">4 หลักท้าย</label>
-                        <input type="text" id="e-orderId" required maxlength="4"
-                            class="premium-input text-center font-black text-sm">
-                    </div>
                 </div>
+
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="vibrant-label">ชื่อลูกค้า</label>
-                        <input type="text" id="e-customerName" class="premium-input">
+                        <label class="vibrant-label">4 หลักท้าย</label>
+                        <input type="text" id="e-orderId" maxlength="4"
+                            class="premium-input text-center font-black text-sm">
                     </div>
                     <div>
                         <label class="vibrant-label">เบอร์โทร</label>
                         <input type="tel" id="e-customerPhone" class="premium-input">
                     </div>
                 </div>
+
+                <div>
+                    <label class="vibrant-label">ชื่อลูกค้า</label>
+                    <input type="text" id="e-customerName" class="premium-input">
+                </div>
+
                 <div class="border-t-2 border-slate-100 dark:border-slate-800 pt-5">
                     <div class="flex justify-between items-center mb-3">
                         <label class="vibrant-label" style="color: #3b82f6; margin-bottom: 0;">รายการสินค้า
@@ -590,15 +671,18 @@
                     </div>
                 </div>
 
-                <div>
-                    <label class="vibrant-label">ยอดขายเต็ม (Gross)</label>
-                    <div class="relative">
-                        <input type="number" id="e-grossAmount" step="0.01" required oninput="calculateNetPopup()"
-                            class="premium-input pl-12 font-black text-lg" readonly
-                            style="background-color: #f1f5f9; border-style: dashed; color: #94a3b8; cursor: not-allowed;">
-                        <span class="absolute left-4 top-4 text-slate-400 font-bold">฿</span>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="vibrant-label">ยอดขายเต็ม (Gross)</label>
+                        <div class="relative">
+                            <input type="number" id="e-grossAmount" step="0.01" oninput="calculateNetPopup()"
+                                class="premium-input pl-12 font-black text-lg" readonly
+                                style="background-color: #f1f5f9; border-style: dashed; color: #94a3b8; cursor: not-allowed;">
+                            <span class="absolute left-4 top-4 text-slate-400 font-bold">฿</span>
+                        </div>
                     </div>
                 </div>
+
                 <div
                     class="bg-gradient-to-br from-blue-50 to-white dark:from-blue-900/20 dark:to-slate-900/50 p-5 rounded-[2rem] border-2 border-blue-100 dark:border-blue-900/30 flex flex-col gap-3 shadow-inner">
                     <div class="grid grid-cols-2 gap-3 pb-2 border-b border-blue-100 dark:border-blue-900/30">
@@ -632,6 +716,7 @@
                         <span class="text-3xl font-black text-blue-600 drop-shadow-sm" id="e-calc-net">฿0.00</span>
                     </div>
                 </div>
+
                 <div>
                     <label class="vibrant-label">รายละเอียดเพิ่มเติม</label>
                     <textarea id="e-notes" rows="1" class="premium-input text-xs"></textarea>
@@ -649,10 +734,29 @@
                             (PAID)</label>
                     </div>
                     <div id="paid-details-edit" class="hidden animate-in fade-in duration-300 mt-3">
-                        <label class="text-[10px] uppercase font-bold text-slate-400 mb-1 block">วันที่รับเงิน</label>
-                        <input type="date" id="e-paidDate" class="premium-input font-bold">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label
+                                    class="text-[10px] uppercase font-bold text-slate-400 mb-1 block">วันที่รับเงิน</label>
+                                <input type="date" id="e-paidDate" class="premium-input font-bold">
+                            </div>
+                            <div>
+                                <label
+                                    class="text-[10px] uppercase font-bold text-slate-400 mb-1 block">เวลารับโอน</label>
+                                <div class="flex items-center gap-2 premium-input !py-2.5">
+                                    <input type="number" id="e-transferHH" min="0" max="23" placeholder="00"
+                                        class="w-full bg-transparent text-center font-black outline-none text-base"
+                                        oninput="if(value.length>2)value=value.slice(0,2); if(value>23)value=23;">
+                                    <span class="text-slate-300 font-bold">:</span>
+                                    <input type="number" id="e-transferMM" min="0" max="59" placeholder="00"
+                                        class="w-full bg-transparent text-center font-black outline-none text-base"
+                                        oninput="if(value.length>2)value=value.slice(0,2); if(value>59)value=59;">
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
+
                 <div class="flex gap-4 pt-5">
                     <button type="submit"
                         class="flex-1 py-5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-[2rem] font-black shadow-xl shadow-blue-500/30 active:scale-[0.98] transition-all">บันทึกการแก้ไข</button>
@@ -681,22 +785,21 @@
         function togglePaidSection(mode) {
             const isPaid = document.getElementById(mode === 'add' ? 'isPaid' : 'e-isPaid').checked;
             const container = document.getElementById(mode === 'add' ? 'paid-details-add' : 'paid-details-edit');
-            const timeContainer = document.getElementById(mode === 'add' ? 'paid-time-container-add' : 'paid-time-container-edit');
+            // Update: We don't really use separate timeContainer for paid anymore in the same way, 
+            // but let's keep it safe. Actually, the transfer fields are inside 'container'.
 
             if (isPaid) {
                 container.classList.remove('hidden');
-                if (timeContainer) timeContainer.classList.remove('opacity-40');
                 // Set default now if empty
                 const dateField = document.getElementById(mode === 'add' ? 'paidDate' : 'e-paidDate');
                 if (!dateField.value) {
                     const now = new Date();
                     dateField.value = now.toISOString().split('T')[0];
-                    document.getElementById(mode === 'add' ? 'paidHH' : 'e-paidHH').value = now.getHours().toString().padStart(2, '0');
-                    document.getElementById(mode === 'add' ? 'paidMM' : 'e-paidMM').value = now.getMinutes().toString().padStart(2, '0');
+                    document.getElementById(mode === 'add' ? 'transferHH' : 'e-transferHH').value = now.getHours().toString().padStart(2, '0');
+                    document.getElementById(mode === 'add' ? 'transferMM' : 'e-transferMM').value = now.getMinutes().toString().padStart(2, '0');
                 }
             } else {
                 container.classList.add('hidden');
-                if (timeContainer) timeContainer.classList.add('opacity-40');
             }
         }
 
@@ -757,27 +860,24 @@
             div.dataset.id = id;
 
             const calcFunc = containerId === 'items-container' ? 'calculateTotalFromItems()' : 'calculateTotalFromItems(\'e-items-container\', \'e-grossAmount\')';
-            const itemTotal = (data.qty * data.price).toFixed(2);
 
             div.innerHTML = `
-                <div class="flex-1">
-                    <input type="text" list="master-list" placeholder="ชื่อสินค้า" onchange="handleItemChange(this, '${containerId}')"
-                        class="w-full p-2 bg-transparent outline-none text-xs font-bold item-name" value="${data.name}">
+                <input type="text" placeholder="ชื่อสินค้า..." class="item-name w-1/2 bg-white dark:bg-slate-900 border-none outline-none text-xs font-bold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-lineman/20 rounded-lg py-1 px-2" list="master-list" onchange="handleItemChange(this, '${containerId}')">
+                <div class="flex items-center bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-100 dark:border-slate-800 ml-auto">
+                    <input type="number" placeholder="ชิ้น" class="item-qty w-12 bg-transparent border-none text-center text-xs font-black outline-none py-1" oninput="${calcFunc}">
+                    <span class="text-[8px] text-slate-300 font-bold px-1">x</span>
+                    <input type="number" step="0.01" placeholder="ราคา" class="item-price w-16 bg-transparent border-none text-center text-xs font-black outline-none py-1" oninput="${calcFunc}">
                 </div>
-                <div class="w-12">
-                    <input type="number" placeholder="Qty" oninput="handleItemPriceAutoCalc(this, 'qty', '${containerId}')"
-                        class="w-full p-2 bg-transparent outline-none text-[10px] item-qty text-center" value="${data.qty}">
-                </div>
-                <div class="w-16">
-                    <input type="number" placeholder="หน่วย" oninput="handleItemPriceAutoCalc(this, 'price', '${containerId}')"
-                        class="w-full p-2 bg-transparent outline-none text-[10px] font-medium text-right item-price" value="${data.price}">
-                </div>
-                <div class="w-20 bg-slate-50 dark:bg-slate-900/50 rounded-lg">
-                    <input type="number" placeholder="รวม" oninput="handleItemPriceAutoCalc(this, 'total', '${containerId}')"
-                        class="w-full p-2 bg-transparent outline-none text-xs font-black text-right item-total text-blue-600 dark:text-blue-400" value="${itemTotal}">
-                </div>
-                <button type="button" onclick="this.parentElement.remove(); ${calcFunc};" class="text-rose-400 px-2"><i class="fas fa-times"></i></button>
+                <button type="button" onclick="this.closest('.item-row').remove(); ${calcFunc};" class="w-6 h-6 flex items-center justify-center text-rose-300 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-md transition-all">
+                    <i class="fas fa-times-circle text-[10px]"></i>
+                </button>
             `;
+
+            // Set values safely
+            div.querySelector('.item-name').value = data.name || '';
+            div.querySelector('.item-qty').value = data.qty || 1;
+            div.querySelector('.item-price').value = data.price || 0;
+
             container.appendChild(div);
         }
 
@@ -785,24 +885,7 @@
             const row = input.closest('.item-row');
             const qtyInput = row.querySelector('.item-qty');
             const priceInput = row.querySelector('.item-price');
-            const totalInput = row.querySelector('.item-total');
-
-            let qty = parseFloat(qtyInput.value) || 0;
-            let price = parseFloat(priceInput.value) || 0;
-            let total = parseFloat(totalInput.value) || 0;
-
-            if (type === 'qty' || type === 'price') {
-                total = qty * price;
-                totalInput.value = total > 0 ? total.toFixed(2) : '';
-            } else if (type === 'total') {
-                if (qty > 0) {
-                    price = total / qty;
-                    priceInput.value = price.toFixed(2);
-                } else {
-                    // If qty is 0 but total is entered, assume qty 1?
-                    // Maybe just let it be.
-                }
-            }
+            // item-total removed in new UI, we calculate totalGross instead
 
             if (containerId === 'items-container') {
                 calculateTotalFromItems();
@@ -812,23 +895,28 @@
         }
 
         function handleItemChange(input, containerId = 'items-container') {
-            const name = input.value.trim();
-            const master = masterProducts.find(p => p.name === name);
-            if (master) {
-                let price = 0;
-                if (master.prices) {
-                    price = master.prices['LINEMAN'] || master.prices[Object.keys(master.prices)[0]] || 0;
+            try {
+                const name = input.value.trim();
+                const master = masterProducts.find(p => p.name === name);
+                if (master) {
+                    let price = 0;
+                    if (master.prices) {
+                        price = master.prices['LINEMAN'] || master.prices[Object.keys(master.prices)[0]] || 0;
+                    }
+                    const row = input.closest('.item-row');
+                    if (row) {
+                        const pInput = row.querySelector('.item-price');
+                        if (pInput) pInput.value = price;
+
+                        // just trigger gross recalc
+                        if (containerId === 'items-container') {
+                            calculateTotalFromItems();
+                        } else {
+                            calculateTotalFromItems('e-items-container', 'e-grossAmount');
+                        }
+                    }
                 }
-                const row = input.closest('.item-row');
-                row.querySelector('.item-price').value = price;
-                const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
-                row.querySelector('.item-total').value = (qty * price).toFixed(2);
-            }
-            if (containerId === 'items-container') {
-                calculateTotalFromItems();
-            } else {
-                calculateTotalFromItems('e-items-container', 'e-grossAmount');
-            }
+            } catch (err) { console.error("handleItemChange error:", err); }
         }
 
         function calculateTotalFromItems(containerId = 'items-container', displayId = 'grossAmount') {
@@ -931,29 +1019,40 @@
             const now = new Date();
             const today = now.toISOString().split('T')[0];
             document.getElementById('recordDate').value = today;
+            document.getElementById('receivedDate').value = today;
             document.getElementById('paidDate').value = today;
-            document.getElementById('orderHH').value = now.getHours().toString().padStart(2, '0');
-            document.getElementById('orderMM').value = now.getMinutes().toString().padStart(2, '0');
-            document.getElementById('paidHH').value = now.getHours().toString().padStart(2, '0');
-            document.getElementById('paidMM').value = now.getMinutes().toString().padStart(2, '0');
 
-            // Sync Paid Date whenever Record Date changes (if it was same)
+            const hours = now.getHours().toString().padStart(2, '0');
+            const mins = now.getMinutes().toString().padStart(2, '0');
+
+            document.getElementById('orderHH').value = hours;
+            document.getElementById('orderMM').value = mins;
+
+            document.getElementById('receivedHH').value = '';
+            document.getElementById('receivedMM').value = '';
+
+            document.getElementById('transferHH').value = hours;
+            document.getElementById('transferMM').value = mins;
+
+            // Sync Received/Paid Dates whenever Record Date changes (if they were same)
             document.getElementById('recordDate').onchange = (e) => {
+                const rd = document.getElementById('receivedDate');
                 const pd = document.getElementById('paidDate');
+                if (!rd.dataset.manual) rd.value = e.target.value;
                 if (!pd.dataset.manual) pd.value = e.target.value;
             };
-            document.getElementById('paidDate').oninput = (e) => {
-                e.target.dataset.manual = "true";
-            };
+            document.getElementById('receivedDate').oninput = (e) => { e.target.dataset.manual = "true"; };
+            document.getElementById('paidDate').oninput = (e) => { e.target.dataset.manual = "true"; };
 
             // Same for Edit Modal
             document.getElementById('e-recordDate').onchange = (e) => {
+                const erd = document.getElementById('e-receivedDate');
                 const epd = document.getElementById('e-paidDate');
+                if (!erd.dataset.manual) erd.value = e.target.value;
                 if (!epd.dataset.manual) epd.value = e.target.value;
             };
-            document.getElementById('e-paidDate').oninput = (e) => {
-                e.target.dataset.manual = "true";
-            };
+            document.getElementById('e-receivedDate').oninput = (e) => { e.target.dataset.manual = "true"; };
+            document.getElementById('e-paidDate').oninput = (e) => { e.target.dataset.manual = "true"; };
 
             document.getElementById('monthFilter').value = now.toISOString().slice(0, 7);
 
@@ -1049,9 +1148,64 @@
 
         function renderUI() {
             const termMonth = document.getElementById('monthFilter').value;
-            const todayStr = new Date().toISOString().split('T')[0];
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = (now.getMonth() + 1).toString().padStart(2, '0');
+            const d = now.getDate().toString().padStart(2, '0');
+            const todayStr = `${y}-${m}-${d}`;
+            const currentYearStr = y.toString();
 
-            // Filter for the month first
+            // Stats Calculation
+            let countToday = 0, countMonth = 0, countYear = 0;
+            let netPaidMonth = 0, netPaidYear = 0;
+            let totalPerfMins = 0, perfCount = 0;
+
+            salesData.forEach(r => {
+                const rDate = r.date || '';
+                if (rDate === todayStr) countToday++;
+                if (rDate.startsWith(termMonth)) {
+                    countMonth++;
+                    if (r.isPaid) netPaidMonth += (r.net || 0);
+                }
+                if (rDate.startsWith(currentYearStr)) {
+                    countYear++;
+                    if (r.isPaid) netPaidYear += (r.net || 0);
+                }
+
+                if (r.receivedTime) {
+                    const perf = calculatePerformance(r.date, r.orderTime, r.receivedDate || r.date, r.receivedTime);
+                    if (perf) {
+                        totalPerfMins += perf.totalMins;
+                        perfCount++;
+                    }
+                }
+            });
+
+            // Update Header Stats
+            document.getElementById('stat-count-today').innerText = countToday;
+            document.getElementById('stat-count-month').innerText = countMonth;
+            document.getElementById('stat-count-year').innerText = countYear;
+            document.getElementById('stat-net-month').innerText = `฿${netPaidMonth.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('stat-net-year').innerText = `฿${netPaidYear.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            if (perfCount > 0) {
+                const avgMins = Math.round(totalPerfMins / perfCount);
+                const h = Math.floor(avgMins / 60);
+                const m = avgMins % 60;
+                document.getElementById('stat-avg-time').innerText = h > 0 ? `${h}h ${m}m` : `${m}m`;
+                const progress = Math.min(100, (avgMins / 90) * 100);
+                const bar = document.getElementById('stat-avg-progress');
+                if (bar) {
+                    bar.style.width = `${progress}%`;
+                    bar.className = `h-full transition-all duration-1000 ${avgMins > 45 ? (avgMins > 90 ? 'bg-rose-500' : 'bg-amber-400') : 'bg-emerald-500'}`;
+                }
+            } else {
+                document.getElementById('stat-avg-time').innerText = '--';
+                const bar = document.getElementById('stat-avg-progress');
+                if (bar) bar.style.width = '0%';
+            }
+
+            // Filter for the month for the list view
             let filtered = salesData.filter(r => r.date.startsWith(termMonth));
 
             // Pagination Rendering
@@ -1126,7 +1280,22 @@
                     <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${rowStyle} relative">
                         <td class="p-4 align-top">
                             <div class="text-[10px] font-black text-slate-500 dark:text-slate-400">${record.date}</div>
-                            <div class="text-[11px] font-black text-blue-600 dark:text-blue-400 mb-1.5">${record.orderTime || '--:--'}</div>
+                            <div class="text-[11px] font-black text-blue-600 dark:text-blue-400 mb-1">${record.orderTime || '--:--'}</div>
+                            
+                            ${record.receivedTime ? `
+                                <div class="flex items-center gap-1 text-[9px] font-bold text-amber-600 mb-1" title="เวลารับสินค้า: ${record.receivedDate} ${record.receivedTime}">
+                                    <i class="fas fa-box-open"></i> ${record.receivedTime}
+                                </div>
+                                ${(() => {
+                            const perf = calculatePerformance(record.date, record.orderTime, record.receivedDate || record.date, record.receivedTime);
+                            return perf ? `
+                                        <div class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md ${perf.color} text-[8px] font-black shadow-sm mb-1">
+                                            <i class="fas fa-bolt"></i> ${perf.label}
+                                        </div>
+                                    ` : '';
+                        })()}
+                            ` : ''}
+
                             <div class="inline-block bg-white dark:bg-slate-800 border-[1.5px] border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded-md font-black text-slate-800 dark:text-slate-100 shadow-sm text-[11px] mb-1 tracking-tight">
                                 ${record.orderId}
                             </div>
@@ -1140,7 +1309,7 @@
                                 ${(record.items || []).map(i => `
                                     <div class="flex justify-between text-[10px]">
                                         <span class="text-slate-500">${i.name} x${i.qty}</span>
-                                        <span class="font-bold text-slate-400">฿${(i.qty * i.price).toLocaleString()}</span>
+                                        <span class="font-bold text-slate-400">฿${(i.qty * i.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     </div>
                                 `).join('')}
                             </div>
@@ -1170,14 +1339,6 @@
                                         <span>PAID ${record.paidDate || record.date} <span class="opacity-40 font-bold">///</span></span>
                                         <span class="text-[12px]">฿ ${dailyPaidTotals[record.paidDate || record.date].toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     </div>
-                                    ${(() => {
-                            const perf = calculatePerformance(record.date, record.orderTime, record.paidDate || record.date, record.paidTime);
-                            return perf ? `
-                                            <div class="text-[9px] ${perf.color} px-2 py-0.5 rounded-full flex items-center gap-1 font-black shadow-sm border border-black/5">
-                                                <i class="fas fa-bolt"></i> ${perf.label}
-                                            </div>
-                                        ` : '';
-                        })()}
                                 </div>
                             ` : ''}
                             <div class="flex items-center justify-center gap-2">
@@ -1193,10 +1354,9 @@
                 `;
             });
 
-            document.getElementById('summary-gross').innerText = `฿${dailyGross.toLocaleString()}`;
-            document.getElementById('summary-gp').innerText = `฿${dailyGP.toLocaleString()}`;
-            document.getElementById('summary-net').innerText = `฿${dailyNet.toLocaleString()}`;
-            document.getElementById('summary-count').innerText = dailyCount;
+            document.getElementById('summary-gross').innerText = `฿${dailyGross.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('summary-gp').innerText = `฿${dailyGP.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('summary-gross-label').innerText = `${dailyCount} รายการ`;
 
             if (filtered.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="5" class="p-20 text-center text-slate-300 font-bold uppercase tracking-widest">No Sales Found</td></tr>`;
@@ -1205,182 +1365,224 @@
 
         document.getElementById('salesForm').onsubmit = async (e) => {
             e.preventDefault();
-            const gross = parseFloat(document.getElementById('grossAmount').value);
-            const isManual = document.getElementById('isManualNet').checked;
-            const manual = parseFloat(document.getElementById('manualNet').value) || 0;
+            try {
+                const vDate = document.getElementById('recordDate').value;
+                const oId = document.getElementById('orderId').value;
+                const grossVal = document.getElementById('grossAmount').value;
 
-            const isNoFee = document.getElementById('isNoFee').checked;
-            let gp = isNoFee ? 0 : gross * GP_RATE;
-            let net = gross - gp;
-
-            if (isManual) {
-                net = manual;
-                gp = gross - net;
-            }
-
-            // Collect items
-            const items = [];
-            const masterUpdates = [];
-            document.querySelectorAll('.item-row').forEach(row => {
-                const name = row.querySelector('.item-name').value;
-                const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
-                const price = parseFloat(row.querySelector('.item-price').value) || 0;
-                if (name) items.push({ name, qty, price });
-
-                // Track for master update if price changed?
-                // Actually, just update master if name exists
-                if (name && price > 0) masterUpdates.push({ name, price });
-            });
-
-            const hh = document.getElementById('orderHH').value.padStart(2, '0');
-            const mm = document.getElementById('orderMM').value.padStart(2, '0');
-
-            const isPaid = document.getElementById('isPaid').checked;
-            const paidDate = document.getElementById('paidDate').value;
-            const paidHH = document.getElementById('paidHH').value.padStart(2, '0');
-            const paidMM = document.getElementById('paidMM').value.padStart(2, '0');
-
-            const record = {
-                date: document.getElementById('recordDate').value,
-                orderTime: `${hh}:${mm}`,
-                orderId: document.getElementById('orderId').value,
-                orderIdFull: document.getElementById('orderIdFull').value,
-                customerName: document.getElementById('customerName').value,
-                customerPhone: document.getElementById('customerPhone').value,
-                gross: gross,
-                gp: gp,
-                net: net,
-                isManualNet: isManual,
-                isNoFee: isNoFee,
-                isPaid: isPaid,
-                paidDate: paidDate,
-                paidTime: isPaid ? `${paidHH}:${paidMM}` : '',
-                items: items,
-                notes: document.getElementById('notes').value,
-                recordedAt: new Date().getTime()
-            };
-
-            // Master Update Logic
-            for (const update of masterUpdates) {
-                const master = masterProducts.find(m => m.name === update.name);
-                if (master) {
-                    await window.db.collection('master_products').doc(update.name).set({
-                        prices: {
-                            ...(master.prices || {}),
-                            'LINEMAN': update.price
-                        }
-                    }, { merge: true });
-                } else {
-                    await window.db.collection('master_products').doc(update.name).set({
-                        unit: 'ชิ้น',
-                        prices: { 'LINEMAN': update.price },
-                        minQty: 0
-                    });
+                if (!vDate || !oId || !grossVal || parseFloat(grossVal) <= 0) {
+                    Swal.fire('ข้อมูลไม่ครบ', 'กรุณาระบุวันที่, ออเดอร์ และรายการสินค้าให้ครบถ้วน', 'warning');
+                    return;
                 }
-            }
 
-            if (editIndex !== null) {
-                salesData[editIndex] = record;
-                Swal.fire({ icon: 'success', title: 'แก้ไขข้อมูลสำเร็จ', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
-            } else {
+                const gross = parseFloat(grossVal) || 0;
+                const isManual = document.getElementById('isManualNet').checked;
+                const manual = parseFloat(document.getElementById('manualNet').value) || 0;
+
+                const isNoFee = document.getElementById('isNoFee').checked;
+                let gp = isNoFee ? 0 : gross * GP_RATE;
+                let net = gross - gp;
+
+                if (isManual) {
+                    net = manual;
+                    gp = gross - net;
+                }
+
+                // Collect items - Fixed: Scope to items-container
+                const items = [];
+                const masterUpdates = [];
+                const container = document.getElementById('items-container');
+                container.querySelectorAll('.item-row').forEach(row => {
+                    const nameInput = row.querySelector('.item-name');
+                    const qtyInput = row.querySelector('.item-qty');
+                    const priceInput = row.querySelector('.item-price');
+
+                    const name = nameInput ? nameInput.value.trim() : '';
+                    const qty = parseFloat(qtyInput ? qtyInput.value : 0) || 0;
+                    const price = parseFloat(priceInput ? priceInput.value : 0) || 0;
+
+                    if (name) items.push({ name, qty, price });
+                    if (name && price > 0) masterUpdates.push({ name, price });
+                });
+
+                const hh = document.getElementById('orderHH')?.value?.toString()?.padStart(2, '0') || '00';
+                const mm = document.getElementById('orderMM')?.value?.toString()?.padStart(2, '0') || '00';
+
+                const rDate = document.getElementById('receivedDate')?.value || document.getElementById('recordDate')?.value;
+                const rHH = document.getElementById('receivedHH')?.value?.toString()?.padStart(2, '0') || '00';
+                const rMM = document.getElementById('receivedMM')?.value?.toString()?.padStart(2, '0') || '00';
+
+                const isPaid = document.getElementById('isPaid').checked;
+                const paidDate = document.getElementById('paidDate').value;
+                const tHH = document.getElementById('transferHH')?.value?.toString()?.padStart(2, '0') || '00';
+                const tMM = document.getElementById('transferMM')?.value?.toString()?.padStart(2, '0') || '00';
+
+                const record = {
+                    date: document.getElementById('recordDate').value,
+                    orderTime: `${hh}:${mm}`,
+                    receivedDate: rDate,
+                    receivedTime: (rHH !== '00' || rMM !== '00') ? `${rHH}:${rMM}` : '',
+                    orderId: document.getElementById('orderId').value,
+                    orderIdFull: document.getElementById('orderIdFull').value,
+                    customerName: document.getElementById('customerName').value,
+                    customerPhone: document.getElementById('customerPhone').value,
+                    gross: gross,
+                    gp: gp,
+                    net: net,
+                    isManualNet: isManual,
+                    isNoFee: isNoFee,
+                    isPaid: isPaid,
+                    paidDate: paidDate,
+                    paidTime: isPaid ? `${tHH}:${tMM}` : '',
+                    items: items,
+                    notes: document.getElementById('notes').value,
+                    recordedAt: new Date().getTime()
+                };
+
+                showLoading(true);
+
+                // Master Update Logic
+                for (const update of masterUpdates) {
+                    const docId = update.name.replace(/\//g, '_'); // Firestore doc ID cannot contain /
+                    const master = masterProducts.find(m => m.name === update.name);
+                    try {
+                        await window.db.collection('master_products').doc(docId).set({
+                            prices: { ...(master?.prices || {}), 'LINEMAN': update.price }
+                        }, { merge: true });
+                    } catch (mErr) { console.warn("Master Update Failed for:", update.name, mErr); }
+                }
+
                 salesData.unshift(record);
                 Swal.fire({ icon: 'success', title: 'บันทึกยอดขายแล้ว', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
+
+                salesData.sort((a, b) => b.date.localeCompare(a.date) || b.recordedAt - a.recordedAt);
+
+                await window.db.collection('system').doc('lineman_sales').set({ records: salesData });
+
+                closeRecordModal();
+                document.getElementById('salesForm').reset();
+                document.getElementById('items-container').innerHTML = '';
+                document.getElementById('isManualNet').checked = false;
+                toggleManualNet();
+                initDefaults();
+                calculateNet();
+                clearDraft();
+                syncMasterData();
+            } catch (error) {
+                console.error("Save Record Error:", error);
+                Swal.fire('Error', 'ไม่สามารถบันทึกข้อมูลได้: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
             }
-
-            salesData.sort((a, b) => b.date.localeCompare(a.date) || b.recordedAt - a.recordedAt);
-
-            showLoading(true);
-            await window.db.collection('system').doc('lineman_sales').set({ records: salesData });
-            showLoading(false);
-
-            closeRecordModal(); // Close after success
-            document.getElementById('salesForm').reset();
-            document.getElementById('items-container').innerHTML = '';
-            document.getElementById('isManualNet').checked = false;
-            toggleManualNet();
-            initDefaults();
-            calculateNet();
-            clearDraft();
-            syncMasterData();
         };
 
         // Modal Form Submit (Edit)
         document.getElementById('editForm').onsubmit = async (e) => {
             e.preventDefault();
-            if (editingUid === null) return;
+            console.log("Edit Form Submit Triggered - UID:", editingUid);
 
-            // Find target index again to be safe against data updates
-            const targetIdx = salesData.findIndex(r => r.recordedAt === editingUid);
-            if (targetIdx === -1) {
-                Swal.fire('Error', 'ไม่พบข้อมูลรายการที่ต้องการแก้ไข', 'error');
+            if (editingUid === null) {
+                Swal.fire('Error', 'Session Expired: กรุณาปิดแล้วเปิดการแก้ไขใหม่อีกครั้ง', 'warning');
                 return;
             }
-
-            const gross = parseFloat(document.getElementById('e-grossAmount').value) || 0;
-            const isNoFee = document.getElementById('e-isNoFee').checked;
-            const isManual = document.getElementById('e-isManualNet').checked;
-            const manual = parseFloat(document.getElementById('e-manualNet').value) || 0;
-
-            let gp = isNoFee ? 0 : gross * GP_RATE;
-            let net = gross - gp;
-
-            if (isManual) {
-                net = manual;
-                gp = gross - net;
-            }
-
-            // Collect items from popup
-            const items = [];
-            const masterUpdates = [];
-            document.getElementById('e-items-container').querySelectorAll('.item-row').forEach(row => {
-                const name = row.querySelector('.item-name').value;
-                const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
-                const price = parseFloat(row.querySelector('.item-price').value) || 0;
-                if (name) items.push({ name, qty, price });
-                if (name && price > 0) masterUpdates.push({ name, price });
-            });
-
-            const updatedRecord = {
-                ...salesData[targetIdx],
-                date: document.getElementById('e-recordDate').value,
-                orderTime: `${document.getElementById('e-orderHH').value.toString().padStart(2, '0')}:${document.getElementById('e-orderMM').value.toString().padStart(2, '0')}`,
-                orderId: document.getElementById('e-orderId').value,
-                orderIdFull: document.getElementById('e-orderIdFull').value,
-                customerName: document.getElementById('e-customerName').value,
-                customerPhone: document.getElementById('e-customerPhone').value,
-                gross: gross,
-                gp: gp,
-                net: net,
-                isNoFee: isNoFee,
-                isManualNet: isManual,
-                isPaid: document.getElementById('e-isPaid').checked,
-                paidDate: document.getElementById('e-paidDate').value,
-                paidTime: document.getElementById('e-isPaid').checked ? `${document.getElementById('e-paidHH').value.toString().padStart(2, '0')}:${document.getElementById('e-paidMM').value.toString().padStart(2, '0')}` : '',
-                items: items,
-                notes: document.getElementById('e-notes').value
-            };
 
             try {
                 showLoading(true);
 
-                // Master Update Logic
-                for (const update of masterUpdates) {
-                    const master = masterProducts.find(m => m.name === update.name);
-                    if (master) {
-                        await window.db.collection('master_products').doc(update.name).set({
-                            prices: { ...(master.prices || {}), 'LINEMAN': update.price }
-                        }, { merge: true });
-                    } else {
-                        await window.db.collection('master_products').doc(update.name).set({
-                            unit: 'ชิ้น', prices: { 'LINEMAN': update.price }, minQty: 0
-                        });
-                    }
+                // Manual Validation
+                const vDate = document.getElementById('e-recordDate')?.value;
+                const oId = document.getElementById('e-orderId')?.value;
+                const grossVal = document.getElementById('e-grossAmount')?.value;
+
+                if (!vDate || !oId || !grossVal || parseFloat(grossVal) <= 0) {
+                    throw new Error("ข้อมูลไม่ครบถ้วน (วันที่, เลขออเดอร์ หรือรายการสินค้า)");
                 }
 
-                salesData[targetIdx] = updatedRecord;
-                // Re-sort to maintain view order
-                salesData.sort((a, b) => b.date.localeCompare(a.date) || b.recordedAt - a.recordedAt);
+                // Find target index
+                const targetIdx = salesData.findIndex(r => r.recordedAt === editingUid);
+                if (targetIdx === -1) throw new Error("ไม่พบข้อมูลรายการที่ต้องการแก้ไขในระบบ (Index Error)");
 
+                const gross = parseFloat(grossVal) || 0;
+                const isNoFee = document.getElementById('e-isNoFee')?.checked || false;
+                const isManual = document.getElementById('e-isManualNet')?.checked || false;
+                const manual = parseFloat(document.getElementById('e-manualNet')?.value || 0) || 0;
+
+                let gp = isNoFee ? 0 : gross * GP_RATE;
+                let net = gross - gp;
+                if (isManual) {
+                    net = manual;
+                    gp = gross - net;
+                }
+
+                // Collect items
+                const items = [];
+                const masterUpdates = [];
+                const eContainer = document.getElementById('e-items-container');
+                if (eContainer) {
+                    eContainer.querySelectorAll('.item-row').forEach(row => {
+                        const n = row.querySelector('.item-name')?.value?.trim();
+                        const q = parseFloat(row.querySelector('.item-qty')?.value) || 0;
+                        const p = parseFloat(row.querySelector('.item-price')?.value) || 0;
+                        if (n) {
+                            items.push({ name: n, qty: q, price: p });
+                            if (p > 0) masterUpdates.push({ name: n, price: p });
+                        }
+                    });
+                }
+
+                const hh = document.getElementById('e-orderHH')?.value?.toString()?.padStart(2, '0') || '00';
+                const mm = document.getElementById('e-orderMM')?.value?.toString()?.padStart(2, '0') || '00';
+                const rDate = document.getElementById('e-receivedDate')?.value || document.getElementById('e-recordDate')?.value;
+                const rHH = document.getElementById('e-receivedHH')?.value?.toString()?.padStart(2, '0') || '00';
+                const rMM = document.getElementById('e-receivedMM')?.value?.toString()?.padStart(2, '0') || '00';
+
+                const isPaid = document.getElementById('e-isPaid')?.checked || false;
+                const pDate = document.getElementById('e-paidDate')?.value || '';
+                const tHH = document.getElementById('e-transferHH')?.value?.toString()?.padStart(2, '0') || '00';
+                const tMM = document.getElementById('e-transferMM')?.value?.toString()?.padStart(2, '0') || '00';
+
+                const updatedRecord = {
+                    ...salesData[targetIdx],
+                    date: document.getElementById('e-recordDate')?.value || salesData[targetIdx].date,
+                    orderTime: `${hh}:${mm}`,
+                    receivedDate: rDate,
+                    receivedTime: (rHH !== '00' || rMM !== '00') ? `${rHH}:${rMM}` : '',
+                    orderId: document.getElementById('e-orderId')?.value || '',
+                    orderIdFull: document.getElementById('e-orderIdFull')?.value || '',
+                    customerName: document.getElementById('e-customerName')?.value || '',
+                    customerPhone: document.getElementById('e-customerPhone')?.value || '',
+                    gross: gross,
+                    gp: gp,
+                    net: net,
+                    isNoFee: isNoFee,
+                    isManualNet: isManual,
+                    isPaid: isPaid,
+                    paidDate: pDate,
+                    paidTime: isPaid ? `${tHH}:${tMM}` : '',
+                    items: items,
+                    notes: document.getElementById('e-notes')?.value || ''
+                };
+
+                console.log("Saving Master Product Updates...");
+                for (const update of masterUpdates) {
+                    const docId = update.name.replace(/\//g, '_');
+                    const master = masterProducts.find(m => m.name === update.name);
+                    try {
+                        await window.db.collection('master_products').doc(docId).set({
+                            prices: { ...(master?.prices || {}), 'LINEMAN': update.price }
+                        }, { merge: true });
+                    } catch (mErr) { console.warn("Master Update Failed for:", update.name, mErr); }
+                }
+
+                console.log("Updating Sales Data...");
+                const finalIdx = salesData.findIndex(r => r.recordedAt === editingUid);
+                if (finalIdx !== -1) {
+                    salesData[finalIdx] = updatedRecord;
+                } else {
+                    salesData.unshift(updatedRecord);
+                }
+
+                salesData.sort((a, b) => b.date.localeCompare(a.date) || b.recordedAt - a.recordedAt);
                 await window.db.collection('system').doc('lineman_sales').set({ records: salesData });
 
                 closeEditModal();
@@ -1394,8 +1596,13 @@
                 });
                 syncMasterData();
             } catch (error) {
-                console.error("Save Edit Error:", error);
-                Swal.fire('Error', 'ไม่สามารถบันทึกข้อมูลได้: ' + error.message, 'error');
+                console.error("Save Edit Error Details:", error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'บันทึกไม่สำเร็จ',
+                    text: error.message,
+                    footer: 'Debug: ' + (error.stack ? error.stack.split('\n')[0] : 'No stack')
+                });
             } finally {
                 showLoading(false);
             }
@@ -1523,19 +1730,31 @@
                 record.items.forEach(item => addItemRow(item, 'e-items-container'));
             }
 
-            // Payment Status
+            // Received Status
+            document.getElementById('e-receivedDate').value = record.receivedDate || record.date;
+            if (record.receivedTime && record.receivedTime.includes(':')) {
+                const [rh, rm] = record.receivedTime.split(':');
+                document.getElementById('e-receivedHH').value = rh;
+                document.getElementById('e-receivedMM').value = rm;
+            } else {
+                document.getElementById('e-receivedHH').value = '';
+                document.getElementById('e-receivedMM').value = '';
+            }
+
+            // Payment Status (PAID)
             const isPaid = record.isPaid || false;
             document.getElementById('e-isPaid').checked = isPaid;
             document.getElementById('e-paidDate').value = record.paidDate || record.date;
             document.getElementById('e-paidDate').dataset.manual = record.paidDate && record.paidDate !== record.date ? "true" : "";
+
             if (record.paidTime && record.paidTime.includes(':')) {
-                const [ph, pm] = record.paidTime.split(':');
-                document.getElementById('e-paidHH').value = ph;
-                document.getElementById('e-paidMM').value = pm;
+                const [th, tm] = record.paidTime.split(':');
+                document.getElementById('e-transferHH').value = th;
+                document.getElementById('e-transferMM').value = tm;
             } else {
                 const now = new Date();
-                document.getElementById('e-paidHH').value = now.getHours().toString().padStart(2, '0');
-                document.getElementById('e-paidMM').value = now.getMinutes().toString().padStart(2, '0');
+                document.getElementById('e-transferHH').value = now.getHours().toString().padStart(2, '0');
+                document.getElementById('e-transferMM').value = now.getMinutes().toString().padStart(2, '0');
             }
             togglePaidSection('edit');
 
@@ -1606,7 +1825,7 @@
             document.getElementById('loading').style.display = show ? 'flex' : 'none';
         }
 
-        function exportSales() {
+        function exportSalesCSV() {
             const termMonth = document.getElementById('monthFilter').value;
             const filtered = salesData.filter(r => r.date.startsWith(termMonth));
             if (filtered.length === 0) return Swal.fire('No Data', 'ไม่มีข้อมูลในช่วงเวลาที่เลือก', 'info');
@@ -1621,6 +1840,28 @@
             link.href = URL.createObjectURL(blob);
             link.setAttribute("download", `lineman_sales_${termMonth}.csv`);
             link.click();
+        }
+
+        function exportBackupJSON() {
+            if (salesData.length === 0) return Swal.fire('No Data', 'ไม่มีข้อมูลให้ Backup', 'info');
+
+            const dataStr = JSON.stringify(salesData, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            const timestamp = new Date().toISOString().slice(0, 10);
+
+            link.href = url;
+            link.download = `lineman_backup_${timestamp}.json`;
+            link.click();
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Backup สำเร็จ',
+                text: 'ดาวน์โหลดไฟล์ JSON เรียบร้อยแล้ว',
+                timer: 2000,
+                showConfirmButton: false
+            });
         }
 
         function logout() { window.auth.signOut().then(() => window.location.reload()); }
