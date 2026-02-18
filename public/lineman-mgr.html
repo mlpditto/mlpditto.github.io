@@ -33,14 +33,59 @@
         }
 
         .glass {
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(30px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
         }
 
         .dark .glass {
-            background: rgba(30, 41, 59, 0.7);
+            background: rgba(15, 23, 42, 0.95);
             border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .vibrant-label {
+            font-size: 11px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-left: 4px;
+            margin-bottom: 6px;
+            display: block;
+            color: #475569;
+            /* slate-600 */
+        }
+
+        .dark .vibrant-label {
+            color: #cbd5e1;
+            /* slate-300 */
+        }
+
+        .premium-input {
+            width: 100%;
+            padding: 1rem;
+            border-radius: 1.25rem;
+            background-color: #f8fafc;
+            border: 2px solid #e2e8f0;
+            outline: none;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .dark .premium-input {
+            background-color: rgba(30, 41, 59, 0.8);
+            border-color: rgba(51, 65, 85, 0.8);
+            color: #f8fafc;
+        }
+
+        .premium-input:focus {
+            border-color: #00B14F;
+            background-color: #ffffff;
+            box-shadow: 0 0 0 4px rgba(0, 177, 79, 0.1);
+        }
+
+        .dark .premium-input:focus {
+            background-color: #0f172a;
         }
 
         .card-hover {
@@ -56,6 +101,15 @@
         input::-webkit-inner-spin-button {
             -webkit-appearance: none;
             margin: 0;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
     </style>
 </head>
@@ -106,13 +160,16 @@
                             <div
                                 class="flex items-center gap-2 text-[10px] uppercase font-bold tracking-widest text-slate-400">
                                 <span class="text-lineman">Platform Manager</span>
-                                <span class="w-1 h-1 rounded-full bg-slate-300"></span>
-                                <span id="userDisplay">...</span>
                             </div>
                         </div>
                     </div>
 
                     <div class="flex items-center gap-3">
+                        <button onclick="openRecordModal()"
+                            class="w-12 h-12 rounded-2xl bg-lineman text-white flex items-center justify-center shadow-lg shadow-green-500/20 hover:scale-110 transition-all transform active:scale-95"
+                            title="เพิ่มยอดขายใหม่">
+                            <i class="fas fa-plus"></i>
+                        </button>
                         <button onclick="toggleTheme()"
                             class="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 text-slate-400 dark:text-yellow-400 flex items-center justify-center shadow-sm hover:scale-105 transition-all">
                             <i class="fas fa-moon dark:hidden"></i><i class="fas fa-sun hidden dark:inline"></i>
@@ -149,144 +206,59 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- Record Form Side -->
-                <div class="lg:col-span-1">
-                    <section class="glass p-6 rounded-3xl shadow-xl sticky top-28 border border-white/20">
-                        <h2 class="text-lg font-black mb-6 flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-lg bg-lineman/10 flex items-center justify-center pt-1">
-                                <i id="form-icon" class="fas fa-plus text-lineman text-sm"></i>
-                            </div>
-                            <span id="form-title">บันทึกยอดขายใหม่</span>
-                            <span id="autosave-status"
-                                class="ml-auto text-[9px] font-bold text-slate-400 opacity-0 transition-opacity uppercase tracking-widest">
-                                <i class="fas fa-save mr-1"></i> Draft Saved
-                            </span>
-                        </h2>
-                        <form id="salesForm" class="space-y-4">
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label
-                                        class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">วันที่ขาย</label>
-                                    <input type="date" id="recordDate" required
-                                        class="w-full mt-1 p-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-lineman outline-none transition-all">
-                                </div>
-                                <div>
-                                    <label
-                                        class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">เลขออเดอร์
-                                        (4 หลัก)</label>
-                                    <input type="text" id="orderId" placeholder="0001" required maxlength="4"
-                                        class="w-full mt-1 p-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-lineman outline-none transition-all uppercase">
-                                </div>
-                            </div>
-
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label
-                                        class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">ชื่อลูกค้า</label>
-                                    <input type="text" id="customerName" placeholder="ชื่อลูกค้า"
-                                        class="w-full mt-1 p-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-lineman outline-none transition-all">
-                                </div>
-                                <div>
-                                    <label
-                                        class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">เบอร์โทร
-                                        (Optional)</label>
-                                    <input type="tel" id="customerPhone" placeholder="08x-xxx-xxxx"
-                                        class="w-full mt-1 p-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-lineman outline-none transition-all">
-                                </div>
-                            </div>
-
+            <div class="grid grid-cols-1 gap-6">
+                <!-- Sales List Side -->
+                <div class="w-full">
+                    <div class="glass rounded-3xl shadow-xl overflow-hidden border border-white/20">
+                        <div
+                            class="p-6 border-b border-slate-100 dark:border-slate-700 flex flex-wrap justify-between items-center gap-4 bg-white/50 dark:bg-slate-800/50">
                             <div>
-                                <label
-                                    class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">ยอดขายเต็ม
-                                    (Gross Amount)</label>
-                                <div class="relative">
-                                    <input type="number" id="grossAmount" step="0.01" required oninput="calculateNet()"
-                                        class="w-full mt-1 p-3 pl-8 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-lineman outline-none transition-all font-bold text-lg">
-                                    <span class="absolute left-3 top-4 text-slate-400 font-bold">฿</span>
-                                </div>
+                                <h2 class="font-black text-lg flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-lg bg-lineman/10 flex items-center justify-center"><i
+                                            class="fas fa-history text-lineman text-sm"></i></div>
+                                    ประวัติยอดขาย
+                                </h2>
+                                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+                                    Transaction History</p>
                             </div>
-
-                            <div class="bg-slate-100/50 dark:bg-slate-800/50 p-4 rounded-2xl space-y-3">
-                                <div class="flex justify-between items-center">
-                                    <span class="text-xs font-bold text-slate-500">GP Platform (30%)</span>
-                                    <span class="text-sm font-black text-rose-500" id="calc-gp">฿0.00</span>
-                                </div>
-                                <div
-                                    class="flex justify-between items-center border-t border-slate-200 dark:border-slate-700 pt-2">
-                                    <span
-                                        class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase">ยอดรับสุทธิ
-                                        (Net)</span>
-                                    <span class="text-lg font-black text-lineman" id="calc-net">฿0.00</span>
-                                </div>
+                            <div class="flex items-center gap-2">
+                                <input type="month" id="monthFilter" onchange="renderUI()"
+                                    class="text-xs p-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-lineman outline-none">
+                                <button onclick="openImportModal()"
+                                    class="px-4 py-2.5 rounded-xl bg-lineman/10 text-lineman font-bold hover:bg-lineman hover:text-white transition-all text-xs border border-lineman/20">
+                                    <i class="fas fa-file-import mr-2"></i> นำเข้าจาก CSV
+                                </button>
+                                <button onclick="exportSales()"
+                                    class="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 text-slate-400 hover:text-blue-500 shadow-sm border border-slate-100 dark:border-slate-700 transition-all">
+                                    <i class="fas fa-file-export"></i>
+                                </button>
                             </div>
-
-                            <div>
-                                <label
-                                    class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">รายการเมนู
-                                    / หมายเหตุ</label>
-                                <textarea id="notes" rows="2"
-                                    class="w-full mt-1 p-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-lineman outline-none transition-all placeholder:text-[10px]"
-                                    placeholder="เช่น ข้าวผัด 2, กะเพรา 1..."></textarea>
-                            </div>
-
-                            <button type="submit" id="submitBtn"
-                                class="w-full py-4 bg-lineman hover:bg-green-600 text-white rounded-2xl font-bold shadow-lg shadow-green-500/20 transition-all transform active:scale-95">
-                                <i class="fas fa-check-circle mr-2"></i> บันทึกยอดขาย
-                            </button>
-                </div>
-                </form>
-                </section>
-            </div>
-
-            <!-- Sales List Side -->
-            <div class="lg:col-span-2">
-                <div class="glass rounded-3xl shadow-xl overflow-hidden border border-white/20">
-                    <div
-                        class="p-6 border-b border-slate-100 dark:border-slate-700 flex flex-wrap justify-between items-center gap-4 bg-white/50 dark:bg-slate-800/50">
-                        <div>
-                            <h2 class="font-black text-lg flex items-center gap-3">
-                                <div class="w-8 h-8 rounded-lg bg-lineman/10 flex items-center justify-center"><i
-                                        class="fas fa-history text-lineman text-sm"></i></div>
-                                ประวัติยอดขาย
-                            </h2>
-                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
-                                Transaction History</p>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <input type="month" id="monthFilter" onchange="renderUI()"
-                                class="text-xs p-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-lineman outline-none">
-                            <button onclick="openImportModal()"
-                                class="px-4 py-2.5 rounded-xl bg-lineman/10 text-lineman font-bold hover:bg-lineman hover:text-white transition-all text-xs border border-lineman/20">
-                                <i class="fas fa-file-import mr-2"></i> นำเข้าจาก CSV
-                            </button>
-                            <button onclick="exportSales()"
-                                class="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 text-slate-400 hover:text-blue-500 shadow-sm border border-slate-100 dark:border-slate-700 transition-all">
-                                <i class="fas fa-file-export"></i>
-                            </button>
+                        <div id="date-pagination"
+                            class="px-6 py-3 bg-slate-50/50 dark:bg-slate-800/30 flex gap-2 overflow-x-auto border-b border-slate-100 dark:border-slate-700 no-scrollbar items-center min-h-[60px]">
+                            <!-- Date buttons will be rendered here -->
                         </div>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse text-sm">
-                            <thead
-                                class="bg-slate-100/50 dark:bg-slate-800/50 uppercase text-[10px] font-bold text-slate-500 tracking-widest">
-                                <tr>
-                                    <th class="p-4 border-b dark:border-slate-700">วันที่ / Order</th>
-                                    <th class="p-4 border-b dark:border-slate-700">ลูกค้า / รายการ</th>
-                                    <th class="p-4 border-b dark:border-slate-700 text-right">ยอดรวม (Gross)</th>
-                                    <th class="p-4 border-b dark:border-slate-700 text-right">ยอดจริง (Net)</th>
-                                    <th class="p-4 border-b dark:border-slate-700 text-center">จัดการ</th>
-                                </tr>
-                            </thead>
-                            <tbody id="salesTable" class="divide-y divide-slate-100 dark:divide-slate-700">
-                                <!-- Rendered Content -->
-                            </tbody>
-                        </table>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-sm">
+                                <thead
+                                    class="bg-slate-100/50 dark:bg-slate-800/50 uppercase text-[10px] font-bold text-slate-500 tracking-widest">
+                                    <tr>
+                                        <th class="p-4 border-b dark:border-slate-700">วันที่ / Order</th>
+                                        <th class="p-4 border-b dark:border-slate-700">ลูกค้า / รายการ</th>
+                                        <th class="p-4 border-b dark:border-slate-700 text-right">ยอดรวม (Gross)</th>
+                                        <th class="p-4 border-b dark:border-slate-700 text-right">ยอดจริง (Net)</th>
+                                        <th class="p-4 border-b dark:border-slate-700 text-center">จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="salesTable" class="divide-y divide-slate-100 dark:divide-slate-700">
+                                    <!-- Rendered Content -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
     </div>
 
     <!-- Scripts -->
@@ -332,68 +304,360 @@
         </div>
     </div>
 
-    <!-- Edit Modal -->
+    <!-- Sales Record Modal -->
+    <div id="recordModal"
+        class="fixed inset-0 bg-black/60 z-[115] hidden flex items-center justify-center p-4 backdrop-blur-sm transition-all duration-300">
+        <div
+            class="glass p-6 rounded-3xl shadow-2xl w-full max-w-xl border border-white/20 max-h-[95vh] overflow-y-auto no-scrollbar">
+            <h2
+                class="text-xl font-black mb-6 flex items-center gap-3 sticky top-0 bg-white/10 dark:bg-slate-900/10 backdrop-blur-md py-2 -mx-2 px-2 rounded-xl">
+                <div class="w-10 h-10 rounded-xl bg-lineman/10 flex items-center justify-center">
+                    <i class="fas fa-plus text-lineman text-lg"></i>
+                </div>
+                <span>บันทึกยอดขายใหม่</span>
+                <span id="autosave-status"
+                    class="ml-auto text-[9px] font-bold text-slate-400 opacity-0 transition-opacity uppercase tracking-widest">
+                    <i class="fas fa-save mr-1"></i> Draft Saved
+                </span>
+                <button onclick="closeRecordModal()" class="ml-4 text-slate-400 hover:text-rose-500 transition-colors">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </h2>
+
+            <form id="salesForm" class="space-y-4">
+                <div class="grid grid-cols-4 gap-4">
+                    <div class="col-span-2">
+                        <label class="vibrant-label">วันที่ขาย</label>
+                        <input type="date" id="recordDate" required class="premium-input font-bold">
+                    </div>
+                    <div class="col-span-1">
+                        <label class="vibrant-label text-center block">เวลาสั่ง</label>
+                        <div class="flex items-center gap-1 premium-input !py-2.5 px-2">
+                            <input type="number" id="orderHH" min="0" max="23" placeholder="00"
+                                class="w-full bg-transparent text-center font-black text-lg outline-none"
+                                oninput="if(value.length>2)value=value.slice(0,2); if(value>23)value=23;">
+                            <span class="font-bold text-slate-300">:</span>
+                            <input type="number" id="orderMM" min="0" max="59" placeholder="00"
+                                class="w-full bg-transparent text-center font-black text-lg outline-none"
+                                oninput="if(value.length>2)value=value.slice(0,2); if(value>59)value=59;">
+                        </div>
+                    </div>
+                    <div class="col-span-1 opacity-40 transition-opacity" id="paid-time-container-add">
+                        <label class="vibrant-label text-center block">เวลารับ</label>
+                        <div class="flex items-center gap-1 premium-input !py-2.5 px-2 bg-emerald-50/50">
+                            <input type="number" id="paidHH" min="0" max="23" placeholder="00"
+                                class="w-full bg-transparent text-center font-bold text-lg outline-none">
+                            <span class="font-bold text-slate-300">:</span>
+                            <input type="number" id="paidMM" min="0" max="59" placeholder="00"
+                                class="w-full bg-transparent text-center font-bold text-lg outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="col-span-2">
+                        <label class="vibrant-label" style="color: #00B14F;">เลขออเดอร์ (เต็ม)</label>
+                        <input type="text" id="orderIdFull" placeholder="LME-XXXXXX" oninput="autoFillShortOrderId()"
+                            class="premium-input uppercase font-semibold" style="border-color: rgba(0, 177, 79, 0.2);">
+                    </div>
+                    <div class="col-span-1">
+                        <label class="vibrant-label">4 หลักท้าย</label>
+                        <input type="text" id="orderId" placeholder="0001" required maxlength="4"
+                            class="premium-input text-center font-black">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="vibrant-label">ชื่อลูกค้า</label>
+                        <input type="text" id="customerName" placeholder="ระบุชื่อลูกค้า" class="premium-input">
+                    </div>
+                    <div>
+                        <label class="vibrant-label">เบอร์โทร (Optional)</label>
+                        <input type="tel" id="customerPhone" placeholder="08x-xxx-xxxx" class="premium-input">
+                    </div>
+                </div>
+
+                <div class="border-t-2 border-slate-100 dark:border-slate-800 pt-5">
+                    <div class="flex justify-between items-center mb-3">
+                        <label class="vibrant-label" style="color: #00B14F; margin-bottom: 0;">รายการสินค้า
+                            (Master)</label>
+                        <div class="flex gap-2">
+                            <button type="button" onclick="smartImport('items-container')"
+                                class="text-[10px] font-black text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 px-2 py-1.5 rounded-xl transition-all border border-blue-100 dark:border-blue-900/30">
+                                <i class="fas fa-magic mr-1"></i> วางรายการ
+                            </button>
+                            <button type="button" onclick="addItemRow()"
+                                class="text-[11px] font-black text-lineman hover:bg-lineman/10 px-3 py-1.5 rounded-xl transition-all border border-lineman/10">+
+                                เพิ่มรายการ</button>
+                        </div>
+                    </div>
+                    <div id="items-container" class="space-y-3">
+                        <!-- Item rows -->
+                    </div>
+                </div>
+
+                <div class="pt-5 border-t-2 border-slate-100 dark:border-slate-800">
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div
+                            class="flex items-center gap-3 p-3 bg-rose-50/50 dark:bg-rose-900/10 rounded-2xl border border-rose-100/50 dark:border-rose-900/30">
+                            <input type="checkbox" id="isNoFee" onchange="calculateNet()"
+                                class="w-5 h-5 rounded-lg border-rose-300 text-rose-600 focus:ring-rose-500 cursor-pointer">
+                            <label for="isNoFee"
+                                class="text-[11px] font-black text-rose-600 dark:text-rose-400 uppercase tracking-widest cursor-pointer">รายการนี้ไม่มี
+                                FEE</label>
+                        </div>
+                        <div
+                            class="flex items-center gap-3 p-3 bg-blue-50/50 dark:bg-blue-900/10 rounded-2xl border border-blue-100/50 dark:border-blue-900/30">
+                            <input type="checkbox" id="isManualNet" onchange="toggleManualNet()"
+                                class="w-5 h-5 rounded-lg border-blue-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
+                            <label for="isManualNet"
+                                class="text-[11px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest cursor-pointer">ระบุยอดสุทธิเอง</label>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="vibrant-label">ยอดรวม (Gross)</label>
+                            <div class="relative">
+                                <input type="number" id="grossAmount" step="0.01" required readonly
+                                    class="premium-input pl-12 !bg-slate-100 dark:!bg-slate-900 border-dashed !text-slate-400 cursor-not-allowed">
+                                <span class="absolute left-4 top-4 text-slate-400 font-bold">฿</span>
+                            </div>
+                        </div>
+                        <div id="manual-net-box" class="hidden">
+                            <label class="vibrant-label" style="color: #2563eb;">ยอดรับจริง (Net Override)</label>
+                            <div class="relative">
+                                <input type="number" id="manualNet" step="0.01" oninput="calculateNet()"
+                                    class="premium-input"
+                                    style="border-color: #3b82f6; font-weight: 900; color: #1e40af;">
+                                <span class="absolute left-4 top-4 text-blue-500 font-bold">฿</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    class="bg-gradient-to-br from-lineman/10 to-transparent dark:from-lineman/20 dark:to-transparent p-6 rounded-[2rem] border-2 border-lineman/20 shadow-inner">
+                    <div class="flex justify-between items-end">
+                        <div class="flex flex-col">
+                            <span class="vibrant-label" style="margin-left: 0;">ยอดรวมทั้งหมด</span>
+                            <span class="text-xl font-bold text-slate-600 dark:text-slate-300"
+                                id="display-gross">฿0.00</span>
+                        </div>
+                        <div class="text-right flex flex-col">
+                            <span class="vibrant-label font-black"
+                                style="color: #00B14F; margin-right: 0;">ยอดรับสุทธิจริง (NET)</span>
+                            <span class="text-3xl font-black text-lineman" id="calc-net">฿0.00</span>
+                        </div>
+                    </div>
+                    <div
+                        class="mt-4 pt-3 border-t border-dashed border-lineman/30 flex justify-between items-center text-xs font-black text-rose-500">
+                        <span>ค่าธรรมเนียม GP (30%)</span>
+                        <span id="calc-gp" class="bg-rose-50 dark:bg-rose-900/30 px-2 py-1 rounded-lg">-฿0.00</span>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="vibrant-label">รายละเอียด / หมายเหตุเพิ่มเติม</label>
+                    <textarea id="notes" rows="2" class="premium-input text-sm"
+                        placeholder="ระบุเมนูพิเศษ หรือบันทึกช่วยจำ..."></textarea>
+                </div>
+
+                <div
+                    class="mt-4 p-5 rounded-[2rem] bg-emerald-50/50 dark:bg-emerald-900/10 border-2 border-emerald-100 dark:border-emerald-900/30">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="relative flex items-center">
+                            <input type="checkbox" id="isPaid" onchange="togglePaidSection('add')"
+                                class="w-7 h-7 rounded-xl border-2 border-emerald-300 text-emerald-500 focus:ring-emerald-500 cursor-pointer transition-all">
+                        </div>
+                        <label for="isPaid"
+                            class="text-sm font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest cursor-pointer">ได้รับเงินแล้ว
+                            (PAID)</label>
+                    </div>
+                    <div id="paid-details-add"
+                        class="hidden grid grid-cols-2 gap-4 animate-in slide-in-from-top-2 duration-300">
+                        <div>
+                            <label
+                                class="text-[10px] uppercase font-black text-slate-400 mb-1.5 block ml-2">วันที่รับเงิน</label>
+                            <input type="date" id="paidDate" class="premium-input !py-3 text-sm font-bold">
+                        </div>
+                        <div>
+                            <label
+                                class="text-[10px] uppercase font-black text-slate-400 mb-1.5 block ml-2">เวลาที่ได้รับ</label>
+                            <div class="flex items-center gap-2 premium-input !py-3">
+                                <input type="number" id="paidHH" min="0" max="23" placeholder="00"
+                                    class="w-full bg-transparent text-center font-black outline-none text-base">
+                                <span class="text-slate-300 font-bold">:</span>
+                                <input type="number" id="paidMM" min="0" max="59" placeholder="00"
+                                    class="w-full bg-transparent text-center font-black outline-none text-base">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" id="submitBtn"
+                    class="w-full py-5 bg-gradient-to-r from-lineman to-green-600 text-white rounded-[2rem] text-xl font-black shadow-xl shadow-green-500/30 transition-all transform active:scale-[0.98] flex items-center justify-center gap-3">
+                    <i class="fas fa-check-circle text-2xl"></i> บันทึกยอดขาย
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Modal (Premium Refined) -->
     <div id="editModal"
-        class="fixed inset-0 bg-black/60 z-[120] hidden flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="glass p-6 rounded-3xl shadow-2xl w-full max-w-xl border border-white/20">
-            <h3 class="text-xl font-black mb-6 flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center"><i
-                        class="fas fa-edit text-blue-500 text-lg"></i></div>
-                แก้ไขยอดขาย
+        class="fixed inset-0 bg-black/60 z-[120] hidden flex items-center justify-center p-4 backdrop-blur-sm transition-all duration-300">
+        <div
+            class="glass p-6 rounded-3xl shadow-2xl w-full max-w-xl border border-white/20 max-h-[95vh] overflow-y-auto no-scrollbar">
+            <h3
+                class="text-xl font-black mb-6 flex items-center gap-3 sticky top-0 bg-white/10 dark:bg-slate-900/10 backdrop-blur-md py-2 -mx-2 px-2 rounded-xl">
+                <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                    <i class="fas fa-edit text-blue-500 text-lg"></i>
+                </div>
+                <span>แก้ไขยอดขาย</span>
+                <button onclick="closeEditModal()" class="ml-auto text-slate-400 hover:text-rose-500 transition-colors">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
             </h3>
             <form id="editForm" class="space-y-4">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label
-                            class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">วันที่ขาย</label>
-                        <input type="date" id="e-recordDate" required
-                            class="w-full mt-1 p-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 outline-none transition-all">
+                <div class="grid grid-cols-4 gap-4">
+                    <div class="col-span-2">
+                        <label class="vibrant-label">วันที่ขาย</label>
+                        <input type="date" id="e-recordDate" required class="premium-input font-bold">
                     </div>
-                    <div>
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">เลขออเดอร์
-                            (4 หลัก)</label>
+                    <div class="col-span-1">
+                        <label class="vibrant-label text-center block">เวลาสั่ง</label>
+                        <div class="flex items-center gap-1 premium-input !py-2.5 px-2">
+                            <input type="number" id="e-orderHH" min="0" max="23" placeholder="00"
+                                class="w-full bg-transparent text-center font-black text-lg outline-none"
+                                oninput="if(value.length>2)value=value.slice(0,2); if(value>23)value=23;">
+                            <span class="font-bold text-slate-300 text-sm">:</span>
+                            <input type="number" id="e-orderMM" min="0" max="59" placeholder="00"
+                                class="w-full bg-transparent text-center font-black text-lg outline-none"
+                                oninput="if(value.length>2)value=value.slice(0,2); if(value>59)value=59;">
+                        </div>
+                    </div>
+                    <div class="col-span-1 opacity-40 transition-opacity" id="paid-time-container-edit">
+                        <label class="vibrant-label text-center block">เวลารับ</label>
+                        <div class="flex items-center gap-1 premium-input !py-2.5 px-2 bg-emerald-50/50">
+                            <input type="number" id="e-paidHH" min="0" max="23" placeholder="00"
+                                class="w-full bg-transparent text-center font-bold text-lg outline-none">
+                            <span class="font-bold text-slate-300 text-sm">:</span>
+                            <input type="number" id="e-paidMM" min="0" max="59" placeholder="00"
+                                class="w-full bg-transparent text-center font-bold text-lg outline-none">
+                        </div>
+                    </div>
+                </div>
+                <div
+                    class="grid grid-cols-3 gap-4 p-4 bg-blue-50/30 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-900/30">
+                    <div class="col-span-2">
+                        <label class="vibrant-label" style="color: #3b82f6;">เลขออเดอร์ (เต็ม)</label>
+                        <input type="text" id="e-orderIdFull" oninput="autoFillShortOrderIdPopup()"
+                            class="premium-input text-sm font-semibold" style="border-color: rgba(59, 130, 246, 0.2);">
+                    </div>
+                    <div class="col-span-1">
+                        <label class="vibrant-label">4 หลักท้าย</label>
                         <input type="text" id="e-orderId" required maxlength="4"
-                            class="w-full mt-1 p-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 outline-none transition-all uppercase">
+                            class="premium-input text-center font-black text-sm">
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label
-                            class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">ชื่อลูกค้า</label>
-                        <input type="text" id="e-customerName"
-                            class="w-full mt-1 p-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 outline-none transition-all">
+                        <label class="vibrant-label">ชื่อลูกค้า</label>
+                        <input type="text" id="e-customerName" class="premium-input">
                     </div>
                     <div>
-                        <label
-                            class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">เบอร์โทร</label>
-                        <input type="tel" id="e-customerPhone"
-                            class="w-full mt-1 p-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 outline-none transition-all">
+                        <label class="vibrant-label">เบอร์โทร</label>
+                        <input type="tel" id="e-customerPhone" class="premium-input">
                     </div>
                 </div>
+                <div class="border-t-2 border-slate-100 dark:border-slate-800 pt-5">
+                    <div class="flex justify-between items-center mb-3">
+                        <label class="vibrant-label" style="color: #3b82f6; margin-bottom: 0;">รายการสินค้า
+                            (Edit)</label>
+                        <div class="flex gap-2">
+                            <button type="button" onclick="smartImport('e-items-container')"
+                                class="text-[10px] font-black text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 px-2 py-1.5 rounded-xl transition-all border border-blue-100 dark:border-blue-900/30">
+                                <i class="fas fa-magic mr-1"></i> วางรายการ
+                            </button>
+                            <button type="button" onclick="addItemRow({name:'', qty:1, price:0}, 'e-items-container')"
+                                class="text-[11px] font-black text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 px-3 py-1.5 rounded-xl transition-all border border-blue-100/50">+
+                                เพิ่มรายการ</button>
+                        </div>
+                    </div>
+                    <div id="e-items-container" class="space-y-3 mb-4">
+                        <!-- Item rows for edit -->
+                    </div>
+                </div>
+
                 <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">ยอดขายเต็ม
-                        (Gross)</label>
+                    <label class="vibrant-label">ยอดขายเต็ม (Gross)</label>
                     <div class="relative">
                         <input type="number" id="e-grossAmount" step="0.01" required oninput="calculateNetPopup()"
-                            class="w-full mt-1 p-3 pl-8 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 outline-none transition-all font-bold text-lg">
-                        <span class="absolute left-3 top-4 text-slate-400 font-bold">฿</span>
+                            class="premium-input pl-12 font-black text-lg" readonly
+                            style="background-color: #f1f5f9; border-style: dashed; color: #94a3b8; cursor: not-allowed;">
+                        <span class="absolute left-4 top-4 text-slate-400 font-bold">฿</span>
                     </div>
                 </div>
-                <div class="bg-blue-50/50 dark:bg-slate-800/50 p-4 rounded-2xl flex justify-between items-center">
-                    <span class="text-xs font-bold text-slate-500">ยอดรับสุทธิ (NET)</span>
-                    <span class="text-lg font-black text-blue-600" id="e-calc-net">฿0.00</span>
+                <div
+                    class="bg-gradient-to-br from-blue-50 to-white dark:from-blue-900/20 dark:to-slate-900/50 p-5 rounded-[2rem] border-2 border-blue-100 dark:border-blue-900/30 flex flex-col gap-3 shadow-inner">
+                    <div class="grid grid-cols-2 gap-3 pb-2 border-b border-blue-100 dark:border-blue-900/30">
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" id="e-isNoFee" onchange="calculateNetPopup()"
+                                class="w-5 h-5 rounded-lg border-rose-300 text-rose-600 focus:ring-rose-500 cursor-pointer">
+                            <label for="e-isNoFee"
+                                class="text-[11px] font-black text-rose-600 dark:text-rose-400 uppercase tracking-widest cursor-pointer">ไม่มี
+                                FEE</label>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" id="e-isManualNet" onchange="toggleManualNet('edit')"
+                                class="w-5 h-5 rounded-lg border-blue-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
+                            <label for="e-isManualNet"
+                                class="text-[11px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest cursor-pointer">ระบุสุทธิเอง</label>
+                        </div>
+                    </div>
+
+                    <div id="e-manual-net-box" class="hidden mb-2">
+                        <label class="vibrant-label" style="color: #2563eb;">ยอดรับจริง (Net Override)</label>
+                        <div class="relative">
+                            <input type="number" id="e-manualNet" step="0.01" oninput="calculateNetPopup()"
+                                class="premium-input !py-2.5"
+                                style="border-color: #3b82f6; font-weight: 900; color: #1e40af;">
+                            <span class="absolute left-4 top-3 text-blue-500 font-bold">฿</span>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center">
+                        <span class="vibrant-label !mb-0" style="color: #2563eb;">ยอดรับสุทธิ (NET)</span>
+                        <span class="text-3xl font-black text-blue-600 drop-shadow-sm" id="e-calc-net">฿0.00</span>
+                    </div>
                 </div>
                 <div>
-                    <label
-                        class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">รายละเอียด</label>
-                    <textarea id="e-notes" rows="2"
-                        class="w-full mt-1 p-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 outline-none transition-all text-xs"></textarea>
+                    <label class="vibrant-label">รายละเอียดเพิ่มเติม</label>
+                    <textarea id="e-notes" rows="1" class="premium-input text-xs"></textarea>
                 </div>
-                <div class="flex gap-3 pt-4">
+
+                <div
+                    class="mt-2 p-4 rounded-2xl bg-slate-50 border border-slate-100 dark:bg-slate-800/50 dark:border-slate-700/50">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="relative flex items-center">
+                            <input type="checkbox" id="e-isPaid" onchange="togglePaidSection('edit')"
+                                class="w-6 h-6 rounded-lg border-2 border-emerald-300 text-emerald-500 focus:ring-emerald-500 cursor-pointer transition-all">
+                        </div>
+                        <label for="e-isPaid"
+                            class="text-sm font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider cursor-pointer">ได้รับเงินแล้ว
+                            (PAID)</label>
+                    </div>
+                    <div id="paid-details-edit" class="hidden animate-in fade-in duration-300 mt-3">
+                        <label class="text-[10px] uppercase font-bold text-slate-400 mb-1 block">วันที่รับเงิน</label>
+                        <input type="date" id="e-paidDate" class="premium-input font-bold">
+                    </div>
+                </div>
+                <div class="flex gap-4 pt-5">
                     <button type="submit"
-                        class="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all">บันทึกการแก้ไข</button>
+                        class="flex-1 py-5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-[2rem] font-black shadow-xl shadow-blue-500/30 active:scale-[0.98] transition-all">บันทึกการแก้ไข</button>
                     <button type="button" onclick="closeEditModal()"
-                        class="px-8 py-4 bg-slate-200 dark:bg-slate-700 rounded-2xl font-bold active:scale-95 transition-all">ยกเลิก</button>
+                        class="px-10 py-5 bg-slate-100 dark:bg-slate-800 rounded-[2rem] font-bold active:scale-[0.98] transition-all text-slate-500">ยกเลิก</button>
                 </div>
             </form>
         </div>
@@ -407,20 +671,290 @@
 
     <script>
         let salesData = [];
+        let masterProducts = [];
         let currentUser = null;
         let editIndex = null;
+        let editingUid = null;
+        let currentSelectedDate = null; // null means "All" or "Default to Today"
         const GP_RATE = 0.30; // GP 30% รวม VAT
+
+        function togglePaidSection(mode) {
+            const isPaid = document.getElementById(mode === 'add' ? 'isPaid' : 'e-isPaid').checked;
+            const container = document.getElementById(mode === 'add' ? 'paid-details-add' : 'paid-details-edit');
+            const timeContainer = document.getElementById(mode === 'add' ? 'paid-time-container-add' : 'paid-time-container-edit');
+
+            if (isPaid) {
+                container.classList.remove('hidden');
+                if (timeContainer) timeContainer.classList.remove('opacity-40');
+                // Set default now if empty
+                const dateField = document.getElementById(mode === 'add' ? 'paidDate' : 'e-paidDate');
+                if (!dateField.value) {
+                    const now = new Date();
+                    dateField.value = now.toISOString().split('T')[0];
+                    document.getElementById(mode === 'add' ? 'paidHH' : 'e-paidHH').value = now.getHours().toString().padStart(2, '0');
+                    document.getElementById(mode === 'add' ? 'paidMM' : 'e-paidMM').value = now.getMinutes().toString().padStart(2, '0');
+                }
+            } else {
+                container.classList.add('hidden');
+                if (timeContainer) timeContainer.classList.add('opacity-40');
+            }
+        }
 
         document.addEventListener('DOMContentLoaded', () => {
             initDefaults();
             checkAuth();
-            loadDraft(); // Load draft on startup
-            setupAutosave(); // Activate autosave listeners
+            loadDraft();
+            setupAutosave();
         });
+
+        async function syncMasterData() {
+            try {
+                const snapshot = await window.db.collection('master_products').get();
+                masterProducts = snapshot.docs.map(doc => ({ name: doc.id, ...doc.data() }));
+                updateDatalist();
+            } catch (err) { console.error("Master Sync Error", err); }
+        }
+
+        function updateDatalist() {
+            let dl = document.getElementById('master-list');
+            if (!dl) {
+                dl = document.createElement('datalist');
+                dl.id = 'master-list';
+                document.body.appendChild(dl);
+            }
+            dl.innerHTML = masterProducts.map(p => `<option value="${p.name}">`).join('');
+        }
+
+        function autoFillShortOrderId() {
+            const full = document.getElementById('orderIdFull').value.trim();
+            if (full.length >= 4) {
+                document.getElementById('orderId').value = full.slice(-4).toUpperCase();
+            }
+        }
+
+        function autoFillShortOrderIdPopup() {
+            const full = document.getElementById('e-orderIdFull').value.trim();
+            if (full.length >= 4) {
+                document.getElementById('e-orderId').value = full.slice(-4).toUpperCase();
+            }
+        }
+
+        function toggleManualNet(mode = 'add') {
+            const pref = mode === 'edit' ? 'e-' : '';
+            const isManual = document.getElementById(`${pref}isManualNet`).checked;
+            const box = document.getElementById(`${pref}manual-net-box`);
+            if (box) box.classList.toggle('hidden', !isManual);
+
+            if (mode === 'edit') calculateNetPopup();
+            else calculateNet();
+        }
+
+        function addItemRow(data = { name: '', qty: 1, price: 0 }, containerId = 'items-container') {
+            const container = document.getElementById(containerId);
+            const id = Date.now() + Math.random();
+            const div = document.createElement('div');
+            div.className = "flex items-center gap-2 bg-white dark:bg-slate-800 p-2 rounded-xl border border-slate-100 dark:border-slate-700 item-row";
+            div.dataset.id = id;
+
+            const calcFunc = containerId === 'items-container' ? 'calculateTotalFromItems()' : 'calculateTotalFromItems(\'e-items-container\', \'e-grossAmount\')';
+            const itemTotal = (data.qty * data.price).toFixed(2);
+
+            div.innerHTML = `
+                <div class="flex-1">
+                    <input type="text" list="master-list" placeholder="ชื่อสินค้า" onchange="handleItemChange(this, '${containerId}')"
+                        class="w-full p-2 bg-transparent outline-none text-xs font-bold item-name" value="${data.name}">
+                </div>
+                <div class="w-12">
+                    <input type="number" placeholder="Qty" oninput="handleItemPriceAutoCalc(this, 'qty', '${containerId}')"
+                        class="w-full p-2 bg-transparent outline-none text-[10px] item-qty text-center" value="${data.qty}">
+                </div>
+                <div class="w-16">
+                    <input type="number" placeholder="หน่วย" oninput="handleItemPriceAutoCalc(this, 'price', '${containerId}')"
+                        class="w-full p-2 bg-transparent outline-none text-[10px] font-medium text-right item-price" value="${data.price}">
+                </div>
+                <div class="w-20 bg-slate-50 dark:bg-slate-900/50 rounded-lg">
+                    <input type="number" placeholder="รวม" oninput="handleItemPriceAutoCalc(this, 'total', '${containerId}')"
+                        class="w-full p-2 bg-transparent outline-none text-xs font-black text-right item-total text-blue-600 dark:text-blue-400" value="${itemTotal}">
+                </div>
+                <button type="button" onclick="this.parentElement.remove(); ${calcFunc};" class="text-rose-400 px-2"><i class="fas fa-times"></i></button>
+            `;
+            container.appendChild(div);
+        }
+
+        function handleItemPriceAutoCalc(input, type, containerId) {
+            const row = input.closest('.item-row');
+            const qtyInput = row.querySelector('.item-qty');
+            const priceInput = row.querySelector('.item-price');
+            const totalInput = row.querySelector('.item-total');
+
+            let qty = parseFloat(qtyInput.value) || 0;
+            let price = parseFloat(priceInput.value) || 0;
+            let total = parseFloat(totalInput.value) || 0;
+
+            if (type === 'qty' || type === 'price') {
+                total = qty * price;
+                totalInput.value = total > 0 ? total.toFixed(2) : '';
+            } else if (type === 'total') {
+                if (qty > 0) {
+                    price = total / qty;
+                    priceInput.value = price.toFixed(2);
+                } else {
+                    // If qty is 0 but total is entered, assume qty 1?
+                    // Maybe just let it be.
+                }
+            }
+
+            if (containerId === 'items-container') {
+                calculateTotalFromItems();
+            } else {
+                calculateTotalFromItems('e-items-container', 'e-grossAmount');
+            }
+        }
+
+        function handleItemChange(input, containerId = 'items-container') {
+            const name = input.value.trim();
+            const master = masterProducts.find(p => p.name === name);
+            if (master) {
+                let price = 0;
+                if (master.prices) {
+                    price = master.prices['LINEMAN'] || master.prices[Object.keys(master.prices)[0]] || 0;
+                }
+                const row = input.closest('.item-row');
+                row.querySelector('.item-price').value = price;
+                const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+                row.querySelector('.item-total').value = (qty * price).toFixed(2);
+            }
+            if (containerId === 'items-container') {
+                calculateTotalFromItems();
+            } else {
+                calculateTotalFromItems('e-items-container', 'e-grossAmount');
+            }
+        }
+
+        function calculateTotalFromItems(containerId = 'items-container', displayId = 'grossAmount') {
+            let totalGross = 0;
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            container.querySelectorAll('.item-row').forEach(row => {
+                const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+                const price = parseFloat(row.querySelector('.item-price').value) || 0;
+                totalGross += (qty * price);
+            });
+            document.getElementById(displayId).value = totalGross.toFixed(2);
+
+            if (displayId === 'grossAmount') {
+                calculateNet();
+            } else {
+                calculateNetPopup();
+            }
+        }
+
+        function smartImport(containerId) {
+            Swal.fire({
+                title: 'Smart Import รายการ',
+                input: 'textarea',
+                inputPlaceholder: 'วางรายการจาก LINE MAN ที่นี่...\n(เช่น ชื่อสินค้า 1|ชื่อสินค้า 2)',
+                showCancelButton: true,
+                confirmButtonText: 'นำเข้า',
+                cancelButtonText: 'ยกเลิก',
+                confirmButtonColor: '#00B14F'
+            }).then((result) => {
+                if (result.isConfirmed && result.value) {
+                    const raw = result.value.trim();
+                    // Split by | or newline
+                    const parts = raw.split(/[|\n]/);
+
+                    parts.forEach(part => {
+                        let text = part.trim();
+                        if (!text) return;
+
+                        // Clean quotes if present
+                        text = text.replace(/^["']|["']$/g, '');
+
+                        // Pattern: [Name] [Quantity]
+                        // Use regex to find the last space followed by a number
+                        const match = text.match(/(.*)\s+(\d+)$/);
+                        let name = text;
+                        let qty = 1;
+
+                        if (match) {
+                            name = match[1].trim();
+                            qty = parseInt(match[2]) || 1;
+                        }
+
+                        // Lookup Price
+                        const master = masterProducts.find(p => p.name === name);
+                        let price = 0;
+                        if (master && master.prices) {
+                            price = master.prices['LINEMAN'] || master.prices[Object.keys(master.prices)[0]] || 0;
+                        }
+
+                        addItemRow({ name, qty, price }, containerId);
+                    });
+
+                    if (containerId === 'items-container') {
+                        calculateTotalFromItems();
+                    } else {
+                        calculateTotalFromItems('e-items-container', 'e-grossAmount');
+                    }
+                }
+            });
+        }
+
+        function calculateNet() {
+            const gross = parseFloat(document.getElementById('grossAmount').value) || 0;
+            const isManual = document.getElementById('isManualNet').checked;
+            const isNoFee = document.getElementById('isNoFee').checked;
+            const manual = parseFloat(document.getElementById('manualNet').value) || 0;
+
+            let gp = isNoFee ? 0 : gross * GP_RATE;
+            let net = gross - gp;
+
+            if (isManual) {
+                net = manual;
+                gp = gross - net;
+            }
+
+            const displayGross = document.getElementById('display-gross');
+            if (displayGross) displayGross.innerText = `฿${gross.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+
+            document.getElementById('calc-gp').innerText = `-฿${gp.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+            document.getElementById('calc-net').innerText = `฿${net.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+
+            // Visual fee indicator
+            const feeRow = document.getElementById('calc-gp').parentElement;
+            if (feeRow) feeRow.classList.toggle('opacity-30', isNoFee);
+        }
 
         function initDefaults() {
             const now = new Date();
-            document.getElementById('recordDate').value = now.toISOString().split('T')[0];
+            const today = now.toISOString().split('T')[0];
+            document.getElementById('recordDate').value = today;
+            document.getElementById('paidDate').value = today;
+            document.getElementById('orderHH').value = now.getHours().toString().padStart(2, '0');
+            document.getElementById('orderMM').value = now.getMinutes().toString().padStart(2, '0');
+            document.getElementById('paidHH').value = now.getHours().toString().padStart(2, '0');
+            document.getElementById('paidMM').value = now.getMinutes().toString().padStart(2, '0');
+
+            // Sync Paid Date whenever Record Date changes (if it was same)
+            document.getElementById('recordDate').onchange = (e) => {
+                const pd = document.getElementById('paidDate');
+                if (!pd.dataset.manual) pd.value = e.target.value;
+            };
+            document.getElementById('paidDate').oninput = (e) => {
+                e.target.dataset.manual = "true";
+            };
+
+            // Same for Edit Modal
+            document.getElementById('e-recordDate').onchange = (e) => {
+                const epd = document.getElementById('e-paidDate');
+                if (!epd.dataset.manual) epd.value = e.target.value;
+            };
+            document.getElementById('e-paidDate').oninput = (e) => {
+                e.target.dataset.manual = "true";
+            };
+
             document.getElementById('monthFilter').value = now.toISOString().slice(0, 7);
 
             if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -443,8 +977,8 @@
                             currentUser = user;
                             document.getElementById('login-container').style.display = 'none';
                             document.getElementById('app-container').style.display = 'block';
-                            document.getElementById('userDisplay').innerText = user.email || user.displayName;
                             syncData();
+                            syncMasterData();
                         } else {
                             document.getElementById('app-container').style.display = 'none';
                             document.getElementById('login-container').style.display = 'flex';
@@ -454,8 +988,7 @@
             }, 100);
         }
 
-        function syncData() {
-            // Re-use system/lineman_sales specifically
+        async function syncData() {
             window.db.collection('system').doc('lineman_sales').onSnapshot(doc => {
                 if (doc.exists) {
                     salesData = doc.data().records || [];
@@ -466,58 +999,192 @@
             });
         }
 
-        function calculateNet() {
-            const gross = parseFloat(document.getElementById('grossAmount').value) || 0;
-            const gp = gross * GP_RATE;
-            const net = gross - gp;
+        function setDateFilter(date) {
+            currentSelectedDate = date;
+            renderUI();
+        }
 
-            document.getElementById('calc-gp').innerText = `฿${gp.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            document.getElementById('calc-net').innerText = `฿${net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        function openRecordModal() {
+            document.getElementById('recordModal').classList.remove('hidden');
+        }
+
+        function closeRecordModal() {
+            document.getElementById('recordModal').classList.add('hidden');
+        }
+
+
+        function calculatePerformance(d1, t1, d2, t2) {
+            if (!d1 || !t1 || !d2 || !t2) return null;
+            try {
+                // Parse components explicitly to ensure local time context
+                const [y1, m1, dd1] = d1.split('-').map(Number);
+                const [h1, mm1] = t1.split(':').map(Number);
+                const [y2, m2, dd2] = d2.split('-').map(Number);
+                const [h2, mm2] = t2.split(':').map(Number);
+
+                const start = new Date(y1, m1 - 1, dd1, h1, mm1, 0);
+                const end = new Date(y2, m2 - 1, dd2, h2, mm2, 0);
+
+                const diffMs = end - start;
+                if (diffMs < 0) return null;
+
+                const totalMins = Math.floor(diffMs / 60000);
+                const days = Math.floor(totalMins / 1440);
+                const hrs = Math.floor((totalMins % 1440) / 60);
+                const mins = totalMins % 60;
+
+                let label = '';
+                if (days > 0) label += `${days}d `;
+                if (hrs > 0 || days > 0) label += `${hrs}h `;
+                label += `${mins}m`;
+
+                let colorClass = 'text-emerald-600 bg-white'; // Fast < 30m
+                if (totalMins > 1440) colorClass = 'text-rose-600 bg-rose-50'; // > 24h
+                else if (totalMins > 120) colorClass = 'text-amber-600 bg-amber-50'; // > 2h
+                else if (totalMins > 30) colorClass = 'text-blue-600 bg-blue-50'; // > 30m
+
+                return { label: label.trim(), color: colorClass, totalMins };
+            } catch (e) { return null; }
         }
 
         function renderUI() {
             const termMonth = document.getElementById('monthFilter').value;
             const todayStr = new Date().toISOString().split('T')[0];
 
-            const filtered = salesData.filter(r => r.date.startsWith(termMonth));
+            // Filter for the month first
+            let filtered = salesData.filter(r => r.date.startsWith(termMonth));
+
+            // Pagination Rendering
+            const uniqueDates = [...new Set(filtered.map(r => r.date))].sort((a, b) => b.localeCompare(a));
+            const pagin = document.getElementById('date-pagination');
+
+            const formatDate = (ds) => {
+                if (!ds) return '';
+                const parts = ds.split('-');
+                if (parts.length < 3) return ds;
+                const [y, m, d] = parts;
+                return `${d}/${m}/${y.slice(2)}`;
+            };
+
+            let paginHTML = `<button onclick="setDateFilter(null)" class="px-5 py-2.5 rounded-2xl text-xs font-black transition-all whitespace-nowrap ${!currentSelectedDate ? 'bg-lineman text-white shadow-lg shadow-green-500/20 scale-105' : 'bg-white dark:bg-slate-800 text-slate-400 hover:bg-slate-100 border border-slate-100 dark:border-slate-700'}">ทั้งหมด</button>`;
+
+            uniqueDates.forEach(d => {
+                const isActive = currentSelectedDate === d;
+                paginHTML += `<button onclick="setDateFilter('${d}')" class="px-5 py-2.5 rounded-2xl text-xs font-black transition-all whitespace-nowrap ${isActive ? 'bg-lineman text-white shadow-lg shadow-green-500/20 scale-105' : 'bg-white dark:bg-slate-800 text-slate-400 hover:bg-slate-100 border border-slate-100 dark:border-slate-700'}">${formatDate(d)}</button>`;
+            });
+            if (pagin) pagin.innerHTML = paginHTML;
+
+            // Apply Date Filter
+            if (currentSelectedDate) {
+                if (!uniqueDates.includes(currentSelectedDate)) {
+                    currentSelectedDate = null;
+                } else {
+                    filtered = filtered.filter(r => r.date === currentSelectedDate);
+                }
+            }
+
+            // Update Summary Labels
+            const summaryLabel = currentSelectedDate ? `ประจำวันที่ ${formatDate(currentSelectedDate)}` : `ประจำเดือน ${termMonth}`;
+            document.querySelectorAll('[id^="summary-"]').forEach(el => {
+                const p = el.parentElement.querySelector('p');
+                if (p && p.innerText.includes('วันนี้')) {
+                    p.innerText = p.innerText.replace('วันนี้', currentSelectedDate ? 'ประจำวัน' : 'ประจำเดือน');
+                }
+            });
+
+            // Calculate daily totals for PAID ribbons (using the month's filtered data to be consistent)
+            const monthFiltered = salesData.filter(r => r.date.startsWith(termMonth));
+            const dailyPaidTotals = {};
+            monthFiltered.forEach(r => {
+                if (r.isPaid) {
+                    const pDate = r.paidDate || r.date;
+                    dailyPaidTotals[pDate] = (dailyPaidTotals[pDate] || 0) + r.net;
+                }
+            });
+
             const tbody = document.getElementById('salesTable');
             tbody.innerHTML = '';
 
             let dailyGross = 0; let dailyGP = 0; let dailyNet = 0; let dailyCount = 0;
 
             filtered.forEach((record, index) => {
-                const isToday = record.date === todayStr;
-                if (isToday) {
-                    dailyGross += record.gross;
-                    dailyGP += record.gp;
-                    dailyNet += record.net;
-                    dailyCount++;
+                // Summary now reflects the filtered list (all month or specific day)
+                dailyGross += record.gross;
+                dailyGP += record.gp;
+                dailyNet += record.net;
+                dailyCount++;
+
+                const isUpdated = (record.items && record.items.length > 0);
+                let rowStyle = '';
+                if (record.isPaid) {
+                    rowStyle = '!bg-emerald-50/70 dark:!bg-emerald-900/30 border-l-[4px] border-emerald-500';
+                } else if (isUpdated) {
+                    rowStyle = '!bg-orange-50/80 dark:!bg-orange-900/30 border-l-[4px] border-orange-400';
                 }
 
                 tbody.innerHTML += `
-                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                        <td class="p-4">
-                            <div class="font-[10px] font-bold text-slate-400">${record.date}</div>
-                            <div class="font-black text-slate-700 dark:text-slate-200 uppercase">${record.orderId}</div>
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${rowStyle} relative">
+                        <td class="p-4 align-top">
+                            <div class="text-[10px] font-black text-slate-500 dark:text-slate-400">${record.date}</div>
+                            <div class="text-[11px] font-black text-blue-600 dark:text-blue-400 mb-1.5">${record.orderTime || '--:--'}</div>
+                            <div class="inline-block bg-white dark:bg-slate-800 border-[1.5px] border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded-md font-black text-slate-800 dark:text-slate-100 shadow-sm text-[11px] mb-1 tracking-tight">
+                                ${record.orderId}
+                            </div>
+                            ${record.orderIdFull ? `<div class="text-[8px] text-slate-300 truncate max-w-[80px]">${record.orderIdFull}</div>` : ''}
                         </td>
-                        <td class="p-4 max-w-[200px]">
+                        <td class="p-4 align-top max-w-[200px]">
                             <div class="font-bold text-xs text-slate-800 dark:text-slate-100">${record.customerName || 'ลูกค้าทั่วไป'}</div>
-                            <div class="text-[10px] text-slate-400">${record.customerPhone || ''}</div>
-                            <div class="text-[10px] truncate text-slate-500 mt-1" title="${record.notes}">${record.notes || '-'}</div>
+                            <div class="text-[10px] text-slate-400 mb-1">${record.customerPhone || ''}</div>
+                            
+                            <div class="space-y-1">
+                                ${(record.items || []).map(i => `
+                                    <div class="flex justify-between text-[10px]">
+                                        <span class="text-slate-500">${i.name} x${i.qty}</span>
+                                        <span class="font-bold text-slate-400">฿${(i.qty * i.price).toLocaleString()}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+
+                            <div class="text-[10px] italic text-slate-400 mt-2 border-t border-slate-50 pt-1" title="${record.notes}">
+                                ${record.notes || ''}
+                                ${record.isPaid ? `
+                                    <div class="mt-1 flex items-center gap-1 text-[9px] text-emerald-600 font-bold bg-emerald-100/50 px-2 py-0.5 rounded-full w-fit">
+                                        <i class="fas fa-check-circle"></i> ได้รับเงิน: ${record.paidDate} ${record.paidTime}
+                                    </div>
+                                ` : ''}
+                            </div>
                         </td>
                         <td class="p-4 text-right">
-                            <div class="text-[10px] text-rose-400 font-bold">-฿${record.gp.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                            <div class="text-[10px] ${record.isNoFee ? 'text-slate-300' : 'text-rose-400'} font-bold">
+                                ${record.isNoFee ? '<span class="bg-rose-50 px-1 rounded text-[8px]">NO FEE</span>' : `-฿${record.gp.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
+                            </div>
                             <div class="font-bold text-slate-400">฿${record.gross.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                         </td>
                         <td class="p-4 text-right">
                             <div class="font-black text-lineman text-lg">฿${record.net.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                         </td>
-                        <td class="p-4 text-center">
+                        <td class="p-4 text-center relative max-w-[120px]">
+                            ${record.isPaid ? `
+                                <div class="mb-2 bg-emerald-500 text-white text-[9px] font-black px-4 py-2 rounded-lg shadow-sm uppercase tracking-tighter whitespace-nowrap flex flex-col items-center justify-center gap-1">
+                                    <div class="flex items-center gap-1.5">
+                                        <span>PAID ${record.paidDate || record.date} <span class="opacity-40 font-bold">///</span></span>
+                                        <span class="text-[12px]">฿ ${dailyPaidTotals[record.paidDate || record.date].toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                    </div>
+                                    ${(() => {
+                            const perf = calculatePerformance(record.date, record.orderTime, record.paidDate || record.date, record.paidTime);
+                            return perf ? `
+                                            <div class="text-[9px] ${perf.color} px-2 py-0.5 rounded-full flex items-center gap-1 font-black shadow-sm border border-black/5">
+                                                <i class="fas fa-bolt"></i> ${perf.label}
+                                            </div>
+                                        ` : '';
+                        })()}
+                                </div>
+                            ` : ''}
                             <div class="flex items-center justify-center gap-2">
-                                <button onclick="editRecord(${index})" class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-400 hover:text-blue-600 transition-all">
+                                <button onclick="editRecord(${record.recordedAt})" class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-400 hover:text-blue-600 transition-all">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button onclick="deleteRecord(${index})" class="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-900/20 text-rose-400 hover:text-rose-600 transition-all">
+                                <button onclick="deleteRecord(${record.recordedAt})" class="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-900/20 text-rose-400 hover:text-rose-600 transition-all">
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
                             </div>
@@ -539,31 +1206,77 @@
         document.getElementById('salesForm').onsubmit = async (e) => {
             e.preventDefault();
             const gross = parseFloat(document.getElementById('grossAmount').value);
-            const gp = gross * GP_RATE;
-            const net = gross - gp;
+            const isManual = document.getElementById('isManualNet').checked;
+            const manual = parseFloat(document.getElementById('manualNet').value) || 0;
+
+            const isNoFee = document.getElementById('isNoFee').checked;
+            let gp = isNoFee ? 0 : gross * GP_RATE;
+            let net = gross - gp;
+
+            if (isManual) {
+                net = manual;
+                gp = gross - net;
+            }
+
+            // Collect items
+            const items = [];
+            const masterUpdates = [];
+            document.querySelectorAll('.item-row').forEach(row => {
+                const name = row.querySelector('.item-name').value;
+                const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+                const price = parseFloat(row.querySelector('.item-price').value) || 0;
+                if (name) items.push({ name, qty, price });
+
+                // Track for master update if price changed?
+                // Actually, just update master if name exists
+                if (name && price > 0) masterUpdates.push({ name, price });
+            });
+
+            const hh = document.getElementById('orderHH').value.padStart(2, '0');
+            const mm = document.getElementById('orderMM').value.padStart(2, '0');
+
+            const isPaid = document.getElementById('isPaid').checked;
+            const paidDate = document.getElementById('paidDate').value;
+            const paidHH = document.getElementById('paidHH').value.padStart(2, '0');
+            const paidMM = document.getElementById('paidMM').value.padStart(2, '0');
 
             const record = {
                 date: document.getElementById('recordDate').value,
+                orderTime: `${hh}:${mm}`,
                 orderId: document.getElementById('orderId').value,
+                orderIdFull: document.getElementById('orderIdFull').value,
                 customerName: document.getElementById('customerName').value,
                 customerPhone: document.getElementById('customerPhone').value,
                 gross: gross,
                 gp: gp,
                 net: net,
+                isManualNet: isManual,
+                isNoFee: isNoFee,
+                isPaid: isPaid,
+                paidDate: paidDate,
+                paidTime: isPaid ? `${paidHH}:${paidMM}` : '',
+                items: items,
                 notes: document.getElementById('notes').value,
                 recordedAt: new Date().getTime()
             };
 
-            if (editIndex !== null) {
-                // Find actual index in original salesData if we filtered? 
-                // Currently renderUI filters but index is passed from filtered.
-                // To be safe, we need to map filtered index back to original or just re-render.
-                // Simple approach: find by orderId and date or use a unique ID.
-                // For now, assume editIndex is correct since salesData is the source for filtered.
-
-                // Wait, filtered index != salesData index if filtered.
-                // Let's modify renderUI to pass a more reliable identifier or the actual index.
-                // I will add ID to records.
+            // Master Update Logic
+            for (const update of masterUpdates) {
+                const master = masterProducts.find(m => m.name === update.name);
+                if (master) {
+                    await window.db.collection('master_products').doc(update.name).set({
+                        prices: {
+                            ...(master.prices || {}),
+                            'LINEMAN': update.price
+                        }
+                    }, { merge: true });
+                } else {
+                    await window.db.collection('master_products').doc(update.name).set({
+                        unit: 'ชิ้น',
+                        prices: { 'LINEMAN': update.price },
+                        minQty: 0
+                    });
+                }
             }
 
             if (editIndex !== null) {
@@ -574,43 +1287,118 @@
                 Swal.fire({ icon: 'success', title: 'บันทึกยอดขายแล้ว', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
             }
 
-            // Sort by date desc
             salesData.sort((a, b) => b.date.localeCompare(a.date) || b.recordedAt - a.recordedAt);
 
             showLoading(true);
             await window.db.collection('system').doc('lineman_sales').set({ records: salesData });
             showLoading(false);
 
+            closeRecordModal(); // Close after success
             document.getElementById('salesForm').reset();
+            document.getElementById('items-container').innerHTML = '';
+            document.getElementById('isManualNet').checked = false;
+            toggleManualNet();
             initDefaults();
             calculateNet();
-            clearDraft(); // Clear local draft
+            clearDraft();
+            syncMasterData();
         };
 
-        // Modal Form Submit
+        // Modal Form Submit (Edit)
         document.getElementById('editForm').onsubmit = async (e) => {
             e.preventDefault();
-            const gross = parseFloat(document.getElementById('e-grossAmount').value);
-            const gp = gross * GP_RATE;
-            const net = gross - gp;
+            if (editingUid === null) return;
 
-            salesData[editIndex] = {
-                ...salesData[editIndex],
+            // Find target index again to be safe against data updates
+            const targetIdx = salesData.findIndex(r => r.recordedAt === editingUid);
+            if (targetIdx === -1) {
+                Swal.fire('Error', 'ไม่พบข้อมูลรายการที่ต้องการแก้ไข', 'error');
+                return;
+            }
+
+            const gross = parseFloat(document.getElementById('e-grossAmount').value) || 0;
+            const isNoFee = document.getElementById('e-isNoFee').checked;
+            const isManual = document.getElementById('e-isManualNet').checked;
+            const manual = parseFloat(document.getElementById('e-manualNet').value) || 0;
+
+            let gp = isNoFee ? 0 : gross * GP_RATE;
+            let net = gross - gp;
+
+            if (isManual) {
+                net = manual;
+                gp = gross - net;
+            }
+
+            // Collect items from popup
+            const items = [];
+            const masterUpdates = [];
+            document.getElementById('e-items-container').querySelectorAll('.item-row').forEach(row => {
+                const name = row.querySelector('.item-name').value;
+                const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+                const price = parseFloat(row.querySelector('.item-price').value) || 0;
+                if (name) items.push({ name, qty, price });
+                if (name && price > 0) masterUpdates.push({ name, price });
+            });
+
+            const updatedRecord = {
+                ...salesData[targetIdx],
                 date: document.getElementById('e-recordDate').value,
+                orderTime: `${document.getElementById('e-orderHH').value.toString().padStart(2, '0')}:${document.getElementById('e-orderMM').value.toString().padStart(2, '0')}`,
                 orderId: document.getElementById('e-orderId').value,
+                orderIdFull: document.getElementById('e-orderIdFull').value,
                 customerName: document.getElementById('e-customerName').value,
                 customerPhone: document.getElementById('e-customerPhone').value,
                 gross: gross,
                 gp: gp,
                 net: net,
+                isNoFee: isNoFee,
+                isManualNet: isManual,
+                isPaid: document.getElementById('e-isPaid').checked,
+                paidDate: document.getElementById('e-paidDate').value,
+                paidTime: document.getElementById('e-isPaid').checked ? `${document.getElementById('e-paidHH').value.toString().padStart(2, '0')}:${document.getElementById('e-paidMM').value.toString().padStart(2, '0')}` : '',
+                items: items,
                 notes: document.getElementById('e-notes').value
             };
 
-            showLoading(true);
-            await window.db.collection('system').doc('lineman_sales').set({ records: salesData });
-            showLoading(false);
-            closeEditModal();
-            Swal.fire({ icon: 'success', title: 'แก้ไขข้อมูลสำเร็จ', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
+            try {
+                showLoading(true);
+
+                // Master Update Logic
+                for (const update of masterUpdates) {
+                    const master = masterProducts.find(m => m.name === update.name);
+                    if (master) {
+                        await window.db.collection('master_products').doc(update.name).set({
+                            prices: { ...(master.prices || {}), 'LINEMAN': update.price }
+                        }, { merge: true });
+                    } else {
+                        await window.db.collection('master_products').doc(update.name).set({
+                            unit: 'ชิ้น', prices: { 'LINEMAN': update.price }, minQty: 0
+                        });
+                    }
+                }
+
+                salesData[targetIdx] = updatedRecord;
+                // Re-sort to maintain view order
+                salesData.sort((a, b) => b.date.localeCompare(a.date) || b.recordedAt - a.recordedAt);
+
+                await window.db.collection('system').doc('lineman_sales').set({ records: salesData });
+
+                closeEditModal();
+                Swal.fire({
+                    icon: 'success',
+                    title: 'แก้ไขข้อมูลสำเร็จ',
+                    toast: true,
+                    position: 'top-end',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+                syncMasterData();
+            } catch (error) {
+                console.error("Save Edit Error:", error);
+                Swal.fire('Error', 'ไม่สามารถบันทึกข้อมูลได้: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
         };
 
         // --- Autosave System ---
@@ -626,10 +1414,19 @@
 
             const draft = {
                 date: document.getElementById('recordDate').value,
+                orderHH: document.getElementById('orderHH').value,
+                orderMM: document.getElementById('orderMM').value,
                 orderId: document.getElementById('orderId').value,
+                orderIdFull: document.getElementById('orderIdFull').value,
                 customerName: document.getElementById('customerName').value,
                 customerPhone: document.getElementById('customerPhone').value,
-                gross: document.getElementById('grossAmount').value,
+                isManualNet: document.getElementById('isManualNet').checked,
+                manualNet: document.getElementById('manualNet').value,
+                items: Array.from(document.querySelectorAll('.item-row')).map(row => ({
+                    name: row.querySelector('.item-name').value,
+                    qty: row.querySelector('.item-qty').value,
+                    price: row.querySelector('.item-price').value
+                })),
                 notes: document.getElementById('notes').value,
                 timestamp: new Date().getTime()
             };
@@ -653,14 +1450,26 @@
             }
 
             if (draft.date) document.getElementById('recordDate').value = draft.date;
+            if (draft.orderHH) document.getElementById('orderHH').value = draft.orderHH;
+            if (draft.orderMM) document.getElementById('orderMM').value = draft.orderMM;
+            if (draft.orderIdFull) document.getElementById('orderIdFull').value = draft.orderIdFull;
             if (draft.orderId) document.getElementById('orderId').value = draft.orderId;
             if (draft.customerName) document.getElementById('customerName').value = draft.customerName;
             if (draft.customerPhone) document.getElementById('customerPhone').value = draft.customerPhone;
-            if (draft.gross) {
-                document.getElementById('grossAmount').value = draft.gross;
-                calculateNet();
+
+            if (draft.items) {
+                document.getElementById('items-container').innerHTML = '';
+                draft.items.forEach(item => addItemRow(item));
             }
+
+            if (draft.isManualNet) {
+                document.getElementById('isManualNet').checked = true;
+                document.getElementById('manualNet').value = draft.manualNet || 0;
+            }
+            toggleManualNet();
+
             if (draft.notes) document.getElementById('notes').value = draft.notes;
+            calculateTotalFromItems();
         }
 
         function clearDraft() {
@@ -668,24 +1477,68 @@
             document.getElementById('autosave-status').classList.add('opacity-0');
         }
 
-        function editRecord(index) {
-            const termMonth = document.getElementById('monthFilter').value;
-            const filtered = salesData.filter(r => r.date.startsWith(termMonth));
-            const target = filtered[index];
-
-            const actualIndex = salesData.findIndex(r => r.recordedAt === target.recordedAt);
+        function editRecord(uid) {
+            const actualIndex = salesData.findIndex(r => r.recordedAt === uid);
             if (actualIndex === -1) return;
 
             editIndex = actualIndex;
+            editingUid = uid;
             const record = salesData[actualIndex];
 
             // Fill Modal Form
             document.getElementById('e-recordDate').value = record.date;
-            document.getElementById('e-orderId').value = record.orderId;
+
+            const [h, m] = (record.orderTime || '00:00').split(':');
+            document.getElementById('e-orderHH').value = h;
+            document.getElementById('e-orderMM').value = m;
+
+            document.getElementById('e-isNoFee').checked = record.isNoFee || false;
+
+            // Intelligence: Handle old records where orderId might contain the full ID
+            let displayOrderId = record.orderId || '';
+            let displayOrderIdFull = record.orderIdFull || '';
+
+            if (!displayOrderIdFull && displayOrderId.length > 8) {
+                displayOrderIdFull = displayOrderId;
+                displayOrderId = displayOrderId.slice(-4).toUpperCase();
+            }
+
+            document.getElementById('e-orderId').value = displayOrderId;
+            document.getElementById('e-orderIdFull').value = displayOrderIdFull;
+
             document.getElementById('e-customerName').value = record.customerName || '';
             document.getElementById('e-customerPhone').value = record.customerPhone || '';
             document.getElementById('e-grossAmount').value = record.gross;
+
+            document.getElementById('e-isManualNet').checked = record.isManualNet || false;
+            document.getElementById('e-manualNet').value = record.net || record.gross;
+            toggleManualNet('edit');
+
             document.getElementById('e-notes').value = record.notes || '';
+
+            // Load Items into container
+            const eContainer = document.getElementById('e-items-container');
+            eContainer.innerHTML = '';
+            if (record.items && record.items.length > 0) {
+                record.items.forEach(item => addItemRow(item, 'e-items-container'));
+            }
+
+            // Payment Status
+            const isPaid = record.isPaid || false;
+            document.getElementById('e-isPaid').checked = isPaid;
+            document.getElementById('e-paidDate').value = record.paidDate || record.date;
+            document.getElementById('e-paidDate').dataset.manual = record.paidDate && record.paidDate !== record.date ? "true" : "";
+            if (record.paidTime && record.paidTime.includes(':')) {
+                const [ph, pm] = record.paidTime.split(':');
+                document.getElementById('e-paidHH').value = ph;
+                document.getElementById('e-paidMM').value = pm;
+            } else {
+                const now = new Date();
+                document.getElementById('e-paidHH').value = now.getHours().toString().padStart(2, '0');
+                document.getElementById('e-paidMM').value = now.getMinutes().toString().padStart(2, '0');
+            }
+            togglePaidSection('edit');
+
             calculateNetPopup();
 
             document.getElementById('editModal').classList.remove('hidden');
@@ -693,17 +1546,30 @@
 
         function closeEditModal() {
             editIndex = null;
+            editingUid = null;
             document.getElementById('editModal').classList.add('hidden');
         }
 
         function calculateNetPopup() {
             const gross = parseFloat(document.getElementById('e-grossAmount').value) || 0;
-            const net = gross - (gross * GP_RATE);
+            const isNoFee = document.getElementById('e-isNoFee').checked;
+            const isManual = document.getElementById('e-isManualNet').checked;
+            const manual = parseFloat(document.getElementById('e-manualNet').value) || 0;
+
+            let net;
+            if (isManual) {
+                net = manual;
+            } else {
+                let gp = isNoFee ? 0 : gross * GP_RATE;
+                net = gross - gp;
+            }
+
             document.getElementById('e-calc-net').innerText = `฿${net.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
         }
 
         function cancelEdit() {
             editIndex = null;
+            editingUid = null;
             document.getElementById('salesForm').reset();
             initDefaults(); // Restore date to today
             calculateNet();
@@ -715,7 +1581,7 @@
             document.getElementById('submitBtn').innerHTML = '<i class="fas fa-check-circle mr-2"></i> บันทึกข้อมูล';
         }
 
-        async function deleteRecord(index) {
+        async function deleteRecord(uid) {
             const res = await Swal.fire({
                 title: 'ยืนยันการลบ?',
                 text: "ยอดขายรายการนี้จะถูกถอนออกจากระบบ",
@@ -726,10 +1592,13 @@
             });
 
             if (res.isConfirmed) {
-                salesData.splice(index, 1);
-                showLoading(true);
-                await window.db.collection('system').doc('lineman_sales').set({ records: salesData });
-                showLoading(false);
+                const idx = salesData.findIndex(r => r.recordedAt === uid);
+                if (idx !== -1) {
+                    salesData.splice(idx, 1);
+                    showLoading(true);
+                    await window.db.collection('system').doc('lineman_sales').set({ records: salesData });
+                    showLoading(false);
+                }
             }
         }
 
@@ -790,26 +1659,101 @@
 
                 // นำเข้าเฉพาะที่สำเร็จ และยังไม่มีในระบบ
                 if (status === 'FINISH') {
-                    const dateOnly = settleTime.split(' ')[0].replace(/\//g, '-');
+                    const dtParts = settleTime.split(' ');
+                    const dateOnly = dtParts[0].replace(/\//g, '-');
+                    const timeOnly = dtParts.length > 1 ? dtParts[1].slice(0, 5) : '00:00';
                     const gp = gross * GP_RATE;
                     const net = gross - gp;
 
+                    const orderIdShort = orderId.length >= 4 ? orderId.slice(-4).toUpperCase() : orderId;
+
+                    // Split items from itemName (e.g. "Product A 1|Product B 2")
+                    const items = [];
+                    const parts = itemName.split('|');
+                    parts.forEach(part => {
+                        const text = part.trim();
+                        if (!text) return;
+                        const match = text.match(/(.*)\s+(\d+)$/);
+                        let name = text;
+                        let qty = 1;
+                        if (match) {
+                            name = match[1].trim();
+                            qty = parseInt(match[2]) || 1;
+                        }
+
+                        // Lookup Price (for display in UI history)
+                        const master = masterProducts.find(m => m.name === name);
+                        const price = (master && master.prices) ? (master.prices['LINEMAN'] || master.prices[Object.keys(master.prices)[0]] || 0) : 0;
+
+                        items.push({ name, qty, price });
+                    });
+
                     recordsToImport.push({
                         date: dateOnly,
-                        orderId: orderId,
+                        orderTime: timeOnly,
+                        orderId: orderIdShort,
+                        orderIdFull: orderId,
                         gross: gross,
                         gp: gp,
                         net: net,
+                        isPaid: false, // Default for CSV import
+                        paidDate: '',
+                        paidTime: '',
+                        items: items, // Added split items
                         notes: itemName,
-                        recordedAt: new Date().getTime() + index // ป้องกัน timestamp ซ้ำกัน
+                        recordedAt: new Date().getTime() + index
                     });
                 }
             });
 
             if (recordsToImport.length > 0) {
                 showLoading(true);
-                // รวมข้อมูลใหม่เข้ากับข้อมูลเดิมที่มีอยู่
-                salesData = [...recordsToImport, ...salesData];
+
+                let addedCount = 0;
+                let updatedCount = 0;
+                let ignoredCount = 0;
+
+                const getScore = (r) => {
+                    let s = 0;
+                    if (r.items && r.items.length > 0) s += r.items.length * 10;
+                    if (r.notes) s += r.notes.length;
+                    if (r.customerName) s += 10;
+                    if (r.isPaid) s += 100; // Manual paid status is high value
+                    return s;
+                };
+
+                recordsToImport.forEach(newRec => {
+                    // Find duplicate
+                    const existingIdx = salesData.findIndex(r =>
+                        (r.orderIdFull && newRec.orderIdFull && r.orderIdFull === newRec.orderIdFull) ||
+                        (!r.orderIdFull && !newRec.orderIdFull && r.orderId === newRec.orderId && r.date === newRec.date)
+                    );
+
+                    if (existingIdx === -1) {
+                        salesData.push(newRec);
+                        addedCount++;
+                    } else {
+                        const existingRec = salesData[existingIdx];
+                        const sOld = getScore(existingRec);
+                        const sNew = getScore(newRec);
+
+                        if (sNew > sOld) {
+                            // Link existing manual info if any
+                            const merged = {
+                                ...newRec,
+                                isPaid: existingRec.isPaid || newRec.isPaid,
+                                paidDate: existingRec.paidDate || newRec.paidDate,
+                                paidTime: existingRec.paidTime || newRec.paidTime,
+                                recordedAt: existingRec.recordedAt // Keep original order
+                            };
+                            salesData[existingIdx] = merged;
+                            updatedCount++;
+                        } else {
+                            ignoredCount++;
+                        }
+                    }
+                });
+
                 // เรียงลำดับตามวันที่ใหม่
                 salesData.sort((a, b) => b.date.localeCompare(a.date) || b.recordedAt - a.recordedAt);
 
@@ -819,8 +1763,14 @@
 
                 Swal.fire({
                     icon: 'success',
-                    title: `นำเข้าสำเร็จ ${recordsToImport.length} รายการ`,
-                    text: 'ระบบได้บันทึกยอดขายและหัก GP เรียบร้อยแล้ว',
+                    title: 'นำเข้าข้อมูลเรียบร้อย',
+                    html: `
+                        <div class="text-left space-y-1 text-sm bg-slate-50 p-4 rounded-xl">
+                            <div class="flex justify-between"><span>เพิ่มใหม่:</span> <span class="font-bold text-emerald-600">${addedCount}</span></div>
+                            <div class="flex justify-between"><span>อัปเดตข้อมูล:</span> <span class="font-bold text-blue-600">${updatedCount}</span></div>
+                            <div class="flex justify-between"><span>ข้าม (ซ้ำ):</span> <span class="font-bold text-slate-400">${ignoredCount}</span></div>
+                        </div>
+                    `,
                     confirmButtonColor: '#00B14F'
                 });
             } else {

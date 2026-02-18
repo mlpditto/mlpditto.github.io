@@ -55,6 +55,7 @@ Comprehensive pharmacy and medical supply management system integrated with LINE
 - `Sales Analytics.html`: ระบบวิเคราะห์ยอดขายจาก CSV
 - `TMTP-Manager.html`: ระบบประมวลผลข้อมูลส่งพัสดุ
 - `return-log-int.html`: ระบบจัดการคืนสินค้าและวันหมดอายุ
+- `lineman-mgr.html`: ระบบบันทึกยอดขาย LINE MAN (Sales Recorder)
 - `faq.html`: ระบบจัดการฐานความรู้
 
 ---
