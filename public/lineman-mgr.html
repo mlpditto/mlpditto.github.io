@@ -501,9 +501,9 @@
                             <div>
                                 <label class="vibrant-label">วันที่และเวลาสั่ง</label>
                                 <div class="flex gap-2">
-                                    <input type="date" id="recordDate" class="minimal-input flex-[2]">
+                                    <input type="date" id="recordDate" class="minimal-input flex-[1.5]">
                                     <div
-                                        class="flex items-center gap-1 minimal-input flex-1 px-2 border-l border-slate-100 dark:border-slate-800">
+                                        class="flex items-center gap-1 minimal-input flex-1 px-3 border-l border-slate-100 dark:border-slate-800">
                                         <input type="number" id="orderHH" min="0" max="23" placeholder="00"
                                             class="w-full bg-transparent text-center font-black outline-none"
                                             oninput="limitValue(this, 23)">
@@ -516,8 +516,9 @@
                             </div>
                             <div>
                                 <label class="vibrant-label">เลขออเดอร์ (เต็ม)</label>
-                                <input type="text" id="orderIdFull" class="minimal-input font-bold text-lineman"
-                                    placeholder="LME-XXXXXX" oninput="autoFillShortOrderId()">
+                                <input type="text" id="orderIdFull"
+                                    class="minimal-input font-bold text-lineman max-w-[180px]" placeholder="LME-XXXXXX"
+                                    oninput="autoFillShortOrderId()">
                             </div>
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
@@ -541,9 +542,9 @@
                         <div class="mt-6 pt-6 border-t border-slate-50 dark:border-slate-800">
                             <label class="vibrant-label">วันที่และเวลารับสินค้า (Received)</label>
                             <div class="flex gap-2">
-                                <input type="date" id="receivedDate" class="minimal-input flex-[2]">
+                                <input type="date" id="receivedDate" class="minimal-input flex-[1.5]">
                                 <div
-                                    class="flex items-center gap-1 minimal-input flex-1 px-2 border-l border-slate-100 dark:border-slate-800 bg-blue-50/10 rounded-lg">
+                                    class="flex items-center gap-1 minimal-input flex-1 px-3 border-l border-slate-100 dark:border-slate-800 bg-blue-50/10 rounded-lg">
                                     <input type="number" id="receivedHH" min="0" max="23" placeholder="00"
                                         class="w-full bg-transparent text-center font-bold outline-none"
                                         oninput="limitValue(this, 23)">
@@ -748,9 +749,9 @@
                                 <div>
                                     <label class="vibrant-label">วันที่และเวลาสั่ง</label>
                                     <div class="flex gap-2">
-                                        <input type="date" id="e-recordDate" class="minimal-input flex-[2]">
+                                        <input type="date" id="e-recordDate" class="minimal-input flex-[1.5]">
                                         <div
-                                            class="flex items-center gap-1 minimal-input flex-1 px-2 border-l border-slate-100 dark:border-slate-800">
+                                            class="flex items-center gap-1 minimal-input flex-1 px-3 border-l border-slate-100 dark:border-slate-800">
                                             <input type="number" id="e-orderHH" min="0" max="23" placeholder="00"
                                                 class="w-full bg-transparent text-center font-black outline-none"
                                                 oninput="limitValue(this, 23)">
@@ -764,7 +765,7 @@
                                 <div>
                                     <label class="vibrant-label">เลขออเดอร์ (เต็ม)</label>
                                     <input type="text" id="e-orderIdFull"
-                                        class="minimal-input font-bold text-blue-600 dark:text-blue-400"
+                                        class="minimal-input font-bold text-blue-600 dark:text-blue-400 max-w-[180px]"
                                         placeholder="LME-XXXXXX" oninput="autoFillShortOrderIdPopup()">
                                 </div>
                                 <div class="grid grid-cols-2 gap-4">
@@ -789,9 +790,9 @@
                             <div class="mt-6 pt-6 border-t border-slate-50 dark:border-slate-800">
                                 <label class="vibrant-label">วันที่และเวลารับสินค้า (Received)</label>
                                 <div class="flex gap-2">
-                                    <input type="date" id="e-receivedDate" class="minimal-input flex-[2]">
+                                    <input type="date" id="e-receivedDate" class="minimal-input flex-[1.5]">
                                     <div
-                                        class="flex items-center gap-1 minimal-input flex-1 px-2 border-l border-slate-100 dark:border-slate-800 bg-blue-50/10 rounded-lg">
+                                        class="flex items-center gap-1 minimal-input flex-1 px-3 border-l border-slate-100 dark:border-slate-800 bg-blue-50/10 rounded-lg">
                                         <input type="number" id="e-receivedHH" min="0" max="23" placeholder="00"
                                             class="w-full bg-transparent text-center font-bold outline-none"
                                             oninput="limitValue(this, 23)">
