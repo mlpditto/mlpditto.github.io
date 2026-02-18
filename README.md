@@ -1,11 +1,11 @@
-# 🏥 Medlife Plus Pharmacy - FKB Front Kanban
+# 🏥 MLP - FKB Front Kanban
 
 [![Platform](https://img.shields.io/badge/Platform-Web-blue.svg)](https://fkb-front-kanban.web.app)
 [![Framework](https://img.shields.io/badge/Framework-Vanilla_JS-orange.svg)](https://javascript.info)
 [![Database](https://img.shields.io/badge/Database-Firebase-yellow.svg)](https://firebase.google.com)
 [![UI](https://img.shields.io/badge/UI-Tailwind_CSS-blueviolet.svg)](https://tailwindcss.com)
 
-ระบบบริหารจัดการร้านยาและเวชภัณฑ์ครบวงจร (Medlife Plus Pharmacy Management System) ที่เชื่อมต่อกับ LINE LIFF และ Firebase เพื่อการทำงานที่รวดเร็วและแม่นยำ
+ระบบบริหารจัดการร้านยาและเวชภัณฑ์ครบวงจร ที่เชื่อมต่อกับ LINE LIFF และ Firebase เพื่อการทำงานที่รวดเร็วและแม่นยำ
 
 Comprehensive pharmacy and medical supply management system integrated with LINE LIFF and Firebase for efficient and accurate workflows.
 
