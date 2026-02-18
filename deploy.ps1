@@ -11,17 +11,17 @@ if ([string]::IsNullOrWhiteSpace($msg)) {
 }
 
 try {
-    # 2. Add changes
+    # 4. Push to Git
     Write-Host "Adding changes..." -ForegroundColor Yellow
     git add .
-
-    # 3. Commit
     Write-Host "Committing changes: $msg" -ForegroundColor Yellow
     git commit -m "$msg"
-
-    # 4. Push
     Write-Host "Pushing to repository..." -ForegroundColor Yellow
     git push
+
+    # 5. Deploy to Firebase
+    Write-Host "Hosting: Deploying to Firebase..." -ForegroundColor Cyan
+    firebase deploy --only hosting
 
     Write-Host "Deployment Successful!" -ForegroundColor Green
 }
