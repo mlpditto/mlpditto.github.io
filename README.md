@@ -24,14 +24,14 @@ Comprehensive pharmacy and medical supply management system integrated with LINE
 *   **Key Features:** Drag & Drop Kanban, Day Counter (Color-coded + Red Flag), User Approval (Status Icons), LIFF Preview Mode.
 
 ### 3. 📊 ระบบสั่งยาอัจฉริยะ (ProOrder Manager - proorder.html)
-*   **ภาษาไทย:** ระบบช่วยรวบรวมรายการสั่งยาด้วย "Smart Paste" (รวมยอดอัตโนมัติ), ระบบฐานข้อมูลสินค้าส่วนกลาง (Master DB), และบันทึกราคาสินค้าแยกตามซัพพลายเออร์
-*   **English:** Order aggregation system with "Smart Paste" (auto-merging), Master Product Database, and multi-supplier pricing management.
-*   **Key Features:** Firestore Master DB Integration, Multi-Supplier Pricing, Click-to-Edit Master Data, Intelligent Suggestion.
+*   **ภาษาไทย:** ระบบช่วยรวบรวมรายการสั่งยาด้วย "Smart Paste" (รวมยอดอัตโนมัติ), ฐานข้อมูล Master DB, รวมชื่อบริษัท (Merge Similar), และระบบสำรองข้อมูล JSON
+*   **English:** Order aggregation with "Smart Paste", Master Product DB, Merge Similar Companies, and JSON Backup support.
+*   **Key Features:** Firestore Master DB, Multi-Supplier Pricing, Merge Companies, LAB Mode, JSON Open/Save.
 
 ### 4. 📋 ระบบประวัติการรักษา (SOAP History - history.html)
-*   **ภาษาไทย:** บันทึกประวัติทางการแพทย์ด้วยมาตรฐาน SOAP Note, เชื่อมโยงแฟ้มประวัติด้วยเบอร์โทรศัพท์ และรองรับการนำเข้าข้อมูลจาก Excel/CSV
-*   **English:** Medical record system using SOAP standards, linking patient profiles by phone number, and supporting Excel/CSV data import.
-*   **Key Features:** Professional SOAP Framework, Phone-based Search, Data Import Preview Mode.
+*   **ภาษาไทย:** บันทึกประวัติมาตรฐาน SOAP Note, ระบบ **Patient Profile** (เชื่อมโยงประวัติรักษากับออเดอร์สินค้า), และรองรับการนำเข้า Excel/CSV
+*   **English:** Medical record system using SOAP standards, **Patient Profile** linking history with orders, and Excel/CSV data import.
+*   **Key Features:** Professional SOAP Framework, Interactive Patient Profile, Phone-linked Order History.
 
 ---
 

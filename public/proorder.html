@@ -698,6 +698,12 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
 
+        // Helper: Firestore doc ID cannot contain /
+        function getDocId(name) {
+            if (!name) return "";
+            return name.replace(/\//g, '_');
+        }
+
         auth.onAuthStateChanged(user => {
             if (user && user.email === 'medlifeplus@gmail.com') {
                 document.getElementById('auth-guard').classList.add('hidden'); // Unlock
@@ -969,7 +975,7 @@
 
         async function recordToMaster(name, unit = "", company = "", price = 0) {
             if (!name) return;
-            const docRef = db.collection('master_products').doc(name);
+            const docRef = db.collection('master_products').doc(getDocId(name));
             try {
                 const doc = await docRef.get();
                 if (!doc.exists) {
@@ -1344,7 +1350,7 @@
             document.getElementById('masterProductModal').classList.remove('hidden-el');
 
             try {
-                const doc = await db.collection('master_products').doc(name).get();
+                const doc = await db.collection('master_products').doc(getDocId(name)).get();
                 const sessionProd = products.find(p => p.name === name); // Search current list
 
                 if (doc.exists) {
@@ -1471,13 +1477,13 @@
 
             try {
                 const batch = db.batch();
-                const newDocRef = db.collection('master_products').doc(newName);
+                const newDocRef = db.collection('master_products').doc(getDocId(newName));
 
                 // If name changed, we need to create new and delete old
                 if (newName !== originalName && originalName) {
                     if (!confirm(`คุณกำลังเปลี่ยนชื่อสินค้าจาก "${originalName}" เป็น "${newName}"\nระบบจะย้ายข้อมูลทั้งหมดไปยังชื่อใหม่และลบชื่อเดิมทิ้ง ตกลงหรือไม่?`)) return;
 
-                    const oldDocRef = db.collection('master_products').doc(originalName);
+                    const oldDocRef = db.collection('master_products').doc(getDocId(originalName));
                     batch.set(newDocRef, {
                         name: newName, unit, minQty, prices, units: Array.from(unitsSet)
                     });
