@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VCI Portal | บริการสำหรับผู้ติดต่อ</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <style>
+        body {
+            font-family: 'IBM Plex Sans Thai', sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #cbd5e1 100%);
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .tab-btn.active {
+            background: #2563eb;
+            color: white;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div class="glass-card w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden">
+        <!-- Main Logo/Header -->
+        <div class="bg-blue-600 p-8 text-center text-white relative overflow-hidden">
+            <i class="fas fa-id-card-clip text-5xl mb-4 opacity-50 absolute -right-4 -top-4 rotate-12"></i>
+            <h1 class="text-3xl font-black tracking-tighter">VCI Portal</h1>
+            <p class="text-blue-100 text-xs font-bold uppercase tracking-widest mt-1">Visitor Service Hub</p>
+        </div>
+
+        <div class="p-8">
+            <!-- Screen 1: Welcome -->
+            <div id="screen-welcome" class="space-y-6">
+                <div class="text-center space-y-2">
+                    <h2 class="text-xl font-bold">ยินดีต้อนรับ</h2>
+                    <p class="text-gray-500 text-sm">กรุณาเลือกรายการที่ต้องการดำเนินการ</p>
+                </div>
+                <div class="grid gap-4">
+                    <button onclick="showScreen('register')"
+                        class="bg-white border-2 border-blue-600 text-blue-600 font-black p-4 rounded-2xl hover:bg-blue-50 transition flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <i class="fas fa-user-plus text-xl"></i>
+                            <div class="text-left">
+                                <div class="text-sm">ลงทะเบียนใหม่</div>
+                                <div class="text-[10px] font-bold opacity-60 uppercase">New Registration</div>
+                            </div>
+                        </div>
+                        <i class="fas fa-chevron-right text-xs opacity-40"></i>
+                    </button>
+                    <button onclick="showScreen('login')"
+                        class="bg-blue-600 text-white font-black p-4 rounded-2xl hover:bg-blue-700 transition shadow-lg flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <i class="fas fa-sign-in-alt text-xl"></i>
+                            <div class="text-left">
+                                <div class="text-sm">เข้าสู่ระบบ / เช็คอิน</div>
+                                <div class="text-[10px] font-bold opacity-60 uppercase">Member Access</div>
+                            </div>
+                        </div>
+                        <i class="fas fa-chevron-right text-xs opacity-40"></i>
+                    </button>
+                </div>
+                <div class="text-center pt-4">
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest"><i
+                            class="fas fa-shield-halved mr-1"></i> Secured by Medlife Plus</p>
+                </div>
+            </div>
+
+            <!-- Screen 2: Registration -->
+            <div id="screen-register" class="hidden space-y-6">
+                <button onclick="showScreen('welcome')"
+                    class="text-gray-400 font-bold text-xs hover:text-blue-600 transition">
+                    <i class="fas fa-arrow-left mr-1"></i> กลับหน้าหลัก
+                </button>
+                <div class="space-y-1">
+                    <h2 class="text-2xl font-black">สมัครสมาชิก</h2>
+                    <p class="text-gray-400 text-xs font-bold uppercase">Registration form</p>
+                </div>
+                <form id="regForm" class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-black uppercase text-gray-400 px-1">ชื่อ</label>
+                            <input type="text" id="reg-fname"
+                                class="w-full bg-gray-50 border p-3 rounded-xl outline-none focus:border-blue-500 transition font-bold text-sm"
+                                placeholder="First Name" required>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-black uppercase text-gray-400 px-1">นามสกุล</label>
+                            <input type="text" id="reg-lname"
+                                class="w-full bg-gray-50 border p-3 rounded-xl outline-none focus:border-blue-500 transition font-bold text-sm"
+                                placeholder="Last Name" required>
+                        </div>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black uppercase text-gray-400 px-1">เบอร์โทรศัพท์</label>
+                        <input type="tel" id="reg-phone"
+                            class="w-full bg-gray-50 border p-3 rounded-xl outline-none focus:border-blue-500 transition font-bold text-sm"
+                            placeholder="08x-xxx-xxxx" required>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black uppercase text-gray-400 px-1">บริษัท / สังกัด</label>
+                        <input type="text" id="reg-company" list="companyList"
+                            class="w-full bg-gray-50 border p-3 rounded-xl outline-none focus:border-blue-500 transition font-bold text-sm"
+                            placeholder="ระบุสังกัด (ถ้ามี)">
+                        <datalist id="companyList"></datalist>
+                    </div>
+                    <button type="submit"
+                        class="w-full bg-gray-900 text-white font-black py-4 rounded-2xl hover:bg-black transition shadow-xl mt-4">
+                        ส่งคำขอลงทะเบียน
+                    </button>
+                    <p class="text-center text-[10px] text-gray-400 font-medium">*
+                        ข้อมูลของท่านจะต้องได้รับการอนุมัติจาก Admin ก่อนหน้าจอถัดไป</p>
+                </form>
+            </div>
+
+            <!-- Screen 3: Login -->
+            <div id="screen-login" class="hidden space-y-6">
+                <button onclick="showScreen('welcome')"
+                    class="text-gray-400 font-bold text-xs hover:text-blue-600 transition">
+                    <i class="fas fa-arrow-left mr-1"></i> กลับหน้าหลัก
+                </button>
+                <div class="space-y-1">
+                    <h2 class="text-2xl font-black">เข้าสู่ระบบ</h2>
+                    <p class="text-gray-400 text-xs font-bold uppercase">Verify Your Identity</p>
+                </div>
+                <div class="space-y-4">
+                    <div class="space-y-1">
+                        <label
+                            class="text-[10px] font-black uppercase text-gray-400 px-1">เบอร์โทรที่ลงทะเบียนไว้</label>
+                        <input type="tel" id="login-phone"
+                            class="w-full bg-gray-50 border p-4 rounded-2xl outline-none focus:border-blue-500 transition font-black text-center text-lg tracking-widest"
+                            placeholder="08x-xxx-xxxx">
+                    </div>
+                    <button onclick="handleLogin()"
+                        class="w-full bg-blue-600 text-white font-black py-4 rounded-2xl hover:bg-blue-700 transition shadow-xl">
+                        ตรวจสอบสถานะ
+                    </button>
+                </div>
+            </div>
+
+            <!-- Screen 4: Member Portal -->
+            <div id="screen-portal" class="hidden space-y-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div id="portal-name" class="text-xl font-black">Admin Medlife</div>
+                        <div id="portal-status-badge"
+                            class="inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase mt-1">Status:
+                            Checking...</div>
+                    </div>
+                    <button onclick="logoutPortal()" class="text-gray-300 hover:text-red-500 transition"><i
+                            class="fas fa-sign-out-alt"></i></button>
+                </div>
+
+                <!-- Approval Needed State -->
+                <div id="portal-pending" class="hidden text-center py-8 space-y-4">
+                    <div
+                        class="w-20 h-20 bg-orange-50 text-orange-400 rounded-full flex items-center justify-center mx-auto text-3xl">
+                        <i class="fas fa-user-clock animate-pulse"></i>
+                    </div>
+                    <div class="space-y-2">
+                        <h3 class="font-bold text-lg">รวการอนุมัติ...</h3>
+                        <p class="text-xs text-gray-500 px-4">Admin กำลังตรวจสอบข้อมูลของท่าน
+                            ระบบจะแจ้งผลให้ทราบเมื่อได้รับการอนุมัติ</p>
+                    </div>
+                    <button onclick="handleLogin()" class="text-blue-600 text-xs font-black underline">Refresh
+                        Status</button>
+                </div>
+
+                <!-- Approved Membership State -->
+                <div id="portal-approved" class="hidden space-y-8">
+                    <!-- Section: Check-in (Only visible if have appointment for TODAY) -->
+                    <div id="portal-apt-ready" class="hidden space-y-6">
+                        <div
+                            class="bg-blue-600 p-8 rounded-[2.5rem] flex flex-col items-center text-center gap-4 shadow-2xl shadow-blue-200 relative overflow-hidden">
+                            <div class="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full"></div>
+                            <div
+                                class="w-20 h-20 bg-white text-blue-600 rounded-3xl flex items-center justify-center text-3xl shadow-xl z-10">
+                                <i class="fas fa-qrcode"></i>
+                            </div>
+                            <div class="space-y-1 z-10">
+                                <h3 class="font-black text-2xl text-white">Check-in Now</h3>
+                                <div id="confirmed-apt-info"
+                                    class="text-xs font-black text-blue-100 uppercase tracking-widest mt-1 opacity-80">
+                                </div>
+                            </div>
+
+                            <div class="w-full space-y-3 z-10 pt-4">
+                                <label
+                                    class="text-[10px] font-black uppercase text-white/60 float-left px-1">เลือกจุดประสงค์ที่เข้าพบวันนี้</label>
+                                <div id="purpose-chips" class="flex flex-wrap gap-2 clear-both text-xs">
+                                    <button onclick="togglePurpose(this)"
+                                        class="chip px-4 py-2 rounded-xl border border-white/20 bg-white/10 font-bold text-white hover:bg-white/20 transition">แจ้งรายการยา</button>
+                                    <button onclick="togglePurpose(this)"
+                                        class="chip px-4 py-2 rounded-xl border border-white/20 bg-white/10 font-bold text-white hover:bg-white/20 transition">เสนอสินค้าใหม่</button>
+                                    <button onclick="togglePurpose(this)"
+                                        class="chip px-4 py-2 rounded-xl border border-white/20 bg-white/10 font-bold text-white hover:bg-white/20 transition">นำของฝาก</button>
+                                    <button id="chip-other" onclick="togglePurpose(this, true)"
+                                        class="chip px-4 py-2 rounded-xl border border-white/20 bg-white/10 font-bold text-white hover:bg-white/20 transition">อื่นๆ</button>
+                                </div>
+                            </div>
+
+                            <div id="manual-purpose-container"
+                                class="w-full hidden animate-in fade-in slide-in-from-top-2 duration-300 z-10">
+                                <input type="text" id="manual-purpose"
+                                    class="w-full bg-white border-none p-4 rounded-2xl outline-none font-bold text-sm text-gray-800 shadow-inner"
+                                    placeholder="ระบุวัตถุประสงค์อื่นๆ...">
+                            </div>
+
+                            <button id="btn-checkin" onclick="submitCheckin()"
+                                class="w-full bg-white text-blue-600 font-black py-4 rounded-2xl shadow-xl z-10 hover:bg-blue-50 transition uppercase tracking-widest text-sm mt-2">ยืนยันการเข้าตึก</button>
+                        </div>
+                    </div>
+
+                    <!-- Section: Upcoming/Manager Appointments List -->
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between px-1">
+                            <h3 class="text-[11px] font-black uppercase text-gray-400 tracking-widest">นัดหมายของท่าน
+                            </h3>
+                            <button onclick="showScreen('appointment-request')"
+                                class="bg-indigo-600 text-white text-[10px] font-black px-4 py-2 rounded-xl shadow-lg shadow-indigo-100 flex items-center gap-2 transition hover:scale-105">
+                                <i class="fas fa-plus"></i> เพิ่มนัดหมาย
+                            </button>
+                        </div>
+
+                        <div id="appointments-list-container" class="space-y-3">
+                            <!-- Dynamic Multi-cards -->
+                        </div>
+
+                        <div id="portal-no-appointment"
+                            class="hidden text-center py-10 bg-gray-50 rounded-[2rem] border-2 border-dashed border-gray-100 space-y-4">
+                            <div
+                                class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-gray-300 mx-auto border">
+                                <i class="fas fa-calendar-alt"></i>
+                            </div>
+                            <div class="text-[11px] font-black text-gray-400 uppercase">ยังไม่มีรายการนัดหมายอื่นๆ</div>
+                        </div>
+                    </div>
+
+                    <!-- Case 3: Ready for Check-in (Appointment Confirmed for today) -->
+                    <div id="portal-apt-ready" class="hidden space-y-6">
+                        <div
+                            class="bg-blue-50 p-6 rounded-3xl border border-blue-100 flex flex-col items-center text-center gap-4">
+                            <div
+                                class="w-16 h-16 bg-blue-600 text-white rounded-2xl flex items-center justify-center text-2xl shadow-lg">
+                                <i class="fas fa-qrcode"></i>
+                            </div>
+                            <div class="space-y-1">
+                                <h3 class="font-black text-lg">Check-in Now</h3>
+                                <p class="text-[10px] font-bold text-blue-400 uppercase">Ready to enter building</p>
+                                <div id="confirmed-apt-info" class="text-xs font-bold text-blue-600"></div>
+                            </div>
+
+                            <div class="w-full space-y-3">
+                                <label
+                                    class="text-[10px] font-black uppercase text-blue-500 float-left px-1">วัตถุประสงค์วันนี้</label>
+                                <div id="purpose-chips" class="flex flex-wrap gap-2 clear-both text-xs">
+                                    <button onclick="togglePurpose(this)"
+                                        class="chip px-3 py-1.5 rounded-full border border-blue-200 font-bold text-blue-600 hover:bg-blue-100 transition">แจ้งรายการยา</button>
+                                    <button onclick="togglePurpose(this)"
+                                        class="chip px-3 py-1.5 rounded-full border border-blue-200 font-bold text-blue-600 hover:bg-blue-100 transition">เสนอสินค้าใหม่</button>
+                                    <button onclick="togglePurpose(this)"
+                                        class="chip px-3 py-1.5 rounded-full border border-blue-200 font-bold text-blue-600 hover:bg-blue-100 transition">นำของฝาก</button>
+                                    <button id="chip-other" onclick="togglePurpose(this, true)"
+                                        class="chip px-3 py-1.5 rounded-full border border-blue-200 font-bold text-blue-600 hover:bg-blue-100 transition">อื่นๆ</button>
+                                </div>
+                            </div>
+
+                            <div id="manual-purpose-container"
+                                class="w-full hidden animate-in fade-in slide-in-from-top-2 duration-300">
+                                <input type="text" id="manual-purpose"
+                                    class="w-full bg-white border-2 border-blue-500 p-3 rounded-xl outline-none font-bold text-sm"
+                                    placeholder="ระบุวัตถุประสงค์อื่นๆ...">
+                            </div>
+
+                            <button id="btn-checkin" onclick="submitCheckin()"
+                                class="w-full bg-blue-600 text-white font-black py-4 rounded-2xl hover:bg-blue-700 transition shadow-xl mt-2">
+                                บันทึกการเข้าติดต่อ
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- History Section -->
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between px-1">
+                            <h4 class="text-xs font-black uppercase text-gray-400">Your visits history</h4>
+                            <button class="text-[10px] font-bold text-blue-600">View All</button>
+                        </div>
+                        <div id="user-history" class="space-y-2"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Screen 5: Appointment Request -->
+            <div id="screen-appointment-request" class="hidden space-y-6">
+                <button onclick="showScreen('portal')"
+                    class="text-gray-400 font-bold text-xs hover:text-blue-600 transition">
+                    <i class="fas fa-arrow-left mr-1"></i> กลับหน้าสมาชิก
+                </button>
+                <div class="space-y-1">
+                    <h2 class="text-2xl font-black">ขอนัดหมาย</h2>
+                    <p class="text-gray-400 text-xs font-bold uppercase">Schedule a Visit</p>
+                </div>
+                <form id="aptForm" class="space-y-4">
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black uppercase text-gray-400 px-1">วันที่ต้องการเข้าพบ</label>
+                        <input type="date" id="apt-date"
+                            class="w-full bg-gray-50 border p-4 rounded-2xl outline-none focus:border-blue-500 transition font-black text-sm"
+                            required>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-black uppercase text-gray-400 px-1">เวลาเริ่ม
+                                (บังคับ)</label>
+                            <input type="time" id="apt-time-start"
+                                class="w-full bg-gray-50 border p-4 rounded-2xl outline-none focus:border-blue-500 transition font-black text-sm"
+                                required>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-black uppercase text-gray-400 px-1">เวลาสิ้นสุด</label>
+                            <input type="time" id="apt-time-end"
+                                class="w-full bg-gray-50 border p-4 rounded-2xl outline-none focus:border-blue-500 transition font-black text-sm">
+                        </div>
+                    </div>
+                    <div class="space-y-3">
+                        <label class="text-[10px] font-black uppercase text-gray-400 px-1">วัตถุประสงค์</label>
+                        <div id="apt-purpose-chips" class="flex flex-wrap gap-2 text-xs">
+                            <button type="button" onclick="setAptPurpose(this)"
+                                class="chip-apt px-3 py-2 rounded-xl border border-gray-200 font-bold text-gray-500 hover:bg-gray-50 transition">Training</button>
+                            <button type="button" onclick="setAptPurpose(this)"
+                                class="chip-apt px-3 py-2 rounded-xl border border-gray-200 font-bold text-gray-500 hover:bg-gray-50 transition">เสนอสินค้า</button>
+                            <button type="button" onclick="setAptPurpose(this)"
+                                class="chip-apt px-3 py-2 rounded-xl border border-gray-200 font-bold text-gray-500 hover:bg-gray-50 transition">เรียกคืนสินค้า</button>
+                            <button type="button" onclick="setAptPurpose(this)"
+                                class="chip-apt px-3 py-2 rounded-xl border border-gray-200 font-bold text-gray-500 hover:bg-gray-50 transition">ของฝาก</button>
+                            <button type="button" id="chip-apt-other" onclick="setAptPurpose(this, true)"
+                                class="chip-apt px-3 py-2 rounded-xl border border-gray-200 font-bold text-gray-500 hover:bg-gray-50 transition">อื่นๆ
+                                (โปรดระบุ)</button>
+                        </div>
+                        <div id="apt-other-container"
+                            class="hidden animate-in fade-in slide-in-from-top-2 duration-300">
+                            <input type="text" id="apt-purpose-other"
+                                class="w-full bg-gray-50 border-2 border-blue-500 p-4 rounded-2xl outline-none font-bold text-sm"
+                                placeholder="ระบุวัตถุประสงค์อื่นๆ (บังคับ)">
+                        </div>
+                    </div>
+                    <button type="submit"
+                        class="w-full bg-blue-600 text-white font-black py-4 rounded-2xl hover:bg-blue-700 transition shadow-xl mt-4">ส่งคำขอนัดหมาย</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <script>
+        const db = firebase.firestore();
+        let currentUser = null;
+
+        function showScreen(screenId) {
+            document.querySelectorAll('[id^="screen-"]').forEach(s => s.classList.add('hidden'));
+            document.getElementById('screen-' + screenId).classList.remove('hidden');
+        }
+
+        // --- Registration ---
+        document.getElementById('regForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const phone = document.getElementById('reg-phone').value.trim();
+            const data = {
+                firstName: document.getElementById('reg-fname').value.trim(),
+                lastName: document.getElementById('reg-lname').value.trim(),
+                phone: phone,
+                company: document.getElementById('reg-company').value.trim(),
+                status: 'pending',
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            try {
+                // Check if exists
+                const existing = await db.collection("visitor_registrations").where("phone", "==", phone).get();
+                if (!existing.empty) {
+                    alert("เบอร์โทรศัพท์นี้มีการลงทะเบียนไว้แล้ว กรุณาเข้าสู่ระบบ");
+                    showScreen('login');
+                    return;
+                }
+
+                await db.collection("visitor_registrations").add(data);
+                alert("ส่งคำขอลงทะเบียนสำเร็จ! กรุณารอรับการอนุมัติจาก Admin");
+                showScreen('welcome');
+            } catch (err) { alert("Error: " + err.message); }
+        });
+
+        // --- Login ---
+        async function handleLogin() {
+            const phone = document.getElementById('login-phone').value.trim();
+            if (!phone) return alert("ระบุเบอร์โทรศัพท์");
+
+            try {
+                const snap = await db.collection("visitor_registrations").where("phone", "==", phone).get();
+                if (snap.empty) return alert("ไม่พบข้อมูลการลงทะเบียนสำหรับเบอร์นี้");
+
+                const user = snap.docs[0].data();
+                currentUser = { id: snap.docs[0].id, ...user };
+                renderPortal();
+                showScreen('portal');
+            } catch (e) { alert(e.message); }
+        }
+
+        async function renderPortal() {
+            document.getElementById('portal-name').innerText = currentUser.firstName + " " + currentUser.lastName;
+            const badge = document.getElementById('portal-status-badge');
+            badge.innerText = "Status: " + (currentUser.status || 'Pending');
+
+            if (currentUser.status === 'approved') {
+                badge.className = "inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase mt-1 bg-green-100 text-green-700";
+                document.getElementById('portal-approved').classList.remove('hidden');
+                document.getElementById('portal-pending').classList.add('hidden');
+
+                // Fetch latest appointment
+                // Fetch latest appointment (Workaround: No orderBy to avoid index error, sort in JS)
+                let aptSnap;
+                try {
+                    aptSnap = await db.collection("visitor_appointments")
+                        .where("visitorId", "==", currentUser.id)
+                        .get();
+                } catch (e) {
+                    console.error("Apt Fetch Error:", e);
+                    alert("Error loading appointments. Please try again later.");
+                    return;
+                }
+
+                const readyApt = document.getElementById('portal-apt-ready');
+                const listContainer = document.getElementById('appointments-list-container');
+                const noApt = document.getElementById('portal-no-appointment');
+
+                [readyApt, noApt].forEach(el => el.classList.add('hidden'));
+                listContainer.innerHTML = '';
+
+                if (aptSnap.empty) {
+                    noApt.classList.remove('hidden');
+                } else {
+                    const appointments = aptSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    appointments.sort((a, b) => {
+                        const tA = (a.date || "") + (a.time || "");
+                        const tB = (b.date || "") + (b.time || "");
+                        return tA.localeCompare(tB); // Ascending order for list
+                    });
+
+                    const todayStr = new Date().toLocaleDateString('en-CA');
+                    let hasToday = false;
+                    let upcomingCount = 0;
+
+                    appointments.forEach(apt => {
+                        if (apt.status === 'confirmed' && apt.date === todayStr) {
+                            // Priority: Today Check-in
+                            hasToday = true;
+                            readyApt.classList.remove('hidden');
+                            document.getElementById('confirmed-apt-info').innerText = `Scheduled for TODAY at ${apt.time}`;
+                        } else if (apt.status === 'pending' || (apt.status === 'confirmed' && apt.date >= todayStr)) {
+                            // List card
+                            upcomingCount++;
+                            const isPending = apt.status === 'pending';
+                            const cardBg = isPending ? 'bg-orange-50 border-orange-100' : 'bg-white border-gray-100';
+                            const iconBg = isPending ? 'bg-orange-400' : 'bg-indigo-600';
+                            const iconClass = isPending ? 'fa-clock' : 'fa-check-circle';
+                            const statusText = isPending ? 'รอยืนยัน' : 'ยืนยันแล้ว';
+                            const statusColor = isPending ? 'text-orange-500' : 'text-indigo-600';
+
+                            listContainer.innerHTML += `
+                                <div class="${cardBg} p-5 rounded-3xl border flex items-center justify-between shadow-sm">
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-12 h-12 ${iconBg} text-white rounded-2xl flex items-center justify-center text-xl shadow-md">
+                                            <i class="fas ${iconClass}"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-[11px] font-black ${statusColor} uppercase tracking-tighter">${statusText}</div>
+                                            <div class="text-sm font-black text-gray-800">${apt.date}</div>
+                                            <div class="text-[10px] text-gray-400 font-bold">@ ${apt.time}</div>
+                                        </div>
+                                    </div>
+                                    <div class="text-[9px] font-black text-gray-300 uppercase">#${apt.id.slice(0, 4)}</div>
+                                </div>
+                            `;
+                        }
+                    });
+
+                    if (upcomingCount === 0) noApt.classList.remove('hidden');
+                }
+                loadUserHistory();
+            } else {
+                badge.className = "inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase mt-1 bg-orange-100 text-orange-700";
+                document.getElementById('portal-pending').classList.remove('hidden');
+                document.getElementById('portal-approved').classList.add('hidden');
+            }
+        }
+
+        // --- Appointment Request ---
+        function setAptPurpose(chip, isOther = false) {
+            document.querySelectorAll('.chip-apt').forEach(c => {
+                c.classList.remove('active', 'bg-blue-600', 'text-white', 'border-blue-600');
+                c.classList.add('text-gray-500', 'border-gray-200');
+            });
+            chip.classList.add('active', 'bg-blue-600', 'text-white', 'border-blue-600');
+            chip.classList.remove('text-gray-500', 'border-gray-200');
+
+            const container = document.getElementById('apt-other-container');
+            if (isOther) {
+                container.classList.remove('hidden');
+                document.getElementById('apt-purpose-other').focus();
+            } else {
+                container.classList.add('hidden');
+            }
+        }
+
+        document.getElementById('aptForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const activeChip = document.querySelector('.chip-apt.active');
+            if (!activeChip) return alert("กรุณาเลือกวัตถุประสงค์");
+
+            let purpose = activeChip.innerText;
+            if (activeChip.id === 'chip-apt-other') {
+                const otherVal = document.getElementById('apt-purpose-other').value.trim();
+                if (!otherVal) return alert("กรุณาระบุวัตถุประสงค์อื่นๆ");
+                purpose = "อื่นๆ: " + otherVal;
+            }
+
+            const startTime = document.getElementById('apt-time-start').value;
+            const endTime = document.getElementById('apt-time-end').value;
+            const fullTime = endTime ? `${startTime} - ${endTime}` : startTime;
+
+            const data = {
+                visitorId: currentUser.id,
+                visitorName: currentUser.firstName + " " + currentUser.lastName,
+                visitorPhone: currentUser.phone,
+                date: document.getElementById('apt-date').value,
+                startTime: startTime,
+                endTime: endTime || "",
+                time: fullTime, // For backward compatibility in display
+                purpose: purpose,
+                status: 'pending',
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            try {
+                await db.collection("visitor_appointments").add(data);
+                alert("ส่งคำขอนัดหมายเรียบร้อย! โปรดรอแอดมินยืนยันวัน-เวลา");
+                renderPortal();
+                showScreen('portal');
+                // Reset form
+                e.target.reset();
+                document.querySelectorAll('.chip-apt').forEach(c => c.classList.remove('active', 'bg-blue-600', 'text-white'));
+            } catch (err) { alert(err.message); }
+        });
+
+        function togglePurpose(chip, isOther = false) {
+            chip.classList.toggle('active');
+            chip.classList.toggle('bg-blue-600');
+            chip.classList.toggle('text-white');
+
+            if (isOther) {
+                const container = document.getElementById('manual-purpose-container');
+                if (chip.classList.contains('active')) {
+                    container.classList.remove('hidden');
+                    document.getElementById('manual-purpose').focus();
+                } else {
+                    container.classList.add('hidden');
+                }
+            }
+        }
+
+        async function submitCheckin() {
+            const selected = Array.from(document.querySelectorAll('.chip.active')).map(c => c.innerText);
+            const manualVal = document.getElementById('manual-purpose').value.trim();
+            const isOtherActive = document.getElementById('chip-other').classList.contains('active');
+
+            if (selected.length === 0) return alert("กรุณาเลือกวัตถุประสงค์");
+            if (isOtherActive && !manualVal) return alert("กรุณาระบุวัตถุประสงค์อื่นๆ");
+
+            // Replace 'อื่นๆ' with manual text if provided
+            const finalPurposes = selected.map(p => {
+                if (p === 'อื่นๆ' && manualVal) return `อื่นๆ: ${manualVal}`;
+                return p;
+            });
+
+            const btn = document.getElementById('btn-checkin');
+            btn.disabled = true;
+
+            const log = {
+                visitorId: currentUser.id,
+                firstName: currentUser.firstName,
+                lastName: currentUser.lastName,
+                phone: currentUser.phone,
+                company: currentUser.company,
+                purposes: finalPurposes,
+                status: 'active',
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            try {
+                await db.collection("visitor_logs").add(log);
+                alert("เช็คอินสำเร็จ! ขอบคุณค่ะ");
+                btn.disabled = false;
+                loadUserHistory();
+                // Reset chips
+                document.querySelectorAll('.chip.active').forEach(c => togglePurpose(c));
+            } catch (e) { alert(e.message); }
+        }
+
+        async function loadUserHistory() {
+            const hist = document.getElementById('user-history');
+            const snap = await db.collection("visitor_logs").where("phone", "==", currentUser.phone).get();
+            if (snap.empty) {
+                hist.innerHTML = '<div class="text-[10px] text-gray-400 text-center py-4">No history yet</div>';
+                return;
+            }
+            // Sort in memory
+            const logs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            logs.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+            const topLogs = logs.slice(0, 3);
+
+            hist.innerHTML = '';
+            topLogs.forEach(log => {
+                const dDate = log.timestamp?.toDate ? log.timestamp.toDate() : new Date();
+                hist.innerHTML += `
+                    <div class="bg-white p-3 rounded-2xl border border-gray-100 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center text-gray-400 text-xs"><i class="fas fa-history"></i></div>
+                            <div>
+                                <div class="text-[11px] font-black">${dDate.toLocaleDateString('th-TH')}</div>
+                                <div class="text-[9px] text-gray-400 uppercase font-bold">${log.purposes.join(', ')}</div>
+                            </div>
+                        </div>
+                        <div class="text-[9px] font-black text-gray-300">#${log.id.slice(0, 5)}</div>
+                    </div>
+                `;
+            });
+        }
+
+        function logoutPortal() { currentUser = null; showScreen('welcome'); }
+
+        // Start company list
+        db.collection("companies").orderBy("name").get().then(snap => {
+            const list = document.getElementById('companyList');
+            snap.forEach(doc => {
+                const opt = document.createElement('option');
+                opt.value = doc.data().name;
+                list.appendChild(opt);
+            });
+        });
+    </script>
+</body>
+
+</html>

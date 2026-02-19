@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VCI Setup | กำหนดค่าระบบเช็คอิน</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <style>
+        body {
+            font-family: 'IBM Plex Sans Thai', sans-serif;
+        }
+
+        .glass-ui {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+
+        .nav-link {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .nav-link.active {
+            background: #2563eb;
+            color: white;
+            box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.2);
+        }
+
+        /* Phone Mockup Styling */
+        .phone-mockup {
+            width: 320px;
+            height: 640px;
+            background: #1a1a1a;
+            border-radius: 45px;
+            padding: 12px;
+            position: relative;
+            box-shadow: 0 40px 80px -15px rgba(0, 0, 0, 0.4);
+            border: 6px solid #2d2d2d;
+            margin: 0 auto;
+        }
+
+        .phone-mockup .screen {
+            width: 100%;
+            height: 100%;
+            background: white;
+            border-radius: 35px;
+            overflow: hidden;
+            position: relative;
+            border: 2px solid #000;
+        }
+
+        .phone-mockup iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .stat-card {
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .custom-scroll::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #e2e8f0;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body class="bg-[#f1f5f9] text-[#1e293b] min-h-screen flex flex-col overflow-hidden">
+
+    <!-- Header Navigation -->
+    <header class="bg-white border-b px-6 py-3 flex justify-between items-center z-50 shrink-0 shadow-sm">
+        <div class="flex items-center gap-3">
+            <div class="bg-blue-600 p-2 rounded-xl text-white">
+                <i class="fas fa-id-card-clip text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-tight">VCI Dashboard</h1>
+                <p class="text-[10px] uppercase font-bold text-gray-400 tracking-widest">Visitor Check-in v1.0</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <div id="user-status"
+                class="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100">
+                <img id="user-avatar" src="https://via.placeholder.com/32" class="w-6 h-6 rounded-full border">
+                <span id="user-name" class="text-xs font-bold text-gray-600">Checking...</span>
+            </div>
+            <button onclick="logout()" class="text-red-500 hover:bg-red-50 p-2 rounded-lg transition" title="Logout">
+                <i class="fas fa-power-off"></i>
+            </button>
+        </div>
+    </header>
+
+    <div class="flex-1 flex overflow-hidden">
+        <!-- Sidebar Navigation -->
+        <aside class="w-72 bg-white border-r flex flex-col p-6 shrink-0 hidden md:flex">
+            <div class="flex items-center gap-4 mb-10 px-2">
+                <div
+                    class="bg-indigo-600 text-white w-10 h-10 rounded-2xl flex items-center justify-center text-xl shadow-indigo-200 shadow-lg">
+                    <i class="fas fa-id-badge"></i>
+                </div>
+                <div>
+                    <h1 class="font-black text-xl tracking-tighter">VCI Hub</h1>
+                    <p class="text-[9px] font-black text-indigo-600 uppercase opacity-60">Control Center</p>
+                </div>
+            </div>
+
+            <nav class="space-y-1">
+                <button onclick="showTab('dashboard')" id="nav-dashboard"
+                    class="nav-link w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-gray-500 hover:bg-gray-50 active">
+                    <i class="fas fa-th-large w-5"></i> Dashboard
+                </button>
+                <button onclick="showTab('pending')" id="nav-pending"
+                    class="nav-link w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl font-bold text-sm text-gray-500 hover:bg-gray-50">
+                    <span class="flex items-center gap-3"><i class="fas fa-user-clock w-5"></i> Approval Req.</span>
+                    <span id="pending-badge"
+                        class="bg-orange-500 text-white text-[10px] px-2 py-0.5 rounded-full hidden">0</span>
+                </button>
+                <button onclick="showTab('appointments')" id="nav-appointments"
+                    class="nav-link w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl font-bold text-sm text-gray-500 hover:bg-gray-50">
+                    <span class="flex items-center gap-3"><i class="fas fa-calendar-check w-5"></i> Visit
+                        requests</span>
+                    <span id="apt-badge"
+                        class="bg-indigo-500 text-white text-[10px] px-2 py-0.5 rounded-full hidden">0</span>
+                </button>
+                <button onclick="showTab('history')" id="nav-history"
+                    class="nav-link w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-gray-500 hover:bg-gray-50">
+                    <i class="fas fa-history w-5"></i> Log History
+                </button>
+                <div class="pt-4 mt-4 border-t border-gray-100">
+                    <div class="text-[10px] font-black text-gray-400 uppercase px-4 mb-2">Simulate / Preview</div>
+                    <button onclick="showTab('preview')" id="nav-preview"
+                        class="nav-link w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-gray-500 hover:bg-gray-50">
+                        <i class="fas fa-mobile-alt w-5"></i> User UI Preview
+                    </button>
+                    <button onclick="window.open('vci-visitor-check-in.html', '_blank')"
+                        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-[11px] text-blue-600 hover:bg-blue-50 transition mt-1">
+                        <i class="fas fa-external-link-alt w-5"></i> Open Full Portal
+                    </button>
+                </div>
+            </nav>
+
+            <div class="mt-auto pt-6 border-t">
+                <div class="bg-gray-900 rounded-2xl p-4 text-white relative overflow-hidden">
+                    <div class="relative z-10 text-xs font-bold opacity-50 mb-1 uppercase tracking-tighter">Calendar
+                        Integration</div>
+                    <div class="relative z-10 text-sm font-bold flex items-center gap-2">
+                        <i class="fab fa-google text-red-400"></i> Google Calendar
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-y-auto custom-scroll p-4 md:p-8">
+            <div id="tab-dashboard" class="tab-content space-y-8">
+                <!-- KPI Section (Clickable to open modals for quick action) -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div class="stat-card bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100">
+                        <div
+                            class="bg-blue-50 text-blue-600 w-12 h-12 rounded-2xl flex items-center justify-center mb-4">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="text-4xl font-black" id="count-today">0</div>
+                        <div class="text-[11px] font-black text-gray-400 uppercase tracking-widest mt-1">Visitors Today
+                        </div>
+                    </div>
+                    <div class="stat-card bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100">
+                        <div
+                            class="bg-emerald-50 text-emerald-600 w-12 h-12 rounded-2xl flex items-center justify-center mb-4">
+                            <i class="fas fa-door-open"></i>
+                        </div>
+                        <div class="text-4xl font-black" id="count-current">0</div>
+                        <div class="text-[11px] font-black text-gray-400 uppercase tracking-widest mt-1">Live On-Site
+                        </div>
+                    </div>
+                    <button onclick="openModal('pending')"
+                        class="stat-card bg-white p-6 rounded-[2.5rem] shadow-sm border-2 border-transparent hover:border-orange-200 transition-all text-left group">
+                        <div
+                            class="bg-orange-50 text-orange-600 w-12 h-12 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                            <i class="fas fa-user-clock"></i>
+                        </div>
+                        <div class="text-4xl font-black" id="count-pending">0</div>
+                        <div class="text-[11px] font-black text-orange-600 uppercase tracking-widest mt-1">Registration
+                            Req. <i class="fas fa-chevron-right text-[10px]"></i></div>
+                    </button>
+                    <button onclick="openModal('appointments')"
+                        class="stat-card bg-white p-6 rounded-[2.5rem] shadow-sm border-2 border-transparent hover:border-indigo-200 transition-all text-left group">
+                        <div
+                            class="bg-indigo-50 text-indigo-600 w-12 h-12 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <div class="text-4xl font-black" id="count-events">0</div>
+                        <div class="text-[11px] font-black text-indigo-600 uppercase tracking-widest mt-1">Visit
+                            Requests <i class="fas fa-chevron-right text-[10px]"></i></div>
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2 space-y-6">
+                        <h2 class="text-xl font-black text-gray-800 px-2"><i
+                                class="fas fa-clock mr-2 text-emerald-500"></i> Active Checked-in</h2>
+                        <div id="checkin-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Live visitors Load Here -->
+                        </div>
+                    </div>
+                    <div class="space-y-6">
+                        <h2 class="text-xl font-black text-gray-800 px-2"><i
+                                class="fas fa-calendar-alt mr-2 text-indigo-500"></i> Today's Schedule</h2>
+                        <div class="bg-white rounded-[2.5rem] border shadow-sm p-6">
+                            <div id="calendar-grid" class="grid grid-cols-7 gap-1 text-center mb-6"></div>
+                            <div class="space-y-3 pt-6 border-t border-gray-50">
+                                <label class="text-[10px] font-black text-gray-300 uppercase block mb-2">Confirmed
+                                    Appointments</label>
+                                <div id="appointment-list"
+                                    class="space-y-3 max-h-[400px] overflow-y-auto custom-scroll">
+                                    <div
+                                        class="text-center py-4 text-gray-400 text-xs font-black uppercase tracking-tighter">
+                                        No appointments scheduled</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Full-page Tabs (for sidebar navigation) -->
+            <div id="tab-pending" class="tab-content hidden space-y-6">
+                <h2 class="text-3xl font-black text-gray-800">Registration Requests</h2>
+                <div id="pending-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </div>
+
+            <div id="tab-appointments" class="tab-content hidden space-y-6">
+                <h2 class="text-3xl font-black text-gray-800">Visit Requests</h2>
+                <div id="apt-request-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                </div>
+            </div>
+
+            <div id="tab-history" class="tab-content hidden space-y-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-3xl font-black text-gray-800">Logs History</h2>
+                    <input type="month" id="history-month"
+                        class="bg-white px-4 py-2 rounded-xl border text-sm font-bold shadow-sm">
+                </div>
+                <div class="bg-white rounded-[2.5rem] border shadow-sm overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50/50 text-[11px] font-black text-gray-400 uppercase border-b">
+                                <th class="px-6 py-4">Visitor</th>
+                                <th class="px-6 py-4">Phone</th>
+                                <th class="px-6 py-4">Company</th>
+                                <th class="px-6 py-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-tbody" class="text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="tab-preview" class="tab-content hidden h-full">
+                <div class="flex flex-col lg:flex-row gap-12 items-center justify-center py-10">
+                    <div class="max-w-sm space-y-6 text-center lg:text-left">
+                        <div
+                            class="inline-block px-4 py-1.5 bg-blue-50 text-blue-600 rounded-full text-[11px] font-black uppercase tracking-wider mb-2">
+                            Simulation Mode</div>
+                        <h2 class="text-4xl font-black text-gray-800 leading-tight">User Portal<br>Live Preview</h2>
+                        <p class="text-sm text-gray-500 leading-relaxed font-medium">
+                            นี่คือตัวอย่างหน้าตาของระบบที่ผู้ติดต่อจะเห็นผ่านมือถือครับ ท่านสามารถทดสอบลำดับขั้นตอนต่างๆ
+                            ได้จากตรงนี้เลย ข้อมูลที่กรอกจะถูกส่งเข้า Database จริงครับ</p>
+                        <div class="flex flex-wrap gap-3 pt-6 justify-center lg:justify-start">
+                            <button onclick="document.getElementById('preview-frame').contentWindow.location.reload()"
+                                class="px-8 py-3.5 bg-gray-900 text-white rounded-2xl font-black text-xs hover:bg-gray-800 transition shadow-lg">RESTART
+                                PORTAL</button>
+                            <button onclick="window.open('vci-visitor-check-in.html', '_blank')"
+                                class="px-8 py-3.5 bg-white border-2 border-gray-100 text-gray-600 rounded-2xl font-black text-xs hover:bg-gray-50 transition">WEB
+                                VIEW</button>
+                        </div>
+                    </div>
+                    <div class="phone-mockup">
+                        <div class="screen"><iframe id="preview-frame" src="vci-visitor-check-in.html"></iframe></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Generic Modal Structure -->
+    <div id="modal-container"
+        class="fixed inset-0 bg-black/60 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div
+            class="bg-indigo-50/10 w-full max-w-5xl max-h-[90vh] rounded-[3rem] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-300 border border-white/20">
+            <div class="bg-white p-6 border-b flex items-center justify-between">
+                <div>
+                    <h3 id="modal-title" class="text-2xl font-black text-gray-800">Title</h3>
+                    <p id="modal-subtitle"
+                        class="text-[10px] font-black text-indigo-500 uppercase tracking-widest mt-0.5">Sub title</p>
+                </div>
+                <button onclick="closeModal()"
+                    class="w-12 h-12 flex items-center justify-center rounded-2xl bg-gray-50 text-gray-400 hover:bg-red-50 hover:text-red-500 transition">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div id="modal-content" class="p-8 overflow-y-auto custom-scroll flex-1 bg-gray-50/50">
+                <!-- Content injected dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden containers for MODAL CONTENT TEMPLATES -->
+    <div id="tpl-pending" class="hidden">
+        <div id="pending-list-modal" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+    </div>
+    <div id="tpl-appointments" class="hidden">
+        <div id="apt-request-list-modal" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+    </div>
+    <div id="tpl-history" class="hidden">
+        <div class="flex items-center justify-between mb-6">
+            <input type="month" id="history-month-modal"
+                class="bg-white px-4 py-2.5 rounded-2xl border-2 border-gray-100 text-sm font-bold outline-none focus:border-blue-500 transition shadow-sm">
+            <button onclick="exportHistory()"
+                class="bg-indigo-600 text-white px-6 py-2.5 rounded-2xl text-xs font-black shadow-lg hover:bg-indigo-700 transition uppercase tracking-wider">Export
+                Excel</button>
+        </div>
+        <div class="bg-white rounded-[2rem] border shadow-sm overflow-hidden">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-50/50 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b">
+                        <th class="px-6 py-5">Visitor / Company</th>
+                        <th class="px-6 py-5">History Time</th>
+                        <th class="px-6 py-5 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="history-tbody-modal" class="text-sm"></tbody>
+            </table>
+        </div>
+    </div>
+    <div id="tpl-preview" class="hidden h-full">
+        <!-- Re-use the preview content from layout -->
+    </div>
+
+    <!-- Login Guard & Profile logic -->
+    <script>
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        auth.onAuthStateChanged(user => {
+            if (!user) {
+                // Not logged in - redirect or show login?
+                // For MVP, if not logged in, go to root or show basic auth
+                window.location.href = "admin.html"; // Assume reuse original admin flow
+                return;
+            }
+            document.getElementById('user-name').innerText = user.displayName || user.email;
+            document.getElementById('user-avatar').src = user.photoURL || "https://ui-avatars.com/api/?name=" + user.email;
+
+            // Start listeners
+            showTab('dashboard');
+            initLiveCounters();
+            loadActiveVisitors();
+            loadPendingUsers();
+            loadUpcomingAppointments();
+            generateCalendar();
+        });
+
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+            const target = document.getElementById('tab-' + tabId);
+            if (target) target.classList.remove('hidden');
+
+            document.querySelectorAll('.nav-link').forEach(l => {
+                l.classList.remove('active', 'bg-indigo-600', 'text-white', 'shadow-md');
+                l.classList.add('text-gray-500', 'hover:bg-gray-50');
+            });
+            const activeNav = document.getElementById('nav-' + tabId);
+            if (activeNav) {
+                activeNav.classList.add('active', 'bg-indigo-600', 'text-white', 'shadow-md');
+                activeNav.classList.remove('text-gray-500', 'hover:bg-gray-50');
+            }
+        }
+
+        function openModal(type) {
+            const modal = document.getElementById('modal-container');
+            const title = document.getElementById('modal-title');
+            const subtitle = document.getElementById('modal-subtitle');
+            const content = document.getElementById('modal-content');
+
+            modal.classList.remove('hidden');
+
+            if (type === 'pending') {
+                title.innerText = "Registration Requests";
+                subtitle.innerText = "ผู้ที่รอการอนุมัติสมัครสมาชิกใหม่";
+                content.innerHTML = document.getElementById('tpl-pending').innerHTML;
+                loadPendingUsersModal();
+            } else if (type === 'appointments') {
+                title.innerText = "Visit Requests";
+                subtitle.innerText = "ตารางคำขอนัดหมายล่วงหน้าที่รอการยืนยัน";
+                content.innerHTML = document.getElementById('tpl-appointments').innerHTML;
+                loadAppointmentRequestsModal();
+            } else if (type === 'history') {
+                title.innerText = "Visitor Log History";
+                subtitle.innerText = "ประวัติการเข้าติดต่อทั้งหมดย้อนหลัง";
+                content.innerHTML = document.getElementById('tpl-history').innerHTML;
+                loadHistoryModal();
+            } else if (type === 'preview') {
+                title.innerText = "User UI Simulation";
+                subtitle.innerText = "ตัวอย่างหน้าจอที่ผู้ติดต่อส่งนัดหมาย/เช็คอิน";
+                content.innerHTML = `<div class="phone-mockup"><div class="screen"><iframe src="vci-visitor-check-in.html"></iframe></div></div>`;
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('modal-container').classList.add('hidden');
+        }
+
+        function loadUpcomingAppointments() {
+            const todayStr = new Date().toISOString().split('T')[0];
+            db.collection("visitor_appointments")
+                .where("status", "==", "confirmed")
+                .where("date", "==", todayStr)
+                .orderBy("time", "asc")
+                .onSnapshot(snap => {
+                    const list = document.getElementById('appointment-list');
+                    if (snap.empty) {
+                        list.innerHTML = `<div class="text-center py-4 text-gray-400 text-[10px] font-bold uppercase tracking-widest">No visits for today</div>`;
+                        return;
+                    }
+                    list.innerHTML = '';
+                    snap.forEach(doc => {
+                        const a = doc.data();
+                        list.innerHTML += `
+                            <div class="flex items-center gap-3 p-3 bg-white rounded-2xl border border-gray-100 shadow-sm">
+                                <div class="w-1.5 h-10 bg-blue-500 rounded-full"></div>
+                                <div>
+                                    <div class="text-[11px] font-black text-blue-600">${a.time}</div>
+                                    <div class="text-sm font-bold truncate">${a.visitorName}</div>
+                                    <div class="text-[9px] text-gray-400 font-bold italic truncate">${a.purpose}</div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                });
+        }
+
+        function loadPendingUsersModal() {
+            db.collection("visitor_registrations").where("status", "==", "pending").onSnapshot(snap => {
+                const list = document.getElementById('pending-list-modal');
+                if (!list) return;
+                list.innerHTML = '';
+                snap.forEach(doc => {
+                    const u = doc.data();
+                    list.innerHTML += `
+                        <div class="bg-white p-6 rounded-[2rem] border-2 border-orange-100/50 shadow-sm flex flex-col gap-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 bg-orange-600 text-white rounded-2xl flex items-center justify-center text-xl shadow-lg shadow-orange-100"><i class="fas fa-user-clock"></i></div>
+                                <div>
+                                    <div class="font-black text-lg leading-tight">${u.firstName} ${u.lastName}</div>
+                                    <div class="text-[11px] font-bold text-gray-400 uppercase tracking-widest">${u.company}</div>
+                                </div>
+                            </div>
+                            <div class="space-y-1 bg-gray-50 p-3 rounded-xl border border-dashed text-xs">
+                                <div class="flex justify-between font-bold"><span class="text-gray-400">Phone:</span> <span>${u.phone}</span></div>
+                                <div class="flex justify-between font-bold"><span class="text-gray-400">Date:</span> <span>${u.timestamp?.toDate().toLocaleDateString('th-TH')}</span></div>
+                            </div>
+                            <div class="flex gap-2 mt-2">
+                                <button onclick="approveUser('${doc.id}')" class="flex-1 bg-orange-600 text-white font-black py-3 rounded-xl text-xs hover:bg-orange-700 transition uppercase tracking-wider">Approve User</button>
+                                <button onclick="rejectUser('${doc.id}')" class="px-4 py-3 rounded-xl text-xs font-black text-gray-300 hover:bg-red-50 hover:text-red-500 transition uppercase">Delete</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+        }
+
+        function loadAppointmentRequestsModal() {
+            db.collection("visitor_appointments").where("status", "==", "pending").onSnapshot(snap => {
+                const list = document.getElementById('apt-request-list-modal');
+                if (!list) return;
+                list.innerHTML = '';
+                snap.forEach(doc => {
+                    const a = doc.data();
+                    list.innerHTML += `
+                        <div class="bg-white p-6 rounded-[2rem] border-2 border-indigo-100/50 shadow-sm flex flex-col gap-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center text-xl shadow-lg shadow-indigo-100"><i class="fas fa-calendar-alt"></i></div>
+                                <div>
+                                    <div class="font-black text-lg leading-tight">${a.visitorName}</div>
+                                    <div class="text-[11px] font-bold text-gray-400"><i class="fas fa-phone mr-1"></i>${a.visitorPhone}</div>
+                                </div>
+                            </div>
+                            <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 space-y-3">
+                                <div>
+                                    <label class="text-[9px] font-black uppercase text-indigo-400 block mb-1">Schedule Date</label>
+                                    <input type="date" id="apt-date-${doc.id}" value="${a.date}" class="bg-white border-2 border-indigo-200 text-sm font-black p-2 rounded-lg w-full outline-none focus:border-indigo-600">
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <input type="time" id="apt-start-${doc.id}" value="${a.startTime || a.time}" class="bg-white border-2 border-indigo-200 text-xs font-black p-2 rounded-lg w-full outline-none focus:border-indigo-600">
+                                    <input type="time" id="apt-end-${doc.id}" value="${a.endTime || ''}" class="bg-white border-2 border-indigo-200 text-xs font-black p-2 rounded-lg w-full outline-none focus:border-indigo-600" placeholder="End">
+                                </div>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded-xl border border-dashed border-gray-200">
+                                <label class="text-[9px] font-black uppercase text-gray-400 block mb-1">Purpose / เหตุผล</label>
+                                <div class="text-[13px] font-bold text-gray-700 leading-relaxed">${a.purpose}</div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="approveAppointment('${doc.id}')" class="flex-1 bg-indigo-600 text-white font-black py-4 rounded-xl text-xs hover:bg-indigo-700 transition uppercase tracking-wider">Confirm & Send To Calendar</button>
+                                <button onclick="rejectAppointment('${doc.id}')" class="px-4 py-4 rounded-xl text-xs font-black text-gray-300 hover:text-red-500 transition uppercase tracking-widest">Reject</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+        }
+
+        function loadHistoryModal() {
+            const list = document.getElementById('history-tbody-modal');
+            const monthVal = document.getElementById('history-month-modal')?.value || new Date().toISOString().slice(0, 7);
+
+            // Re-order locally instead of compound query to avoid index errors
+            db.collection("visitor_logs").get().then(snap => {
+                if (!list) return;
+                list.innerHTML = '';
+                const logs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                logs.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+
+                logs.forEach(d => {
+                    const rowDate = d.timestamp?.toDate ? d.timestamp.toDate() : new Date();
+                    const rowMonth = rowDate.toISOString().slice(0, 7);
+                    if (monthVal && rowMonth !== monthVal) return;
+
+                    list.innerHTML += `
+                        <tr class="hover:bg-gray-50 transition border-b border-gray-50 group">
+                            <td class="px-6 py-4">
+                                <div class="font-black text-sm">${d.firstName} ${d.lastName}</div>
+                                <div class="text-[10px] font-black text-indigo-500 uppercase opacity-60">${d.company} / ${d.phone}</div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="text-[11px] font-black mb-0.5">${rowDate.toLocaleDateString('th-TH')}</div>
+                                <div class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">${d.timestamp?.toDate().toLocaleTimeString('th-TH')}</div>
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <button onclick="deleteLog('${d.id}')" class="w-8 h-8 rounded-lg bg-gray-50 text-gray-300 hover:bg-red-50 hover:text-red-500 transition">
+                                    <i class="fas fa-trash-alt text-[10px]"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            });
+        }
+
+        function initLiveCounters() {
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+
+            // Today count
+            db.collection("visitor_logs").onSnapshot(snap => {
+                const todayCount = snap.docs.filter(d => {
+                    const ts = d.data().timestamp?.toDate ? d.data().timestamp.toDate() : new Date();
+                    return ts >= today;
+                }).length;
+                const el = document.getElementById('count-today');
+                if (el) el.innerText = todayCount;
+            });
+
+            // Pending Approval (From registrations)
+            db.collection("visitor_registrations").where("status", "==", "pending").onSnapshot(snap => {
+                const countEl = document.getElementById('count-pending');
+                if (countEl) countEl.innerText = snap.size;
+                const badgeEl = document.getElementById('pending-badge');
+                if (badgeEl) {
+                    badgeEl.innerText = snap.size;
+                    badgeEl.classList.toggle('hidden', snap.size === 0);
+                }
+            });
+
+            // Pending Appointment Requests
+            db.collection("visitor_appointments").where("status", "==", "pending").onSnapshot(snap => {
+                const countEl = document.getElementById('count-events');
+                if (countEl) countEl.innerText = snap.size;
+                const badgeEl = document.getElementById('apt-badge');
+                if (badgeEl) {
+                    badgeEl.innerText = snap.size;
+                    badgeEl.classList.toggle('hidden', snap.size === 0);
+                }
+            });
+
+            // Currently Checked-in
+            db.collection("visitor_logs").where("status", "==", "active").onSnapshot(snap => {
+                const countEl = document.getElementById('count-current');
+                if (countEl) countEl.innerText = snap.size;
+                renderActiveVisitors(snap);
+            });
+        }
+
+        function renderActiveVisitors(snap) {
+            const list = document.getElementById('checkin-list');
+            list.innerHTML = '';
+            if (snap.empty) {
+                list.innerHTML = '<div class="col-span-full text-center py-12 bg-white rounded-[2rem] border-2 border-dashed border-gray-100"><p class="text-gray-400 font-black text-xs uppercase tracking-widest">No visitors onsite</p></div>';
+                return;
+            }
+            snap.forEach(doc => {
+                const d = doc.data();
+                list.innerHTML += `
+                    <div class="bg-white p-5 rounded-[2rem] border shadow-sm flex items-center justify-between group hover:border-emerald-200 transition-all">
+                        <div class="flex items-center gap-4">
+                            <div class="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-xl shadow-lg shadow-emerald-50"><i class="fas fa-user-check"></i></div>
+                            <div>
+                                <div class="font-black text-lg leading-tight uppercase tracking-tighter">${d.firstName} ${d.lastName}</div>
+                                <div class="text-[10px] font-black text-emerald-500 uppercase tracking-widest">${d.company}</div>
+                                <div class="text-[9px] font-bold text-gray-400 mt-0.5">${d.purposes.join(', ')}</div>
+                            </div>
+                        </div>
+                        <button onclick="checkoutVisitor('${doc.id}')" class="bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-[10px] font-black shadow-lg hover:bg-emerald-700 transition uppercase tracking-wider">Check Out</button>
+                    </div>
+                `;
+            });
+        }
+
+        function loadActiveVisitors() {
+            db.collection("visitor_logs").where("status", "==", "active").orderBy("timestamp", "desc").onSnapshot(snap => {
+                const list = document.getElementById('checkin-list');
+                if (snap.empty) {
+                    list.innerHTML = `<div class="text-center py-12 bg-white rounded-3xl border-2 border-dashed border-gray-200"><p class="text-gray-400 font-medium">No visitors currently onsite</p></div>`;
+                    return;
+                }
+                list.innerHTML = '';
+                snap.forEach(doc => {
+                    const d = doc.data();
+                    const checkinTime = d.timestamp?.toDate ? d.timestamp.toDate() : new Date();
+                    list.innerHTML += `
+                        <div class="group bg-white p-4 rounded-3xl border shadow-sm hover:shadow-md transition-all flex items-center justify-between">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center text-blue-600 font-black text-lg">
+                                    ${d.firstName?.[0]}${d.lastName?.[0]}
+                                </div>
+                                <div>
+                                    <div class="font-bold text-gray-900">${d.firstName} ${d.lastName}</div>
+                                    <div class="text-[10px] uppercase font-black text-blue-500">${d.purposes?.join(' · ') || '-'}</div>
+                                    <div class="text-[10px] text-gray-400 font-bold mt-1">
+                                        <i class="far fa-clock"></i> Arrived: ${checkinTime.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} 
+                                        · <i class="fas fa-building text-[8px]"></i> ${d.company || 'Private'}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onclick="checkOut('${doc.id}')" class="bg-red-50 text-red-600 px-4 py-2 rounded-xl text-[10px] font-black hover:bg-red-100 transition">CHECK-OUT</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+        }
+
+        async function loadPendingUsers() {
+            db.collection("visitor_registrations").where("status", "==", "pending").onSnapshot(snap => {
+                const list = document.getElementById('pending-list');
+                list.innerHTML = '';
+                snap.forEach(doc => {
+                    const u = doc.data();
+                    list.innerHTML += `
+                        <div class="bg-white p-6 rounded-3xl border shadow-sm flex flex-col gap-4">
+                            <div class="flex items-start justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-12 h-12 bg-orange-100 rounded-2xl flex items-center justify-center text-orange-600 font-bold text-lg"><i class="fas fa-user-plus"></i></div>
+                                    <div>
+                                        <div class="font-bold text-base">${u.firstName} ${u.lastName}</div>
+                                        <div class="text-xs text-gray-400 font-bold"><i class="fas fa-phone"></i> ${u.phone}</div>
+                                    </div>
+                                </div>
+                                <div class="text-[10px] font-black text-gray-300 uppercase">${new Date(u.timestamp?.seconds * 1000).toLocaleDateString()}</div>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded-2xl text-[11px] font-medium text-gray-500">
+                                <i class="fas fa-building mr-1"></i> Org: ${u.company || 'Private'}
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="approveVisitor('${doc.id}')" class="flex-1 bg-green-600 text-white font-bold py-2.5 rounded-xl text-xs hover:shadow-lg transition">APPROVE</button>
+                                <button onclick="rejectVisitor('${doc.id}')" class="px-4 py-2.5 rounded-xl text-xs font-bold text-gray-400 hover:bg-gray-100 transition">REJECT</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+        }
+
+        async function checkOut(id) {
+            if (!confirm("ยืนยันการเช็คเอาท์?")) return;
+            await db.collection("visitor_logs").doc(id).update({
+                status: 'completed',
+                checkoutAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
+
+        async function approveVisitor(id) {
+            await db.collection("visitor_registrations").doc(id).update({ status: 'approved' });
+        }
+        async function rejectVisitor(id) {
+            if (confirm("Reject this visitor?")) await db.collection("visitor_registrations").doc(id).delete();
+        }
+
+        async function approveAppointment(id) {
+            const newDate = document.getElementById(`apt-date-${id}`).value;
+            const startTime = document.getElementById(`apt-start-${id}`).value;
+            const endTime = document.getElementById(`apt-end-${id}`).value;
+
+            if (!newDate || !startTime) return alert("กรุณาระบุวันและเวลาเริ่มต้น");
+
+            const fullTime = endTime ? `${startTime} - ${endTime}` : startTime;
+
+            await db.collection("visitor_appointments").doc(id).update({
+                status: 'confirmed',
+                date: newDate,
+                startTime: startTime,
+                endTime: endTime,
+                time: fullTime,
+                approvedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            alert("ยืนยันนัดหมายเรียบร้อยแล้ว!");
+        }
+        async function rejectAppointment(id) {
+            if (confirm("Reject this appointment?")) await db.collection("visitor_appointments").doc(id).delete();
+        }
+
+        function generateCalendar() {
+            const grid = document.getElementById('calendar-grid');
+            const now = new Date();
+            const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+            const firstDayIdx = new Date(now.getFullYear(), now.getMonth(), 1).getDay();
+
+            grid.innerHTML = '';
+            for (let i = 0; i < firstDayIdx; i++) grid.innerHTML += '<div></div>';
+            for (let d = 1; d <= lastDay; d++) {
+                const isToday = d === now.getDate();
+                grid.innerHTML += `
+                    <div class="w-full aspect-square flex items-center justify-center text-[11px] font-bold rounded-lg cursor-pointer transition
+                        ${isToday ? 'bg-blue-600 text-white shadow-md' : 'hover:bg-gray-100 text-gray-700'}">
+                        ${d}
+                    </div>
+                `;
+            }
+        }
+
+        function logout() { auth.signOut().then(() => window.location.href = "admin.html"); }
+    </script>
+</body>
+
+</html>

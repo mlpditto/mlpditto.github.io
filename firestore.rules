@@ -40,6 +40,27 @@ service cloud.firestore {
       allow read, write: if true;
     }
     
+    // VCI System Rules
+    match /companies/{companyId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    match /visitor_registrations/{regId} {
+      allow read, create: if true; // Allows registration and login lookup
+      allow update, delete: if isAdmin();
+    }
+    
+    match /visitor_logs/{logId} {
+      allow read, create: if true; // Allows check-in and history view
+      allow update, delete: if isAdmin();
+    }
+
+    match /visitor_appointments/{aptId} {
+      allow read, create: if true; // Allows requesting and checking status
+      allow update, delete: if isAdmin();
+    }
+    
     // System Test
     match /system_test/{docId} {
       allow read, write: if true;

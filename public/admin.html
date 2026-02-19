@@ -130,6 +130,9 @@
                 <h1 class="text-lg font-bold text-gray-800 px-2 tracking-tighter">MLP HUB</h1>
                 <div class="flex bg-gray-100 p-1 rounded-lg gap-1">
                     <button class="nav-btn nav-active"><i class="fas fa-columns"></i> TASK</button>
+                    <a href="vci-dashboard.html" target="_blank" id="nav-vci"
+                        class="nav-btn nav-inactive hover:bg-indigo-50"><i
+                            class="fas fa-id-card-clip text-indigo-600"></i> VCI</a>
                     <a href="faq.html" target="_blank" id="nav-faq" class="nav-btn nav-inactive hover:bg-gray-50"><i
                             class="fas fa-question-circle"></i> FAQ</a>
                     <div class="w-px bg-gray-300 h-6 mx-1"></div>
@@ -512,6 +515,7 @@
                         <button onclick="toggleChecklist('${id}')" class="text-blue-500 hover:text-blue-700 p-1" title="เปิด Checklist"><i class="fas fa-plus-circle text-lg md:text-xl"></i></button>
                         <button onclick="copyToClipboard('${id}', this)" class="text-gray-400 hover:text-blue-600 p-1" title="คัดลอกข้อมูล"><i class="fas fa-copy text-sm md:text-base"></i></button>
                         <button onclick="openEditModal('${id}')" class="text-gray-300 hover:text-indigo-600 p-1" title="แก้ไข"><i class="fas fa-edit text-xs md:text-sm"></i></button>
+                        <button onclick="deleteTask('${id}')" class="text-gray-200 hover:text-red-500 p-1" title="ลบถาวร"><i class="fas fa-trash-alt text-xs md:text-sm"></i></button>
                         ${archiveBtn}
                     </div>
                 </div>
@@ -680,6 +684,13 @@
                     await db.collection("archive").doc(id).set({ ...doc.data(), archivedAt: firebase.firestore.FieldValue.serverTimestamp() });
                     await docRef.delete();
                 }
+            } catch (e) { alert("Error: " + e.message); }
+        }
+
+        async function deleteTask(id) {
+            if (!confirm("คุณต้องการลบงานนี้ถาวรใช่หรือไม่?\n(ข้อมูลจะถูกลบออกจากระบบทันที)")) return;
+            try {
+                await db.collection("tasks").doc(id).delete();
             } catch (e) { alert("Error: " + e.message); }
         }
 

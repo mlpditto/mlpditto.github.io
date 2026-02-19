@@ -14,24 +14,32 @@ Comprehensive pharmacy and medical supply management system integrated with LINE
 ## 🚀 ฟีเจอร์หลัก (Main Features)
 
 ### 1. 🛒 ระบบลูกค้า (Customer Portal - index.html)
-*   **ภาษาไทย:** ลูกค้าสามารถลงทะเบียนสมาชิกผ่าน LINE, แจ้งออเดอร์สินค้า, และบันทึกประวัติสุขภาพเบื้องต้น (BMI, อาการสำคัญ, ประวัติแพ้ยา)
-*   **English:** Customers can register via LINE, submit orders, and record health history (BMI, symptoms, allergy records).
-*   **Key Features:** LINE/Google Login, Health SOAP Form, BMI Calculation, Status Tracking.
+*   **ภาษาไทย:** ลูกค้าสามารถลงทะเบียนสมาชิกผ่าน LINE/Google, แจ้งออเดอร์สินค้า, และบันทึกประวัติสุขภาพ (SOAP)
+*   **English:** Customer registration via LINE/Google, order submission, and health history (SOAP).
 
 ### 2. 🛡️ ศูนย์บริหารจัดการ (Admin Hub - admin.html)
-*   **ภาษาไทย:** ระบบ Kanban Board สำหรับติดตามสถานะออเดอร์, จัดการสิทธิ์ผู้ใช้งาน, และระบบ **Day Counter** เพื่อดูระยะเวลาที่ Card ค้างอยู่ในระบบ (จะหยุดนับเมื่อย้ายเข้า Archive)
-*   **English:** Kanban Board for tracking order status, managing user permissions, and an automated **Day Counter** to monitor task duration (stops upon archiving).
-*   **Key Features:** Drag & Drop Kanban, Day Counter (Color-coded + Red Flag), User Approval (Status Icons), LIFF Preview Mode.
+*   **ภาษาไทย:** ระบบ Kanban Board สำหรับติดตามภาระงาน, ระบบ **Day Counter** แจ้งเตือนธงแดง, และจัดการสิทธิ์ผู้ใช้งาน (RBAC)
+*   **English:** Kanban Board for task tracking, **Day Counter** with red flag alerts, and Role-Based Access Control (RBAC).
 
-### 3. 📊 ระบบสั่งยาอัจฉริยะ (ProOrder Manager - proorder.html)
-*   **ภาษาไทย:** ระบบช่วยรวบรวมรายการสั่งยาด้วย "Smart Paste" (รวมยอดอัตโนมัติ), ฐานข้อมูล Master DB, รวมชื่อบริษัท (Merge Similar), และระบบสำรองข้อมูล JSON
-*   **English:** Order aggregation with "Smart Paste", Master Product DB, Merge Similar Companies, and JSON Backup support.
-*   **Key Features:** Firestore Master DB, Multi-Supplier Pricing, Merge Companies, LAB Mode, JSON Open/Save.
+### 3. 📊 ระบบวิเคราะห์ยอดขาย (Sales Analytics.html)
+*   **ภาษาไทย:** วิเคราะห์ยอดขายเชิงลึกจากไฟล์ CSV, แสดงผลเป็นกราฟ (Chart.js), ฟีเจอร์ Privacy Mode ซ่อนยอดเงิน (แสดงเป็น %), และระบบจัดอันดับพนักงาน
+*   **English:** In-depth sales analysis from CSV, interactive charts (Chart.js), Privacy Mode for financial data, and staff performance ranking.
 
-### 4. 📋 ระบบประวัติการรักษา (SOAP History - history.html)
-*   **ภาษาไทย:** บันทึกประวัติมาตรฐาน SOAP Note, ระบบ **Patient Profile** (เชื่อมโยงประวัติรักษากับออเดอร์สินค้า), และรองรับการนำเข้า Excel/CSV
-*   **English:** Medical record system using SOAP standards, **Patient Profile** linking history with orders, and Excel/CSV data import.
-*   **Key Features:** Professional SOAP Framework, Interactive Patient Profile, Phone-linked Order History.
+### 4. 📦 ระบบจัดการข้อมูลส่งพัสดุ (TMTP Manager - TMTP-Manager.html)
+*   **ภาษาไทย:** ระบบออกใบกำกับภาษี (Premium Tax Invoice) พร้อม BahtText, รันเลข INV/REF อัตโนมัติ, และสรุปยอดส่งพัสดุแยกประเภท (MED/PHARM/NHSO)
+*   **English:** Professional Tax Invoice generation with BahtText support, automatic INV/REF sequences, and shipment categorization.
+
+### 5. 💊 ระบบสั่งยาอัจฉริยะ (ProOrder Manager - proorder.html)
+*   **ภาษาไทย:** ระบบรวบรวมรายการสั่งยาด้วย Smart Paste, ฐานข้อมูล Master DB (Firestore), ระบบ Sanitization ชื่อสินค้า (รองรับเครื่องหมาย /), และระบบสำรองข้อมูล JSON
+*   **English:** Order aggregation via Smart Paste, Firestore Master DB, Item name sanitization (supports /), and JSON data backups.
+
+### 6. 📋 ระบบประวัติการรักษา (SOAP History - history.html)
+*   **ภาษาไทย:** บันทึกประวัติมาตรฐาน SOAP Note พร้อม Smart Datalist (Nationality/Race), เชื่อมโยงประวัติรักษากับออเดอร์สินค้า, และนำเข้าข้อมูล Excel/CSV
+*   **English:** Professional SOAP record system with smart dropdowns, patient profile linking history with orders, and Excel/CSV import.
+
+### 7. 🛵 ระบบบันทึกยอดขาย LINE MAN (Sales Recorder - lineman-mgr.html)
+*   **ภาษาไทย:** (V7.0) บันทึกยอดขายจากแอป Rider ด้วย UI แบบ Collapsible, ตารางสินค้าแบบย่อ, ระบบคำนวณ GP/Net อัตโนมัติ, และติดตามความเร็วในการรับโอนเงิน
+*   **English:** Mobile-first sales recorder with collapsible UI, auto-calculation (GP/Net), and performance tracking for payment speed.
 
 ---
 
@@ -39,10 +47,10 @@ Comprehensive pharmacy and medical supply management system integrated with LINE
 
 | Category | Technology |
 | :--- | :--- |
-| **Frontend** | HTML5, Vanilla JavaScript, Tailwind CSS |
+| **Frontend** | HTML5, Vanilla JavaScript, Tailwind CSS 4.x |
 | **Backend** | Firebase Firestore, Firebase Auth, Firebase Hosting |
-| **Integration** | LINE LIFF SDK, Google Fonts (Prompt / IBM Plex Sans Thai) |
-| **Libraries** | Chart.js, Font Awesome, XLSX/PapaParse (Data handling) |
+| **Integration** | LINE LIFF SDK, Google Fonts (Prompt / IBM Plex Sans Thai Looped) |
+| **Libraries** | Chart.js, Font Awesome 6.x, XLSX/PapaParse, BahtText Logic |
 
 ---
 
@@ -50,20 +58,21 @@ Comprehensive pharmacy and medical supply management system integrated with LINE
 
 - `index.html`: หน้าหลักสำหรับลูกค้า (Customer Portal)
 - `admin.html`: ระบบหลังบ้านสำหรับทีมงาน (Admin Hub)
+- `Sales Analytics.html`: ระบบวิเคราะห์ยอดขายเชิงลึก
+- `TMTP-Manager.html`: ระบบจัดการข้อมูลส่งพัสดุ & Tax Invoice
 - `proorder.html`: ระบบสั่งยาอัจฉริยะ (Master Database)
 - `history.html`: ระบบประวัติการรักษา (SOAP History)
-- `Sales Analytics.html`: ระบบวิเคราะห์ยอดขายจาก CSV
-- `TMTP-Manager.html`: ระบบประมวลผลข้อมูลส่งพัสดุ
-- `return-log-int.html`: ระบบจัดการคืนสินค้าและวันหมดอายุ
 - `lineman-mgr.html`: ระบบบันทึกยอดขาย LINE MAN (Sales Recorder)
+- `vci-visitor-check-in.html`: ระบบบันทึกผู้มาติดต่อ (Visitor Check-in)
+- `return-log-int.html`: ระบบจัดการคืนสินค้าและวันหมดอายุ
 - `faq.html`: ระบบจัดการฐานความรู้
 
 ---
 
 ## 🔒 การรักษาความปลอดภัย (Security)
--   **API Key Restrictions:** จำกัดการใช้งาน API Key เฉพาะโดเมนที่อนุญาต
 -   **Role-Based Access:** ตรวจสอบสิทธิ์ (Admin/Staff/Member) ก่อนเข้าใช้งาน
--   **Zero-Code Credentials:** ปฏิบัติตามมาตรฐาน Google Cloud โดยไม่เก็บ Secret Keys ไว้ใน Code
+-   **Security Rules:** ใช้ Firestore Rules ป้องกันการเข้าถึงข้อมูลข้ามสิทธิ์
+-   **Data Integrity:** ระบบ Sanitization ป้องกันอักขระพิเศษทำลายโครงสร้างฐานข้อมูล
 
 ---
 
