@@ -1099,6 +1099,21 @@
                 snap.forEach(doc => allHistory.push({ id: doc.id, ...doc.data() }));
                 allHistory.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
                 filteredData = [...allHistory];
+
+                // Check for phone parameter in URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const phoneParam = urlParams.get('phone');
+                if (phoneParam) {
+                    const searchInput = document.getElementById('searchInput');
+                    if (searchInput) searchInput.value = phoneParam;
+                    // Apply filter immediately
+                    filteredData = allHistory.filter(d =>
+                        (d.phone && d.phone.includes(phoneParam)) ||
+                        (d.firstName && d.firstName.includes(phoneParam)) ||
+                        (d.lastName && d.lastName.includes(phoneParam))
+                    );
+                }
+
                 renderTable();
             });
         }
