@@ -9,6 +9,10 @@
 *   **TMTP Manager:** เพิ่มรายละเอียดระบบออกใบกำกับภาษีอัตโนมัติและระบบแปลงยอดเงินเป็นตัวอักษรไทย
 *   **ProOrder Manager:** ปรับปรุงรายละเอียดระบบ Master Database, การรวมชื่อบริษัท (Merge), และระบบค้นหาอัจฉริยะที่คงผลลัพธ์ขณะแก้ไข
 *   **VCI (Visitor Check-in) System Enhancements:**
+    *   **Permission Center:** รวมเมนู "Approval" และ "Visit requests" เป็น **"Permission"** (Combined Badge & KPI Table) เพื่อความคล่องตัว
+    *   **Unified History:** หน้า **Log History** แสดงรวมทั้ง Check-in และ Booking พร้อมสถานะแยกสี (Green/Indigo)
+    *   **Apt History in Profile:** เพิ่มแท็บประวัตินัดหมายในหน้าโปรไฟล์รายคน (history.html)
+    *   **Dashboard KPI Layout:** รวมยอด Permission เป็นใบเดียวและจัด Layout 4 Columns
     *   **Appointment Form 2.0:** เพิ่มระบบเลือกเวลาเริ่ม-จบ (Start/End Time) และปุ่มเลือกวัตถุประสงค์ (Training, เสนอสินค้า, อื่นๆ) พร้อมระบบบังคับกรอกเหตุผล
     *   **VCI Dashboard Redesign:** ปรับโฉมหน้า Admin เป็น Single Page Hub ขยายเต็มหน้าจอ และใช้ระบบ **Popup (Modal)** ในการอนุมัติสมาชิกและนัดหมาย เพื่อความคล่องตัว
     *   **User UI Preview:** เพิ่มระบบจำลองหน้าจอมือถือ (Mockup) ในหน้า Dashboard เพื่อให้แอดมินทดสอบขั้นตอนของผู้ติดต่อได้ทันที
