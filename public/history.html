@@ -598,7 +598,11 @@
                 </button>
                 <button onclick="switchProfileTab('order')" id="tab-order"
                     class="flex-1 py-3 text-sm font-bold text-gray-500 hover:bg-gray-50 transition">
-                    <i class="fas fa-shipping-fast mr-1"></i> ประวัติการสั่งซื้อ (Orders)
+                    <i class="fas fa-shipping-fast mr-1"></i> Orders
+                </button>
+                <button onclick="switchProfileTab('apt')" id="tab-apt"
+                    class="flex-1 py-3 text-sm font-bold text-gray-500 hover:bg-gray-50 transition">
+                    <i class="fas fa-calendar-alt mr-1"></i> Appointments
                 </button>
             </div>
 
@@ -622,6 +626,23 @@
                             </tr>
                         </thead>
                         <tbody id="relatedTasksTableBody" class="divide-y divide-gray-100">
+                            <!-- JS populates this -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Appointment History Tab -->
+                <div id="content-apt" class="hidden-el">
+                    <table
+                        class="w-full text-left border-collapse text-sm bg-white shadow-sm rounded-lg overflow-hidden">
+                        <thead class="bg-gray-100 text-xs text-gray-600 uppercase">
+                            <tr>
+                                <th class="p-3">วันที่/เวลา</th>
+                                <th class="p-3">จุดประสงค์</th>
+                                <th class="p-3">สถานะ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="appointmentHistoryTableBody" class="divide-y divide-gray-100">
                             <!-- JS populates this -->
                         </tbody>
                     </table>
@@ -660,18 +681,24 @@
         function switchProfileTab(tab) {
             document.getElementById('content-med').classList.add('hidden-el');
             document.getElementById('content-order').classList.add('hidden-el');
+            document.getElementById('content-apt').classList.add('hidden-el');
 
             document.getElementById('tab-med').className = "flex-1 py-3 text-sm font-bold text-gray-500 hover:bg-gray-50 transition border-b-2 border-transparent";
             document.getElementById('tab-order').className = "flex-1 py-3 text-sm font-bold text-gray-500 hover:bg-gray-50 transition border-b-2 border-transparent";
+            document.getElementById('tab-apt').className = "flex-1 py-3 text-sm font-bold text-gray-500 hover:bg-gray-50 transition border-b-2 border-transparent";
 
             if (tab === 'med') {
                 document.getElementById('content-med').classList.remove('hidden-el');
                 document.getElementById('tab-med').className = "flex-1 py-3 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50 transition";
                 loadMedicalHistory();
-            } else {
+            } else if (tab === 'order') {
                 document.getElementById('content-order').classList.remove('hidden-el');
                 document.getElementById('tab-order').className = "flex-1 py-3 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50 transition";
                 loadOrderHistory();
+            } else if (tab === 'apt') {
+                document.getElementById('content-apt').classList.remove('hidden-el');
+                document.getElementById('tab-apt').className = "flex-1 py-3 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50 transition";
+                loadAppointmentHistory();
             }
         }
 
@@ -759,6 +786,49 @@
                                 </td>
                                 <td class="p-3"><span class="${statusColor} text-[10px] px-2 py-1 rounded-full font-bold uppercase">${t.status}</span></td>
                                 <td class="p-3 font-mono text-gray-600">${t.totalPrice ? Number(t.totalPrice).toLocaleString() : '-'}</td>
+                            </tr>
+                        `;
+                    });
+                });
+        }
+
+        function loadAppointmentHistory() {
+            const rawPhone = document.getElementById('h-phone').value.trim();
+            const tbody = document.getElementById('appointmentHistoryTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="3" class="p-8 text-center text-gray-400"><i class="fas fa-spinner fa-spin text-2xl mb-2"></i><br>กำลังค้นหาข้อมูล...</td></tr>';
+
+            db.collection('visitor_appointments')
+                .where('visitorPhone', '==', rawPhone)
+                .get()
+                .then(snap => {
+                    if (snap.empty) {
+                        tbody.innerHTML = '<tr><td colspan="3" class="p-8 text-center text-gray-400">ไม่พบประวัติการนัดหมาย</td></tr>';
+                        return;
+                    }
+                    let appointments = [];
+                    snap.forEach(doc => appointments.push({ id: doc.id, ...doc.data() }));
+                    appointments.sort((a, b) => {
+                        const dateA = a.date || "";
+                        const dateB = b.date || "";
+                        return dateB.localeCompare(dateA); // Newest first
+                    });
+
+                    tbody.innerHTML = '';
+                    appointments.forEach(apt => {
+                        let statusColor = 'bg-gray-100 text-gray-600';
+                        if (apt.status === 'confirmed') statusColor = 'bg-green-100 text-green-700';
+                        else if (apt.status === 'pending') statusColor = 'bg-orange-100 text-orange-700';
+                        else if (apt.status === 'rejected') statusColor = 'bg-red-100 text-red-700';
+
+                        tbody.innerHTML += `
+                            <tr class="hover:bg-gray-50 border-b last:border-0">
+                                <td class="p-3 font-bold text-gray-700">
+                                    ${apt.date || '-'}
+                                    <div class="text-[10px] font-normal text-gray-400">เวลา ${apt.time || '-'}</div>
+                                </td>
+                                <td class="p-3 text-xs text-gray-600">${apt.purpose || '-'}</td>
+                                <td class="p-3"><span class="${statusColor} text-[10px] px-2 py-1 rounded-full font-bold uppercase">${apt.status}</span></td>
                             </tr>
                         `;
                     });
