@@ -127,18 +127,11 @@
                     class="nav-link w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-gray-500 hover:bg-gray-50 active">
                     <i class="fas fa-th-large w-5"></i> Dashboard
                 </button>
-                <button onclick="showTab('pending')" id="nav-pending"
+                <button onclick="showTab('permission')" id="nav-permission"
                     class="nav-link w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl font-bold text-sm text-gray-500 hover:bg-gray-50">
-                    <span class="flex items-center gap-3"><i class="fas fa-user-clock w-5"></i> Approval Req.</span>
-                    <span id="pending-badge"
+                    <span class="flex items-center gap-3"><i class="fas fa-key w-5"></i> Permission</span>
+                    <span id="permission-badge"
                         class="bg-orange-500 text-white text-[10px] px-2 py-0.5 rounded-full hidden">0</span>
-                </button>
-                <button onclick="showTab('appointments')" id="nav-appointments"
-                    class="nav-link w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl font-bold text-sm text-gray-500 hover:bg-gray-50">
-                    <span class="flex items-center gap-3"><i class="fas fa-calendar-check w-5"></i> Visit
-                        requests</span>
-                    <span id="apt-badge"
-                        class="bg-indigo-500 text-white text-[10px] px-2 py-0.5 rounded-full hidden">0</span>
                 </button>
                 <button onclick="showTab('history')" id="nav-history"
                     class="nav-link w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-gray-500 hover:bg-gray-50">
@@ -176,7 +169,7 @@
         <main class="flex-1 overflow-y-auto custom-scroll p-4 md:p-8">
             <div id="tab-dashboard" class="tab-content space-y-8">
                 <!-- KPI Section (Clickable to open modals for quick action) -->
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div class="stat-card bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100">
                         <div
                             class="bg-blue-50 text-blue-600 w-12 h-12 rounded-2xl flex items-center justify-center mb-4">
@@ -195,24 +188,14 @@
                         <div class="text-[11px] font-black text-gray-400 uppercase tracking-widest mt-1">Live On-Site
                         </div>
                     </div>
-                    <button onclick="openModal('pending')"
+                    <button onclick="openModal('permission')"
                         class="stat-card bg-white p-6 rounded-[2.5rem] shadow-sm border-2 border-transparent hover:border-orange-200 transition-all text-left group">
                         <div
                             class="bg-orange-50 text-orange-600 w-12 h-12 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                            <i class="fas fa-user-clock"></i>
+                            <i class="fas fa-key"></i>
                         </div>
-                        <div class="text-4xl font-black" id="count-pending">0</div>
-                        <div class="text-[11px] font-black text-orange-600 uppercase tracking-widest mt-1">Registration
-                            Req. <i class="fas fa-chevron-right text-[10px]"></i></div>
-                    </button>
-                    <button onclick="openModal('appointments')"
-                        class="stat-card bg-white p-6 rounded-[2.5rem] shadow-sm border-2 border-transparent hover:border-indigo-200 transition-all text-left group">
-                        <div
-                            class="bg-indigo-50 text-indigo-600 w-12 h-12 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                            <i class="fas fa-calendar-check"></i>
-                        </div>
-                        <div class="text-4xl font-black" id="count-events">0</div>
-                        <div class="text-[11px] font-black text-indigo-600 uppercase tracking-widest mt-1">Visit
+                        <div class="text-4xl font-black" id="count-permission">0</div>
+                        <div class="text-[11px] font-black text-orange-600 uppercase tracking-widest mt-1">Permission
                             Requests <i class="fas fa-chevron-right text-[10px]"></i></div>
                     </button>
                     <button onclick="openModal('members')"
@@ -256,14 +239,25 @@
             </div>
 
             <!-- Full-page Tabs (for sidebar navigation) -->
-            <div id="tab-pending" class="tab-content hidden space-y-6">
-                <h2 class="text-3xl font-black text-gray-800">Registration Requests</h2>
-                <div id="pending-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-            </div>
+            <div id="tab-permission" class="tab-content hidden space-y-12">
+                <div class="flex items-center justify-between border-b pb-4">
+                    <h2 class="text-3xl font-black text-gray-800">Permission Center</h2>
+                    <div class="text-xs font-bold text-gray-400 uppercase tracking-widest">Registrations & Visits</div>
+                </div>
 
-            <div id="tab-appointments" class="tab-content hidden space-y-6">
-                <h2 class="text-3xl font-black text-gray-800">Visit Requests</h2>
-                <div id="apt-request-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div class="space-y-6">
+                    <h3 class="text-xl font-bold text-orange-600 flex items-center gap-2">
+                        <i class="fas fa-user-clock"></i> Registration Requests
+                    </h3>
+                    <div id="pending-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+                </div>
+
+                <div class="space-y-6">
+                    <h3 class="text-xl font-bold text-indigo-600 flex items-center gap-2">
+                        <i class="fas fa-calendar-alt"></i> Visit Requests
+                    </h3>
+                    <div id="apt-request-list"
+                        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
                 </div>
             </div>
 
@@ -346,11 +340,19 @@
     </div>
 
     <!-- Hidden containers for MODAL CONTENT TEMPLATES -->
-    <div id="tpl-pending" class="hidden">
-        <div id="pending-list-modal" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
-    </div>
-    <div id="tpl-appointments" class="hidden">
-        <div id="apt-request-list-modal" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+    <div id="tpl-permission" class="hidden">
+        <div class="space-y-10">
+            <div class="space-y-4">
+                <div class="text-[11px] font-black text-orange-500 uppercase tracking-widest pl-2">Member Registrations
+                </div>
+                <div id="pending-list-modal" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+            </div>
+            <div class="space-y-4">
+                <div class="text-[11px] font-black text-indigo-500 uppercase tracking-widest pl-2">Visit Appointments
+                </div>
+                <div id="apt-request-list-modal" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </div>
+        </div>
     </div>
     <div id="tpl-history" class="hidden">
         <div class="flex items-center justify-between mb-6">
@@ -400,6 +402,7 @@
             initLiveCounters();
             loadActiveVisitors();
             loadPendingUsers();
+            loadAppointmentRequests();
             loadUpcomingAppointments();
             generateCalendar();
         });
@@ -428,15 +431,11 @@
 
             modal.classList.remove('hidden');
 
-            if (type === 'pending') {
-                title.innerText = "Registration Requests";
-                subtitle.innerText = "ผู้ที่รอการอนุมัติสมัครสมาชิกใหม่";
-                content.innerHTML = document.getElementById('tpl-pending').innerHTML;
+            if (type === 'permission') {
+                title.innerText = "Permission Requests";
+                subtitle.innerText = "ผู้ที่รอการอนุมัติสมัครสมาชิกและคำขอนัดหมาย";
+                content.innerHTML = document.getElementById('tpl-permission').innerHTML;
                 loadPendingUsersModal();
-            } else if (type === 'appointments') {
-                title.innerText = "Visit Requests";
-                subtitle.innerText = "ตารางคำขอนัดหมายล่วงหน้าที่รอการยืนยัน";
-                content.innerHTML = document.getElementById('tpl-appointments').innerHTML;
                 loadAppointmentRequestsModal();
             } else if (type === 'history') {
                 title.innerText = "Visitor Log History";
@@ -556,6 +555,39 @@
             });
         }
 
+        function loadAppointmentRequests() {
+            db.collection("visitor_appointments").where("status", "==", "pending").onSnapshot(snap => {
+                const list = document.getElementById('apt-request-list');
+                if (!list) return;
+                list.innerHTML = '';
+                snap.forEach(doc => {
+                    const a = doc.data();
+                    list.innerHTML += `
+                        <div class="bg-white p-6 rounded-3xl border shadow-sm flex flex-col gap-4">
+                            <div class="flex items-start justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600 font-bold text-lg"><i class="fas fa-calendar-alt"></i></div>
+                                    <div>
+                                        <div class="font-bold text-base">${a.visitorName}</div>
+                                        <div class="text-xs text-gray-400 font-bold"><i class="fas fa-phone"></i> ${a.visitorPhone}</div>
+                                    </div>
+                                </div>
+                                <div class="text-[10px] font-black text-gray-300 uppercase">${a.date}</div>
+                            </div>
+                            <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 space-y-3">
+                                <div class="grid grid-cols-2 gap-2 text-xs font-bold text-indigo-600">
+                                    <div><i class="far fa-clock"></i> Start: ${a.startTime || a.time}</div>
+                                    <div><i class="fas fa-history"></i> End: ${a.endTime || '-'}</div>
+                                </div>
+                                <div class="text-[11px] font-medium text-gray-600 italic">Purpose: ${a.purpose}</div>
+                            </div>
+                            <button onclick="openModal('permission')" class="w-full py-2 bg-gray-50 text-gray-400 text-[10px] font-black uppercase rounded-xl hover:bg-gray-100 transition tracking-widest">Update & Approve</button>
+                        </div>
+                    `;
+                });
+            });
+        }
+
         function loadAppointmentRequestsModal() {
             db.collection("visitor_appointments").where("status", "==", "pending").onSnapshot(snap => {
                 const list = document.getElementById('apt-request-list-modal');
@@ -646,26 +678,29 @@
                 if (el) el.innerText = todayCount;
             });
 
-            // Pending Approval (From registrations)
-            db.collection("visitor_registrations").where("status", "==", "pending").onSnapshot(snap => {
-                const countEl = document.getElementById('count-pending');
-                if (countEl) countEl.innerText = snap.size;
-                const badgeEl = document.getElementById('pending-badge');
+            // Permission Requests (Combined Registrations & Appointments)
+            let pendingRegCount = 0;
+            let pendingAptCount = 0;
+
+            const updatePermissionView = () => {
+                const total = pendingRegCount + pendingAptCount;
+                const countEl = document.getElementById('count-permission');
+                if (countEl) countEl.innerText = total;
+                const badgeEl = document.getElementById('permission-badge');
                 if (badgeEl) {
-                    badgeEl.innerText = snap.size;
-                    badgeEl.classList.toggle('hidden', snap.size === 0);
+                    badgeEl.innerText = total;
+                    badgeEl.classList.toggle('hidden', total === 0);
                 }
+            };
+
+            db.collection("visitor_registrations").where("status", "==", "pending").onSnapshot(snap => {
+                pendingRegCount = snap.size;
+                updatePermissionView();
             });
 
-            // Pending Appointment Requests
             db.collection("visitor_appointments").where("status", "==", "pending").onSnapshot(snap => {
-                const countEl = document.getElementById('count-events');
-                if (countEl) countEl.innerText = snap.size;
-                const badgeEl = document.getElementById('apt-badge');
-                if (badgeEl) {
-                    badgeEl.innerText = snap.size;
-                    badgeEl.classList.toggle('hidden', snap.size === 0);
-                }
+                pendingAptCount = snap.size;
+                updatePermissionView();
             });
 
             // Approved Members
@@ -796,8 +831,8 @@
                                 <i class="fas fa-building mr-1"></i> Org: ${u.company || 'Private'}
                             </div>
                             <div class="flex gap-2">
-                                <button onclick="approveVisitor('${doc.id}')" class="flex-1 bg-green-600 text-white font-bold py-2.5 rounded-xl text-xs hover:shadow-lg transition">APPROVE</button>
-                                <button onclick="rejectVisitor('${doc.id}')" class="px-4 py-2.5 rounded-xl text-xs font-bold text-gray-400 hover:bg-gray-100 transition">REJECT</button>
+                                <button onclick="approveUser('${doc.id}')" class="flex-1 bg-green-600 text-white font-bold py-2.5 rounded-xl text-xs hover:shadow-lg transition">APPROVE</button>
+                                <button onclick="rejectUser('${doc.id}')" class="px-4 py-2.5 rounded-xl text-xs font-bold text-gray-400 hover:bg-gray-100 transition">REJECT</button>
                             </div>
                         </div>
                     `;
@@ -813,10 +848,10 @@
             });
         }
 
-        async function approveVisitor(id) {
+        async function approveUser(id) {
             await db.collection("visitor_registrations").doc(id).update({ status: 'approved' });
         }
-        async function rejectVisitor(id) {
+        async function rejectUser(id) {
             if (confirm("Reject this visitor?")) await db.collection("visitor_registrations").doc(id).delete();
         }
 
