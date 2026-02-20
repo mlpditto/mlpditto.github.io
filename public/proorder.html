@@ -1845,7 +1845,27 @@
                     for (let i = 1; i <= pdf.numPages; i++) {
                         const page = await pdf.getPage(i);
                         const content = await page.getTextContent();
-                        const pageLines = content.items.map(item => item.str.trim()).filter(s => s.length > 2);
+
+                        // Group items by Y-coordinate to reconstruct rows
+                        const rows = {};
+                        content.items.forEach(item => {
+                            const y = Math.round(item.transform[5]); // Y-coordinate
+                            const foundY = Object.keys(rows).find(ry => Math.abs(ry - y) < 5);
+                            const targetY = foundY || y;
+                            if (!rows[targetY]) rows[targetY] = [];
+                            rows[targetY].push(item);
+                        });
+
+                        // Sort rows by Y (top to bottom) and items within rows by X (left to right)
+                        const sortedY = Object.keys(rows).sort((a, b) => b - a);
+                        const pageLines = sortedY.map(y => {
+                            return rows[y]
+                                .sort((a, b) => a.transform[4] - b.transform[4])
+                                .map(item => item.str.trim())
+                                .join(" ")
+                                .trim();
+                        }).filter(s => s.length > 2);
+
                         allLines = allLines.concat(pageLines);
                     }
                     rawPdfLines = allLines;
