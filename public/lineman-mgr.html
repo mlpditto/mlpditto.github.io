@@ -978,6 +978,50 @@
                 </form>
             </div>
         </div>
+        <!-- Master Product Modal -->
+        <div id="masterModal"
+            class="fixed inset-0 bg-black/50 z-[60] hidden flex items-center justify-center backdrop-blur-sm p-4">
+            <div
+                class="bg-white dark:bg-slate-800 p-6 rounded-2xl w-full max-w-md shadow-2xl transform transition-all scale-100 flex flex-col max-h-[90vh]">
+                <h3 class="text-lg font-black text-slate-700 dark:text-white mb-4 flex items-center gap-2">
+                    <i class="fas fa-boxes text-blue-500"></i> จัดการสินค้า (Master)
+                </h3>
+                <input type="hidden" id="m-originalName">
+                <div class="space-y-4 overflow-y-auto pr-1">
+                    <div>
+                        <label class="vibrant-label">ชื่อสินค้า</label>
+                        <input type="text" id="m-name" class="minimal-input font-bold" placeholder="ชื่อสินค้า">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="vibrant-label">ราคา (LINE MAN)</label>
+                            <input type="number" id="m-price" class="minimal-input" placeholder="0.00">
+                        </div>
+                        <div>
+                            <label class="vibrant-label">หน่วย</label>
+                            <input type="text" id="m-unit" class="minimal-input" placeholder="เช่น กล่อง">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="vibrant-label">Company Code</label>
+                            <input type="text" id="m-companyCode" class="minimal-input" placeholder="รหัสบริษัท">
+                        </div>
+                        <div>
+                            <label class="vibrant-label">MLP Code</label>
+                            <input type="text" id="m-mlpCode" class="minimal-input" placeholder="รหัสภายใน">
+                        </div>
+                    </div>
+                </div>
+                <div class="flex gap-3 mt-6 pt-4 border-t border-slate-100 dark:border-slate-700">
+                    <button onclick="saveMasterEdit()"
+                        class="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition-all">บันทึก</button>
+                    <button onclick="document.getElementById('masterModal').classList.add('hidden')"
+                        class="px-6 py-3 bg-gray-100 dark:bg-slate-700 text-gray-500 rounded-xl font-bold hover:bg-gray-200 transition-all">ปิด</button>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <!-- Scripts -->
@@ -1106,8 +1150,11 @@
             const inputClass = isEdit ? "minimal-input !text-xs !py-2" : "premium-input !py-3 !text-sm !rounded-xl";
 
             row.innerHTML = `
-                <td class="p-2">
-                    <input type="text" value="${item.name}" placeholder="ชื่อสินค้า" class="${inputClass}" list="master-list" oninput="handleItemChange(this, '${containerId}')">
+                <td class="p-2 relative">
+                    <input type="text" value="${item.name}" placeholder="ชื่อสินค้า" class="${inputClass} pr-8" list="master-list" oninput="handleItemChange(this, '${containerId}')">
+                    <button type="button" onclick="openMasterEdit(this.previousElementSibling.value)" tabindex="-1" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-300 hover:text-blue-500 transition-colors">
+                        <i class="fas fa-info-circle"></i>
+                    </button>
                 </td>
                 <td class="p-2">
                     <input type="number" value="${item.qty}" min="1" class="${inputClass} text-center" oninput="calculateTotalFromItems('${containerId}', '${isEdit ? 'e-grossAmount' : 'grossAmount'}')">
@@ -2304,6 +2351,67 @@
                 });
             };
             reader.readAsText(file);
+        }
+    </script>
+    <script>
+        async function openMasterEdit(name) {
+            name = name ? name.trim() : '';
+            if (!name) return Swal.fire({ icon: 'info', title: 'ระบุชื่อสินค้า', text: 'กรุณากรอกชื่อสินค้าก่อนระบุข้อมูลหลัก', timer: 1500, showConfirmButton: false });
+
+            document.getElementById('masterModal').classList.remove('hidden');
+            document.getElementById('m-name').value = name;
+            document.getElementById('m-originalName').value = name;
+
+            const m = masterProducts.find(x => x.name === name);
+            if (m) {
+                document.getElementById('m-price').value = (m.prices && (m.prices['LINEMAN'] || m.prices[Object.keys(m.prices)[0]])) || 0;
+                document.getElementById('m-unit').value = m.unit || '';
+                document.getElementById('m-companyCode').value = m.companyProductId || '';
+                document.getElementById('m-mlpCode').value = m.mlpId || '';
+            } else {
+                document.getElementById('m-price').value = '';
+                document.getElementById('m-unit').value = '';
+                document.getElementById('m-companyCode').value = '';
+                document.getElementById('m-mlpCode').value = '';
+            }
+        }
+
+        async function saveMasterEdit() {
+            const name = document.getElementById('m-name').value.trim();
+            if (!name) return;
+
+            const price = parseFloat(document.getElementById('m-price').value) || 0;
+            const unit = document.getElementById('m-unit').value.trim();
+            const companyCode = document.getElementById('m-companyCode').value.trim();
+            const mlpCode = document.getElementById('m-mlpCode').value.trim();
+
+            const docId = name.replace(/\//g, '_');
+
+            showLoading(true);
+            try {
+                const docRef = window.db.collection('master_products').doc(docId);
+                const doc = await docRef.get();
+
+                let prices = doc.exists && doc.data().prices ? doc.data().prices : {};
+                if (price > 0) prices['LINEMAN'] = price;
+
+                const updateData = {
+                    name, unit, companyProductId: companyCode, mlpId: mlpCode, prices
+                };
+
+
+                await docRef.set(updateData, { merge: true });
+
+                document.getElementById('masterModal').classList.add('hidden');
+                const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 1500, timerProgressBar: true });
+                Toast.fire({ icon: 'success', title: 'Saved Master Data' });
+                syncMasterData();
+            } catch (e) {
+                console.error(e);
+                Swal.fire('Error', e.message, 'error');
+            } finally {
+                showLoading(false);
+            }
         }
     </script>
 </body>

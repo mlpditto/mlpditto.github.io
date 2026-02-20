@@ -189,6 +189,18 @@
                             placeholder="0">
                     </div>
                 </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">รหัสสินค้า (บริษัท)</label>
+                        <input type="text" id="master-company-code" class="w-full p-3 border rounded-xl bg-white"
+                            placeholder="Code จากบริษัท">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">รหัสสินค้า (MLP)</label>
+                        <input type="text" id="master-mlp-code" class="w-full p-3 border rounded-xl bg-white"
+                            placeholder="รหัสภายใน">
+                    </div>
+                </div>
                 <div id="master-all-units" class="flex flex-wrap gap-1.5 pt-1">
                     <!-- Unit suggestion buttons -->
                 </div>
@@ -984,6 +996,8 @@
                         unit: unit,
                         units: unit ? [unit] : [],
                         minQty: 0,
+                        companyProductId: "",
+                        mlpId: "",
                         prices: {}
                     };
                     if (company) {
@@ -1357,6 +1371,8 @@
                     const d = doc.data();
                     document.getElementById('master-unit').value = d.unit || (sessionProd ? sessionProd.unit : '');
                     document.getElementById('master-min-qty').value = d.minQty || 0;
+                    document.getElementById('master-company-code').value = d.companyProductId || '';
+                    document.getElementById('master-mlp-code').value = d.mlpId || '';
                     renderUnitSuggestions(d.units || []);
 
                     let prices = d.prices || {};
@@ -1380,6 +1396,8 @@
                 } else {
                     document.getElementById('master-unit').value = sessionProd ? sessionProd.unit : '';
                     document.getElementById('master-min-qty').value = 0;
+                    document.getElementById('master-company-code').value = '';
+                    document.getElementById('master-mlp-code').value = '';
                     renderUnitSuggestions([]);
 
                     const normalizedPrices = [];
@@ -1455,6 +1473,8 @@
             const newName = document.getElementById('master-name').value.trim();
             const unit = document.getElementById('master-unit').value.trim();
             const minQty = parseInt(document.getElementById('master-min-qty').value) || 0;
+            const companyProductId = document.getElementById('master-company-code').value.trim();
+            const mlpId = document.getElementById('master-mlp-code').value.trim();
 
             if (!newName) return alert('กรุณาระบุชื่อสินค้า');
 
@@ -1485,12 +1505,12 @@
 
                     const oldDocRef = db.collection('master_products').doc(getDocId(originalName));
                     batch.set(newDocRef, {
-                        name: newName, unit, minQty, prices, units: Array.from(unitsSet)
+                        name: newName, unit, minQty, companyProductId, mlpId, prices, units: Array.from(unitsSet)
                     });
                     batch.delete(oldDocRef);
                 } else {
                     batch.set(newDocRef, {
-                        name: newName, unit, minQty, prices, units: Array.from(unitsSet)
+                        name: newName, unit, minQty, companyProductId, mlpId, prices, units: Array.from(unitsSet)
                     }, { merge: true });
                 }
 

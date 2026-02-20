@@ -192,7 +192,20 @@
                             <div><label
                                     class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">ชื่อสินค้า</label><input
                                     type="text" id="productName" required
-                                    class="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-white">
+                                    class="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                                    oninput="app.handleProductInput(this)">
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div><label
+                                        class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">รหัสสินค้า
+                                        (บริษัท)</label><input type="text" id="companyProductId"
+                                        class="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-white">
+                                </div>
+                                <div><label
+                                        class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">รหัสสินค้า
+                                        (MLP)</label><input type="text" id="mlpId"
+                                        class="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-white">
+                                </div>
                             </div>
                             <div class="grid grid-cols-2 gap-3">
                                 <div><label
@@ -310,7 +323,9 @@
                         document.getElementById('login-container').style.display = 'none';
                         document.getElementById('app-container').style.display = 'block';
                         document.getElementById('userDisplay').innerText = user.email || user.displayName;
+                        document.getElementById('userDisplay').innerText = user.email || user.displayName;
                         loadDataFromCloud();
+                        app.loadMasterData();
                     } else {
                         currentUser = null;
                         document.getElementById('app-container').style.display = 'none';
@@ -382,7 +397,31 @@
         // 3. APP LOGIC
         const app = {
             data: [],
+            masterProducts: {},
             config: { itemsPerPage: 10, currentPage: 1, filterType: 'all', sortCol: 'id', sortDir: 'desc', searchTerm: '' },
+
+            loadMasterData() {
+                window.db.collection('master_products').onSnapshot(snapshot => {
+                    this.masterProducts = {};
+                    snapshot.forEach(doc => {
+                        this.masterProducts[doc.data().name] = doc.data(); // Index by Name for easy lookup
+                    });
+                });
+            },
+
+            handleProductInput(el) {
+                const name = el.value.trim();
+                if (this.masterProducts[name]) {
+                    const m = this.masterProducts[name];
+                    document.getElementById('companyProductId').value = m.companyProductId || '';
+                    document.getElementById('mlpId').value = m.mlpId || '';
+                    // Try to guess company if empty?
+                    if (!document.getElementById('companyName').value && m.prices) {
+                        const comps = Object.keys(m.prices).map(k => k.split('_')[0]);
+                        if (comps.length > 0) document.getElementById('companyName').value = comps[0];
+                    }
+                }
+            },
 
             init() {
                 const today = new Date().toISOString().slice(0, 10);
@@ -441,8 +480,23 @@
                     purchaseDate: document.getElementById('purchaseDate').value,
                     expDate: document.getElementById('expDate').value,
                     notifyDate: document.getElementById('notifyDate').value,
-                    returnDate: document.getElementById('returnDate').value
+                    returnDate: document.getElementById('returnDate').value,
+                    companyProductId: document.getElementById('companyProductId').value,
+                    mlpId: document.getElementById('mlpId').value
                 };
+
+                // Sync to Master
+                if (form.product) {
+                    const masterRef = window.db.collection('master_products').doc(form.product);
+                    // We only update if we have new info, to avoid overwriting existing good data with empty?
+                    // But requirement says "update together", so we should trust the user input here.
+                    const updateData = {
+                        name: form.product,
+                        companyProductId: form.companyProductId,
+                        mlpId: form.mlpId
+                    };
+                    masterRef.set(updateData, { merge: true }).catch(e => console.error("Master Sync Error", e));
+                }
 
                 let returnDays = 0;
                 if (form.notifyDate && form.returnDate) returnDays = Math.ceil((new Date(form.returnDate) - new Date(form.notifyDate)) / 86400000);
@@ -503,6 +557,8 @@
             resetForm(keepDate = false) {
                 document.getElementById('returnForm').reset();
                 document.getElementById('editId').value = '';
+                document.getElementById('companyProductId').value = '';
+                document.getElementById('mlpId').value = '';
                 if (keepDate) {
                     const today = new Date().toISOString().slice(0, 10);
                     document.getElementById('notifyDate').value = today;
@@ -521,7 +577,17 @@
                 document.getElementById('purchaseDate').value = item.purchaseDate;
                 document.getElementById('expDate').value = item.expDate;
                 document.getElementById('notifyDate').value = item.notifyDate;
+                document.getElementById('notifyDate').value = item.notifyDate;
                 document.getElementById('returnDate').value = item.returnDate || '';
+                document.getElementById('companyProductId').value = item.companyProductId || '';
+                document.getElementById('mlpId').value = item.mlpId || '';
+
+                // If local item doesn't have codes, try fetching from master
+                if (!item.companyProductId && !item.mlpId && this.masterProducts[item.product]) {
+                    const m = this.masterProducts[item.product];
+                    document.getElementById('companyProductId').value = m.companyProductId || '';
+                    document.getElementById('mlpId').value = m.mlpId || '';
+                }
 
                 const btn = document.getElementById('submitBtn');
                 btn.innerHTML = 'Update';

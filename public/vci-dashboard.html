@@ -405,6 +405,12 @@
             loadAppointmentRequests();
             loadUpcomingAppointments();
             generateCalendar();
+            loadHistory();
+
+            // Listeners for history month filter
+            const hMain = document.getElementById('history-month');
+            if (hMain) hMain.addEventListener('change', () => loadHistory());
+            // Modal month filter is handled inside loadHistoryModal if needed or just use current logic
         });
 
         function showTab(tabId) {
@@ -421,6 +427,8 @@
                 activeNav.classList.add('active', 'bg-indigo-600', 'text-white', 'shadow-md');
                 activeNav.classList.remove('text-gray-500', 'hover:bg-gray-50');
             }
+
+            if (tabId === 'history') loadHistory();
         }
 
         function openModal(type) {
@@ -628,41 +636,112 @@
             });
         }
 
-        function loadHistoryModal() {
-            const list = document.getElementById('history-tbody-modal');
-            const monthVal = document.getElementById('history-month-modal')?.value || new Date().toISOString().slice(0, 7);
+        async function loadHistory() {
+            const list = document.getElementById('history-tbody');
+            if (!list) return;
+            const monthVal = document.getElementById('history-month')?.value || new Date().toISOString().slice(0, 7);
+            list.innerHTML = '<tr><td colspan="4" class="p-10 text-center text-gray-400 font-bold uppercase tracking-widest"><i class="fas fa-spinner fa-spin mr-2"></i> Loading History...</td></tr>';
 
-            // Re-order locally instead of compound query to avoid index errors
-            db.collection("visitor_logs").get().then(snap => {
-                if (!list) return;
-                list.innerHTML = '';
-                const logs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                logs.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+            const logsSnap = await db.collection("visitor_logs").get();
+            const aptsSnap = await db.collection("visitor_appointments").get();
 
-                logs.forEach(d => {
-                    const rowDate = d.timestamp?.toDate ? d.timestamp.toDate() : new Date();
-                    const rowMonth = rowDate.toISOString().slice(0, 7);
-                    if (monthVal && rowMonth !== monthVal) return;
+            let allData = [];
+            logsSnap.forEach(doc => allData.push({ id: doc.id, ...doc.data(), dataType: 'checkin' }));
+            aptsSnap.forEach(doc => allData.push({ id: doc.id, ...doc.data(), dataType: 'booking' }));
 
-                    list.innerHTML += `
-                        <tr class="hover:bg-gray-50 transition border-b border-gray-50 group">
-                            <td class="px-6 py-4">
-                                <div class="font-black text-sm">${d.firstName} ${d.lastName}</div>
-                                <div class="text-[10px] font-black text-indigo-500 uppercase opacity-60">${d.company} / ${d.phone}</div>
-                            </td>
-                            <td class="px-6 py-4">
-                                <div class="text-[11px] font-black mb-0.5">${rowDate.toLocaleDateString('th-TH')}</div>
-                                <div class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">${d.timestamp?.toDate().toLocaleTimeString('th-TH')}</div>
-                            </td>
-                            <td class="px-6 py-4 text-right">
-                                <button onclick="deleteLog('${d.id}')" class="w-8 h-8 rounded-lg bg-gray-50 text-gray-300 hover:bg-red-50 hover:text-red-500 transition">
-                                    <i class="fas fa-trash-alt text-[10px]"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    `;
-                });
+            allData.sort((a, b) => {
+                const tA = (a.timestamp?.seconds || a.approvedAt?.seconds || 0);
+                const tB = (b.timestamp?.seconds || b.approvedAt?.seconds || 0);
+                return tB - tA;
             });
+
+            list.innerHTML = '';
+            allData.forEach(d => {
+                const ts = d.timestamp || d.approvedAt || d.createdAt;
+                const rowDate = ts?.toDate ? ts.toDate() : new Date();
+                const rowMonth = rowDate.toISOString().slice(0, 7);
+                if (monthVal && rowMonth !== monthVal) return;
+
+                const isLog = d.dataType === 'checkin';
+                const name = isLog ? `${d.firstName} ${d.lastName}` : (d.visitorName || d.firstName);
+                const phone = d.phone || d.visitorPhone;
+                const company = d.company || '-';
+                const typeLabel = isLog ? '<span class="bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full text-[9px] font-black uppercase ml-2">Checked-in</span>' : '<span class="bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full text-[9px] font-black uppercase ml-2">Booking</span>';
+
+                list.innerHTML += `
+                    <tr class="hover:bg-gray-50 transition border-b border-gray-50 group">
+                        <td class="px-6 py-4">
+                            <div class="font-black text-sm flex items-center">${name} ${typeLabel}</div>
+                            <div class="text-[10px] font-bold text-gray-400 mt-1">${rowDate.toLocaleString('th-TH')}</div>
+                        </td>
+                        <td class="px-6 py-4 text-gray-600 font-bold">${phone}</td>
+                        <td class="px-6 py-4 text-gray-500">${company}</td>
+                        <td class="px-6 py-4 text-right">
+                            <button onclick="deleteLogEntry('${d.id}', '${d.dataType}')" class="w-8 h-8 rounded-lg bg-gray-50 text-gray-300 hover:bg-red-50 hover:text-red-500 transition">
+                                <i class="fas fa-trash-alt text-[10px]"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        async function loadHistoryModal() {
+            const list = document.getElementById('history-tbody-modal');
+            if (!list) return;
+            const monthVal = document.getElementById('history-month-modal')?.value || new Date().toISOString().slice(0, 7);
+            list.innerHTML = '<tr><td colspan="3" class="p-10 text-center text-gray-400 font-bold uppercase tracking-widest"><i class="fas fa-spinner fa-spin mr-2"></i> Loading...</td></tr>';
+
+            const logsSnap = await db.collection("visitor_logs").get();
+            const aptsSnap = await db.collection("visitor_appointments").get();
+
+            let allData = [];
+            logsSnap.forEach(doc => allData.push({ id: doc.id, ...doc.data(), dataType: 'checkin' }));
+            aptsSnap.forEach(doc => allData.push({ id: doc.id, ...doc.data(), dataType: 'booking' }));
+
+            allData.sort((a, b) => {
+                const tA = (a.timestamp?.seconds || a.approvedAt?.seconds || 0);
+                const tB = (b.timestamp?.seconds || b.approvedAt?.seconds || 0);
+                return tB - tA;
+            });
+
+            list.innerHTML = '';
+            allData.forEach(d => {
+                const ts = d.timestamp || d.approvedAt || d.createdAt;
+                const rowDate = ts?.toDate ? ts.toDate() : new Date();
+                const rowMonth = rowDate.toISOString().slice(0, 7);
+                if (monthVal && rowMonth !== monthVal) return;
+
+                const isLog = d.dataType === 'checkin';
+                const name = isLog ? `${d.firstName} ${d.lastName}` : (d.visitorName || d.firstName);
+                const typeLabel = isLog ? '<span class="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full text-[8px] font-black uppercase ml-2">IN</span>' : '<span class="bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full text-[8px] font-black uppercase ml-2">BOOK</span>';
+
+                list.innerHTML += `
+                    <tr class="hover:bg-gray-50 transition border-b border-gray-50 group">
+                        <td class="px-6 py-5">
+                            <div class="font-black text-sm uppercase">${name} ${typeLabel}</div>
+                            <div class="text-[10px] font-black text-indigo-500 uppercase opacity-60">${d.company || '-'} / ${d.phone || d.visitorPhone}</div>
+                        </td>
+                        <td class="px-6 py-5">
+                            <div class="text-[11px] font-black mb-0.5">${rowDate.toLocaleDateString('th-TH')}</div>
+                            <div class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">${rowDate.toLocaleTimeString('th-TH')}</div>
+                        </td>
+                        <td class="px-6 py-5 text-right">
+                            <button onclick="deleteLogEntry('${d.id}', '${d.dataType}')" class="w-8 h-8 rounded-lg bg-gray-50 text-gray-300 hover:bg-red-50 hover:text-red-500 transition">
+                                <i class="fas fa-trash-alt text-[10px]"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        async function deleteLogEntry(id, type) {
+            if (!confirm("ยืนยันการลบประวัตินี้?")) return;
+            const collection = type === 'checkin' ? 'visitor_logs' : 'visitor_appointments';
+            await db.collection(collection).doc(id).delete();
+            loadHistory();
+            if (!document.getElementById('modal-container').classList.contains('hidden')) loadHistoryModal();
         }
 
         function initLiveCounters() {
