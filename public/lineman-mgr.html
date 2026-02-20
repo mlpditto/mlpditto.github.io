@@ -213,6 +213,10 @@
             background: rgba(21, 128, 61, 0.2);
             color: #4ade80;
         }
+
+        #editModal {
+            z-index: 130 !important;
+        }
     </style>
 </head>
 
@@ -1534,9 +1538,12 @@
                         <!-- Details List -->
                         <div id="detail-${date}" class="hidden border-t border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30">
                             ${g.items.map(item => `
-                                <div class="p-3 pl-16 pr-4 flex justify-between items-center border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                                <div class="p-3 pl-16 pr-4 flex justify-between items-center border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group" onclick="editRecord(${item.recordedAt}); event.stopPropagation();">
                                     <div class="text-xs">
-                                        <div class="font-bold text-slate-700 dark:text-slate-300 line-clamp-1">${item.customerName || 'ลูกค้าทั่วไป'} (${item.orderId || '-'})</div>
+                                        <div class="font-bold text-slate-700 dark:text-slate-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-1">
+                                            <i class="fas fa-edit mr-1 opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                                            ${item.customerName || 'ลูกค้าทั่วไป'} (${item.orderId || '-'})
+                                        </div>
                                         <div class="text-[10px] text-slate-400">Order: ${item.date} ${item.orderTime}</div>
                                     </div>
                                     <div class="font-bold text-slate-600 dark:text-slate-400 text-xs">+${item.net.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
@@ -1598,6 +1605,11 @@
         }
 
         function renderUI() {
+            // Auto-refresh Payout UI if open
+            if (!document.getElementById('payoutModal').classList.contains('hidden')) {
+                renderPayoutUI();
+            }
+
             const termMonth = document.getElementById('monthFilter').value;
             const now = new Date();
             const y = now.getFullYear();
