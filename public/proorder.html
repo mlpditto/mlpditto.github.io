@@ -628,13 +628,17 @@
                 <button onclick="closeModal('masterExplorerModal')" class="text-teal-200 hover:text-white"><i
                         class="fas fa-times text-xl"></i></button>
             </div>
-            <div class="p-4 border-b bg-gray-50 shrink-0">
-                <div class="relative">
+            <div class="p-4 border-b bg-gray-50 shrink-0 flex gap-3">
+                <div class="relative flex-1">
                     <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
                     <input type="text" id="master-explorer-search" oninput="renderMasterExplorer()"
                         placeholder="ค้นหาชื่อสินค้าในฐานข้อมูล..."
                         class="w-full pl-10 pr-4 py-2 border rounded-xl focus:ring-2 focus:ring-teal-500 outline-none">
                 </div>
+                <button onclick="openMasterProductModal('')"
+                    class="bg-teal-600 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-teal-700 transition flex items-center gap-2 shadow-md shrink-0">
+                    <i class="fas fa-plus"></i> เพิ่มรายการ
+                </button>
             </div>
             <div id="master-explorer-list" class="flex-1 overflow-y-auto p-4 space-y-2 bg-white">
                 <!-- Items list -->
@@ -1443,15 +1447,30 @@
             document.getElementById('master-name').value = name;
             document.getElementById('master-original-name').value = name;
             document.getElementById('master-session-id').value = sessionId || "";
-            document.getElementById('master-prices-list').innerHTML = '<p class="text-center py-4 text-gray-400 text-xs">กำลังโหลด...</p>';
+            document.getElementById('master-prices-list').innerHTML = name ? '<p class="text-center py-4 text-gray-400 text-xs">กำลังโหลด...</p>' : '';
 
             // Refresh Suggestions
             refreshMasterSuggestions();
 
             document.getElementById('masterProductModal').classList.remove('hidden-el');
 
+            if (!name) {
+                document.getElementById('master-unit').value = '';
+                document.getElementById('master-min-qty').value = 0;
+                document.getElementById('master-company-code').value = '';
+                document.getElementById('master-mlp-code').value = '';
+                document.getElementById('master-sell-store').value = 0;
+                document.getElementById('master-sell-platform').value = 0;
+                document.getElementById('master-sell-wholesale').value = 0;
+                document.getElementById('master-sell-suggested').value = 0;
+                renderUnitSuggestions([]);
+                renderMasterPrices([]);
+                return;
+            }
+
             try {
-                const doc = await db.collection('master_products').doc(getDocId(name)).get();
+                const docId = getDocId(name);
+                const doc = await db.collection('master_products').doc(docId).get();
                 const sessionProd = products.find(p => p.name === name); // Search current list
 
                 if (doc.exists) {
