@@ -358,98 +358,128 @@
         updateClock();
 
         // --- Auth Logic ---
+        let isLoggingIn = false;
+
         async function initAuth() {
             try {
+                // Initialize LIFF and Firebase Auth state once
                 await liff.init({ liffId: liffId });
-                updateUserStatus();
+
+                // onAuthStateChanged will handle the initial status update
+                // only call updateUserStatus manually if LIFF is logged in 
+                // because onAuthStateChanged doesn't trigger for LIFF
+                if (liff.isLoggedIn()) {
+                    await updateUserStatus();
+                }
             } catch (err) {
                 console.error("LIFF Init Error:", err);
-                updateUserStatus(); // Still try to update UI with Firebase Auth
+                await updateUserStatus();
             }
         }
 
         auth.onAuthStateChanged(user => {
-            updateUserStatus();
+            if (!liff.isLoggedIn()) {
+                updateUserStatus();
+            }
         });
 
         async function updateUserStatus() {
             let profile = null;
             let provider = 'none';
 
-            // 1. Check LIFF
-            if (liff.isLoggedIn()) {
-                const liffProfile = await liff.getProfile();
-                profile = {
-                    uid: liffProfile.userId,
-                    displayName: liffProfile.displayName,
-                    photoURL: liffProfile.pictureUrl,
-                    email: null // LIFF doesn't give email easily
-                };
-                provider = 'line';
-            }
-            // 2. Check Firebase Auth (Google)
-            else if (auth.currentUser) {
-                profile = {
-                    uid: auth.currentUser.uid,
-                    displayName: auth.currentUser.displayName,
-                    photoURL: auth.currentUser.photoURL,
-                    email: auth.currentUser.email
-                };
-                provider = 'google';
-            }
+            try {
+                // 1. Check LIFF
+                if (liff.isLoggedIn()) {
+                    const liffProfile = await liff.getProfile();
+                    profile = {
+                        uid: liffProfile.userId,
+                        displayName: liffProfile.displayName,
+                        photoURL: liffProfile.pictureUrl,
+                        email: null
+                    };
+                    provider = 'line';
+                }
+                // 2. Check Firebase Auth (Google)
+                else if (auth.currentUser) {
+                    profile = {
+                        uid: auth.currentUser.uid,
+                        displayName: auth.currentUser.displayName,
+                        photoURL: auth.currentUser.photoURL,
+                        email: auth.currentUser.email
+                    };
+                    provider = 'google';
+                }
 
-            if (profile) {
-                currentUser = profile;
-                document.getElementById('user-img').src = profile.photoURL || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-                document.getElementById('user-name').innerText = profile.displayName;
+                if (profile) {
+                    currentUser = profile;
+                    document.getElementById('user-img').src = profile.photoURL || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+                    document.getElementById('user-name').innerText = profile.displayName;
 
-                // Admin Check
-                currentUserIsAdmin = (profile.email === ALLOWED_ADMIN);
+                    // Admin Check
+                    currentUserIsAdmin = (profile.email === ALLOWED_ADMIN);
 
-                // Member Check (from "users" collection)
-                const userDoc = await db.collection('users').doc(profile.uid).get();
-                if (userDoc.exists) {
-                    const data = userDoc.data();
-                    if (data.status === 'approved') {
-                        isMember = true;
-                        document.getElementById('badge-member').classList.remove('hidden');
-                        document.getElementById('badge-pending').classList.add('hidden');
-                    } else {
+                    // Member Check (from "users" collection) - Wrap in try/catch to handle missing permissions
+                    try {
+                        const userDoc = await db.collection('users').doc(profile.uid).get();
+                        if (userDoc.exists) {
+                            const data = userDoc.data();
+                            if (data.status === 'approved') {
+                                isMember = true;
+                                document.getElementById('badge-member').classList.remove('hidden');
+                                document.getElementById('badge-pending').classList.add('hidden');
+                            } else {
+                                isMember = false;
+                                document.getElementById('badge-member').classList.add('hidden');
+                                document.getElementById('badge-pending').classList.remove('hidden');
+                            }
+                        } else {
+                            isMember = false;
+                            document.getElementById('badge-member').classList.add('hidden');
+                            document.getElementById('badge-pending').classList.add('hidden');
+                        }
+                    } catch (e) {
+                        console.warn("User profile fetch error:", e.message);
                         isMember = false;
-                        document.getElementById('badge-member').classList.add('hidden');
-                        document.getElementById('badge-pending').classList.remove('hidden');
                     }
+
+                    if (currentUserIsAdmin) {
+                        document.getElementById('badge-admin').classList.remove('hidden');
+                        document.getElementById('admin-tabs').classList.remove('hidden');
+                    }
+
+                    document.getElementById('login-buttons').classList.add('hidden');
+                    document.getElementById('badge-user').classList.remove('hidden');
+                    document.getElementById('login-prompt').classList.add('hidden');
                 } else {
+                    currentUser = null;
+                    currentUserIsAdmin = false;
                     isMember = false;
-                    document.getElementById('badge-member').classList.add('hidden');
-                    document.getElementById('badge-pending').classList.add('hidden');
+                    document.getElementById('login-buttons').classList.remove('hidden');
+                    document.getElementById('badge-user').classList.add('hidden');
+                    document.getElementById('login-prompt').classList.remove('hidden');
+                    document.getElementById('admin-tabs').classList.add('hidden');
                 }
-
-                if (currentUserIsAdmin) {
-                    document.getElementById('badge-admin').classList.remove('hidden');
-                    document.getElementById('admin-tabs').classList.remove('hidden');
-                }
-
-                document.getElementById('login-buttons').classList.add('hidden');
-                document.getElementById('badge-user').classList.remove('hidden');
-                document.getElementById('login-prompt').classList.add('hidden');
-            } else {
-                currentUser = null;
-                currentUserIsAdmin = false;
-                isMember = false;
-                document.getElementById('login-buttons').classList.remove('hidden');
-                document.getElementById('badge-user').classList.add('hidden');
-                document.getElementById('login-prompt').classList.remove('hidden');
-                document.getElementById('admin-tabs').classList.add('hidden');
+            } catch (err) {
+                console.error("Status update error:", err);
+            } finally {
+                document.getElementById('badge-loading').classList.add('hidden');
+                loadFAQs();
             }
-
-            document.getElementById('badge-loading').classList.add('hidden');
-            loadFAQs();
         }
 
-        function loginWithGoogle() {
+        async function loginWithGoogle() {
+            if (isLoggingIn) return;
+            isLoggingIn = true;
             const provider = new firebase.auth.GoogleAuthProvider();
-            auth.signInWithPopup(provider).catch(err => alert("Google Login Error: " + err.message));
+            try {
+                await auth.signInWithPopup(provider);
+            } catch (err) {
+                if (err.code !== 'auth/cancelled-popup-request' && err.code !== 'auth/popup-closed-by-user') {
+                    alert("Google Login Error: " + err.message);
+                }
+            } finally {
+                isLoggingIn = false;
+            }
         }
 
         function logout() {
@@ -459,18 +489,21 @@
         }
 
         // --- FAQ Logic ---
+        let faqUnsubscribe = null;
+
         function loadFAQs() {
-            // Unsubscribe existing if any? (Simplified for now)
-            db.collection("faqs").orderBy("order").onSnapshot((snap) => {
+            if (faqUnsubscribe) faqUnsubscribe();
+
+            // Try to listen to all FAQs. If it fails due to permissions, catch it.
+            faqUnsubscribe = db.collection("faqs").orderBy("order").onSnapshot((snap) => {
                 document.getElementById('loading').classList.add('hidden');
                 allFaqsData = [];
                 let pendingCount = 0;
 
                 snap.forEach(doc => {
                     const d = doc.data();
-                    if (!d.status) d.status = 'approved'; // Default for old data
+                    if (!d.status) d.status = 'approved';
                     if (d.status === 'pending') pendingCount++;
-
                     allFaqsData.push({ id: doc.id, ...d });
                 });
 
@@ -481,7 +514,24 @@
                 filterFAQs();
             }, (error) => {
                 console.error("Firestore Error:", error);
-                document.getElementById('loading').innerHTML = `<div class="text-red-500 p-10 bg-white rounded-3xl shadow-sm border border-red-50 text-center"><i class="fas fa-exclamation-triangle text-3xl mb-2"></i><br>เกิดข้อผิดพลาด: ${error.message}</div>`;
+
+                // If permission error, it might be because the user is not an admin and cannot read 'pending' items
+                // in a single collection query if rules are strict.
+                if (error.code === 'permission-denied' && !currentUserIsAdmin) {
+                    // Fallback: Try reading only approved ones
+                    db.collection("faqs").where("status", "==", "approved").orderBy("order").get().then(snap => {
+                        document.getElementById('loading').classList.add('hidden');
+                        allFaqsData = [];
+                        snap.forEach(doc => {
+                            allFaqsData.push({ id: doc.id, ...doc.data(), status: 'approved' });
+                        });
+                        filterFAQs();
+                    }).catch(err => {
+                        document.getElementById('loading').innerHTML = `<div class="text-red-500 p-10 bg-white rounded-3xl shadow-sm border border-red-50 text-center"><i class="fas fa-exclamation-triangle text-3xl mb-2"></i><br>เกิดข้อผิดพลาดรุนแรง: ${err.message}</div>`;
+                    });
+                } else {
+                    document.getElementById('loading').innerHTML = `<div class="text-red-500 p-10 bg-white rounded-3xl shadow-sm border border-red-50 text-center"><i class="fas fa-exclamation-triangle text-3xl mb-2"></i><br>เกิดข้อผิดพลาด: ${error.message}</div>`;
+                }
             });
         }
 

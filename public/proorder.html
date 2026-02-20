@@ -152,6 +152,10 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="firebase-config.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
 </head>
 
 <body class="text-gray-800 h-screen flex flex-col">
@@ -331,6 +335,10 @@
                         <button onclick="openLabModal()"
                             class="px-4 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold shadow-sm border border-indigo-200 hover:bg-indigo-200 transition flex items-center gap-2">
                             <i class="fas fa-vial"></i> LAB
+                        </button>
+                        <button onclick="openQuotationModal()"
+                            class="px-3 py-1.5 bg-white text-rose-600 rounded-lg text-xs font-bold shadow-sm border border-rose-100 hover:bg-rose-50 transition flex items-center gap-1.5 font-bold">
+                            <i class="fas fa-file-invoice"></i> QUOTATION
                         </button>
                         <div class="relative group">
                             <button onclick="toggleExportMenu()"
@@ -686,20 +694,63 @@
             </div>
         </div>
     </div>
-    <div id="printArea" class="hidden-el">
-        <div class="p-8 font-serif">
-            <div class="text-center mb-8">
-                <h1 class="text-3xl font-bold mb-2">ใบสั่งซื้อสินค้า</h1>
-                <p class="text-gray-600" id="printDate"></p>
+    </div>
+
+    <!-- Quotation Modal -->
+    <div id="quotationModal"
+        class="hidden-el fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4 backdrop-blur-sm no-print">
+        <div class="bg-white w-full max-w-5xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="bg-rose-600 text-white p-4 flex justify-between items-center shrink-0">
+                <h2 class="text-lg font-bold flex items-center gap-2"><i class="fas fa-file-invoice"></i> Quotation OCR
+                    & Matching</h2>
+                <button onclick="closeModal('quotationModal')" class="text-rose-200 hover:text-white"><i
+                        class="fas fa-times text-xl"></i></button>
             </div>
-            <div id="printContent"></div>
-            <div class="mt-8 pt-8 border-t-2 border-gray-300 flex justify-between items-end">
-                <div class="text-sm text-gray-500">
-                    <p>ผู้สั่งซื้อ: _______________________</p>
+            <div class="p-4 border-b bg-gray-50 flex flex-wrap gap-4 shrink-0">
+                <div class="flex gap-2">
+                    <input type="file" id="pdfInput" accept=".pdf" class="hidden" onchange="handlePdfUpload(this)">
+                    <button onclick="document.getElementById('pdfInput').click()"
+                        class="bg-rose-600 text-white px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-rose-700 transition flex items-center gap-2 shadow-md">
+                        <i class="fas fa-upload"></i> เลือกไฟล์ PDF
+                    </button>
+                    <button id="reScanBtn" onclick="reParsePdf()"
+                        class="hidden-el px-4 py-2.5 bg-gray-200 text-gray-600 rounded-xl font-bold text-sm hover:bg-gray-300 transition">
+                        <i class="fas fa-sync-alt"></i> สแกนใหม่
+                    </button>
                 </div>
-                <div class="text-right">
-                    <div class="text-xl font-bold">ยอดรวมสุทธิ</div>
-                    <div class="text-3xl font-bold text-black mt-1" id="printGrandTotal">0.00 ฿</div>
+                <div id="pdfFileName"
+                    class="text-sm font-bold text-gray-700 self-center bg-white px-3 py-2 rounded-lg border border-gray-200">
+                    ยังไม่ได้เลือกไฟล์</div>
+                <div class="flex-1 min-w-[200px] relative">
+                    <i class="fas fa-building absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                    <input type="text" id="quote-company" list="list-master-companies"
+                        placeholder="ระบุบริษัทที่เสนอราคา..."
+                        class="w-full pl-8 pr-4 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-rose-500 outline-none">
+                </div>
+            </div>
+            <div id="quotationResultArea" class="flex-1 overflow-y-auto p-4 bg-gray-50/50">
+                <div id="quotationList" class="space-y-3">
+                    <div class="text-center py-32 text-gray-400">
+                        <i class="fas fa-file-pdf text-7xl mb-4 opacity-10"></i>
+                        <p class="font-bold text-lg">วางแผนสั่งซื้อจากใบเสนอราคา PDF</p>
+                        <p class="text-xs">รองรับการดึงข้อมูลรายการยา จำนวน และราคา อัตโนมัติ</p>
+                    </div>
+                </div>
+            </div>
+            <div
+                class="p-4 bg-white border-t flex flex-col md:flex-row justify-between items-center gap-4 shrink-0 shadow-inner">
+                <div class="flex flex-col">
+                    <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">สรุปรายการ</div>
+                    <div class="text-sm text-gray-600 font-bold"><span id="quoteMatches" class="text-green-600">0</span>
+                        จับคู่สำเร็จ | <span id="quoteNew" class="text-orange-500">0</span> รายการใหม่</div>
+                </div>
+                <div class="flex gap-3 w-full md:w-auto">
+                    <button onclick="closeModal('quotationModal')"
+                        class="flex-1 md:flex-none px-6 py-3 bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 text-sm">ปิด</button>
+                    <button id="addQuotationBtn" onclick="addQuoteToAnalysis()"
+                        class="flex-1 md:flex-none px-10 py-3 bg-rose-600 text-white rounded-2xl font-bold text-base hover:bg-rose-700 shadow-xl transition opacity-50 cursor-not-allowed disabled:opacity-50">
+                        นำเข้าข้อมูล (<span id="quotationTotalCount">0</span>)
+                    </button>
                 </div>
             </div>
         </div>
@@ -1654,6 +1705,88 @@
         function toggleCompanyList(id, header) { const list = document.getElementById(`list-${id}`); const icon = header.querySelector('.rotate-icon'); if (list.classList.contains('hidden-el')) { list.classList.remove('hidden-el'); icon.style.transform = 'rotate(90deg)'; expandedCompanies.add(id); } else { list.classList.add('hidden-el'); icon.style.transform = 'rotate(0deg)'; expandedCompanies.delete(id); } }
         function switchDashTab(t) { document.getElementById('dContent-all').classList.add('hidden-el'); document.getElementById('dContent-company').classList.add('hidden-el'); document.getElementById('alphabetJumpContainer').classList.add('hidden-el'); document.getElementById('dTab-all').className = "px-3 py-1.5 text-[10px] rounded-md font-bold text-gray-500 hover:text-indigo-600 transition"; document.getElementById('dTab-company').className = "px-3 py-1.5 text-[10px] rounded-md font-bold text-gray-500 hover:text-indigo-600 transition flex items-center gap-1"; document.getElementById(`dContent-${t}`).classList.remove('hidden-el'); if (t === 'company') { document.getElementById('dTab-company').className = "px-3 py-1.5 text-[10px] rounded-md font-bold text-white bg-indigo-600 shadow-sm transition flex items-center gap-1"; document.getElementById('alphabetJumpContainer').classList.remove('hidden-el'); } else { document.getElementById('dTab-all').className = "px-3 py-1.5 text-[10px] rounded-md font-bold text-white bg-indigo-600 shadow-sm transition"; } }
         function showAddMedicineForm() { document.getElementById('addMedicineModal').classList.remove('hidden-el'); document.getElementById('newMedicineName').focus(); }
+    </script>
+    <!-- Quotation Modal -->
+    <div id="quotationModal"
+        class="hidden-el fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4 backdrop-blur-sm no-print">
+        <div class="bg-white w-full max-w-5xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="bg-rose-600 text-white p-4 flex justify-between items-center shrink-0">
+                <h2 class="text-lg font-bold flex items-center gap-2"><i class="fas fa-file-invoice"></i> Quotation OCR
+                    & Matching</h2>
+                <button onclick="closeModal('quotationModal')" class="text-rose-200 hover:text-white"><i
+                        class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="p-4 border-b bg-gray-50 flex flex-wrap gap-4 shrink-0">
+                <div class="flex gap-2">
+                    <input type="file" id="pdfInput" accept=".pdf" class="hidden" onchange="handlePdfUpload(this)">
+                    <button onclick="document.getElementById('pdfInput').click()"
+                        class="bg-rose-600 text-white px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-rose-700 transition flex items-center gap-2 shadow-md">
+                        <i class="fas fa-upload"></i> เลือกไฟล์ PDF
+                    </button>
+                    <button id="reScanBtn" onclick="reParsePdf()"
+                        class="hidden-el px-4 py-2.5 bg-gray-200 text-gray-600 rounded-xl font-bold text-sm hover:bg-gray-300 transition">
+                        <i class="fas fa-sync-alt"></i> สแกนใหม่
+                    </button>
+                </div>
+                <div id="pdfFileName"
+                    class="text-sm font-bold text-gray-700 self-center bg-white px-3 py-2 rounded-lg border border-gray-200">
+                    ยังไม่ได้เลือกไฟล์</div>
+                <div class="flex-1 min-w-[200px] relative">
+                    <i class="fas fa-building absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                    <input type="text" id="quote-company" list="list-master-companies"
+                        placeholder="ระบุบริษัทที่เสนอราคา..."
+                        class="w-full pl-8 pr-4 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-rose-500 outline-none">
+                </div>
+            </div>
+            <div id="quotationResultArea" class="flex-1 overflow-y-auto p-4 bg-gray-50/50">
+                <div id="quotationList" class="space-y-3">
+                    <div class="text-center py-32 text-gray-400">
+                        <i class="fas fa-file-pdf text-7xl mb-4 opacity-10"></i>
+                        <p class="font-bold text-lg">วางแผนสั่งซื้อจากใบเสนอราคา PDF</p>
+                        <p class="text-xs">รองรับการดึงข้อมูลรายการยา จำนวน และราคา อัตโนมัติ</p>
+                    </div>
+                </div>
+            </div>
+            <div
+                class="p-4 bg-white border-t flex flex-col md:flex-row justify-between items-center gap-4 shrink-0 shadow-inner">
+                <div class="flex flex-col">
+                    <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">สรุปรายการ</div>
+                    <div class="text-sm text-gray-600 font-bold"><span id="quoteMatches" class="text-green-600">0</span>
+                        จับคู่สำเร็จ | <span id="quoteNew" class="text-orange-500">0</span> รายการใหม่</div>
+                </div>
+                <div class="flex gap-3 w-full md:w-auto">
+                    <button onclick="closeModal('quotationModal')"
+                        class="flex-1 md:flex-none px-6 py-3 bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 text-sm">ปิด</button>
+                    <button id="addQuotationBtn" onclick="addQuoteToAnalysis()"
+                        class="flex-1 md:flex-none px-10 py-3 bg-rose-600 text-white rounded-2xl font-bold text-base hover:bg-rose-700 shadow-xl transition opacity-50 cursor-not-allowed disabled:opacity-50">
+                        นำเข้าข้อมูล (<span id="quotationTotalCount">0</span>)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Print Area -->
+    <div id="printArea" class="hidden-el">
+        <div class="p-8 font-serif">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold mb-2">ใบสั่งซื้อสินค้า</h1>
+                <p class="text-gray-600" id="printDate"></p>
+            </div>
+            <div id="printContent"></div>
+            <div class="mt-8 pt-8 border-t-2 border-gray-300 flex justify-between items-end">
+                <div class="text-sm text-gray-500">
+                    <p>ผู้สั่งซื้อ: _______________________</p>
+                </div>
+                <div class="text-right">
+                    <div class="text-xl font-bold">ยอดรวมสุทธิ</div>
+                    <div class="text-3xl font-bold text-black mt-1" id="printGrandTotal">0.00 ฿</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
         function closeModal(id) { document.getElementById(id).classList.add('hidden-el'); }
         function showChangelogModal() { document.getElementById('changelogModal').classList.remove('hidden-el'); }
         function addCustomMedicine() { const n = document.getElementById('newMedicineName').value.trim(), c = document.getElementById('newMedicineCompany').value.trim(), u = document.getElementById('newMedicineUnit').value.trim(), q = parseInt(document.getElementById('newMedicineQty').value) || 1, p = parseFloat(document.getElementById('newMedicinePrice').value) || 0; if (!n) return alert('ระบุชื่อ'); batchAddProducts([{ name: n, company: c, unit: u, qty: q, price: p }]); renderProducts(products); updateSummary(); refreshDashboard(); saveState(); closeModal('addMedicineModal'); }
@@ -1669,6 +1802,211 @@
         function copyToClipboard(t) { navigator.clipboard.writeText(t).then(() => alert('✅ คัดลอกแล้ว')).catch(() => alert('❌ Copy ไม่ได้')); }
         function exportToPDF() { const i = getActiveItems(); if (i.length === 0) return alert('ไม่มีรายการ'); const g = {}; i.forEach(x => { const c = x.company || 'ทั่วไป'; if (!g[c]) g[c] = []; g[c].push(x); }); let h = '', s = 0; Object.keys(g).sort().forEach(c => { h += `<div class="mb-6"><h3 class="font-bold border-b border-black mb-2">${c}</h3><table class="w-full text-sm text-left border-collapse"><thead><tr class="bg-gray-100 border-b"><th class="py-1">รายการ</th><th class="py-1 text-center">จำนวน</th><th class="py-1 text-right">ราคา</th><th class="py-1 text-right">รวม</th></tr></thead><tbody>`; const sb = g[c]; sb.sort((a, b) => a.name.localeCompare(b.name)); sb.forEach(x => { let ss = x.price * x.qty; s += ss; h += `<tr class="border-b border-gray-100"><td class="py-1">${x.name}</td><td class="py-1 text-center">${x.qty} ${x.unit || ''}</td><td class="py-1 text-right">${x.price > 0 ? x.price.toLocaleString() : '-'}</td><td class="py-1 text-right">${ss > 0 ? ss.toLocaleString() : '-'}</td></tr>`; }); h += `</tbody></table></div>`; }); document.getElementById('printContent').innerHTML = h; document.getElementById('printGrandTotal').innerText = s.toLocaleString() + ' ฿'; document.getElementById('printDate').innerText = `วันที่: ${new Date().toLocaleDateString('th-TH')}`; window.print(); }
         function exportToExcel() { const items = getActiveItems(); if (items.length === 0) return alert('ไม่มีรายการ'); if (sortMode === 'az') items.sort((a, b) => a.name.localeCompare(b.name)); let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"></head><body><table><thead><tr><th>ลำดับ</th><th>บริษัท</th><th>รายการยา</th><th>จำนวน</th><th>หน่วย</th><th>ราคาต่อหน่วย</th><th>ราคารวม</th></tr></thead><tbody>`; items.forEach((x, i) => { html += `<tr><td>${i + 1}</td><td>${x.company || '-'}</td><td>${x.name}</td><td>${x.qty}</td><td>${x.unit || ''}</td><td>${x.price > 0 ? x.price : ''}</td><td>${x.price > 0 ? x.price * x.qty : ''}</td></tr>`; }); html += `</tbody></table></body></html>`; const blob = new Blob([html], { type: 'application/vnd.ms-excel' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'medicine_order.xls'; document.body.appendChild(a); a.click(); a.remove(); }
+
+        // --- QUOTATION PDF LOGIC ---
+        let currentQuoteItems = [];
+        let rawPdfText = "";
+
+        function openQuotationModal() {
+            document.getElementById('quotationModal').classList.remove('hidden-el');
+            refreshMasterSuggestions();
+        }
+
+        async function handlePdfUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            document.getElementById('pdfFileName').innerText = file.name;
+            const reader = new FileReader();
+
+            const list = document.getElementById('quotationList');
+            list.innerHTML = '<div class="text-center py-20"><i class="fas fa-spinner fa-spin text-rose-500 text-4xl mb-4"></i><p class="font-bold text-gray-500">กำลังอ่านข้อมูลจาก PDF...</p></div>';
+
+            reader.onload = async function () {
+                const typedarray = new Uint8Array(this.result);
+                try {
+                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                    let fullText = "";
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const content = await page.getTextContent();
+                        const strings = content.items.map(item => item.str);
+                        fullText += strings.join(" ") + "\n";
+                    }
+                    rawPdfText = fullText;
+                    processRawQuoteText(fullText);
+                } catch (err) {
+                    alert("Error loading PDF: " + err.message);
+                    list.innerHTML = `<div class="text-red-500 text-center py-20"><i class="fas fa-exclamation-triangle text-4xl mb-2"></i><br>${err.message}</div>`;
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function reParsePdf() {
+            if (rawPdfText) processRawQuoteText(rawPdfText);
+        }
+
+        async function processRawQuoteText(text) {
+            const lines = text.split('\n');
+            const items = [];
+
+            lines.forEach(line => {
+                line = line.trim();
+                if (!line || line.length < 5) return;
+                const parts = line.split(/\s+/);
+                if (parts.length < 3) return;
+
+                let price = 0, qty = 0, unit = "", name = "";
+                let priceIdx = -1, qtyIdx = -1;
+
+                for (let i = parts.length - 1; i >= 0; i--) {
+                    const val = parts[i].replace(/,/g, '');
+                    if (/^\d+\.\d{2}$/.test(val) || (/^\d+$/.test(val) && i > parts.length - 3)) {
+                        price = parseFloat(val);
+                        priceIdx = i;
+                        break;
+                    }
+                }
+
+                if (priceIdx !== -1) {
+                    for (let i = priceIdx - 1; i >= 0; i--) {
+                        if (/^\d+$/.test(parts[i])) {
+                            qty = parseInt(parts[i]);
+                            qtyIdx = i;
+                            break;
+                        }
+                    }
+                    if (qtyIdx !== -1) {
+                        name = parts.slice(0, qtyIdx).join(" ").replace(/^\d+\.?\s*/, '').trim();
+                        if (priceIdx - qtyIdx > 1) {
+                            unit = parts.slice(qtyIdx + 1, priceIdx).join(" ").trim();
+                        }
+                    }
+                }
+                if (name && qty > 0) {
+                    items.push({ name, qty, price, unit });
+                }
+            });
+
+            currentQuoteItems = items;
+            renderQuotationList();
+        }
+
+        async function renderQuotationList() {
+            const list = document.getElementById('quotationList');
+            if (currentQuoteItems.length === 0) {
+                list.innerHTML = '<div class="text-center py-20 text-orange-500 font-bold">ไม่พบรายการสินค้าที่ระบุได้ชัดเจนใน PDF</div>';
+                return;
+            }
+
+            list.innerHTML = '<div class="text-center py-10"><i class="fas fa-database fa-spin text-teal-500 text-2xl"></i><p class="mt-2 text-gray-500">กำลังตรวจสอบข้อมูลหลัก...</p></div>';
+
+            let matchCount = 0;
+            let html = '';
+
+            for (let i = 0; i < currentQuoteItems.length; i++) {
+                const item = currentQuoteItems[i];
+                const matched = await db.collection('master_products').doc(getDocId(item.name)).get();
+
+                let masterData = matched.exists ? matched.data() : null;
+                if (masterData) matchCount++;
+
+                const statusBg = masterData ? 'bg-green-50 border-green-200' : 'bg-orange-50 border-orange-200';
+                const statusIcon = masterData ? '<i class="fas fa-check-circle text-green-500"></i>' : '<i class="fas fa-question-circle text-orange-400"></i>';
+                const statusText = masterData ? 'Matched' : 'New Product';
+
+                html += `
+                    <div class="p-4 border rounded-2xl ${statusBg} transition-all hover:shadow-md flex flex-wrap md:flex-nowrap gap-4 items-center">
+                        <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-xs font-bold shrink-0 shadow-sm">${i + 1}</div>
+                        <div class="flex-1 min-w-[200px]">
+                            <div class="flex items-center gap-2 mb-1">
+                                ${statusIcon} <span class="text-[10px] font-bold uppercase tracking-widest ${masterData ? 'text-green-600' : 'text-orange-500'}">${statusText}</span>
+                            </div>
+                            <input type="text" value="${item.name.replace(/"/g, '&quot;')}" onchange="currentQuoteItems[${i}].name = this.value" 
+                                class="w-full bg-transparent font-bold text-gray-800 border-none focus:ring-1 focus:ring-rose-500 p-1 rounded">
+                        </div>
+                        <div class="w-24 shrink-0">
+                            <label class="text-[9px] font-bold text-gray-400 block ml-1 uppercase">QTY</label>
+                            <input type="number" value="${item.qty}" onchange="currentQuoteItems[${i}].qty = parseInt(this.value)" 
+                                class="w-full p-2 border rounded-lg text-sm font-bold text-center h-9">
+                        </div>
+                        <div class="w-24 shrink-0">
+                            <label class="text-[9px] font-bold text-gray-400 block ml-1 uppercase">Unit</label>
+                            <input type="text" value="${(item.unit || (masterData ? masterData.unit : '')).replace(/"/g, '&quot;')}" onchange="currentQuoteItems[${i}].unit = this.value" list="list-master-units"
+                                class="w-full p-2 border rounded-lg text-sm text-center h-9">
+                        </div>
+                        <div class="w-32 shrink-0">
+                            <label class="text-[9px] font-bold text-gray-400 block ml-1 uppercase">Price</label>
+                            <input type="number" value="${item.price}" onchange="currentQuoteItems[${i}].price = parseFloat(this.value)" 
+                                class="w-full p-2 border rounded-lg text-sm font-bold text-right text-rose-600 h-9">
+                        </div>
+                        <button onclick="currentQuoteItems.splice(${i}, 1); renderQuotationList()" class="text-gray-300 hover:text-red-500 p-2 transition"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                `;
+            }
+
+            list.innerHTML = html;
+            document.getElementById('quoteMatches').innerText = matchCount;
+            document.getElementById('quoteNew').innerText = currentQuoteItems.length - matchCount;
+            document.getElementById('quotationTotalCount').innerText = currentQuoteItems.length;
+
+            const addBtn = document.getElementById('addQuotationBtn');
+            if (currentQuoteItems.length > 0) {
+                addBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                addBtn.disabled = false;
+            } else {
+                addBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                addBtn.disabled = true;
+            }
+            document.getElementById('reScanBtn').classList.remove('hidden-el');
+        }
+
+        function addQuoteToAnalysis() {
+            if (currentQuoteItems.length === 0) return;
+            const company = document.getElementById('quote-company').value.trim();
+            if (!company) return alert("กรุณาระบุชื่อบริษัทที่เสนอราคา");
+
+            const formattedItems = currentQuoteItems.map(item => ({
+                name: item.name,
+                qty: item.qty,
+                price: item.price,
+                unit: item.unit,
+                company: company
+            }));
+
+            const result = batchAddProducts(formattedItems);
+            renderProducts(products);
+            updateSummary();
+            refreshDashboard();
+            saveState();
+
+            closeModal('quotationModal');
+            showToast(`นำเข้าสำเร็จ! (${result.added} ใหม่, ${result.updated} เดิม)`);
+
+            currentQuoteItems = [];
+            rawPdfText = "";
+            document.getElementById('pdfInput').value = "";
+            document.getElementById('pdfFileName').innerText = "ยังไม่ได้เลือกไฟล์";
+            document.getElementById('reScanBtn').classList.add('hidden-el');
+        }
+
+        function showToast(msg = "บันทึกเรียบร้อย!") {
+            const existing = document.getElementById('toast');
+            if (existing) existing.remove();
+            const t = document.createElement('div');
+            t.id = 'toast';
+            t.className = "fixed bottom-10 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-full shadow-2xl z-[999] transition-all duration-300 flex items-center gap-2 text-sm font-bold";
+            t.innerHTML = `<i class="fas fa-check-circle text-green-400"></i> ${msg}`;
+            document.body.appendChild(t);
+            setTimeout(() => {
+                t.style.opacity = '0';
+                t.style.transform = 'translate(-50%, 10px)';
+                setTimeout(() => t.remove(), 500);
+            }, 3000);
+        }
+
+        main();
     </script>
 </body>
 
