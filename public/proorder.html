@@ -1851,41 +1851,32 @@
             const lines = text.split('\n');
             const items = [];
 
+            // Pattern สำหรับดึงข้อมูล: (ชื่อรายการ) (หน่วยนับ) (จำนวน)
+            // รองรับชื่อภาษาไทยที่มีวงเล็บ หรือรายละเอียดขนาดบรรจุ
             lines.forEach(line => {
                 line = line.trim();
                 if (!line || line.length < 5) return;
-                const parts = line.split(/\s+/);
-                if (parts.length < 3) return;
 
-                let price = 0, qty = 0, unit = "", name = "";
-                let priceIdx = -1, qtyIdx = -1;
+                // ข้ามบรรทัดที่เป็นหัวตารางหรือคำขึ้นต้น
+                if (line.includes("รายละเอียดสินค้า") || line.includes("เสนอราคาสินค้า") || line.includes("PR No.")) return;
 
-                for (let i = parts.length - 1; i >= 0; i--) {
-                    const val = parts[i].replace(/,/g, '');
-                    if (/^\d+\.\d{2}$/.test(val) || (/^\d+$/.test(val) && i > parts.length - 3)) {
-                        price = parseFloat(val);
-                        priceIdx = i;
-                        break;
-                    }
-                }
+                // ใช้ Regex แยกส่วนท้ายที่เป็น (หน่วยนับ) และ (จำนวน)
+                // โดยมองหาตัวเลขที่อยู่ท้ายประโยค (จำนวน) และคำก่อนหน้านั้น (หน่วยนับ)
+                const match = line.match(/^(.*?)\s+([ก-๙A-Za-z./]+)\s+(\d+)\s*$/);
 
-                if (priceIdx !== -1) {
-                    for (let i = priceIdx - 1; i >= 0; i--) {
-                        if (/^\d+$/.test(parts[i])) {
-                            qty = parseInt(parts[i]);
-                            qtyIdx = i;
-                            break;
-                        }
+                if (match) {
+                    let name = match[1].replace(/^PR\d+-\d+\s*/, '').trim(); // ลบเลข PR ถ้าติดมา
+                    let unit = match[2].trim();
+                    let qty = parseInt(match[3]);
+
+                    if (name && qty > 0) {
+                        items.push({
+                            name: name,
+                            qty: qty,
+                            price: 0,
+                            unit: unit
+                        });
                     }
-                    if (qtyIdx !== -1) {
-                        name = parts.slice(0, qtyIdx).join(" ").replace(/^\d+\.?\s*/, '').trim();
-                        if (priceIdx - qtyIdx > 1) {
-                            unit = parts.slice(qtyIdx + 1, priceIdx).join(" ").trim();
-                        }
-                    }
-                }
-                if (name && qty > 0) {
-                    items.push({ name, qty, price, unit });
                 }
             });
 
