@@ -153,6 +153,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="firebase-config.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
@@ -708,10 +709,11 @@
             </div>
             <div class="p-4 border-b bg-gray-50 flex flex-wrap gap-4 shrink-0">
                 <div class="flex gap-2">
-                    <input type="file" id="pdfInput" accept=".pdf" class="hidden" onchange="handlePdfUpload(this)">
+                    <input type="file" id="pdfInput" accept=".pdf,image/*" class="hidden"
+                        onchange="handlePdfUpload(this)">
                     <button onclick="document.getElementById('pdfInput').click()"
                         class="bg-rose-600 text-white px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-rose-700 transition flex items-center gap-2 shadow-md">
-                        <i class="fas fa-upload"></i> เลือกไฟล์ PDF
+                        <i class="fas fa-upload"></i> เลือกไฟล์ PDF / รูปภาพ
                     </button>
                     <button id="reScanBtn" onclick="reParsePdf()"
                         class="hidden-el px-4 py-2.5 bg-gray-200 text-gray-600 rounded-xl font-bold text-sm hover:bg-gray-300 transition">
@@ -1828,13 +1830,52 @@
             document.getElementById('reScanBtn').classList.add('hidden-el');
         }
 
+        async function performOcrOnImage(imageSource, onProgress) {
+            try {
+                const worker = await Tesseract.createWorker('tha+eng', 1, {
+                    logger: m => {
+                        if (m.status === 'recognizing text' && onProgress) {
+                            onProgress(m);
+                        }
+                    }
+                });
+                const { data: { text } } = await worker.recognize(imageSource);
+                await worker.terminate();
+                return text;
+            } catch (err) {
+                console.error("OCR Error:", err);
+                return "";
+            }
+        }
+
         async function handlePdfUpload(input) {
             const file = input.files[0];
             if (!file) return;
 
+            const isImage = file.type.startsWith('image/');
             document.getElementById('pdfFileName').innerText = file.name;
-            const reader = new FileReader();
             const list = document.getElementById('quotationList');
+            const reader = new FileReader();
+
+            if (isImage) {
+                list.innerHTML = `
+                    <div class="text-center py-20">
+                        <i class="fas fa-magic fa-spin text-rose-500 text-4xl mb-4"></i>
+                        <p class="font-bold text-gray-500">กำลังใช้ AI OCR อ่านข้อมูลจากรูปภาพ...</p>
+                        <div id="ocrStatus" class="mt-2 text-xs text-rose-400">กำลังเตรียมรูปภาพ...</div>
+                    </div>`;
+
+                reader.onload = async function () {
+                    const text = await performOcrOnImage(this.result, (m) => {
+                        document.getElementById('ocrStatus').innerText = `Progress: ${Math.round(m.progress * 100)}%`;
+                    });
+                    rawPdfLines = text.split('\n').map(s => s.trim()).filter(s => s.length > 2);
+                    renderLinePicker();
+                };
+                reader.readAsDataURL(file);
+                return;
+            }
+
             list.innerHTML = '<div class="text-center py-20"><i class="fas fa-spinner fa-spin text-rose-500 text-4xl mb-4"></i><p class="font-bold text-gray-500">กำลังอ่านข้อมูลจาก PDF...</p></div>';
 
             reader.onload = async function () {
@@ -1842,11 +1883,12 @@
                 try {
                     const pdf = await pdfjsLib.getDocument(typedarray).promise;
                     let allLines = [];
+                    let hasTextLayer = false;
+
                     for (let i = 1; i <= pdf.numPages; i++) {
                         const page = await pdf.getPage(i);
                         const content = await page.getTextContent();
 
-                        // Reconstruct lines by grouping items with similar Y coordinates
                         let items = content.items.map(item => ({
                             str: item.str,
                             x: item.transform[4],
@@ -1854,37 +1896,55 @@
                             height: item.height || 10
                         })).filter(item => item.str.trim().length > 0);
 
-                        if (items.length === 0) continue;
-
-                        // Sort items by Y descending (top to bottom)
-                        items.sort((a, b) => b.y - a.y);
-
-                        let rows = [];
-                        let currentRow = [items[0]];
-
-                        for (let j = 1; j < items.length; j++) {
-                            // If Y difference is small (within 80% of average item height), same row
-                            const yDiff = Math.abs(items[j].y - currentRow[0].y);
-                            if (yDiff < 8) {
-                                currentRow.push(items[j]);
-                            } else {
-                                // Join and add
-                                rows.push(currentRow.sort((a, b) => a.x - b.x).map(it => it.str).join(" "));
-                                currentRow = [items[j]];
+                        if (items.length > 0) {
+                            hasTextLayer = true;
+                            items.sort((a, b) => b.y - a.y);
+                            let rows = [];
+                            let currentRow = [items[0]];
+                            for (let j = 1; j < items.length; j++) {
+                                if (Math.abs(items[j].y - currentRow[0].y) < 8) {
+                                    currentRow.push(items[j]);
+                                } else {
+                                    rows.push(currentRow.sort((a, b) => a.x - b.x).map(it => it.str).join(" "));
+                                    currentRow = [items[j]];
+                                }
                             }
+                            rows.push(currentRow.sort((a, b) => a.x - b.x).map(it => it.str).join(" "));
+                            allLines = allLines.concat(rows.map(r => r.trim()).filter(r => r.length > 0));
                         }
-                        rows.push(currentRow.sort((a, b) => a.x - b.x).map(it => it.str).join(" "));
-
-                        // Add some context debugging or cleaner joining
-                        allLines = allLines.concat(rows.map(r => r.trim()).filter(r => r.length > 0));
                     }
+
+                    if (!hasTextLayer) {
+                        list.innerHTML = `
+                            <div class="text-center py-20">
+                                <i class="fas fa-magic fa-spin text-rose-500 text-4xl mb-4"></i>
+                                <p class="font-bold text-gray-500">ไฟล์นี้ไม่มีเลเยอร์ข้อความ กำลังใช้ AI OCR อ่านจากรูปภาพ...</p>
+                                <div id="ocrStatus" class="mt-2 text-xs text-rose-400">กำลังเตรียมหน้าไฟล์ PDF...</div>
+                            </div>`;
+
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const viewport = page.getViewport({ scale: 2.0 });
+                            const canvas = document.createElement('canvas');
+                            const context = canvas.getContext('2d');
+                            canvas.height = viewport.height;
+                            canvas.width = viewport.width;
+                            await page.render({ canvasContext: context, viewport: viewport }).promise;
+
+                            const text = await performOcrOnImage(canvas.toDataURL('image/jpeg', 0.8), (m) => {
+                                document.getElementById('ocrStatus').innerText = `กำลังอ่านหน้า ${i}/${pdf.numPages}: ${Math.round(m.progress * 100)}%`;
+                            });
+                            allLines = allLines.concat(text.split('\n').map(s => s.trim()).filter(s => s.length > 2));
+                        }
+                    }
+
                     rawPdfLines = allLines;
                     if (rawPdfLines.length === 0) {
                         list.innerHTML = `
                             <div class="text-center py-20 text-orange-500 font-bold">
                                 <i class="fas fa-exclamation-circle text-4xl mb-2"></i><br>
                                 ไม่พบข้อความที่ดึงออกมาได้
-                                <p class="text-xs font-normal text-gray-400 mt-2 italic">หากเป็น PDF สแกน (รูปภาพ) ระบบอาจจะอ่านข้อความไม่ได้</p>
+                                <p class="text-xs font-normal text-gray-400 mt-2 italic">หากรูปภาพไม่ชัดเจน ระบบอาจจะอ่านข้อความไม่ได้</p>
                             </div>`;
                     } else {
                         renderLinePicker();
