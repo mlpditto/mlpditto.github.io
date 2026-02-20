@@ -1846,37 +1846,51 @@
                         const page = await pdf.getPage(i);
                         const content = await page.getTextContent();
 
-                        // Group items by Y-coordinate to reconstruct rows (Tolerance 7px for fragmentation)
-                        const rows = {};
-                        content.items.forEach(item => {
-                            if (!item.str || item.str.trim().length === 0) return;
-                            const y = Math.round(item.transform[5]);
-                            const foundY = Object.keys(rows).find(ry => Math.abs(parseFloat(ry) - y) < 7);
-                            const targetY = foundY || y;
-                            if (!rows[targetY]) rows[targetY] = [];
-                            rows[targetY].push(item);
-                        });
+                        // Reconstruct lines by grouping items with similar Y coordinates
+                        let items = content.items.map(item => ({
+                            str: item.str,
+                            x: item.transform[4],
+                            y: item.transform[5],
+                            height: item.height || 10
+                        })).filter(item => item.str.trim().length > 0);
 
-                        // Sort rows by Y (top to bottom) and items within rows by X (left to right)
-                        const sortedY = Object.keys(rows).sort((a, b) => b - a);
-                        const pageLines = sortedY.map(y => {
-                            return rows[y]
-                                .sort((a, b) => a.transform[4] - b.transform[4])
-                                .map(item => item.str.trim())
-                                .join(" ")
-                                .trim();
-                        }).filter(s => s.length > 3);
+                        if (items.length === 0) continue;
 
-                        allLines = allLines.concat(pageLines);
+                        // Sort items by Y descending (top to bottom)
+                        items.sort((a, b) => b.y - a.y);
+
+                        let rows = [];
+                        let currentRow = [items[0]];
+
+                        for (let j = 1; j < items.length; j++) {
+                            // If Y difference is small (within 80% of average item height), same row
+                            const yDiff = Math.abs(items[j].y - currentRow[0].y);
+                            if (yDiff < 8) {
+                                currentRow.push(items[j]);
+                            } else {
+                                // Join and add
+                                rows.push(currentRow.sort((a, b) => a.x - b.x).map(it => it.str).join(" "));
+                                currentRow = [items[j]];
+                            }
+                        }
+                        rows.push(currentRow.sort((a, b) => a.x - b.x).map(it => it.str).join(" "));
+
+                        // Add some context debugging or cleaner joining
+                        allLines = allLines.concat(rows.map(r => r.trim()).filter(r => r.length > 0));
                     }
                     rawPdfLines = allLines;
                     if (rawPdfLines.length === 0) {
-                        list.innerHTML = '<div class="text-center py-20 text-orange-500 font-bold"><i class="fas fa-search text-4xl mb-2"></i><br>ไม่พบข้อความใน PDF นี้</div>';
+                        list.innerHTML = `
+                            <div class="text-center py-20 text-orange-500 font-bold">
+                                <i class="fas fa-exclamation-circle text-4xl mb-2"></i><br>
+                                ไม่พบข้อความที่ดึงออกมาได้
+                                <p class="text-xs font-normal text-gray-400 mt-2 italic">หากเป็น PDF สแกน (รูปภาพ) ระบบอาจจะอ่านข้อความไม่ได้</p>
+                            </div>`;
                     } else {
                         renderLinePicker();
                     }
                 } catch (err) {
-                    console.error(err);
+                    console.error("PDF Reading Error:", err);
                     list.innerHTML = `<div class="text-red-500 text-center py-20"><i class="fas fa-exclamation-triangle text-4xl mb-2"></i><br>${err.message}</div>`;
                 }
             };
