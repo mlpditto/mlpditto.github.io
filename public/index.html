@@ -107,39 +107,103 @@
         </div>
 
         <div id="main-content" class="hidden">
-            <div id="tab-order" class="p-5 animate-fade-in">
-                <div class="flex items-center mb-6">
-                    <div class="w-1.5 h-8 bg-blue-600 mr-3 rounded-full"></div>
-                    <h2 class="text-2xl font-bold text-gray-800">สั่งสินค้า</h2>
-                </div>
-                <form id="order-form" class="space-y-5">
-                    <div class="bg-blue-50 p-5 rounded-2xl border border-blue-100 shadow-sm">
-                        <label class="text-sm font-bold text-blue-900 mb-3 block"><i
-                                class="fas fa-shipping-fast mr-2"></i> ข้อมูลจัดส่ง</label>
-                        <input type="text" id="cust-name" placeholder="ชื่อผู้รับ"
-                            class="w-full p-3 rounded-xl bg-white mb-3 shadow-sm border-none focus:ring-2 focus:ring-blue-300"
-                            required>
-                        <input type="tel" id="cust-phone" placeholder="เบอร์โทรติดต่อ"
-                            class="w-full p-3 rounded-xl bg-white shadow-sm border-none focus:ring-2 focus:ring-blue-300"
-                            required>
+            <div id="tab-order" class="p-5 pb-24 animate-fade-in">
+                <div class="flex items-center mb-8">
+                    <div class="w-1.5 h-8 bg-blue-600 mr-4 rounded-full shadow-sm"></div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">สั่งสินค้า</h2>
+                        <p class="text-xs text-slate-400 font-medium">กรอกข้อมูลเพื่อทำการจอง</p>
                     </div>
-                    <div class="bg-green-50 p-5 rounded-2xl border border-green-100 shadow-sm">
-                        <label class="text-sm font-bold text-green-900 mb-3 block"><i class="fas fa-pills mr-2"></i>
-                            รายละเอียดสินค้า</label>
-                        <input type="text" id="prod-name" placeholder="ชื่อยา / สินค้า"
-                            class="w-full p-3 rounded-xl bg-white mb-3 shadow-sm border-none focus:ring-2 focus:ring-green-300"
-                            required>
-                        <div class="flex space-x-3">
-                            <input type="number" id="prod-amt" placeholder="จำนวน"
-                                class="w-1/2 p-3 rounded-xl bg-white shadow-sm border-none focus:ring-2 focus:ring-green-300"
-                                required>
-                            <input type="text" id="prod-unit" placeholder="หน่วย"
-                                class="w-1/2 p-3 rounded-xl bg-white shadow-sm border-none focus:ring-2 focus:ring-green-300"
-                                required>
+                </div>
+
+                <form id="order-form" class="space-y-6">
+                    <!-- Shipping Card -->
+                    <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 p-4 opacity-5">
+                            <i class="fas fa-shipping-fast text-6xl text-blue-600"></i>
+                        </div>
+                        <div class="flex items-center gap-3 mb-5">
+                            <div
+                                class="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 shadow-sm">
+                                <i class="fas fa-map-marker-alt"></i>
+                            </div>
+                            <h3 class="font-bold text-slate-700">ข้อมูลจัดส่ง</h3>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div>
+                                <label
+                                    class="text-[10px] uppercase font-bold text-slate-400 mb-1 block ml-1">ชื่อผู้รับ</label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <i class="fas fa-user text-slate-300"></i>
+                                    </div>
+                                    <input type="text" id="cust-name" placeholder="ระบุชื่อผู้รับสินค้า"
+                                        class="w-full pl-10 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none"
+                                        required>
+                                </div>
+                            </div>
+                            <div>
+                                <label
+                                    class="text-[10px] uppercase font-bold text-slate-400 mb-1 block ml-1">เบอร์โทรศัพท์</label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <i class="fas fa-phone text-slate-300"></i>
+                                    </div>
+                                    <input type="tel" id="cust-phone" placeholder="0xx-xxx-xxxx"
+                                        class="w-full pl-10 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none"
+                                        required>
+                                </div>
+                            </div>
                         </div>
                     </div>
+
+                    <!-- Product Card -->
+                    <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 p-4 opacity-5">
+                            <i class="fas fa-pills text-6xl text-emerald-600"></i>
+                        </div>
+                        <div class="flex items-center gap-3 mb-5">
+                            <div
+                                class="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 shadow-sm">
+                                <i class="fas fa-box-open"></i>
+                            </div>
+                            <h3 class="font-bold text-slate-700">รายละเอียดสินค้า</h3>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div>
+                                <label class="text-[10px] uppercase font-bold text-slate-400 mb-1 block ml-1">ชื่อสินค้า
+                                    / ยา</label>
+                                <input type="text" id="prod-name" placeholder="ระบุชื่อสินค้าที่ต้องการ"
+                                    class="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none"
+                                    required>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label
+                                        class="text-[10px] uppercase font-bold text-slate-400 mb-1 block ml-1">จำนวน</label>
+                                    <input type="number" id="prod-amt" placeholder="0"
+                                        class="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-center font-bold focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none"
+                                        required>
+                                </div>
+                                <div>
+                                    <label
+                                        class="text-[10px] uppercase font-bold text-slate-400 mb-1 block ml-1">หน่วยนับ</label>
+                                    <input type="text" id="prod-unit" placeholder="เช่น กล่อง/แผง"
+                                        class="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-center font-medium focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none"
+                                        required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <button type="submit"
-                        class="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white p-4 rounded-xl font-bold shadow-lg text-lg">ยืนยันออเดอร์</button>
+                        class="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-bold shadow-xl shadow-blue-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-3 group">
+                        <span>ยืนยันออเดอร์</span>
+                        <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                    </button>
+                    <p class="text-center text-[10px] text-slate-400">กรุณาตรวจสอบข้อมูลให้ถูกต้องก่อนยืนยัน</p>
                 </form>
             </div>
 

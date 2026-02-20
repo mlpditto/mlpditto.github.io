@@ -385,6 +385,10 @@
                                     class="px-4 py-2.5 rounded-xl bg-lineman/10 text-lineman font-bold hover:bg-lineman hover:text-white transition-all text-xs border border-lineman/20">
                                     <i class="fas fa-file-import mr-2"></i> IMPORT
                                 </button>
+                                <button onclick="openPayoutModal()"
+                                    class="px-4 py-2.5 rounded-xl bg-emerald-50 text-emerald-600 font-bold hover:bg-emerald-600 hover:text-white transition-all text-xs border border-emerald-200">
+                                    <i class="fas fa-receipt mr-2"></i> สรุปยอดโอน
+                                </button>
                                 <div
                                     class="flex items-center bg-slate-100 dark:bg-slate-800 rounded-xl p-1 border border-slate-200 dark:border-slate-700">
                                     <button onclick="exportSalesCSV()"
@@ -1021,6 +1025,49 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Payout History Modal -->
+    <div id="payoutModal"
+        class="fixed inset-0 bg-black/60 z-[120] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div
+            class="bg-gray-50 dark:bg-slate-900 w-full max-w-lg rounded-3xl shadow-2xl h-[85vh] flex flex-col overflow-hidden border border-white/20">
+            <!-- Header -->
+            <div class="bg-white dark:bg-slate-800 p-5 shadow-sm z-10 flex justify-between items-center relative">
+                <div>
+                    <h3 class="font-black text-lg text-slate-800 dark:text-white flex items-center gap-2">
+                        <i class="fas fa-donate text-emerald-500"></i> ประวัติยอดเงินเข้า
+                    </h3>
+                    <p class="text-[10px] text-slate-400 mt-1">สรุปยอดโอนตามวันที่ได้รับเงินจริง</p>
+                </div>
+                <button onclick="document.getElementById('payoutModal').classList.add('hidden')"
+                    class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 flex items-center justify-center hover:bg-rose-100 hover:text-rose-500 transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Filter -->
+            <div class="p-4 bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700">
+                <div class="relative">
+                    <input type="month" id="payoutMonthFilter" onchange="renderPayoutUI()"
+                        class="w-full bg-slate-100 dark:bg-slate-900 border-none rounded-xl px-4 py-3 text-sm font-bold text-slate-600 dark:text-slate-300 outline-none">
+                </div>
+            </div>
+
+            <!-- List Content -->
+            <div id="payout-list-container" class="flex-1 overflow-y-auto p-4 space-y-3">
+                <!-- Items here -->
+            </div>
+
+            <!-- Footer Summary -->
+            <div class="bg-white dark:bg-slate-800 p-4 border-t border-slate-100 dark:border-slate-700 safe-pb">
+                <div class="flex justify-between items-end">
+                    <span class="text-xs font-bold text-slate-400 uppercase">ยอดรวมเดือนนี้</span>
+                    <span id="payout-total-month" class="text-2xl font-black text-emerald-600">฿0.00</span>
+                </div>
+            </div>
+        </div>
+    </div>
 
     </div>
 
@@ -1408,6 +1455,111 @@
 
         function closeRecordModal() {
             document.getElementById('recordModal').classList.add('hidden');
+        }
+
+        function openPayoutModal() {
+            const currentMonth = document.getElementById('monthFilter').value;
+            document.getElementById('payoutMonthFilter').value = currentMonth;
+            renderPayoutUI();
+            document.getElementById('payoutModal').classList.remove('hidden');
+        }
+
+        function renderPayoutUI() {
+            const container = document.getElementById('payout-list-container');
+            const targetMonth = document.getElementById('payoutMonthFilter').value;
+            const groups = {};
+            let totalMonth = 0;
+
+            // 1. Group Paid Records by paidDate
+            salesData.forEach(r => {
+                if (r.isPaid && r.paidDate && r.paidDate.startsWith(targetMonth)) {
+                    const dateKey = r.paidDate;
+                    if (!groups[dateKey]) {
+                        groups[dateKey] = {
+                            date: dateKey,
+                            total: 0,
+                            count: 0,
+                            items: []
+                        };
+                    }
+                    groups[dateKey].total += r.net;
+                    groups[dateKey].count++;
+                    groups[dateKey].items.push(r);
+                }
+            });
+
+            // 2. Sort by Date Descending
+            const sortedDates = Object.keys(groups).sort().reverse();
+
+            // 3. Render
+            container.innerHTML = '';
+            if (sortedDates.length === 0) {
+                container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-full text-slate-300 opacity-60">
+                        <i class="fas fa-receipt text-6xl mb-4"></i>
+                        <p class="text-sm">ไม่พบยอดโอนในเดือนนี้</p>
+                    </div>
+                `;
+            }
+
+            sortedDates.forEach(date => {
+                const g = groups[date];
+                totalMonth += g.total;
+
+                // Format Date
+                const [y, m, d] = date.split('-');
+                const thMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+                const displayDate = `${parseInt(d)} ${thMonths[parseInt(m) - 1]} ${parseInt(y) + 543}`;
+
+                // HTML structure similar to bank app
+                const html = `
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden transition-all">
+                        <div class="p-4 flex justify-between items-start cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                             onclick="togglePayoutDetail('${date}')">
+                            <div class="flex gap-3">
+                                <div class="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-arrow-down"></i>
+                                </div>
+                                <div>
+                                    <div class="font-bold text-slate-800 dark:text-slate-100 text-sm">ยอดเงินเข้า</div>
+                                    <div class="text-[11px] text-slate-400 mt-0.5">${displayDate}</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-bold text-emerald-600 text-base">+${g.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                                <div class="text-[10px] text-slate-400 mt-0.5"><i class="fas fa-chevron-down text-[10px] ml-1 transition-transform" id="icon-${date}"></i></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Details List -->
+                        <div id="detail-${date}" class="hidden border-t border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30">
+                            ${g.items.map(item => `
+                                <div class="p-3 pl-16 pr-4 flex justify-between items-center border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                                    <div class="text-xs">
+                                        <div class="font-bold text-slate-700 dark:text-slate-300 line-clamp-1">${item.customerName || 'ลูกค้าทั่วไป'} (${item.orderId || '-'})</div>
+                                        <div class="text-[10px] text-slate-400">Order: ${item.date} ${item.orderTime}</div>
+                                    </div>
+                                    <div class="font-bold text-slate-600 dark:text-slate-400 text-xs">+${item.net.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += html;
+            });
+
+            document.getElementById('payout-total-month').innerText = `฿${totalMonth.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+        }
+
+        function togglePayoutDetail(id) {
+            const detail = document.getElementById(`detail-${id}`);
+            const icon = document.getElementById(`icon-${id}`);
+            detail.classList.toggle('hidden');
+            if (detail.classList.contains('hidden')) {
+                icon.style.transform = 'rotate(0deg)';
+            } else {
+                icon.style.transform = 'rotate(180deg)';
+            }
         }
 
 
