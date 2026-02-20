@@ -1805,11 +1805,27 @@
 
         // --- QUOTATION PDF LOGIC ---
         let currentQuoteItems = [];
-        let rawPdfText = "";
+        let rawPdfLines = [];
 
         function openQuotationModal() {
             document.getElementById('quotationModal').classList.remove('hidden-el');
             refreshMasterSuggestions();
+            resetQuotationUI();
+        }
+
+        function resetQuotationUI() {
+            document.getElementById('quotationList').innerHTML = `
+                <div class="text-center py-32 text-gray-400">
+                    <i class="fas fa-file-pdf text-7xl mb-4 opacity-10"></i>
+                    <p class="font-bold text-lg">วางแผนสั่งซื้อจากใบเสนอราคา PDF</p>
+                    <p class="text-xs">รองรับการดึงข้อมูลรายการยา จำนวน และราคา อัตโนมัติ</p>
+                </div>`;
+            document.getElementById('quotationTotalCount').innerText = "0";
+            document.getElementById('quoteMatches').innerText = "0";
+            document.getElementById('quoteNew').innerText = "0";
+            document.getElementById('addQuotationBtn').classList.add('opacity-50', 'cursor-not-allowed');
+            document.getElementById('addQuotationBtn').disabled = true;
+            document.getElementById('reScanBtn').classList.add('hidden-el');
         }
 
         async function handlePdfUpload(input) {
@@ -1818,7 +1834,6 @@
 
             document.getElementById('pdfFileName').innerText = file.name;
             const reader = new FileReader();
-
             const list = document.getElementById('quotationList');
             list.innerHTML = '<div class="text-center py-20"><i class="fas fa-spinner fa-spin text-rose-500 text-4xl mb-4"></i><p class="font-bold text-gray-500">กำลังอ่านข้อมูลจาก PDF...</p></div>';
 
@@ -1826,15 +1841,15 @@
                 const typedarray = new Uint8Array(this.result);
                 try {
                     const pdf = await pdfjsLib.getDocument(typedarray).promise;
-                    let fullText = "";
+                    let allLines = [];
                     for (let i = 1; i <= pdf.numPages; i++) {
                         const page = await pdf.getPage(i);
                         const content = await page.getTextContent();
-                        const strings = content.items.map(item => item.str);
-                        fullText += strings.join(" ") + "\n";
+                        const pageLines = content.items.map(item => item.str.trim()).filter(s => s.length > 2);
+                        allLines = allLines.concat(pageLines);
                     }
-                    rawPdfText = fullText;
-                    processRawQuoteText(fullText);
+                    rawPdfLines = allLines;
+                    renderLinePicker();
                 } catch (err) {
                     alert("Error loading PDF: " + err.message);
                     list.innerHTML = `<div class="text-red-500 text-center py-20"><i class="fas fa-exclamation-triangle text-4xl mb-2"></i><br>${err.message}</div>`;
@@ -1843,23 +1858,62 @@
             reader.readAsArrayBuffer(file);
         }
 
-        function reParsePdf() {
-            if (rawPdfText) processRawQuoteText(rawPdfText);
+        function renderLinePicker() {
+            const list = document.getElementById('quotationList');
+            let html = `
+                <div class="bg-amber-50 p-4 rounded-2xl border border-amber-200 mb-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm font-bold text-amber-800"><i class="fas fa-tasks mr-2"></i> ขั้นตอนที่ 1: เลือกบรรทัดที่เป็นรายการสินค้า</span>
+                        <div class="flex gap-3">
+                            <button onclick="toggleAllLines(true)" class="text-xs text-indigo-600 font-bold hover:underline">เลือกทั้งหมด</button>
+                            <button onclick="toggleAllLines(false)" class="text-xs text-gray-400 font-bold hover:underline">ไม่เลือกเลย</button>
+                        </div>
+                    </div>
+                    <p class="text-[10px] text-amber-600 mb-0">คลิกเลือกเฉพาะบรรทัดที่เป็นรายการสินค้า (ชื่อยา จำนวน หน่วย) เพื่อนำไปประมวลผลต่อ</p>
+                </div>
+                <div class="space-y-1 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+            `;
+
+            rawPdfLines.forEach((line, idx) => {
+                const isLikelyProduct = /\d+/.test(line) && line.length > 10;
+                html += `
+                    <label class="flex items-center gap-3 p-3 bg-white border border-gray-100 rounded-xl cursor-pointer hover:bg-indigo-50 transition group">
+                        <input type="checkbox" name="rawLine" value="${idx}" ${isLikelyProduct ? 'checked' : ''} class="w-5 h-5 rounded text-rose-600 focus:ring-rose-500">
+                        <span class="text-sm text-gray-700 font-medium group-hover:text-indigo-900">${line}</span>
+                    </label>
+                `;
+            });
+
+            html += `
+                </div>
+                <div class="mt-6 flex justify-center sticky bottom-0 bg-gray-50/80 backdrop-blur-sm py-4 border-t border-gray-100">
+                    <button onclick="processSelectedLines()" class="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-bold shadow-xl hover:bg-indigo-700 transition flex items-center gap-2">
+                        ประมวลผลรายการที่เลือก <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            `;
+            list.innerHTML = html;
         }
 
-        async function processRawQuoteText(text) {
-            const lines = text.split('\n');
+        function toggleAllLines(checked) {
+            document.querySelectorAll('input[name="rawLine"]').forEach(cb => cb.checked = checked);
+        }
+
+        function processSelectedLines() {
+            const selectedIndices = Array.from(document.querySelectorAll('input[name="rawLine"]:checked')).map(cb => parseInt(cb.value));
+            if (selectedIndices.length === 0) return alert("กรุณาเลือกอย่างน้อย 1 รายการ");
+
+            const selectedLines = selectedIndices.map(idx => rawPdfLines[idx]);
             const items = [];
-            lines.forEach(line => {
-                line = line.trim();
-                if (!line || line.length < 5) return;
+
+            selectedLines.forEach(line => {
                 const parts = line.split(/\s+/);
-                if (parts.length < 3) return;
+                if (parts.length < 2) return;
 
                 let price = 0, qty = 0, unit = "", name = "";
                 let priceIdx = -1, qtyIdx = -1;
 
-                // Step 1: พยายามหา price ท้ายบรรทัด (ถ้ามี)
+                // User's Improved Parsing Logic
                 for (let i = parts.length - 1; i >= 0; i--) {
                     const val = parts[i].replace(/,/g, '');
                     if (/^\d+\.\d{2}$/.test(val) || (/^\d+$/.test(val) && i > parts.length - 3)) {
@@ -1870,7 +1924,6 @@
                 }
 
                 if (priceIdx !== -1) {
-                    // มี price: หา qty ก่อนหน้า price
                     for (let i = priceIdx - 1; i >= 0; i--) {
                         if (/^\d+$/.test(parts[i])) {
                             qty = parseInt(parts[i]);
@@ -1879,22 +1932,19 @@
                         }
                     }
                     if (qtyIdx !== -1) {
-                        name = parts.slice(0, qtyIdx).join(" ").replace(/^\d+\.?\s*/, '').replace(/^PR\d+-\d+\s*/, '').trim(); // ละเว้น ลำดับ/PR No.
+                        name = parts.slice(0, qtyIdx).join(" ").replace(/^\d+\.?\s*/, '').replace(/^PR\d+-\d+\s*/, '').trim();
                         if (priceIdx - qtyIdx > 1) {
                             unit = parts.slice(qtyIdx + 1, priceIdx).join(" ").trim();
                         }
                     }
                 } else {
-                    // ไม่มี price: Assume qty อยู่ท้าย, unit อยู่ก่อน qty, name คือส่วนหน้า
                     const last = parts[parts.length - 1];
                     if (/^\d+$/.test(last)) {
                         qty = parseInt(last);
                         qtyIdx = parts.length - 1;
-                        // Unit คือคำก่อน qty (ถ้ามี)
                         if (parts.length > 1) {
                             unit = parts[parts.length - 2].trim();
-                            // เช็คว่า unit เป็นคำไทยหน่วยนับจริง ๆ (เช่น กล่อง, ขวด) ถ้าไม่ใช่ ให้รวมใน name
-                            if (!/^[ก-ฮ]+$/.test(unit)) { // ถ้าไม่ใช่ตัวอักษรไทย ให้ถือว่าไม่มี unit
+                            if (!/^[ก-ฮ]+$/.test(unit)) {
                                 unit = "";
                                 name = parts.slice(0, qtyIdx).join(" ").replace(/^\d+\.?\s*/, '').replace(/^PR\d+-\d+\s*/, '').trim();
                             } else {
@@ -1903,10 +1953,14 @@
                         } else {
                             name = parts.slice(0, qtyIdx).join(" ").trim();
                         }
+                    } else {
+                        // Very inclusive fallback
+                        name = line.replace(/^\d+\.?\s*/, '').replace(/^PR\d+-\d+\s*/, '').trim();
+                        qty = 1;
                     }
                 }
 
-                if (name && qty > 0) {
+                if (name) {
                     items.push({ name, qty, price, unit });
                 }
             });
@@ -1917,21 +1971,44 @@
 
         async function renderQuotationList() {
             const list = document.getElementById('quotationList');
-            if (currentQuoteItems.length === 0) {
-                list.innerHTML = '<div class="text-center py-20 text-orange-500 font-bold">ไม่พบรายการสินค้าที่ระบุได้ชัดเจนใน PDF</div>';
-                return;
-            }
-
-            list.innerHTML = '<div class="text-center py-10"><i class="fas fa-database fa-spin text-teal-500 text-2xl"></i><p class="mt-2 text-gray-500">กำลังตรวจสอบข้อมูลหลัก...</p></div>';
+            list.innerHTML = '<div class="text-center py-20"><i class="fas fa-database fa-spin text-teal-500 text-2xl"></i><p class="mt-2 text-gray-500">กำลังจับคู่ข้อมูลหลัก...</p></div>';
 
             let matchCount = 0;
-            let html = '';
+            let html = `
+                <div class="bg-indigo-600 p-4 rounded-2xl text-white mb-4 shadow-md flex justify-between items-center">
+                    <div>
+                        <div class="text-xs opacity-80 uppercase tracking-widest font-bold">ขั้นตอนที่ 2</div>
+                        <div class="text-lg font-bold">ตรวจสอบและแก้ไขข้อมูล</div>
+                    </div>
+                    <button onclick="renderLinePicker()" class="bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1">
+                        <i class="fas fa-arrow-left"></i> กลับไปเลือกบรรทัด
+                    </button>
+                </div>
+            `;
 
-            for (let i = 0; i < currentQuoteItems.length; i++) {
-                const item = currentQuoteItems[i];
-                const matched = await db.collection('master_products').doc(getDocId(item.name)).get();
+            // Optimization: Match against local products first
+            const nameToItem = {};
+            currentQuoteItems.forEach(item => {
+                const id = getDocId(item.name);
+                if (!nameToItem[id]) nameToItem[id] = [];
+                nameToItem[id].push(item);
+            });
 
-                let masterData = matched.exists ? matched.data() : null;
+            const ids = Object.keys(nameToItem);
+            const masterCache = {};
+
+            // Batch Firestore fetch (limited to 30 items per query)
+            const chunks = [];
+            for (let i = 0; i < ids.length; i += 30) chunks.push(ids.slice(i, i + 30));
+
+            for (const chunk of chunks) {
+                const snap = await db.collection('master_products').where(firebase.firestore.FieldPath.documentId(), 'in', chunk).get();
+                snap.forEach(doc => masterCache[doc.id] = doc.data());
+            }
+
+            currentQuoteItems.forEach((item, i) => {
+                const id = getDocId(item.name);
+                const masterData = masterCache[id];
                 if (masterData) matchCount++;
 
                 const statusBg = masterData ? 'bg-green-50 border-green-200' : 'bg-orange-50 border-orange-200';
@@ -1945,12 +2022,12 @@
                             <div class="flex items-center gap-2 mb-1">
                                 ${statusIcon} <span class="text-[10px] font-bold uppercase tracking-widest ${masterData ? 'text-green-600' : 'text-orange-500'}">${statusText}</span>
                             </div>
-                            <input type="text" value="${item.name.replace(/"/g, '&quot;')}" onchange="currentQuoteItems[${i}].name = this.value" 
+                            <input type="text" value="${item.name.replace(/"/g, '&quot;')}" onchange="currentQuoteItems[${i}].name = this.value"
                                 class="w-full bg-transparent font-bold text-gray-800 border-none focus:ring-1 focus:ring-rose-500 p-1 rounded">
                         </div>
                         <div class="w-24 shrink-0">
                             <label class="text-[9px] font-bold text-gray-400 block ml-1 uppercase">QTY</label>
-                            <input type="number" value="${item.qty}" onchange="currentQuoteItems[${i}].qty = parseInt(this.value)" 
+                            <input type="number" value="${item.qty}" onchange="currentQuoteItems[${i}].qty = parseInt(this.value)"
                                 class="w-full p-2 border rounded-lg text-sm font-bold text-center h-9">
                         </div>
                         <div class="w-24 shrink-0">
@@ -1960,13 +2037,13 @@
                         </div>
                         <div class="w-32 shrink-0">
                             <label class="text-[9px] font-bold text-gray-400 block ml-1 uppercase">Price</label>
-                            <input type="number" value="${item.price}" onchange="currentQuoteItems[${i}].price = parseFloat(this.value)" 
+                            <input type="number" value="${item.price}" onchange="currentQuoteItems[${i}].price = parseFloat(this.value)"
                                 class="w-full p-2 border rounded-lg text-sm font-bold text-right text-rose-600 h-9">
                         </div>
                         <button onclick="currentQuoteItems.splice(${i}, 1); renderQuotationList()" class="text-gray-300 hover:text-red-500 p-2 transition"><i class="fas fa-trash-alt"></i></button>
                     </div>
                 `;
-            }
+            });
 
             list.innerHTML = html;
             document.getElementById('quoteMatches').innerText = matchCount;
@@ -1974,14 +2051,12 @@
             document.getElementById('quotationTotalCount').innerText = currentQuoteItems.length;
 
             const addBtn = document.getElementById('addQuotationBtn');
-            if (currentQuoteItems.length > 0) {
-                addBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                addBtn.disabled = false;
-            } else {
-                addBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                addBtn.disabled = true;
-            }
-            document.getElementById('reScanBtn').classList.remove('hidden-el');
+            addBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            addBtn.disabled = false;
+        }
+
+        function reParsePdf() {
+            if (rawPdfLines.length > 0) renderLinePicker();
         }
 
         function addQuoteToAnalysis() {
@@ -2007,7 +2082,7 @@
             showToast(`นำเข้าสำเร็จ! (${result.added} ใหม่, ${result.updated} เดิม)`);
 
             currentQuoteItems = [];
-            rawPdfText = "";
+            rawPdfLines = [];
             document.getElementById('pdfInput').value = "";
             document.getElementById('pdfFileName').innerText = "ยังไม่ได้เลือกไฟล์";
             document.getElementById('reScanBtn').classList.add('hidden-el');
