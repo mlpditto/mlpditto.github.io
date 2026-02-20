@@ -54,158 +54,276 @@
 
 <body class="bg-gray-50 min-h-screen relative pb-24">
 
-    <div class="bg-white shadow-sm sticky top-0 z-10">
-        <div class="max-w-lg mx-auto p-4 flex justify-between items-start">
+    <div class="bg-white shadow-sm sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto p-4 flex justify-between items-start">
             <div>
-                <h1 class="text-xl font-bold text-gray-800">FAQ</h1>
-                <p class="text-gray-500 text-xs mb-1">MLP</p>
-                <div class="h-6"></div> <!-- Spacer to keep layout if needed, or just empty -->
+                <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                    <i class="fas fa-question-circle text-indigo-600"></i> FAQ
+                </h1>
+                <p class="text-gray-500 text-xs mb-1">Med Life Plus - ระบบฐานข้อมูลคำถามที่พบบ่อย</p>
             </div>
             <div class="flex items-center gap-3">
                 <div id="status-area" class="flex flex-col items-end justify-center h-full gap-1">
                     <span id="badge-loading" class="text-xs text-gray-400 animate-pulse">กำลังตรวจสอบสิทธิ์...</span>
 
-                    <!-- Login Button -->
-                    <!-- Login Button with explicit redirect -->
-                    <button id="btn-login" onclick="liff.login({ redirectUri: window.location.href })"
-                        class="hidden bg-[#06C755] hover:bg-[#05b34c] text-white text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1 transition shadow-sm">
-                        <i class="fab fa-line text-xs"></i> เข้าสู่ระบบ
-                    </button>
-
-                    <!-- Contact Button (Moved) -->
-                    <a href="https://page.line.me/medlifeplus" target="_blank"
-                        class="bg-blue-500 hover:bg-blue-600 text-white text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1 transition shadow-sm">
-                        <i class="fas fa-comment-dots text-xs"></i> ติดต่อสอบถาม
-                    </a>
+                    <!-- Login Buttons -->
+                    <div id="login-buttons" class="hidden flex gap-2">
+                        <button id="btn-login-line" onclick="liff.login({ redirectUri: window.location.href })"
+                            class="bg-[#06C755] hover:bg-[#05b34c] text-white text-[10px] font-bold px-3 py-1.5 rounded-full flex items-center gap-1 transition shadow-sm">
+                            <i class="fab fa-line text-xs"></i> LINE
+                        </button>
+                        <button id="btn-login-google" onclick="loginWithGoogle()"
+                            class="bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 text-[10px] font-bold px-3 py-1.5 rounded-full flex items-center gap-1 transition shadow-sm">
+                            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/pwa/google.svg"
+                                class="w-3 h-3"> Google
+                        </button>
+                    </div>
 
                     <div id="badge-user" class="hidden flex items-center gap-2">
                         <div class="text-right">
                             <span id="user-name"
-                                class="block text-xs font-bold text-gray-700 truncate max-w-[100px] leading-tight">User</span>
+                                class="block text-xs font-bold text-gray-700 truncate max-w-[120px] leading-tight">User</span>
                             <div class="flex justify-end gap-1">
+                                <span id="badge-admin"
+                                    class="hidden bg-indigo-100 text-indigo-700 text-[8px] font-bold px-1.5 py-0.5 rounded-full border border-indigo-200 leading-none uppercase">Admin</span>
                                 <span id="badge-member"
                                     class="hidden bg-amber-100 text-amber-700 text-[8px] font-bold px-1.5 py-0.5 rounded-full border border-amber-200 leading-none">สมาชิก</span>
                                 <span id="badge-pending"
                                     class="hidden bg-gray-100 text-gray-500 text-[8px] font-bold px-1.5 py-0.5 rounded-full border border-gray-200 leading-none">รออนุมัติ</span>
+                                <button onclick="logout()"
+                                    class="text-[8px] text-red-500 hover:underline ml-1">ออกจากระบบ</button>
                             </div>
                         </div>
-                        <img id="user-img" src="" class="w-8 h-8 rounded-full border border-gray-200">
+                        <img id="user-img" src="" class="w-9 h-9 rounded-full border-2 border-indigo-100 shadow-sm">
                     </div>
                 </div>
 
-                <div class="text-right clock-container bg-green-50/50 pr-2 py-1 rounded-r-lg">
-                    <div class="text-sm font-bold text-gray-700 flex items-center justify-end gap-2"><i
-                            class="far fa-calendar-alt text-green-600"></i> <span id="date-display">...</span></div>
+                <div
+                    class="hidden sm:block text-right clock-container bg-green-50/50 pr-3 py-1.5 rounded-r-xl border-l-4 border-green-500">
                     <div
-                        class="text-lg font-mono text-green-700 font-bold flex items-center justify-end gap-2 leading-none mt-1">
-                        <i class="far fa-clock text-xs opacity-50"></i> <span id="time-display">...</span>
+                        class="text-[10px] font-bold text-gray-500 flex items-center justify-end gap-1 uppercase tracking-wider">
+                        <i class="far fa-calendar-alt text-green-600"></i> <span id="date-display">...</span>
+                    </div>
+                    <div
+                        class="text-xl font-mono text-green-700 font-bold flex items-center justify-end gap-2 leading-none mt-1">
+                        <span id="time-display">00:00:00</span>
                     </div>
                 </div>
             </div>
-            <div id="admin-controls" class="hidden absolute top-20 right-4 z-20">
-                <button onclick="openFaqModal()"
-                    class="bg-indigo-600 hover:bg-indigo-700 text-white w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition hover:scale-110">
-                    <i class="fas fa-plus"></i>
-                </button>
-            </div>
         </div>
-        <div class="bg-indigo-600 pb-8 pt-4 -mt-1 px-4 rounded-b-[2rem] shadow-lg mb-6 relative z-0">
-            <div class="max-w-lg mx-auto">
-                <div class="relative mb-4">
-                    <i class="fas fa-search absolute left-4 top-3.5 text-indigo-300"></i>
-                    <input type="text" id="search-input" onkeyup="filterFAQs()" placeholder="ค้นหาคำถาม..."
-                        class="w-full bg-indigo-500/50 border border-indigo-400/30 text-white placeholder-indigo-200 pl-11 pr-4 py-3 rounded-xl focus:outline-none focus:bg-indigo-500/70 transition shadow-inner backdrop-blur-sm">
+
+        <div class="bg-indigo-600 pb-10 pt-6 -mt-1 px-4 rounded-b-[3rem] shadow-xl mb-8 relative z-0">
+            <div class="max-w-7xl mx-auto">
+                <div class="flex flex-col md:flex-row gap-4 items-center mb-6">
+                    <div class="relative flex-1 w-full">
+                        <i class="fas fa-search absolute left-5 top-4 text-indigo-300"></i>
+                        <input type="text" id="search-input" onkeyup="filterFAQs()"
+                            placeholder="ค้นหาคำถามหรือเนื้อหาที่คุณสนใจ..."
+                            class="w-full bg-white/10 border border-white/20 text-white placeholder-indigo-200 pl-12 pr-4 py-4 rounded-2xl focus:outline-none focus:bg-white/20 focus:ring-2 focus:ring-white/50 transition shadow-inner backdrop-blur-md text-lg">
+                    </div>
+                    <div class="flex gap-2">
+                        <button id="btn-ask-question" onclick="openAskModal()"
+                            class="whitespace-nowrap bg-amber-400 hover:bg-amber-500 text-amber-900 font-bold px-6 py-4 rounded-2xl flex items-center gap-2 transition transform hover:scale-105 shadow-lg">
+                            <i class="fas fa-paper-plane"></i> ฝากคำถามไว้
+                        </button>
+                        <a href="https://page.line.me/medlifeplus" target="_blank"
+                            class="whitespace-nowrap bg-white/10 hover:bg-white/20 text-white font-bold px-6 py-4 rounded-2xl flex items-center gap-2 transition border border-white/20 backdrop-blur-md">
+                            <i class="fas fa-comment-dots"></i> ติอต่อเรา
+                        </a>
+                    </div>
                 </div>
-                <div class="flex gap-2 overflow-x-auto pb-2 no-scrollbar" id="category-filters">
+
+                <div class="flex items-center gap-3 overflow-x-auto pb-2 no-scrollbar" id="category-filters">
+                    <span
+                        class="text-indigo-200 text-xs font-bold uppercase tracking-widest mr-2 hidden md:block">หมวดหมู่:</span>
                     <button onclick="filterCategory('all')"
-                        class="cat-btn active whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition bg-white text-indigo-600 shadow-sm border border-white">ทั้งหมด</button>
+                        class="cat-btn active whitespace-nowrap px-6 py-2 rounded-xl text-sm font-bold transition bg-white text-indigo-600 shadow-lg scale-105">ทั้งหมด</button>
                     <button onclick="filterCategory('general')"
-                        class="cat-btn whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition bg-indigo-500/30 text-indigo-100 hover:bg-indigo-500/50 border border-indigo-400/30">ทั่วไป</button>
+                        class="cat-btn whitespace-nowrap px-6 py-2 rounded-xl text-sm font-bold transition bg-indigo-500/30 text-indigo-100 hover:bg-indigo-400/50 border border-white/10 hover:border-white/30">ทั่วไป</button>
                     <button onclick="filterCategory('product')"
-                        class="cat-btn whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition bg-indigo-500/30 text-indigo-100 hover:bg-indigo-500/50 border border-indigo-400/30">ผลิตภัณฑ์</button>
+                        class="cat-btn whitespace-nowrap px-6 py-2 rounded-xl text-sm font-bold transition bg-indigo-500/30 text-indigo-100 hover:bg-indigo-400/50 border border-white/10 hover:border-white/30">ผลิตภัณฑ์</button>
                     <button onclick="filterCategory('disease')"
-                        class="cat-btn whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition bg-indigo-500/30 text-indigo-100 hover:bg-indigo-500/50 border border-indigo-400/30">โรค</button>
+                        class="cat-btn whitespace-nowrap px-6 py-2 rounded-xl text-sm font-bold transition bg-indigo-500/30 text-indigo-100 hover:bg-indigo-400/50 border border-white/10 hover:border-white/30">โรค</button>
                     <button onclick="filterCategory('medicine')"
-                        class="cat-btn whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition bg-indigo-500/30 text-indigo-100 hover:bg-indigo-500/50 border border-indigo-400/30">ยา</button>
+                        class="cat-btn whitespace-nowrap px-6 py-2 rounded-xl text-sm font-bold transition bg-indigo-500/30 text-indigo-100 hover:bg-indigo-400/50 border border-white/10 hover:border-white/30">ยา</button>
+                    <div id="admin-tabs" class="hidden border-l border-white/20 pl-4 ml-2 flex gap-2">
+                        <button onclick="filterCategory('pending')"
+                            class="cat-btn whitespace-nowrap px-6 py-2 rounded-xl text-sm font-bold transition bg-rose-500/40 text-rose-100 hover:bg-rose-500/60 border border-rose-400/30">
+                            <i class="fas fa-clock mr-1"></i> รออนุมัติ <span id="pending-count"
+                                class="hidden ml-1 bg-rose-600 text-[10px] px-1.5 py-0.5 rounded-full">0</span>
+                        </button>
+                    </div>
                 </div>
                 <!-- Subcategory Filters (Hidden by default) -->
                 <div id="sub-filters"
-                    class="hidden flex gap-2 overflow-x-auto pb-2 pt-2 no-scrollbar border-t border-indigo-400/30 mt-2">
+                    class="hidden flex gap-2 overflow-x-auto pb-2 pt-4 no-scrollbar border-t border-white/10 mt-4">
                     <!-- Dynamic Content -->
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="max-w-lg mx-auto p-4">
-        <div id="loading" class="text-center text-gray-400 py-10"><i class="fas fa-spinner fa-spin text-2xl"></i>
-            กำลังโหลดข้อมูล...</div>
-        <div id="faq-container" class="space-y-3"></div>
-        <div id="login-prompt" class="hidden text-center mt-8 p-6 bg-white rounded-xl border border-gray-100 shadow-sm">
-            <i class="fas fa-lock text-3xl text-gray-300 mb-2"></i>
-            <p class="text-gray-500 text-sm mb-3">เนื้อหาบางส่วนสงวนสิทธิ์เฉพาะสมาชิก</p><button
-                onclick="liff.login({ redirectUri: window.location.href })"
-                class="text-green-600 font-bold text-sm hover:underline">คลิกเพื่อเข้าสู่ระบบ</button>
+    <div class="max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
+        <div id="loading" class="flex flex-col items-center justify-center py-20 text-indigo-400">
+            <i class="fas fa-circle-notch fa-spin text-4xl mb-4"></i>
+            <p class="font-medium">กำลังเตรียมข้อมูลคำถาม...</p>
+        </div>
+        <div id="faq-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        <div id="login-prompt"
+            class="hidden max-w-md mx-auto text-center mt-12 p-8 bg-white rounded-3xl border border-gray-100 shadow-xl">
+            <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-lock text-3xl text-gray-300"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 mb-2">เข้าถึงข้อมูลเฉพาะสมาชิก</h3>
+            <p class="text-gray-500 text-sm mb-6 leading-relaxed">กรุณาเข้าสู่ระบบเพื่อดูคำตอบในหมวดหมู่ที่จำกัดสิทธิ์
+                และประวัติการฝากคำถามของคุณ</p>
+            <div class="flex flex-col gap-3">
+                <button onclick="liff.login({ redirectUri: window.location.href })"
+                    class="w-full bg-[#06C755] text-white font-bold py-3 rounded-xl hover:bg-[#05b34c] transition shadow-md flex items-center justify-center gap-2">
+                    <i class="fab fa-line"></i> เข้าสู่ระบบด้วย LINE
+                </button>
+                <button onclick="loginWithGoogle()"
+                    class="w-full bg-white border border-gray-200 text-gray-700 font-bold py-3 rounded-xl hover:bg-gray-50 transition shadow-sm flex items-center justify-center gap-2">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/pwa/google.svg" class="w-5 h-5">
+                    เข้าสู่ระบบด้วย Google
+                </button>
+            </div>
         </div>
     </div>
 
 
 
-    <!-- FAQ Modal for Add/Edit -->
+    <!-- Ask Question Modal (For Users) -->
+    <div id="ask-modal"
+        class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+        <div
+            class="bg-white rounded-3xl w-full max-w-lg shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-300">
+            <div class="bg-amber-400 p-6 text-amber-900 flex justify-between items-center">
+                <div>
+                    <h3 class="font-bold text-xl flex items-center gap-2"><i class="fas fa-paper-plane"></i> ฝากคำถามไว้
+                    </h3>
+                    <p class="text-amber-800 text-xs opacity-80">แอดมินจะตรวจสอบและตอบกลับโดยเร็วที่สุด</p>
+                </div>
+                <button onclick="closeAskModal()"
+                    class="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center hover:bg-amber-500/40 transition">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-8 space-y-6">
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">คำถามของคุณ</label>
+                    <textarea id="ask-question" rows="4" placeholder="พิมพ์คำถามที่ต้องการทราบที่นี่..."
+                        class="w-full border-2 border-gray-100 p-4 rounded-2xl bg-gray-50 focus:ring-4 focus:ring-amber-100 focus:border-amber-400 outline-none transition text-gray-700 placeholder-gray-400"></textarea>
+                </div>
+                <div class="bg-blue-50 p-4 rounded-2xl flex gap-3 border border-blue-100">
+                    <i class="fas fa-info-circle text-blue-500 mt-1"></i>
+                    <p class="text-xs text-blue-700 leading-relaxed">คำถามจะถูกเก็บเป็นความลับและจะแสดงผลในหน้า FAQ
+                        หลังจากได้รับการตอบกลับและอนุมัติจากทางแอดมินเรียบร้อยแล้ว</p>
+                </div>
+                <button onclick="submitQuestion()"
+                    class="w-full bg-amber-400 text-amber-900 py-4 rounded-2xl font-bold text-lg shadow-lg hover:bg-amber-500 hover:shadow-xl transition transform active:scale-95 flex items-center justify-center gap-2">
+                    <i class="fas fa-check-circle"></i> ส่งคำถาม
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FAQ Modal for Add/Edit/Approve (For Admins) -->
     <div id="faq-modal"
         class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl flex flex-col overflow-hidden">
-            <div class="bg-indigo-600 p-4 text-white flex justify-between items-center">
-                <h3 class="font-bold" id="modal-title">จัดการคำถาม</h3>
-                <button onclick="closeFaqModal()"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="p-6 space-y-4">
-                <input type="hidden" id="faq-id">
+        <div
+            class="bg-white rounded-3xl w-full max-w-xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-300">
+            <div class="bg-indigo-600 p-6 text-white flex justify-between items-center">
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 mb-1">หมวดหมู่</label>
-                    <select id="faq-category" onchange="toggleSubcategoryInput()"
-                        class="w-full border p-2 rounded-lg bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none">
-                        <option value="general">ทั่วไป</option>
-                        <option value="product">ผลิตภัณฑ์</option>
-                        <option value="disease">โรค</option>
-                        <option value="medicine">ยา</option>
-                    </select>
+                    <h3 class="font-bold text-xl flex items-center gap-2"><i class="fas fa-tools"></i> จัดการคำถาม</h3>
+                    <p class="text-indigo-200 text-xs opacity-80">สำหรับแอดมินเท่านั้น</p>
                 </div>
+                <button onclick="closeFaqModal()"
+                    class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-5 overflow-y-auto max-h-[80vh]">
+                <input type="hidden" id="faq-id">
+                <input type="hidden" id="faq-status" value="approved">
+
+                <div id="pending-info" class="hidden p-4 bg-rose-50 border border-rose-100 rounded-2xl mb-4">
+                    <div class="flex items-center gap-2 text-rose-700 font-bold text-sm mb-1">
+                        <i class="fas fa-user-circle"></i> ถามโดย: <span id="submitter-name">...</span>
+                    </div>
+                    <p class="text-[10px] text-rose-500" id="submitter-id">ID: ...</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">หมวดหมู่</label>
+                        <select id="faq-category" onchange="toggleSubcategoryInput()"
+                            class="w-full border-2 border-gray-100 p-3 rounded-xl bg-gray-50 focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition">
+                            <option value="general">ทั่วไป</option>
+                            <option value="product">ผลิตภัณฑ์</option>
+                            <option value="disease">โรค</option>
+                            <option value="medicine">ยา</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">ลำดับ (Order)</label>
+                        <input type="number" id="faq-order"
+                            class="w-full border-2 border-gray-100 p-3 rounded-xl bg-gray-50 focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition">
+                    </div>
+                </div>
+
                 <div id="subcategory-container" class="hidden">
                     <label class="block text-xs font-bold text-gray-500 mb-1">หมวดหมู่ย่อย (Subcategory)</label>
                     <input type="text" id="faq-subcategory" placeholder="เช่น วิธีใช้, ผลข้างเคียง"
-                        class="w-full border p-2 rounded-lg bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none">
+                        class="w-full border-2 border-gray-100 p-3 rounded-xl bg-gray-50 focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition">
                 </div>
+
                 <div>
                     <label class="block text-xs font-bold text-gray-500 mb-1">คำถาม</label>
                     <input type="text" id="faq-question"
-                        class="w-full border p-2 rounded-lg bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none">
+                        class="w-full border-2 border-gray-100 p-3 rounded-xl bg-gray-50 focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition font-bold text-gray-700">
                 </div>
+
                 <div>
                     <label class="block text-xs font-bold text-gray-500 mb-1">คำตอบ</label>
                     <textarea id="faq-answer" rows="5"
-                        class="w-full border p-2 rounded-lg bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
+                        class="w-full border-2 border-gray-100 p-3 rounded-xl bg-gray-50 focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition text-gray-600"></textarea>
                 </div>
+
                 <div>
                     <label class="block text-xs font-bold text-gray-500 mb-1">รูปภาพ (URL / Drive Link)</label>
-                    <input type="text" id="faq-image"
-                        class="w-full border p-2 rounded-lg bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <input type="text" id="faq-image" placeholder="https://..."
+                        class="w-full border-2 border-gray-100 p-3 rounded-xl bg-gray-50 focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition text-[10px]">
                 </div>
-                <div class="flex gap-4">
-                    <div class="flex-1">
-                        <label class="block text-xs font-bold text-gray-500 mb-1">ลำดับ (Order)</label>
-                        <input type="number" id="faq-order"
-                            class="w-full border p-2 rounded-lg bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none">
-                    </div>
-                    <div class="flex items-center pt-5">
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" id="faq-member" class="w-4 h-4 text-indigo-600 rounded">
-                            <span class="text-sm text-gray-700">เฉพาะสมาชิก</span>
-                        </label>
+
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                        <input type="checkbox" id="faq-member"
+                            class="w-5 h-5 text-indigo-600 rounded-lg border-gray-300 focus:ring-indigo-500">
+                        <span
+                            class="text-sm font-bold text-gray-700 group-hover:text-indigo-600 transition">จำกัดเฉพาะสมาชิก</span>
+                    </label>
+                    <div id="approve-badge"
+                        class="hidden flex items-center gap-1.5 px-3 py-1 bg-rose-100 text-rose-700 rounded-full text-[10px] font-bold">
+                        <i class="fas fa-exclamation-circle"></i> รออนุมัติ
                     </div>
                 </div>
-                <button onclick="saveFAQ()"
-                    class="w-full bg-indigo-600 text-white py-2.5 rounded-xl font-bold shadow hover:bg-indigo-700 transition">บันทึกข้อมูล</button>
+
+                <div class="flex gap-3">
+                    <button id="btn-delete-modal"
+                        onclick="deleteFAQ(document.getElementById('faq-id').value); closeFaqModal();"
+                        class="hidden flex-shrink-0 w-12 h-12 bg-red-50 text-red-500 rounded-2xl hover:bg-red-100 transition flex items-center justify-center">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    <button onclick="saveFAQ()" id="btn-save-faq"
+                        class="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:shadow-xl transition transform active:scale-95 flex items-center justify-center gap-2 text-lg">
+                        <i class="fas fa-save"></i> บันทึกข้อมูล
+                    </button>
+                    <button onclick="approveQuestion()" id="btn-approve-faq"
+                        class="hidden flex-1 bg-green-500 text-white py-4 rounded-2xl font-bold shadow-lg shadow-green-200 hover:bg-green-600 hover:shadow-xl transition transform active:scale-95 flex items-center justify-center gap-2 text-lg">
+                        <i class="fas fa-check-double"></i> ตอบและอนุมัติ
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -218,224 +336,171 @@
     <script>
         // --- CONFIG ---
         const liffId = "2008999002-KiowNNUL";
+        const ALLOWED_ADMIN = 'medlifeplus@gmail.com';
 
         const db = firebase.firestore();
         const auth = firebase.auth();
-        const ALLOWED_ADMIN = 'medlifeplus@gmail.com';
+
+        let currentUser = null;
         let currentUserIsAdmin = false;
+        let isMember = false;
+        let allFaqsData = [];
+        let currentCategory = 'all';
+        let currentSubCategory = 'all';
 
         // --- Clock ---
-        function updateClock() { const now = new Date(); document.getElementById('date-display').innerText = now.toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }); document.getElementById('time-display').innerText = now.toLocaleTimeString('th-TH', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }); } setInterval(updateClock, 1000); updateClock();
-
-        // --- Main Logic ---
-        // --- Centralized UI Update Logic ---
-        function updateLoginUI() {
-            // Priority: Admin > Member/User > Guest
-            if (currentUserIsAdmin) {
-                document.getElementById('admin-controls').classList.remove('hidden');
-                document.getElementById('btn-login').classList.add('hidden');
-                document.getElementById('login-prompt').classList.add('hidden');
-                document.getElementById('badge-loading').classList.add('hidden');
-            } else if (liff.isLoggedIn()) {
-                document.getElementById('admin-controls').classList.add('hidden');
-                document.getElementById('btn-login').classList.add('hidden');
-                document.getElementById('login-prompt').classList.add('hidden');
-                document.getElementById('badge-loading').classList.add('hidden');
-                document.getElementById('badge-user').classList.remove('hidden');
-            } else {
-                document.getElementById('admin-controls').classList.add('hidden');
-                document.getElementById('btn-login').classList.remove('hidden');
-                document.getElementById('login-prompt').classList.remove('hidden');
-                document.getElementById('badge-loading').classList.add('hidden');
-                document.getElementById('badge-user').classList.add('hidden');
-            }
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('date-display').innerText = now.toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+            document.getElementById('time-display').innerText = now.toLocaleTimeString('th-TH', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
         }
+        setInterval(updateClock, 1000);
+        updateClock();
 
-        // --- Main Logic ---
-        async function main() {
-            let isMember = false;
-            let isLoggedIn = false;
-            document.getElementById('badge-loading').classList.remove('hidden');
+        // --- Auth Logic ---
+        async function initAuth() {
             try {
                 await liff.init({ liffId: liffId });
-                if (liff.isLoggedIn()) {
-                    isLoggedIn = true;
-                    const profile = await liff.getProfile();
-                    document.getElementById('user-img').src = profile.pictureUrl || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-                    document.getElementById('user-name').innerText = profile.displayName;
-
-                    const userDoc = await db.collection('users').doc(profile.userId).get();
-                    if (userDoc.exists) {
-                        if (userDoc.data().status === 'approved') { isMember = true; document.getElementById('badge-member').classList.remove('hidden'); }
-                        else { document.getElementById('badge-pending').classList.remove('hidden'); }
-                    } else { document.getElementById('badge-pending').classList.remove('hidden'); document.getElementById('badge-pending').innerText = "ยังไม่ลงทะเบียน"; }
-                }
+                updateUserStatus();
             } catch (err) {
-                console.log("LIFF Error:", err);
+                console.error("LIFF Init Error:", err);
+                updateUserStatus(); // Still try to update UI with Firebase Auth
             }
-
-            updateLoginUI(); // Update UI based on final state
-            loadFAQs(isMember, isLoggedIn);
         }
 
-        // --- Helper: Convert Drive Link to Direct Image ---
-        function getDirectDriveLink(url) {
-            if (!url) return '';
-            // ถ้าเป็นลิงก์ Google Drive
-            if (url.includes('drive.google.com')) {
-                // Pattern 1: /file/d/ID/view
-                const fileIdMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-                if (fileIdMatch && fileIdMatch[1]) {
-                    return `https://drive.google.com/uc?export=view&id=${fileIdMatch[1]}`;
-                }
-                // Pattern 2: id=ID
-                const idParamMatch = url.match(/id=([a-zA-Z0-9_-]+)/);
-                if (idParamMatch && idParamMatch[1]) {
-                    return `https://drive.google.com/uc?export=view&id=${idParamMatch[1]}`;
-                }
-            }
-            return url; // ถ้าไม่ใช่ Google Drive หรือแปลงไม่ได้ ให้คืนค่าเดิม
-        }
-
-        // --- Modified Load Logic to include Admin Buttons ---
-        function loadFAQs(isMember, isLoggedIn) {
-            db.collection("faqs").orderBy("order").onSnapshot((snap) => { // Use real-time snapshot for admin updates
-                document.getElementById('loading').style.display = 'none';
-                const container = document.getElementById('faq-container'); container.innerHTML = '';
-                if (snap.empty) { container.innerHTML = '<div class="text-center text-gray-400 mt-10"><i class="fas fa-inbox text-4xl mb-2 opacity-30"></i><p>ไม่มีข้อมูล</p></div>'; return; }
-
-                let visibleCount = 0;
-                snap.forEach((doc) => {
-                    const d = doc.data();
-                    if (d.isMemberOnly && !isMember && !currentUserIsAdmin) return;
-                    visibleCount++;
-
-                    const qSafe = escapeHtml(d.question); // Basic escape helper needed
-                    const aSafe = escapeHtml(d.answer);
-
-                    const lockIcon = d.isMemberOnly ? '<i class="fas fa-lock text-amber-500 ml-2" title="สำหรับสมาชิก"></i>' : '';
-                    const borderClass = d.isMemberOnly ? 'border-amber-200 ring-1 ring-amber-100' : 'border-gray-200';
-
-                    let adminControls = '';
-                    if (currentUserIsAdmin) {
-                        adminControls = `
-                        <div class="absolute top-2 right-10 flex gap-1 z-10" onclick="event.stopPropagation()">
-                            <button onclick="openFaqModal('${doc.id}')" class="w-6 h-6 rounded-full bg-gray-100 text-gray-500 hover:bg-blue-100 hover:text-blue-600 flex items-center justify-center transition"><i class="fas fa-pen text-[10px]"></i></button>
-                            <button onclick="deleteFAQ('${doc.id}')" class="w-6 h-6 rounded-full bg-gray-100 text-gray-500 hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition"><i class="fas fa-trash text-[10px]"></i></button>
-                        </div>`;
-                    }
-
-                    // ... (Image Logic from original) ...
-                    let imgHtml = '';
-                    if (d.imageUrl) {
-                        const directUrl = getDirectDriveLink(d.imageUrl);
-                        imgHtml = `<div class="mt-3 mb-2 relative group"><img src="${directUrl}" class="w-full h-auto rounded-lg shadow-sm border border-gray-100 cursor-pointer hover:opacity-95 transition bg-gray-100 min-h-[100px] object-contain" onclick="window.open('${d.imageUrl}', '_blank')" loading="lazy"><div class="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition"><a href="${d.imageUrl}" target="_blank" class="bg-gray-800/80 text-white text-[10px] px-2 py-1 rounded backdrop-blur-sm"><i class="fas fa-external-link-alt"></i> เปิดรูปเต็ม</a></div></div>`;
-                    }
-
-                    const div = document.createElement('div');
-                    div.className = `faq-item bg-white rounded-xl shadow-sm border ${borderClass} overflow-hidden group hover:shadow-md transition duration-200 relative`;
-                    div.innerHTML = `
-                        ${adminControls}
-                        <div class="p-4 flex justify-between items-center cursor-pointer select-none" onclick="this.parentElement.classList.toggle('active')">
-                            <div class="flex items-center gap-3 pr-8"><span class="bg-blue-50 text-blue-600 font-bold text-xs px-2.5 py-1 rounded-lg shadow-sm group-hover:bg-blue-100 transition">Q</span><h3 class="font-bold text-gray-700 text-sm leading-snug">${d.question} ${lockIcon}</h3></div>
-                            <div class="bg-gray-50 rounded-full p-1 w-6 h-6 flex items-center justify-center transition-transform duration-300 faq-chevron group-hover:bg-gray-100"><i class="fas fa-chevron-down text-gray-400 text-xs"></i></div>
-                        </div>
-                        <div class="faq-answer bg-gray-50/80 border-t border-gray-100">
-                            <div class="p-4 text-sm text-gray-600 leading-relaxed whitespace-pre-line">${d.answer}${imgHtml}</div>
-                            <div class="px-4 pb-3 flex justify-end"><button onclick="copyContent(this)" data-q="${qSafe}" data-a="${aSafe}" class="text-[10px] font-bold bg-white border border-gray-200 text-gray-500 px-3 py-1.5 rounded-lg hover:bg-green-50 hover:text-green-600 hover:border-green-200 transition shadow-sm flex items-center gap-1.5 active:scale-95"><i class="far fa-copy"></i> คัดลอก</button></div>
-                        </div>`;
-                    container.appendChild(div);
-                });
-                if (visibleCount === 0 && !isMember && !currentUserIsAdmin) {
-                    if (!isLoggedIn) {
-                        container.innerHTML = '<div class="text-center text-gray-400 mt-10 py-10 bg-white rounded-xl border border-dashed"><i class="fas fa-lock text-3xl mb-3 text-gray-300"></i><p>เนื้อหาสำหรับสมาชิกเท่านั้น<br>กรุณาเข้าสู่ระบบ</p></div>';
-                    } else {
-                        container.innerHTML = '<div class="text-center text-gray-400 mt-10 py-10 bg-white rounded-xl border border-dashed"><i class="fas fa-user-clock text-3xl mb-3 text-gray-300"></i><p>เนื้อหาสำหรับสมาชิกที่ได้รับการอนุมัติเท่านั้น<br>กรุณารอการตรวจสอบสิทธิ์</p></div>';
-                    }
-                }
-
-            }, (error) => {
-                console.error("Firestore Error:", error);
-                document.getElementById('loading').innerHTML = '<div class="text-red-500"><i class="fas fa-exclamation-triangle"></i> เกิดข้อผิดพลาดในการโหลดข้อมูล:<br>' + error.message + '</div>';
-                // Check for index error specifically
-                if (error.message.includes("index")) {
-                    alert("System needs an index. Check console for the link.");
-                }
-            });
-        }
-
-        function escapeHtml(text) { if (!text) return ''; return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); }
-
-        // --- Admin Functions ---
         auth.onAuthStateChanged(user => {
-            if (user && user.email === ALLOWED_ADMIN) {
-                currentUserIsAdmin = true;
-                updateLoginUI(); // Force update UI
-
-                // loadFAQs will be called by main(), but if auth is slow, main might call it false first.
-                // We should re-load if admin is detected.
-                loadFAQs(true);
-            }
+            updateUserStatus();
         });
 
-        function openFaqModal(id = null) {
-            document.getElementById('faq-modal').classList.remove('hidden');
-            const title = document.getElementById('modal-title');
-            if (id) {
-                title.innerText = 'แก้ไขคำถาม';
-                document.getElementById('faq-id').value = id;
-                db.collection('faqs').doc(id).get().then(doc => {
-                    const d = doc.data();
-                    document.getElementById('faq-question').value = d.question;
-                    document.getElementById('faq-answer').value = d.answer;
-                    document.getElementById('faq-image').value = d.imageUrl || '';
-                    document.getElementById('faq-category').value = d.category || 'general';
-                    document.getElementById('faq-subcategory').value = d.subcategory || '';
-                    document.getElementById('faq-order').value = d.order || 0;
-                    document.getElementById('faq-member').checked = d.isMemberOnly || false;
-                    toggleSubcategoryInput();
-                });
-            } else {
-                title.innerText = 'เพิ่มคำถามใหม่';
-                document.getElementById('faq-id').value = '';
-                document.getElementById('faq-question').value = '';
-                document.getElementById('faq-answer').value = '';
-                document.getElementById('faq-image').value = '';
-                document.getElementById('faq-category').value = 'general';
-                document.getElementById('faq-subcategory').value = '';
-                document.getElementById('faq-order').value = Date.now(); // Default sort by timeish
-                document.getElementById('faq-member').checked = false;
-                toggleSubcategoryInput();
+        async function updateUserStatus() {
+            let profile = null;
+            let provider = 'none';
+
+            // 1. Check LIFF
+            if (liff.isLoggedIn()) {
+                const liffProfile = await liff.getProfile();
+                profile = {
+                    uid: liffProfile.userId,
+                    displayName: liffProfile.displayName,
+                    photoURL: liffProfile.pictureUrl,
+                    email: null // LIFF doesn't give email easily
+                };
+                provider = 'line';
             }
+            // 2. Check Firebase Auth (Google)
+            else if (auth.currentUser) {
+                profile = {
+                    uid: auth.currentUser.uid,
+                    displayName: auth.currentUser.displayName,
+                    photoURL: auth.currentUser.photoURL,
+                    email: auth.currentUser.email
+                };
+                provider = 'google';
+            }
+
+            if (profile) {
+                currentUser = profile;
+                document.getElementById('user-img').src = profile.photoURL || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+                document.getElementById('user-name').innerText = profile.displayName;
+
+                // Admin Check
+                currentUserIsAdmin = (profile.email === ALLOWED_ADMIN);
+
+                // Member Check (from "users" collection)
+                const userDoc = await db.collection('users').doc(profile.uid).get();
+                if (userDoc.exists) {
+                    const data = userDoc.data();
+                    if (data.status === 'approved') {
+                        isMember = true;
+                        document.getElementById('badge-member').classList.remove('hidden');
+                        document.getElementById('badge-pending').classList.add('hidden');
+                    } else {
+                        isMember = false;
+                        document.getElementById('badge-member').classList.add('hidden');
+                        document.getElementById('badge-pending').classList.remove('hidden');
+                    }
+                } else {
+                    isMember = false;
+                    document.getElementById('badge-member').classList.add('hidden');
+                    document.getElementById('badge-pending').classList.add('hidden');
+                }
+
+                if (currentUserIsAdmin) {
+                    document.getElementById('badge-admin').classList.remove('hidden');
+                    document.getElementById('admin-tabs').classList.remove('hidden');
+                }
+
+                document.getElementById('login-buttons').classList.add('hidden');
+                document.getElementById('badge-user').classList.remove('hidden');
+                document.getElementById('login-prompt').classList.add('hidden');
+            } else {
+                currentUser = null;
+                currentUserIsAdmin = false;
+                isMember = false;
+                document.getElementById('login-buttons').classList.remove('hidden');
+                document.getElementById('badge-user').classList.add('hidden');
+                document.getElementById('login-prompt').classList.remove('hidden');
+                document.getElementById('admin-tabs').classList.add('hidden');
+            }
+
+            document.getElementById('badge-loading').classList.add('hidden');
+            loadFAQs();
         }
 
+        function loginWithGoogle() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider).catch(err => alert("Google Login Error: " + err.message));
+        }
 
-        function closeFaqModal() { document.getElementById('faq-modal').classList.add('hidden'); }
+        function logout() {
+            if (liff.isLoggedIn()) liff.logout();
+            auth.signOut();
+            window.location.reload();
+        }
 
-        let currentCategory = 'all';
-        let allFaqsData = []; // Store data for client-side filtering
-        let currentSubCategory = 'all';
+        // --- FAQ Logic ---
+        function loadFAQs() {
+            // Unsubscribe existing if any? (Simplified for now)
+            db.collection("faqs").orderBy("order").onSnapshot((snap) => {
+                document.getElementById('loading').classList.add('hidden');
+                allFaqsData = [];
+                let pendingCount = 0;
+
+                snap.forEach(doc => {
+                    const d = doc.data();
+                    if (!d.status) d.status = 'approved'; // Default for old data
+                    if (d.status === 'pending') pendingCount++;
+
+                    allFaqsData.push({ id: doc.id, ...d });
+                });
+
+                document.getElementById('pending-count').innerText = pendingCount;
+                if (pendingCount > 0) document.getElementById('pending-count').classList.remove('hidden');
+                else document.getElementById('pending-count').classList.add('hidden');
+
+                filterFAQs();
+            }, (error) => {
+                console.error("Firestore Error:", error);
+                document.getElementById('loading').innerHTML = `<div class="text-red-500 p-10 bg-white rounded-3xl shadow-sm border border-red-50 text-center"><i class="fas fa-exclamation-triangle text-3xl mb-2"></i><br>เกิดข้อผิดพลาด: ${error.message}</div>`;
+            });
+        }
 
         function filterCategory(cat) {
             currentCategory = cat;
-            currentSubCategory = 'all'; // Reset sub
-            document.querySelectorAll('.cat-btn').forEach(b => {
-                b.classList.remove('bg-white', 'text-indigo-600', 'shadow-sm', 'border-white');
-                b.classList.add('bg-indigo-500/30', 'text-indigo-100', 'border-indigo-400/30');
+            currentSubCategory = 'all';
+
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                btn.classList.remove('active', 'bg-white', 'text-indigo-600', 'shadow-lg', 'scale-105');
+                btn.classList.add('bg-indigo-500/30', 'text-indigo-100', 'border-white/10');
             });
 
-            // Check if looking at sub or main
-            // Actually the clicked button passed 'cat'
-            // We need to highlight it. The event target might be inner text or button.
-            // Simplified: Re-query by onClick is hard. Let's just trust logic for now or add IDs?
-            // Better: Just loop and match logic if possible or just use simple class toggle on clicked
-            const btn = event.currentTarget || event.target; // Safe bet
-            if (btn.classList.contains('cat-btn')) {
-                btn.classList.remove('bg-indigo-500/30', 'text-indigo-100', 'border-indigo-400/30');
-                btn.classList.add('bg-white', 'text-indigo-600', 'shadow-sm', 'border-white');
+            // Target highlighted button
+            const activeBtn = event.currentTarget || event.target;
+            if (activeBtn && activeBtn.classList.contains('cat-btn')) {
+                activeBtn.classList.add('active', 'bg-white', 'text-indigo-600', 'shadow-lg', 'scale-105');
+                activeBtn.classList.remove('bg-indigo-500/30', 'text-indigo-100', 'border-white/10');
             }
 
-            // Handle Medicine Subcategories
             const subContainer = document.getElementById('sub-filters');
             if (cat === 'medicine') {
                 subContainer.classList.remove('hidden');
@@ -449,25 +514,21 @@
 
         function renderSubFilters() {
             const subContainer = document.getElementById('sub-filters');
-            // Get unique subcategories for medicine
             const subs = new Set();
             allFaqsData.forEach(item => {
-                if (item.data.category === 'medicine' && item.data.subcategory) {
-                    subs.add(item.data.subcategory);
-                }
+                if (item.category === 'medicine' && item.subcategory) subs.add(item.subcategory);
             });
 
-            let html = `<button onclick="filterSubCategory('all')" class="sub-cat-btn ${currentSubCategory === 'all' ? 'bg-indigo-800 text-white' : 'bg-indigo-500/30 text-indigo-100'} px-3 py-1 rounded-full text-[10px] font-bold transition hover:bg-indigo-700">ทั้งหมด</button>`;
-
+            let html = `<button onclick="filterSubCategory('all')" class="whitespace-nowrap px-4 py-1.5 rounded-xl text-xs font-bold transition ${currentSubCategory === 'all' ? 'bg-indigo-800 text-white active shadow-md' : 'bg-white/10 text-indigo-100 hover:bg-white/20'}">ทั้งหมด</button>`;
             subs.forEach(s => {
-                html += `<button onclick="filterSubCategory('${s}')" class="sub-cat-btn ${currentSubCategory === s ? 'bg-indigo-800 text-white' : 'bg-indigo-500/30 text-indigo-100'} px-3 py-1 rounded-full text-[10px] font-bold transition hover:bg-indigo-700 whitespace-nowrap">${s}</button>`;
+                html += `<button onclick="filterSubCategory('${s}')" class="whitespace-nowrap px-4 py-1.5 rounded-xl text-xs font-bold transition ${currentSubCategory === s ? 'bg-indigo-800 text-white active shadow-md' : 'bg-white/10 text-indigo-100 hover:bg-white/20'}">${s}</button>`;
             });
             subContainer.innerHTML = html;
         }
 
         function filterSubCategory(sub) {
             currentSubCategory = sub;
-            renderSubFilters(); // Re-render to update active state
+            renderSubFilters();
             filterFAQs();
         }
 
@@ -479,80 +540,199 @@
             let visibleCount = 0;
 
             allFaqsData.forEach(item => {
-                const d = item.data;
-                const matchesSearch = d.question.toLowerCase().includes(query) || d.answer.toLowerCase().includes(query);
-                const matchesCat = currentCategory === 'all' || d.category === currentCategory;
-                const matchesSub = currentSubCategory === 'all' || d.subcategory === currentSubCategory;
+                // 1. Status Filter
+                if (currentCategory === 'pending') {
+                    if (!currentUserIsAdmin || item.status !== 'pending') return;
+                } else {
+                    if (item.status === 'pending') return; // Hide pending from public
+                }
 
-                // Permission Check
-                const hasPermission = !d.isMemberOnly || item.isMember || item.isAdmin;
+                // 2. Category Filter
+                const matchesCat = currentCategory === 'all' || item.category === currentCategory || currentCategory === 'pending';
 
-                if (matchesSearch && matchesCat && (currentCategory !== 'medicine' || matchesSub)) {
-                    if (!hasPermission && !item.isMember && !item.isAdmin) return;
+                // 3. Subcategory Filter
+                const matchesSub = currentSubCategory === 'all' || item.subcategory === currentSubCategory;
 
-                    renderFAQ(item.docId, d, item.isMember, item.isAdmin);
+                // 4. Search Filter
+                const matchesSearch = item.question.toLowerCase().includes(query) || (item.answer && item.answer.toLowerCase().includes(query));
+
+                // 5. Member Check
+                const canSeeAnswer = !item.isMemberOnly || isMember || currentUserIsAdmin;
+
+                if (matchesCat && matchesSub && matchesSearch) {
+                    renderFAQCard(item, canSeeAnswer);
                     visibleCount++;
                 }
             });
 
             if (visibleCount === 0) {
-                if (allFaqsData.length === 0) {
-                    container.innerHTML = '<div class="text-center text-gray-400 mt-10"><i class="fas fa-inbox text-4xl mb-2 opacity-30"></i><p>ไม่มีข้อมูล</p></div>';
-                } else {
-                    container.innerHTML = '<div class="text-center text-gray-400 mt-10"><i class="fas fa-search text-4xl mb-2 opacity-30"></i><p>ไม่พบข้อมูลที่ค้นหา</p></div>';
-                }
+                container.innerHTML = `<div class="col-span-full text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200"><i class="fas fa-search text-5xl text-gray-200 mb-4"></i><p class="text-gray-400">ไม่พบคำถามที่คุณค้นหา</p></div>`;
             }
         }
 
-        function renderFAQ(docId, d, isMember, isAdmin) {
+        function renderFAQCard(d, canSee) {
             const container = document.getElementById('faq-container');
             const qSafe = escapeHtml(d.question);
-            const aSafe = escapeHtml(d.answer);
+            const aSafe = escapeHtml(d.answer || 'รอคำตอบจากแอดมิน...');
+
             const lockIcon = d.isMemberOnly ? '<i class="fas fa-lock text-amber-500 ml-2" title="สำหรับสมาชิก"></i>' : '';
-            const borderClass = d.isMemberOnly ? 'border-amber-200 ring-1 ring-amber-100' : 'border-gray-200';
+            const borderClass = d.isMemberOnly ? 'border-amber-100 ring-2 ring-amber-50' : 'border-gray-100';
 
             let adminControls = '';
-            if (isAdmin) {
+            if (currentUserIsAdmin) {
                 adminControls = `
-                <div class="absolute top-2 right-10 flex gap-1 z-10" onclick="event.stopPropagation()">
-                    <button onclick="openFaqModal('${docId}')" class="w-6 h-6 rounded-full bg-gray-100 text-gray-500 hover:bg-blue-100 hover:text-blue-600 flex items-center justify-center transition"><i class="fas fa-pen text-[10px]"></i></button>
-                    <button onclick="deleteFAQ('${docId}')" class="w-6 h-6 rounded-full bg-gray-100 text-gray-500 hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition"><i class="fas fa-trash text-[10px]"></i></button>
+                <div class="absolute top-4 right-4 flex gap-2 z-10" onclick="event.stopPropagation()">
+                    <button onclick="openFaqModal('${d.id}')" class="w-8 h-8 rounded-full bg-white shadow-sm text-gray-400 hover:text-indigo-600 flex items-center justify-center transition hover:scale-110 border border-gray-100"><i class="fas fa-pen text-[10px]"></i></button>
+                    <button onclick="deleteFAQ('${d.id}')" class="w-8 h-8 rounded-full bg-white shadow-sm text-gray-400 hover:text-red-600 flex items-center justify-center transition hover:scale-110 border border-gray-100"><i class="fas fa-trash text-[10px]"></i></button>
                 </div>`;
             }
 
             let imgHtml = '';
             if (d.imageUrl) {
                 const directUrl = getDirectDriveLink(d.imageUrl);
-                imgHtml = `<div class="mt-3 mb-2 relative group"><img src="${directUrl}" class="w-full h-auto rounded-lg shadow-sm border border-gray-100 cursor-pointer hover:opacity-95 transition bg-gray-100 min-h-[100px] object-contain" onclick="window.open('${d.imageUrl}', '_blank')" loading="lazy"><div class="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition"><a href="${d.imageUrl}" target="_blank" class="bg-gray-800/80 text-white text-[10px] px-2 py-1 rounded backdrop-blur-sm"><i class="fas fa-external-link-alt"></i> เปิดรูปเต็ม</a></div></div>`;
+                imgHtml = `<div class="mt-4 mb-2 relative group"><img src="${directUrl}" class="w-full h-auto rounded-2xl shadow-sm border border-gray-100 cursor-pointer hover:opacity-95 transition bg-gray-50 min-h-[120px] object-contain" onclick="window.open('${d.imageUrl}', '_blank')"><div class="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition"><span class="bg-black/60 text-white text-[10px] px-3 py-1.5 rounded-lg backdrop-blur-md"><i class="fas fa-expand"></i> ดูรูปเต็ม</span></div></div>`;
             }
 
             const div = document.createElement('div');
-            div.className = `faq-item bg-white rounded-xl shadow-sm border ${borderClass} overflow-hidden group hover:shadow-md transition duration-200 relative`;
+            div.className = `faq-item bg-white rounded-[2rem] shadow-sm border ${borderClass} overflow-hidden group hover:shadow-xl transition-all duration-300 relative flex flex-col`;
+
+            // If restricted and not logged in, blur/hide answer
+            let answerContent = `
+                <div class="p-6 text-base text-gray-600 leading-relaxed whitespace-pre-line">${aSafe}${imgHtml}</div>
+                <div class="px-6 pb-6 flex justify-end">
+                    <button onclick="copyContent(this)" data-q="${qSafe}" data-a="${aSafe}" class="text-[10px] font-bold bg-gray-50 text-gray-400 px-4 py-2 rounded-xl hover:bg-green-50 hover:text-green-600 transition shadow-sm flex items-center gap-2 active:scale-95"><i class="far fa-copy"></i> คัดลอกคำตอบ</button>
+                </div>`;
+
+            if (!canSee) {
+                answerContent = `
+                <div class="p-8 text-center bg-gray-50/50">
+                    <i class="fas fa-lock text-3xl text-gray-200 mb-3"></i>
+                    <p class="text-gray-400 text-sm mb-4">เนื้อหาสำหรับสมาชิกที่เข้าร่วมโปรแกรมเท่านั้น</p>
+                    <button onclick="liff.login({ redirectUri: window.location.href })" class="text-indigo-600 font-bold text-xs hover:underline">คลิกเพื่อเข้าสู่ระบบ</button>
+                </div>`;
+            }
+
+            if (d.status === 'pending') {
+                div.classList.add('border-rose-200', 'bg-rose-50/10');
+            }
+
             div.innerHTML = `
                 ${adminControls}
-                <div class="p-4 flex justify-between items-center cursor-pointer select-none" onclick="this.parentElement.classList.toggle('active')">
-                    <div class="flex items-center gap-3 pr-8"><span class="bg-blue-50 text-blue-600 font-bold text-xs px-2.5 py-1 rounded-lg shadow-sm group-hover:bg-blue-100 transition">Q</span><h3 class="font-bold text-gray-700 text-sm leading-snug">${d.question} ${lockIcon}</h3></div>
-                    <div class="bg-gray-50 rounded-full p-1 w-6 h-6 flex items-center justify-center transition-transform duration-300 faq-chevron group-hover:bg-gray-100"><i class="fas fa-chevron-down text-gray-400 text-xs"></i></div>
+                <div class="p-6 flex flex-col cursor-pointer select-none h-full" onclick="this.parentElement.classList.toggle('active')">
+                    <div class="flex items-start gap-4 pr-10 mb-4">
+                        <span class="flex-shrink-0 w-10 h-10 bg-indigo-50 text-indigo-600 font-bold text-lg flex items-center justify-center rounded-2xl shadow-sm transition-transform group-hover:rotate-12 group-hover:scale-110">Q</span>
+                        <h3 class="font-bold text-gray-800 text-lg leading-snug tracking-tight">${d.question} ${lockIcon}</h3>
+                    </div>
+                    ${d.status === 'pending' ? '<div class="mt-auto"><span class="bg-rose-100 text-rose-600 px-3 py-1 rounded-full text-[10px] font-bold uppercase"><i class="fas fa-clock mr-1"></i> รอคำตอบ</span></div>' : ''}
+                    <div class="flex justify-between items-center mt-auto pt-4 border-t border-gray-50">
+                        <span class="text-[10px] text-gray-400 font-medium uppercase tracking-widest">${d.category || 'ทั่วไป'}</span>
+                        <i class="fas fa-chevron-down text-gray-300 text-sm transition-transform duration-300 faq-chevron"></i>
+                    </div>
                 </div>
-                <div class="faq-answer bg-gray-50/80 border-t border-gray-100">
-                    <div class="p-4 text-sm text-gray-600 leading-relaxed whitespace-pre-line">${d.answer}${imgHtml}</div>
-                    <div class="px-4 pb-3 flex justify-end"><button onclick="copyContent(this)" data-q="${qSafe}" data-a="${aSafe}" class="text-[10px] font-bold bg-white border border-gray-200 text-gray-500 px-3 py-1.5 rounded-lg hover:bg-green-50 hover:text-green-600 hover:border-green-200 transition shadow-sm flex items-center gap-1.5 active:scale-95"><i class="far fa-copy"></i> คัดลอก</button></div>
+                <div class="faq-answer bg-gray-50/30 border-t border-gray-100 overflow-hidden">
+                    ${answerContent}
                 </div>`;
             container.appendChild(div);
         }
 
-        function toggleSubcategoryInput() {
-            const cat = document.getElementById('faq-category').value;
-            const subInput = document.getElementById('subcategory-container');
-            if (cat === 'medicine') {
-                subInput.classList.remove('hidden');
-            } else {
-                subInput.classList.add('hidden');
-                document.getElementById('faq-subcategory').value = ''; // Reset
+        // --- Question Submission ---
+        function openAskModal() {
+            if (!currentUser) {
+                document.getElementById('login-prompt').scrollIntoView({ behavior: 'smooth' });
+                alert("กรุณาเข้าสู่ระบบก่อนฝากคำถามครับ");
+                return;
+            }
+            document.getElementById('ask-modal').classList.remove('hidden');
+        }
+
+        function closeAskModal() {
+            document.getElementById('ask-modal').classList.add('hidden');
+            document.getElementById('ask-question').value = '';
+        }
+
+        async function submitQuestion() {
+            const question = document.getElementById('ask-question').value.trim();
+            if (!question) return alert("กรุณาพิมพ์คำถามของคุณด้วยครับ");
+
+            try {
+                const btn = event.target;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังส่ง...';
+
+                await db.collection('faqs').add({
+                    question: question,
+                    answer: "",
+                    category: "general",
+                    status: "pending",
+                    submittedBy: currentUser.uid,
+                    submitterName: currentUser.displayName,
+                    submitterImg: currentUser.photoURL,
+                    order: Date.now(),
+                    isMemberOnly: false,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                showToast("ส่งคำถามเรียบร้อยแล้ว แอดมินจะตรวจสอบให้ครับ!");
+                closeAskModal();
+            } catch (err) {
+                alert("Error: " + err.message);
+            } finally {
+                const b = document.querySelector('#ask-modal button[onclick="submitQuestion()"]');
+                b.disabled = false;
+                b.innerHTML = '<i class="fas fa-check-circle"></i> ส่งคำถาม';
             }
         }
 
-        function saveFAQ() {
+        // --- Admin Actions ---
+        function openFaqModal(id = null) {
+            document.getElementById('faq-modal').classList.remove('hidden');
+            const ids = ['faq-id', 'faq-question', 'faq-answer', 'faq-image', 'faq-subcategory', 'faq-order'];
+            ids.forEach(i => document.getElementById(i).value = '');
+            document.getElementById('faq-member').checked = false;
+            document.getElementById('faq-status').value = 'approved';
+
+            // Hide pending labels by default
+            document.getElementById('pending-info').classList.add('hidden');
+            document.getElementById('approve-badge').classList.add('hidden');
+            document.getElementById('btn-approve-faq').classList.add('hidden');
+            document.getElementById('btn-save-faq').classList.remove('hidden');
+            document.getElementById('btn-delete-modal').classList.add('hidden');
+
+            if (id) {
+                document.getElementById('faq-id').value = id;
+                document.getElementById('btn-delete-modal').classList.remove('hidden');
+
+                db.collection('faqs').doc(id).get().then(doc => {
+                    const d = doc.data();
+                    document.getElementById('faq-question').value = d.question;
+                    document.getElementById('faq-answer').value = d.answer || '';
+                    document.getElementById('faq-image').value = d.imageUrl || '';
+                    document.getElementById('faq-category').value = d.category || 'general';
+                    document.getElementById('faq-subcategory').value = d.subcategory || '';
+                    document.getElementById('faq-order').value = d.order || 0;
+                    document.getElementById('faq-member').checked = d.isMemberOnly || false;
+                    document.getElementById('faq-status').value = d.status || 'approved';
+
+                    if (d.status === 'pending') {
+                        document.getElementById('pending-info').classList.remove('hidden');
+                        document.getElementById('submitter-name').innerText = d.submitterName || 'Unknown';
+                        document.getElementById('submitter-id').innerText = `ID: ${d.submittedBy || '-'}`;
+                        document.getElementById('approve-badge').classList.remove('hidden');
+                        document.getElementById('btn-approve-faq').classList.remove('hidden');
+                        document.getElementById('btn-save-faq').classList.add('hidden');
+                    }
+                    toggleSubcategoryInput();
+                });
+            } else {
+                document.getElementById('faq-order').value = Date.now();
+                toggleSubcategoryInput();
+            }
+        }
+
+        function closeFaqModal() { document.getElementById('faq-modal').classList.add('hidden'); }
+
+        async function saveFAQ() {
             const id = document.getElementById('faq-id').value;
             const data = {
                 question: document.getElementById('faq-question').value,
@@ -562,73 +742,73 @@
                 subcategory: document.getElementById('faq-subcategory').value,
                 order: parseInt(document.getElementById('faq-order').value) || 0,
                 isMemberOnly: document.getElementById('faq-member').checked,
+                status: document.getElementById('faq-status').value,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
 
-            if (!data.question || !data.answer) return alert('กรุณาระบุคำถามและคำตอบ');
+            if (!data.question) return alert('กรุณาระบุคำถาม');
 
-            const promise = id ? db.collection('faqs').doc(id).update(data) : db.collection('faqs').add(data);
-
-            promise.then(() => {
+            try {
+                if (id) await db.collection('faqs').doc(id).update(data);
+                else await db.collection('faqs').add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
                 closeFaqModal();
-            }).catch(e => alert('Error: ' + e.message));
+                showToast("บันทึกข้อมูลเรียบร้อย!");
+            } catch (err) {
+                alert("Error: " + err.message);
+            }
         }
 
-        // --- Modified Load Logic ---
-        function loadFAQs(isMember, isLoggedIn) {
-            db.collection("faqs").orderBy("order").onSnapshot((snap) => {
-                document.getElementById('loading').style.display = 'none';
-                allFaqsData = []; // Reset data
-
-                snap.forEach(doc => {
-                    const d = doc.data();
-                    // Basic default if category is missing
-                    if (!d.category) d.category = 'general';
-                    allFaqsData.push({ docId: doc.id, data: d, isMember: isMember, isAdmin: currentUserIsAdmin });
-                });
-
-                filterFAQs(); // Initial render
-
-                // Handle No Access Empty State (Global check, not per item)
-                const container = document.getElementById('faq-container');
-                // Check if any restricted items exist but user can't see them? 
-                // For now, simplify and just check if screen is empty and we have data but filters hid it?
-                // Actually the original logic was specific: "If ALL items are hidden because of permission, show lock screen"
-                // New logic: Simple filtering. If user has no permission, they just don't see it in list.
-                // If list is empty because of permission, show lock screen.
-
-                const visibleCount = allFaqsData.filter(item => (!item.data.isMemberOnly || isMember || currentUserIsAdmin)).length;
-
-                if (visibleCount === 0 && allFaqsData.length > 0) {
-                    if (!isLoggedIn) {
-                        container.innerHTML = '<div class="text-center text-gray-400 mt-10 py-10 bg-white rounded-xl border border-dashed"><i class="fas fa-lock text-3xl mb-3 text-gray-300"></i><p>เนื้อหาสำหรับสมาชิกเท่านั้น<br>กรุณาเข้าสู่ระบบ</p></div>';
-                    } else {
-                        container.innerHTML = '<div class="text-center text-gray-400 mt-10 py-10 bg-white rounded-xl border border-dashed"><i class="fas fa-user-clock text-3xl mb-3 text-gray-300"></i><p>เนื้อหาสำหรับสมาชิกที่ได้รับการอนุมัติเท่านั้น<br>กรุณารอการตรวจสอบสิทธิ์</p></div>';
-                    }
-                }
-
-            }, (error) => {
-                console.error("Firestore Error:", error);
-                document.getElementById('loading').innerHTML = '<div class="text-red-500"><i class="fas fa-exclamation-triangle"></i> เกิดข้อผิดพลาดในการโหลดข้อมูล:<br>' + error.message + '</div>';
-            });
+        async function approveQuestion() {
+            document.getElementById('faq-status').value = 'approved';
+            if (!document.getElementById('faq-answer').value) return alert("กรุณาพิมพ์คำตอบก่อนอนุมัติด้วยครับ");
+            saveFAQ();
         }
-
 
         function deleteFAQ(id) {
-            if (confirm('ลบคำถามนี้?')) {
-                db.collection('faqs').doc(id).delete();
+            if (confirm('คุณต้องการลบคำถามนี้ใช่หรือไม่?')) {
+                db.collection('faqs').doc(id).delete().then(() => showToast("ลบเรียบร้อย!"));
             }
+        }
+
+        // --- Helpers ---
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        function getDirectDriveLink(url) {
+            if (!url || !url.includes('drive.google.com')) return url;
+            const fileIdMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
+            if (fileIdMatch && fileIdMatch[1]) return `https://drive.google.com/uc?export=view&id=${fileIdMatch[1]}`;
+            return url;
+        }
+
+        function toggleSubcategoryInput() {
+            const cat = document.getElementById('faq-category').value;
+            document.getElementById('subcategory-container').classList.toggle('hidden', cat !== 'medicine');
         }
 
         function copyContent(btn) {
             const q = btn.dataset.q; const a = btn.dataset.a;
-            // ... existing logic but using params ...
-            const now = new Date(); const dStr = now.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }); const tStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }); const t = `Q: ${q}\nA: ${a}\n\n(คัดลอกเมื่อ: ${dStr} เวลา ${tStr})`; navigator.clipboard.writeText(t).then(() => showToast()).catch(() => alert('Copy failed'));
+            const now = new Date();
+            const dStr = now.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
+            const tStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+            const t = `Q: ${q}\nA: ${a}\n\n(Med Life Plus FAQ - คัดลอกเมื่อ: ${dStr} เวลา ${tStr})`;
+            navigator.clipboard.writeText(t).then(() => showToast()).catch(() => alert('Copy failed'));
         }
 
+        function showToast(msg = "คัดลอกแล้ว!") {
+            const t = document.getElementById('toast');
+            t.innerHTML = `<i class="fas fa-check-circle text-green-400"></i> ${msg}`;
+            t.style.opacity = '1';
+            t.style.transform = 'translate(-50%, -10px)';
+            setTimeout(() => {
+                t.style.opacity = '0';
+                t.style.transform = 'translate(-50%, 0)';
+            }, 3000);
+        }
 
-        function showToast() { const t = document.getElementById('toast'); t.style.opacity = '1'; t.style.transform = 'translate(-50%, -10px)'; setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translate(-50%, 0)'; }, 2000); }
-        main();
+        initAuth();
     </script>
 </body>
 
