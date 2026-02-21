@@ -1671,139 +1671,142 @@
         }
 
         function renderUI() {
-            // Auto-refresh Payout UI if open
-            if (!document.getElementById('payoutModal').classList.contains('hidden')) {
-                renderPayoutUI();
-            }
-
-            const termMonth = document.getElementById('monthFilter').value;
-            const now = new Date();
-            const y = now.getFullYear();
-            const m = (now.getMonth() + 1).toString().padStart(2, '0');
-            const d = now.getDate().toString().padStart(2, '0');
-            const todayStr = `${y}-${m}-${d}`;
-            const currentYearStr = y.toString();
-
-            // Stats Calculation
-            let countToday = 0, countMonth = 0, countYear = 0;
-            let netPaidMonth = 0, netPaidYear = 0;
-            let totalProfitMonth = 0;
-            let totalPerfMins = 0, perfCount = 0;
-
-            salesData.forEach(r => {
-                const rDate = r.date || '';
-                if (rDate === todayStr) countToday++;
-                if (rDate.startsWith(termMonth)) {
-                    countMonth++;
-                    if (r.isPaid) netPaidMonth += (r.net || 0);
-                    totalProfitMonth += ((r.net || 0) - (r.cost || 0));
-                }
-                if (rDate.startsWith(currentYearStr)) {
-                    countYear++;
-                    if (r.isPaid) netPaidYear += (r.net || 0);
+            try {
+                // Auto-refresh Payout UI if open
+                if (!document.getElementById('payoutModal').classList.contains('hidden')) {
+                    renderPayoutUI();
                 }
 
-                if (r.receivedTime) {
-                    const perf = calculatePerformance(r.date, r.orderTime, r.receivedDate || r.date, r.receivedTime);
-                    if (perf) {
-                        totalPerfMins += perf.totalMins;
-                        perfCount++;
+                const termMonth = document.getElementById('monthFilter').value;
+                const now = new Date();
+                const y = now.getFullYear();
+                const m = (now.getMonth() + 1).toString().padStart(2, '0');
+                const d = now.getDate().toString().padStart(2, '0');
+                const todayStr = `${y}-${m}-${d}`;
+                const currentYearStr = y.toString();
+
+                // Stats Calculation
+                let countToday = 0, countMonth = 0, countYear = 0;
+                let netPaidMonth = 0, netPaidYear = 0;
+                let totalProfitMonth = 0;
+                let totalPerfMins = 0, perfCount = 0;
+
+                salesData.forEach(r => {
+                    if (!r) return;
+                    const rDate = String(r.date || '');
+                    if (rDate === todayStr) countToday++;
+                    if (rDate.startsWith(termMonth)) {
+                        countMonth++;
+                        if (r.isPaid) netPaidMonth += (r.net || 0);
+                        totalProfitMonth += ((r.net || 0) - (r.cost || 0));
+                    }
+                    if (rDate.startsWith(currentYearStr)) {
+                        countYear++;
+                        if (r.isPaid) netPaidYear += (r.net || 0);
+                    }
+
+                    if (r.receivedTime) {
+                        const perf = calculatePerformance(r.date, r.orderTime, r.receivedDate || r.date, r.receivedTime);
+                        if (perf) {
+                            totalPerfMins += perf.totalMins;
+                            perfCount++;
+                        }
+                    }
+                });
+
+                // Update Header Stats
+                document.getElementById('stat-count-today').innerText = countToday;
+                document.getElementById('stat-count-month').innerText = countMonth;
+                document.getElementById('stat-count-year').innerText = countYear;
+                document.getElementById('stat-net-month').innerText = `฿${netPaidMonth.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                document.getElementById('summary-profit').innerText = `฿${totalProfitMonth.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                document.getElementById('summary-profit').className = `text-xl font-black ${totalProfitMonth < 0 ? 'text-rose-600' : 'text-emerald-600'}`;
+                document.getElementById('stat-net-year').innerText = `฿${netPaidYear.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+                if (perfCount > 0) {
+                    const avgMins = Math.round(totalPerfMins / perfCount);
+                    const h = Math.floor(avgMins / 60);
+                    const m = avgMins % 60;
+                    document.getElementById('stat-avg-time').innerText = h > 0 ? `${h}h ${m}m` : `${m}m`;
+                    const progress = Math.min(100, (avgMins / 90) * 100);
+                    const bar = document.getElementById('stat-avg-progress');
+                    if (bar) {
+                        bar.style.width = `${progress}%`;
+                        bar.className = `h-full transition-all duration-1000 ${avgMins > 45 ? (avgMins > 90 ? 'bg-rose-500' : 'bg-amber-400') : 'bg-emerald-500'}`;
+                    }
+                } else {
+                    document.getElementById('stat-avg-time').innerText = '--';
+                    const bar = document.getElementById('stat-avg-progress');
+                    if (bar) bar.style.width = '0%';
+                }
+
+                // Filter for the month for the list view
+                let filtered = (salesData || []).filter(r => r && String(r.date || '').startsWith(termMonth));
+
+                // Pagination Rendering
+                const uniqueDates = [...new Set(filtered.map(r => r.date || ''))].filter(d => d).sort((a, b) => b.localeCompare(a));
+                const pagin = document.getElementById('date-pagination');
+
+                const formatDate = (ds) => {
+                    if (!ds) return '';
+                    const parts = ds.split('-');
+                    if (parts.length < 3) return ds;
+                    const [y, m, d] = parts;
+                    return `${d}/${m}/${y.slice(2)}`;
+                };
+
+                let paginHTML = `<button onclick="setDateFilter(null)" class="px-5 py-2.5 rounded-2xl text-xs font-black transition-all whitespace-nowrap ${!currentSelectedDate ? 'bg-lineman text-white shadow-lg shadow-green-500/20 scale-105' : 'bg-white dark:bg-slate-800 text-slate-400 hover:bg-slate-100 border border-slate-100 dark:border-slate-700'}">ทั้งหมด</button>`;
+
+                uniqueDates.forEach(d => {
+                    const isActive = currentSelectedDate === d;
+                    paginHTML += `<button onclick="setDateFilter('${d}')" class="px-5 py-2.5 rounded-2xl text-xs font-black transition-all whitespace-nowrap ${isActive ? 'bg-lineman text-white shadow-lg shadow-green-500/20 scale-105' : 'bg-white dark:bg-slate-800 text-slate-400 hover:bg-slate-100 border border-slate-100 dark:border-slate-700'}">${formatDate(d)}</button>`;
+                });
+                if (pagin) pagin.innerHTML = paginHTML;
+
+                // Apply Date Filter
+                if (currentSelectedDate) {
+                    if (!uniqueDates.includes(currentSelectedDate)) {
+                        currentSelectedDate = null;
+                    } else {
+                        filtered = filtered.filter(r => r.date === currentSelectedDate);
                     }
                 }
-            });
 
-            // Update Header Stats
-            document.getElementById('stat-count-today').innerText = countToday;
-            document.getElementById('stat-count-month').innerText = countMonth;
-            document.getElementById('stat-count-year').innerText = countYear;
-            document.getElementById('stat-net-month').innerText = `฿${netPaidMonth.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            document.getElementById('summary-profit').innerText = `฿${totalProfitMonth.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            document.getElementById('summary-profit').className = `text-xl font-black ${totalProfitMonth < 0 ? 'text-rose-600' : 'text-emerald-600'}`;
-            document.getElementById('stat-net-year').innerText = `฿${netPaidYear.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                // Update Summary Labels
+                document.querySelectorAll('[id^="summary-"]').forEach(el => {
+                    try {
+                        const p = el.parentElement ? el.parentElement.querySelector('p') : null;
+                        if (p && p.innerText.includes('วันนี้')) {
+                            p.innerText = p.innerText.replace('วันนี้', currentSelectedDate ? 'ประจำวัน' : 'ประจำเดือน');
+                        }
+                    } catch (e) { }
+                });
 
-            if (perfCount > 0) {
-                const avgMins = Math.round(totalPerfMins / perfCount);
-                const h = Math.floor(avgMins / 60);
-                const m = avgMins % 60;
-                document.getElementById('stat-avg-time').innerText = h > 0 ? `${h}h ${m}m` : `${m}m`;
-                const progress = Math.min(100, (avgMins / 90) * 100);
-                const bar = document.getElementById('stat-avg-progress');
-                if (bar) {
-                    bar.style.width = `${progress}%`;
-                    bar.className = `h-full transition-all duration-1000 ${avgMins > 45 ? (avgMins > 90 ? 'bg-rose-500' : 'bg-amber-400') : 'bg-emerald-500'}`;
-                }
-            } else {
-                document.getElementById('stat-avg-time').innerText = '--';
-                const bar = document.getElementById('stat-avg-progress');
-                if (bar) bar.style.width = '0%';
-            }
+                // Calculate daily totals for PAID ribbons (using the month's filtered data to be consistent)
+                const monthFiltered = salesData.filter(r => (r.date || '').startsWith(termMonth));
+                const dailyPaidTotals = {};
+                monthFiltered.forEach(r => {
+                    if (r.isPaid) {
+                        const pDate = r.paidDate || r.date;
+                        dailyPaidTotals[pDate] = (dailyPaidTotals[pDate] || 0) + r.net;
+                    }
+                });
 
-            // Filter for the month for the list view
-            let filtered = salesData.filter(r => (r.date || '').startsWith(termMonth));
+                const tbody = document.getElementById('salesTable');
+                tbody.innerHTML = '';
 
-            // Pagination Rendering
-            const uniqueDates = [...new Set(filtered.map(r => r.date || ''))].filter(d => d).sort((a, b) => b.localeCompare(a));
-            const pagin = document.getElementById('date-pagination');
+                let dailyGross = 0; let dailyGP = 0; let dailyNet = 0; let dailyCount = 0;
 
-            const formatDate = (ds) => {
-                if (!ds) return '';
-                const parts = ds.split('-');
-                if (parts.length < 3) return ds;
-                const [y, m, d] = parts;
-                return `${d}/${m}/${y.slice(2)}`;
-            };
+                let lastDate = null;
+                filtered.forEach((record, index) => {
+                    // Insert Date Header if date changes
+                    if (record.date && record.date !== lastDate) {
+                        // Calculate total for this specific date (Sales Net)
+                        const dayTotal = filtered.filter(r => r.date === record.date).reduce((sum, r) => sum + (r.net || 0), 0);
+                        const dateParts = record.date.split('-');
+                        const displayDate = dateParts.length >= 3 ? `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}` : record.date; // DD/MM/YYYY
 
-            let paginHTML = `<button onclick="setDateFilter(null)" class="px-5 py-2.5 rounded-2xl text-xs font-black transition-all whitespace-nowrap ${!currentSelectedDate ? 'bg-lineman text-white shadow-lg shadow-green-500/20 scale-105' : 'bg-white dark:bg-slate-800 text-slate-400 hover:bg-slate-100 border border-slate-100 dark:border-slate-700'}">ทั้งหมด</button>`;
-
-            uniqueDates.forEach(d => {
-                const isActive = currentSelectedDate === d;
-                paginHTML += `<button onclick="setDateFilter('${d}')" class="px-5 py-2.5 rounded-2xl text-xs font-black transition-all whitespace-nowrap ${isActive ? 'bg-lineman text-white shadow-lg shadow-green-500/20 scale-105' : 'bg-white dark:bg-slate-800 text-slate-400 hover:bg-slate-100 border border-slate-100 dark:border-slate-700'}">${formatDate(d)}</button>`;
-            });
-            if (pagin) pagin.innerHTML = paginHTML;
-
-            // Apply Date Filter
-            if (currentSelectedDate) {
-                if (!uniqueDates.includes(currentSelectedDate)) {
-                    currentSelectedDate = null;
-                } else {
-                    filtered = filtered.filter(r => r.date === currentSelectedDate);
-                }
-            }
-
-            // Update Summary Labels
-            const summaryLabel = currentSelectedDate ? `ประจำวันที่ ${formatDate(currentSelectedDate)}` : `ประจำเดือน ${termMonth}`;
-            document.querySelectorAll('[id^="summary-"]').forEach(el => {
-                const p = el.parentElement.querySelector('p');
-                if (p && p.innerText.includes('วันนี้')) {
-                    p.innerText = p.innerText.replace('วันนี้', currentSelectedDate ? 'ประจำวัน' : 'ประจำเดือน');
-                }
-            });
-
-            // Calculate daily totals for PAID ribbons (using the month's filtered data to be consistent)
-            const monthFiltered = salesData.filter(r => (r.date || '').startsWith(termMonth));
-            const dailyPaidTotals = {};
-            monthFiltered.forEach(r => {
-                if (r.isPaid) {
-                    const pDate = r.paidDate || r.date;
-                    dailyPaidTotals[pDate] = (dailyPaidTotals[pDate] || 0) + r.net;
-                }
-            });
-
-            const tbody = document.getElementById('salesTable');
-            tbody.innerHTML = '';
-
-            let dailyGross = 0; let dailyGP = 0; let dailyNet = 0; let dailyCount = 0;
-
-            let lastDate = null;
-            filtered.forEach((record, index) => {
-                // Insert Date Header if date changes
-                if (record.date && record.date !== lastDate) {
-                    // Calculate total for this specific date (Sales Net)
-                    const dayTotal = filtered.filter(r => r.date === record.date).reduce((sum, r) => sum + (r.net || 0), 0);
-                    const dateParts = record.date.split('-');
-                    const displayDate = dateParts.length >= 3 ? `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}` : record.date; // DD/MM/YYYY
-
-                    tbody.innerHTML += `
+                        tbody.innerHTML += `
                         <tr class="bg-indigo-50/50 dark:bg-slate-800/50 border-b border-indigo-100 dark:border-slate-700">
                             <td colspan="5" class="p-3">
                                 <div class="flex justify-between items-center">
@@ -1822,23 +1825,23 @@
                             </td>
                         </tr>
                     `;
-                    lastDate = record.date;
-                }
-                // Summary now reflects the filtered list (all month or specific day)
-                dailyGross += record.gross;
-                dailyGP += record.gp;
-                dailyNet += record.net;
-                dailyCount++;
+                        lastDate = record.date;
+                    }
+                    // Summary now reflects the filtered list (all month or specific day)
+                    dailyGross += (record.gross || 0);
+                    dailyGP += (record.gp || 0);
+                    dailyNet += (record.net || 0);
+                    dailyCount++;
 
-                const isUpdated = (record.items && record.items.length > 0);
-                let rowStyle = '';
-                if (record.isPaid) {
-                    rowStyle = '!bg-emerald-50/70 dark:!bg-emerald-900/30 border-l-[4px] border-emerald-500';
-                } else if (isUpdated) {
-                    rowStyle = '!bg-orange-50/80 dark:!bg-orange-900/30 border-l-[4px] border-orange-400';
-                }
+                    const isUpdated = (record.items && record.items.length > 0);
+                    let rowStyle = '';
+                    if (record.isPaid) {
+                        rowStyle = '!bg-emerald-50/70 dark:!bg-emerald-900/30 border-l-[4px] border-emerald-500';
+                    } else if (isUpdated) {
+                        rowStyle = '!bg-orange-50/80 dark:!bg-orange-900/30 border-l-[4px] border-orange-400';
+                    }
 
-                tbody.innerHTML += `
+                    tbody.innerHTML += `
                     <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${rowStyle} relative">
                         <td class="p-4 align-top">
                             <div class="text-[10px] font-black text-slate-500 dark:text-slate-400">${record.date}</div>
@@ -1849,13 +1852,13 @@
                                     <i class="fas fa-box-open"></i> ${record.receivedTime}
                                 </div>
                                 ${(() => {
-                            const perf = calculatePerformance(record.date, record.orderTime, record.receivedDate || record.date, record.receivedTime);
-                            return perf ? `
+                                const perf = calculatePerformance(record.date, record.orderTime, record.receivedDate || record.date, record.receivedTime);
+                                return perf ? `
                                         <div class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md ${perf.color} text-[8px] font-black shadow-sm mb-1">
                                             <i class="fas fa-bolt"></i> ${perf.label}
                                         </div>
                                     ` : '';
-                        })()}
+                            })()}
                             ` : ''}
 
                             <div class="inline-block bg-white dark:bg-slate-800 border-[1.5px] border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded-md font-black text-slate-800 dark:text-slate-100 shadow-sm text-[11px] mb-1 tracking-tight">
@@ -1886,20 +1889,20 @@
                             </div>
                         </td>
                         <td class="p-4 text-right">
-                            <div class="text-[10px] ${record.isNoFee ? 'text-slate-300' : 'text-rose-400'} font-bold">
-                                ${record.isNoFee ? '<span class="bg-rose-50 px-1 rounded text-[8px]">NO FEE</span>' : `-฿${record.gp.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
+                            <div class="text-[10px] ${(record.isNoFee) ? 'text-slate-300' : 'text-rose-400'} font-bold">
+                                ${record.isNoFee ? '<span class="bg-rose-50 px-1 rounded text-[8px]">NO FEE</span>' : `-฿${(record.gp || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
                             </div>
-                            <div class="font-bold text-slate-400">฿${record.gross.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                            <div class="font-bold text-slate-400">฿${(record.gross || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                         </td>
                         <td class="p-4 text-right">
                             <div class="font-black text-lineman text-lg">฿${(record.net || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                             ${(() => {
-                        const netVal = record.net || 0;
-                        const pft = netVal - (record.cost || 0);
-                        const rate = netVal > 0 ? (pft / netVal) * 100 : 0;
-                        const pColor = pft < 0 ? 'text-rose-500' : 'text-emerald-600';
-                        return `<div class="text-[10px] font-black ${pColor}">กำไร: ฿${pft.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${rate.toFixed(1)}%)</div>`;
-                    })()}
+                            const netVal = record.net || 0;
+                            const pft = netVal - (record.cost || 0);
+                            const rate = netVal > 0 ? (pft / netVal) * 100 : 0;
+                            const pColor = pft < 0 ? 'text-rose-500' : 'text-emerald-600';
+                            return `<div class="text-[10px] font-black ${pColor}">กำไร: ฿${pft.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${rate.toFixed(1)}%)</div>`;
+                        })()}
                         </td>
                         <td class="p-4 text-center relative max-w-[120px]">
                             <div class="flex flex-col items-center gap-2">
@@ -1925,14 +1928,17 @@
                         </td>
                     </tr>
                 `;
-            });
+                });
 
-            document.getElementById('summary-gross').innerText = `฿${dailyGross.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            document.getElementById('summary-gp').innerText = `฿${dailyGP.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            document.getElementById('summary-gross-label').innerText = `${dailyCount} รายการ`;
+                document.getElementById('summary-gross').innerText = `฿${dailyGross.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                document.getElementById('summary-gp').innerText = `฿${dailyGP.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                document.getElementById('summary-gross-label').innerText = `${dailyCount} รายการ`;
 
-            if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="p-20 text-center text-slate-300 font-bold uppercase tracking-widest">No Sales Found</td></tr>`;
+                if (filtered.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="p-20 text-center text-slate-300 font-bold uppercase tracking-widest">No Sales Found</td></tr>`;
+                }
+            } catch (err) {
+                console.error("Render error:", err);
             }
         }
 
