@@ -2492,7 +2492,7 @@
                     // Split items from itemName (e.g. "Product A 1|Product B 2")
                     const items = [];
                     const parts = itemName.split('|');
-                    parts.forEach(part => {
+                    const totalCost = parts.map(part => {
                         const text = part.trim();
                         if (!text) return;
                         const match = text.match(/(.*)\s+(\d+)$/);
@@ -2503,12 +2503,13 @@
                             qty = parseInt(match[2]) || 1;
                         }
 
-                        // Lookup Price (for display in UI history)
                         const master = masterProducts.find(m => m.name === name);
                         const price = (master && master.prices) ? (master.prices['LINEMAN'] || master.prices[Object.keys(master.prices)[0]] || 0) : 0;
+                        let rowCost = (master && master.cost) ? (qty * master.cost) : 0;
 
-                        items.push({ name, qty, price });
-                    });
+                        items.push({ name, qty, price, cost: master?.cost || 0 });
+                        return rowCost;
+                    }).reduce((a, b) => a + (b || 0), 0);
 
                     recordsToImport.push({
                         date: dateOnly,
@@ -2518,6 +2519,7 @@
                         gross: gross,
                         gp: gp,
                         net: net,
+                        cost: totalCost,
                         isPaid: false, // Default for CSV import
                         paidDate: '',
                         paidTime: '',
