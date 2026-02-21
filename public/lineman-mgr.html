@@ -1739,10 +1739,10 @@
             }
 
             // Filter for the month for the list view
-            let filtered = salesData.filter(r => r.date.startsWith(termMonth));
+            let filtered = salesData.filter(r => (r.date || '').startsWith(termMonth));
 
             // Pagination Rendering
-            const uniqueDates = [...new Set(filtered.map(r => r.date))].sort((a, b) => b.localeCompare(a));
+            const uniqueDates = [...new Set(filtered.map(r => r.date || ''))].filter(d => d).sort((a, b) => b.localeCompare(a));
             const pagin = document.getElementById('date-pagination');
 
             const formatDate = (ds) => {
@@ -1799,7 +1799,7 @@
                 // Insert Date Header if date changes
                 if (record.date !== lastDate) {
                     // Calculate total for this specific date (Sales Net)
-                    const dayTotal = filtered.filter(r => r.date === record.date).reduce((sum, r) => sum + r.net, 0);
+                    const dayTotal = filtered.filter(r => r.date === record.date).reduce((sum, r) => sum + (r.net || 0), 0);
                     const dateParts = record.date.split('-');
                     const displayDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`; // DD/MM/YYYY
 
@@ -1892,10 +1892,11 @@
                             <div class="font-bold text-slate-400">฿${record.gross.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                         </td>
                         <td class="p-4 text-right">
-                            <div class="font-black text-lineman text-lg">฿${record.net.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                            <div class="font-black text-lineman text-lg">฿${(record.net || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                             ${(() => {
-                        const pft = record.net - (record.cost || 0);
-                        const rate = record.net > 0 ? (pft / record.net) * 100 : 0;
+                        const netVal = record.net || 0;
+                        const pft = netVal - (record.cost || 0);
+                        const rate = netVal > 0 ? (pft / netVal) * 100 : 0;
                         const pColor = pft < 0 ? 'text-rose-500' : 'text-emerald-600';
                         return `<div class="text-[10px] font-black ${pColor}">กำไร: ฿${pft.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${rate.toFixed(1)}%)</div>`;
                     })()}
