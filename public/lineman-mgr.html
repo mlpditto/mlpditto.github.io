@@ -1640,10 +1640,10 @@
             if (!d1 || !t1 || !d2 || !t2) return null;
             try {
                 // Parse components explicitly to ensure local time context
-                const [y1, m1, dd1] = d1.split('-').map(Number);
-                const [h1, mm1] = t1.split(':').map(Number);
-                const [y2, m2, dd2] = d2.split('-').map(Number);
-                const [h2, mm2] = t2.split(':').map(Number);
+                const [y1, m1, dd1] = String(d1).split('-').map(Number);
+                const [h1, mm1] = String(t1).split(':').map(Number);
+                const [y2, m2, dd2] = String(d2).split('-').map(Number);
+                const [h2, mm2] = String(t2).split(':').map(Number);
 
                 const start = new Date(y1, m1 - 1, dd1, h1, mm1, 0);
                 const end = new Date(y2, m2 - 1, dd2, h2, mm2, 0);
@@ -1672,6 +1672,9 @@
 
         function renderUI() {
             try {
+                const sCount = (salesData || []).length;
+                console.log("renderUI trigger - Records:", sCount);
+
                 // Auto-refresh Payout UI if open
                 if (!document.getElementById('payoutModal').classList.contains('hidden')) {
                     renderPayoutUI();
@@ -1744,22 +1747,25 @@
                 let filtered = (salesData || []).filter(r => r && String(r.date || '').startsWith(termMonth));
 
                 // Pagination Rendering
-                const uniqueDates = [...new Set(filtered.map(r => r.date || ''))].filter(d => d).sort((a, b) => b.localeCompare(a));
+                const uniqueDates = [...new Set(filtered.map(r => String(r.date || '')))].filter(d => d).sort((a, b) => String(b).localeCompare(String(a)));
                 const pagin = document.getElementById('date-pagination');
 
                 const formatDate = (ds) => {
-                    if (!ds) return '';
-                    const parts = ds.split('-');
-                    if (parts.length < 3) return ds;
+                    const s = String(ds || '');
+                    if (!s) return '';
+                    const parts = s.split('-');
+                    if (parts.length < 3) return s;
                     const [y, m, d] = parts;
-                    return `${d}/${m}/${y.slice(2)}`;
+                    return `${d}/${m}/${y.slice(-2)}`;
                 };
 
                 let paginHTML = `<button onclick="setDateFilter(null)" class="px-5 py-2.5 rounded-2xl text-xs font-black transition-all whitespace-nowrap ${!currentSelectedDate ? 'bg-lineman text-white shadow-lg shadow-green-500/20 scale-105' : 'bg-white dark:bg-slate-800 text-slate-400 hover:bg-slate-100 border border-slate-100 dark:border-slate-700'}">ทั้งหมด</button>`;
 
                 uniqueDates.forEach(d => {
                     const isActive = currentSelectedDate === d;
-                    paginHTML += `<button onclick="setDateFilter('${d}')" class="px-5 py-2.5 rounded-2xl text-xs font-black transition-all whitespace-nowrap ${isActive ? 'bg-lineman text-white shadow-lg shadow-green-500/20 scale-105' : 'bg-white dark:bg-slate-800 text-slate-400 hover:bg-slate-100 border border-slate-100 dark:border-slate-700'}">${formatDate(d)}</button>`;
+                    try {
+                        paginHTML += `<button onclick="setDateFilter('${d}')" class="px-5 py-2.5 rounded-2xl text-xs font-black transition-all whitespace-nowrap ${isActive ? 'bg-lineman text-white shadow-lg shadow-green-500/20 scale-105' : 'bg-white dark:bg-slate-800 text-slate-400 hover:bg-slate-100 border border-slate-100 dark:border-slate-700'}">${formatDate(d)}</button>`;
+                    } catch (e) { }
                 });
                 if (pagin) pagin.innerHTML = paginHTML;
 
@@ -1802,8 +1808,8 @@
                     // Insert Date Header if date changes
                     if (record.date && record.date !== lastDate) {
                         // Calculate total for this specific date (Sales Net)
-                        const dayTotal = filtered.filter(r => r.date === record.date).reduce((sum, r) => sum + (r.net || 0), 0);
-                        const dateParts = record.date.split('-');
+                        const dayTotal = filtered.filter(r => String(r.date || '') === String(record.date || '')).reduce((sum, r) => sum + (r.net || 0), 0);
+                        const dateParts = String(record.date || '').split('-');
                         const displayDate = dateParts.length >= 3 ? `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}` : record.date; // DD/MM/YYYY
 
                         tbody.innerHTML += `
@@ -1939,6 +1945,15 @@
                 }
             } catch (err) {
                 console.error("Render error:", err);
+                if (!window.lastRenderError || (Date.now() - window.lastRenderError > 5000)) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Render Error',
+                        text: 'เกิดข้อผิดพลาดในการแสดงผลประวัติยอดขาย: ' + err.message,
+                        footer: 'กรุณาล้างแคชหรือแจ้งผู้พัฒนา'
+                    });
+                    window.lastRenderError = Date.now();
+                }
             }
         }
 
