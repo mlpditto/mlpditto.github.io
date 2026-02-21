@@ -314,13 +314,13 @@
                             Paid)</p>
                         <div class="space-y-2">
                             <div class="flex justify-between items-baseline">
-                                <span class="text-[10px] font-bold text-slate-400">เดือนนี้</span>
+                                <span class="text-[10px] font-bold text-slate-400">เดือนนี้ (สุทธิ)</span>
                                 <span class="text-xl font-black text-blue-600" id="stat-net-month">฿0</span>
                             </div>
-                            <div class="flex justify-between items-baseline">
-                                <span class="text-[10px] font-bold text-slate-400">ปีนี้</span>
-                                <span class="text-sm font-black text-slate-600 dark:text-slate-300"
-                                    id="stat-net-year">฿0</span>
+                            <div
+                                class="flex justify-between items-baseline border-t border-slate-50 dark:border-slate-800/50 pt-2">
+                                <span class="text-[10px] font-black text-emerald-500 uppercase">กำไร (Profit)</span>
+                                <span class="text-xl font-black text-emerald-600" id="summary-profit">฿0</span>
                             </div>
                         </div>
                     </div>
@@ -618,7 +618,7 @@
                             class="fas fa-chevron-down text-slate-300 transition-transform duration-300 transform rotate-180"></i>
                     </div>
                     <div class="section-content active">
-                        <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div class="grid grid-cols-2 gap-4 mb-4">
                             <div
                                 class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
                                 <span class="vibrant-label !mb-1">ยอดรวม (Gross)</span>
@@ -628,6 +628,21 @@
                             <div class="p-4 bg-lineman/10 dark:bg-lineman/20 rounded-2xl border border-lineman/30">
                                 <span class="vibrant-label !mb-1 !text-lineman">ยอดรับสุทธิ (NET)</span>
                                 <div id="calc-net" class="text-2xl font-black text-lineman drop-shadow-sm">฿0.00</div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4 mb-6">
+                            <div class="p-4 bg-rose-50 dark:bg-rose-900/10 rounded-2xl border border-rose-200/50">
+                                <span class="vibrant-label !mb-1 !text-rose-600">ต้นทุน (COST)</span>
+                                <input type="number" id="orderCost" step="0.01" oninput="calculateNet()"
+                                    class="w-full bg-transparent text-xl font-black text-rose-600 outline-none"
+                                    placeholder="0.00">
+                            </div>
+                            <div id="profit-box"
+                                class="p-4 bg-emerald-50 dark:bg-emerald-900/10 rounded-2xl border border-emerald-200/50">
+                                <span class="vibrant-label !mb-1 !text-emerald-600">กำไร (PROFIT)</span>
+                                <div id="calc-profit" class="text-xl font-black text-emerald-600 italic">฿0.00 (0%)
+                                </div>
                             </div>
                         </div>
 
@@ -873,7 +888,7 @@
                             <i class="fas fa-chevron-down text-slate-300 transition-transform duration-300"></i>
                         </div>
                         <div class="section-content">
-                            <div class="grid grid-cols-2 gap-4 mb-6">
+                            <div class="grid grid-cols-2 gap-4 mb-4">
                                 <div
                                     class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
                                     <span class="vibrant-label !mb-1">ยอดรวม (Gross)</span>
@@ -886,6 +901,21 @@
                                     <div id="e-calc-net"
                                         class="text-2xl font-black text-blue-900 dark:text-blue-300 drop-shadow-sm">
                                         ฿0.00</div>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4 mb-6">
+                                <div class="p-4 bg-rose-50 dark:bg-rose-900/10 rounded-2xl border border-rose-200/50">
+                                    <span class="vibrant-label !mb-1 !text-rose-600">ต้นทุน (COST)</span>
+                                    <input type="number" id="e-orderCost" step="0.01" oninput="calculateNetPopup()"
+                                        class="w-full bg-transparent text-xl font-black text-rose-600 outline-none"
+                                        placeholder="0.00">
+                                </div>
+                                <div id="e-profit-box"
+                                    class="p-4 bg-emerald-50 dark:bg-emerald-900/10 rounded-2xl border border-emerald-200/50">
+                                    <span class="vibrant-label !mb-1 !text-emerald-600">กำไร (PROFIT)</span>
+                                    <div id="e-calc-profit" class="text-xl font-black text-emerald-600 italic">฿0.00
+                                        (0%)</div>
                                 </div>
                             </div>
 
@@ -1285,15 +1315,31 @@
 
         function calculateTotalFromItems(containerId = 'items-container', displayId = 'grossAmount') {
             let totalGross = 0;
+            let totalCost = 0;
             const container = document.getElementById(containerId);
             if (!container) return;
 
-            container.querySelectorAll('tr').forEach(row => { // Changed from .item-row to tr
-                const qty = parseFloat(row.querySelector('td:nth-child(2) input').value) || 0; // Select qty input in the 2nd td
-                const price = parseFloat(row.querySelector('td:nth-child(3) input').value) || 0; // Select price input in the 3rd td
+            container.querySelectorAll('tr').forEach(row => {
+                const nameInput = row.querySelector('td:nth-child(1) input');
+                const name = nameInput ? nameInput.value.trim() : '';
+                const qty = parseFloat(row.querySelector('td:nth-child(2) input').value) || 0;
+                const price = parseFloat(row.querySelector('td:nth-child(3) input').value) || 0;
                 totalGross += (qty * price);
+
+                // Auto-calc cost from master if possible
+                const master = masterProducts.find(p => p.name === name);
+                if (master && master.cost) {
+                    totalCost += (qty * master.cost);
+                }
             });
             document.getElementById(displayId).value = totalGross.toFixed(2);
+
+            // Auto-update cost field
+            const costId = displayId === 'grossAmount' ? 'orderCost' : 'e-orderCost';
+            const costField = document.getElementById(costId);
+            if (costField && totalCost > 0) {
+                costField.value = totalCost.toFixed(2);
+            }
 
             if (displayId === 'grossAmount') {
                 calculateNet();
@@ -1359,6 +1405,7 @@
             const isManual = document.getElementById('isManualNet').checked;
             const isNoFee = document.getElementById('isNoFee').checked;
             const manual = parseFloat(document.getElementById('manualNet').value) || 0;
+            const cost = parseFloat(document.getElementById('orderCost').value) || 0;
 
             let gp = isNoFee ? 0 : gross * GP_RATE;
             let net = gross - gp;
@@ -1368,15 +1415,20 @@
                 gp = gross - net;
             }
 
-            const displayGross = document.getElementById('display-gross');
-            if (displayGross) displayGross.innerText = `฿${gross.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+            const profit = net - cost;
+            const profitRate = net > 0 ? (profit / net) * 100 : 0;
 
-            document.getElementById('calc-gp').innerText = `-฿${gp.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
             document.getElementById('calc-net').innerText = `฿${net.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 
-            // Visual fee indicator
-            const feeRow = document.getElementById('calc-gp').parentElement;
-            if (feeRow) feeRow.classList.toggle('opacity-30', isNoFee);
+            const profitEl = document.getElementById('calc-profit');
+            profitEl.innerText = `฿${profit.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${profitRate.toFixed(1)}%)`;
+
+            // Profit color logic
+            if (profit < 0) {
+                profitEl.className = "text-xl font-black text-rose-500 italic";
+            } else {
+                profitEl.className = "text-xl font-black text-emerald-600 italic";
+            }
         }
 
         function initDefaults() {
@@ -1635,6 +1687,7 @@
             // Stats Calculation
             let countToday = 0, countMonth = 0, countYear = 0;
             let netPaidMonth = 0, netPaidYear = 0;
+            let totalProfitMonth = 0;
             let totalPerfMins = 0, perfCount = 0;
 
             salesData.forEach(r => {
@@ -1643,6 +1696,7 @@
                 if (rDate.startsWith(termMonth)) {
                     countMonth++;
                     if (r.isPaid) netPaidMonth += (r.net || 0);
+                    totalProfitMonth += ((r.net || 0) - (r.cost || 0));
                 }
                 if (rDate.startsWith(currentYearStr)) {
                     countYear++;
@@ -1663,6 +1717,8 @@
             document.getElementById('stat-count-month').innerText = countMonth;
             document.getElementById('stat-count-year').innerText = countYear;
             document.getElementById('stat-net-month').innerText = `฿${netPaidMonth.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('summary-profit').innerText = `฿${totalProfitMonth.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('summary-profit').className = `text-xl font-black ${totalProfitMonth < 0 ? 'text-rose-600' : 'text-emerald-600'}`;
             document.getElementById('stat-net-year').innerText = `฿${netPaidYear.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
             if (perfCount > 0) {
@@ -1837,6 +1893,12 @@
                         </td>
                         <td class="p-4 text-right">
                             <div class="font-black text-lineman text-lg">฿${record.net.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                            ${(() => {
+                        const pft = record.net - (record.cost || 0);
+                        const rate = record.net > 0 ? (pft / record.net) * 100 : 0;
+                        const pColor = pft < 0 ? 'text-rose-500' : 'text-emerald-600';
+                        return `<div class="text-[10px] font-black ${pColor}">กำไร: ฿${pft.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${rate.toFixed(1)}%)</div>`;
+                    })()}
                         </td>
                         <td class="p-4 text-center relative max-w-[120px]">
                             <div class="flex flex-col items-center gap-2">
@@ -1927,6 +1989,8 @@
                 const tHH = document.getElementById('transferHH')?.value?.toString()?.padStart(2, '0') || '00';
                 const tMM = document.getElementById('transferMM')?.value?.toString()?.padStart(2, '0') || '00';
 
+                const cost = parseFloat(document.getElementById('orderCost').value) || 0;
+
                 const record = {
                     date: document.getElementById('recordDate').value,
                     orderTime: `${hh}:${mm}`,
@@ -1939,6 +2003,7 @@
                     gross: gross,
                     gp: gp,
                     net: net,
+                    cost: cost,
                     isManualNet: isManual,
                     isNoFee: isNoFee,
                     isPaid: isPaid,
@@ -2051,6 +2116,8 @@
                 const tHH = document.getElementById('e-transferHH')?.value?.toString()?.padStart(2, '0') || '00';
                 const tMM = document.getElementById('e-transferMM')?.value?.toString()?.padStart(2, '0') || '00';
 
+                const cost = parseFloat(document.getElementById('e-orderCost')?.value || 0) || 0;
+
                 const updatedRecord = {
                     ...salesData[targetIdx],
                     date: document.getElementById('e-recordDate')?.value || salesData[targetIdx].date,
@@ -2064,6 +2131,7 @@
                     gross: gross,
                     gp: gp,
                     net: net,
+                    cost: cost,
                     isNoFee: isNoFee,
                     isManualNet: isManual,
                     isPaid: isPaid,
@@ -2137,6 +2205,7 @@
                 orderIdFull: document.getElementById('orderIdFull').value,
                 customerName: document.getElementById('customerName').value,
                 customerPhone: document.getElementById('customerPhone').value,
+                cost: document.getElementById('orderCost').value,
                 isManualNet: document.getElementById('isManualNet').checked,
                 manualNet: document.getElementById('manualNet').value,
                 items: Array.from(document.getElementById('items-container').querySelectorAll('tr')).map(row => ({ // Changed from .item-row to tr
@@ -2173,6 +2242,7 @@
             if (draft.orderId) document.getElementById('orderId').value = draft.orderId;
             if (draft.customerName) document.getElementById('customerName').value = draft.customerName;
             if (draft.customerPhone) document.getElementById('customerPhone').value = draft.customerPhone;
+            if (draft.cost) document.getElementById('orderCost').value = draft.cost;
 
             if (draft.items) {
                 document.getElementById('items-container').innerHTML = '';
@@ -2227,6 +2297,7 @@
             updateEditItemCount();
 
             document.getElementById('e-grossAmount').value = record.gross;
+            document.getElementById('e-orderCost').value = record.cost || 0;
             document.getElementById('e-isNoFee').checked = record.isNoFee;
             document.getElementById('e-isManualNet').checked = record.isManualNet;
             document.getElementById('e-manualNet').value = record.net || record.gross;
@@ -2264,6 +2335,7 @@
             const isNoFee = document.getElementById('e-isNoFee').checked;
             const isManual = document.getElementById('e-isManualNet').checked;
             const manual = parseFloat(document.getElementById('e-manualNet').value) || 0;
+            const cost = parseFloat(document.getElementById('e-orderCost').value) || 0;
 
             let net;
             if (isManual) {
@@ -2273,7 +2345,19 @@
                 net = gross - gp;
             }
 
+            const profit = net - cost;
+            const profitRate = net > 0 ? (profit / net) * 100 : 0;
+
             document.getElementById('e-calc-net').innerText = `฿${net.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+
+            const profitEl = document.getElementById('e-calc-profit');
+            profitEl.innerText = `฿${profit.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${profitRate.toFixed(1)}%)`;
+
+            if (profit < 0) {
+                profitEl.className = "text-xl font-black text-rose-500 italic";
+            } else {
+                profitEl.className = "text-xl font-black text-emerald-600 italic";
+            }
         }
 
         function cancelEdit() {
@@ -2321,8 +2405,8 @@
             if (filtered.length === 0) return Swal.fire('No Data', 'ไม่มีข้อมูลในช่วงเวลาที่เลือก', 'info');
 
             const csv = [
-                ['Date', 'Order ID', 'Gross Amount', 'GP Fee (30%)', 'Net Amount', 'Notes'],
-                ...filtered.map(r => [r.date, r.orderId, r.gross, r.gp, r.net, `"${r.notes}"`])
+                ['Date', 'Order ID', 'Gross Amount', 'GP Fee (30%)', 'Net Amount', 'Cost', 'Profit', 'Profit %', 'Notes'],
+                ...filtered.map(r => [r.date, r.orderId, r.gross, r.gp, r.net, r.cost || 0, r.net - (r.cost || 0), r.net > 0 ? ((r.net - (r.cost || 0)) / r.net * 100).toFixed(2) : 0, `"${r.notes}"`])
             ].map(e => e.join(",")).join("\n");
 
             const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
