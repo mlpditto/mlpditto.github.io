@@ -246,7 +246,7 @@
 
     <!-- Main Dashboard -->
     <div id="app-container" class="hidden p-4 md:p-8">
-        <div class="max-w-7xl mx-auto space-y-6">
+        <div class="max-w-full mx-auto space-y-6">
 
             <!-- Header -->
             <nav class="glass sticky top-4 z-50 rounded-3xl shadow-lg border border-white/20 p-4 mb-8">
@@ -1542,7 +1542,7 @@
 
             // 1. Group Paid Records by paidDate
             salesData.forEach(r => {
-                if (r.isPaid && r.paidDate && r.paidDate.startsWith(targetMonth)) {
+                if (r.isPaid && r.paidDate && (r.paidDate || '').startsWith(targetMonth)) {
                     const dateKey = r.paidDate;
                     if (!groups[dateKey]) {
                         groups[dateKey] = {
@@ -1780,7 +1780,7 @@
             });
 
             // Calculate daily totals for PAID ribbons (using the month's filtered data to be consistent)
-            const monthFiltered = salesData.filter(r => r.date.startsWith(termMonth));
+            const monthFiltered = salesData.filter(r => (r.date || '').startsWith(termMonth));
             const dailyPaidTotals = {};
             monthFiltered.forEach(r => {
                 if (r.isPaid) {
@@ -1797,11 +1797,11 @@
             let lastDate = null;
             filtered.forEach((record, index) => {
                 // Insert Date Header if date changes
-                if (record.date !== lastDate) {
+                if (record.date && record.date !== lastDate) {
                     // Calculate total for this specific date (Sales Net)
                     const dayTotal = filtered.filter(r => r.date === record.date).reduce((sum, r) => sum + (r.net || 0), 0);
                     const dateParts = record.date.split('-');
-                    const displayDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`; // DD/MM/YYYY
+                    const displayDate = dateParts.length >= 3 ? `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}` : record.date; // DD/MM/YYYY
 
                     tbody.innerHTML += `
                         <tr class="bg-indigo-50/50 dark:bg-slate-800/50 border-b border-indigo-100 dark:border-slate-700">
