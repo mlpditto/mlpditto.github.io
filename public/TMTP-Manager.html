@@ -1881,7 +1881,35 @@
             const clone = document.createElement('table'); clone.style.fontFamily = 'Prompt, sans-serif'; clone.style.fontSize = '14pt'; clone.style.borderCollapse = 'collapse';
             const thead = document.createElement('thead'); const headerRow = document.createElement('tr');
             ['#', 'Date', 'Order ID', 'Qty', 'Base', 'VAT', 'Total', 'Tracking', 'INV', 'Time', 'Note'].forEach(t => { const th = document.createElement('th'); th.innerText = t; th.style.border = '1px solid #000'; th.style.backgroundColor = '#4CAF50'; th.style.color = '#fff'; th.style.padding = '10px'; th.style.textAlign = 'center'; headerRow.appendChild(th); }); thead.appendChild(headerRow); clone.appendChild(thead);
-            const tbody = document.createElement('tbody'); table.querySelectorAll('tbody tr').forEach(tr => { const newRow = document.createElement('tr'); const inputs = tr.querySelectorAll('input'); const addCell = (val, isText = false, isBold = false, align = 'center') => { const td = document.createElement('td'); td.innerText = val; td.style.border = '1px solid #ddd'; td.style.padding = '10px'; td.style.textAlign = align; td.style.verticalAlign = 'middle'; if (isText) td.setAttribute('style', td.getAttribute('style') + ' mso-number-format:"\\@"'); if (isBold) td.style.fontWeight = 'bold'; newRow.appendChild(td); }; addCell(tr.cells[1].innerText); addCell(inputs[0].value); addCell(inputs[1].value, true); addCell(inputs[2].value); addCell(inputs[3].value); addCell(inputs[4].value); addCell(inputs[5].value, false, true); addCell(inputs[6].value); addCell(inputs[7].value, true); addCell(inputs[8].value); addCell(inputs[9].value, false, false, 'left'); tbody.appendChild(newRow); }); clone.appendChild(tbody);
+            const tbody = document.createElement('tbody');
+            table.querySelectorAll('tbody tr').forEach(tr => {
+                const newRow = document.createElement('tr');
+                const inputs = tr.querySelectorAll('input');
+                const addCell = (val, isText = false, isBold = false, align = 'center') => {
+                    const td = document.createElement('td');
+                    td.innerText = val;
+                    td.style.border = '1px solid #ddd';
+                    td.style.padding = '10px';
+                    td.style.textAlign = align;
+                    td.style.verticalAlign = 'middle';
+                    if (isText) td.setAttribute('style', td.getAttribute('style') + ' mso-number-format:"\\@"');
+                    if (isBold) td.style.fontWeight = 'bold';
+                    newRow.appendChild(td);
+                };
+                addCell(tr.cells[1].innerText); // #
+                addCell(inputs[1].value);       // Date
+                addCell(inputs[2].value, true); // Order ID
+                addCell(inputs[3].value);       // Qty
+                addCell(inputs[4].value);       // Base
+                addCell(inputs[5].value);       // VAT
+                addCell(inputs[6].value, false, true); // Total
+                addCell(inputs[7].value, true); // Tracking
+                addCell(inputs[8].value, true); // INV
+                addCell(inputs[9].value);       // Time
+                addCell(inputs[10].value, false, false, 'left'); // Note
+                tbody.appendChild(newRow);
+            });
+            clone.appendChild(tbody);
             const container = document.getElementById('copyContainer'); container.innerHTML = ''; container.appendChild(clone);
             const range = document.createRange(); range.selectNode(clone); window.getSelection().removeAllRanges(); window.getSelection().addRange(range); document.execCommand('copy'); window.getSelection().removeAllRanges(); showToast("คัดลอกตารางแล้ว (Paste ได้เลย)");
         }
