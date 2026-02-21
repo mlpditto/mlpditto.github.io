@@ -1727,8 +1727,13 @@
                     if (rDate === todayStr) countToday++;
                     if (rDate.startsWith(termMonth)) {
                         countMonth++;
-                        if (r.isPaid) netPaidMonth += (r.net || 0);
-                        totalProfitMonth += ((r.net || 0) - (r.cost || 0));
+                        if (r.isPaid) {
+                            netPaidMonth += (r.net || 0);
+                            // Only count profit if cost is entered (>0) to avoid showing 100% profit for incomplete records
+                            if ((r.cost || 0) > 0) {
+                                totalProfitMonth += ((r.net || 0) - (r.cost || 0));
+                            }
+                        }
                     }
                     if (rDate.startsWith(currentYearStr)) {
                         countYear++;
@@ -2526,6 +2531,7 @@
                 if (cols.length < 12) return; // ข้อมูลไม่ครบ
 
                 const orderId = cols[0].trim();
+                const orderTimeRaw = cols[1] ? cols[1].trim() : ''; // "2026/02/03 16:15:00"
                 const settleTime = cols[2].trim(); // "2026/02/03 16:39:51"
                 const itemName = cols[3].trim().replace(/['"]/g, '');
                 const status = cols[7].trim(); // "FINISH" 
@@ -2533,9 +2539,21 @@
 
                 // นำเข้าเฉพาะที่สำเร็จ และยังไม่มีในระบบ
                 if (status === 'FINISH') {
+                    // Parse Settlement Time (Received)
                     const dtParts = settleTime.split(' ');
                     const dateOnly = dtParts[0].replace(/\//g, '-');
                     const timeOnly = dtParts.length > 1 ? dtParts[1].slice(0, 5) : '00:00';
+
+                    // Parse Order Time (if available, otherwise use settle time)
+                    let orderDateOnly = dateOnly;
+                    let orderTimeOnly = timeOnly;
+
+                    if (orderTimeRaw && orderTimeRaw.includes('/')) {
+                        const otParts = orderTimeRaw.split(' ');
+                        orderDateOnly = otParts[0].replace(/\//g, '-');
+                        orderTimeOnly = otParts.length > 1 ? otParts[1].slice(0, 5) : '00:00';
+                    }
+
                     const gp = gross * GP_RATE;
                     const net = gross - gp;
 
@@ -2564,8 +2582,10 @@
                     }).reduce((a, b) => a + (b || 0), 0);
 
                     recordsToImport.push({
-                        date: dateOnly,
-                        orderTime: timeOnly,
+                        date: orderDateOnly,
+                        orderTime: orderTimeOnly,
+                        receivedDate: dateOnly,
+                        receivedTime: timeOnly,
                         orderId: orderIdShort,
                         orderIdFull: orderId,
                         gross: gross,
@@ -2595,6 +2615,7 @@
                     if (r.notes) s += r.notes.length;
                     if (r.customerName) s += 10;
                     if (r.isPaid) s += 100; // Manual paid status is high value
+                    if (r.receivedTime) s += 50; // completion time found
                     return s;
                 };
 
@@ -2617,6 +2638,8 @@
                             // Link existing manual info if any
                             const merged = {
                                 ...newRec,
+                                customerName: existingRec.customerName || newRec.customerName,
+                                customerPhone: existingRec.customerPhone || newRec.customerPhone,
                                 isPaid: existingRec.isPaid || newRec.isPaid,
                                 paidDate: existingRec.paidDate || newRec.paidDate,
                                 paidTime: existingRec.paidTime || newRec.paidTime,
