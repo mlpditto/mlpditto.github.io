@@ -302,8 +302,13 @@
                     </div>
                     <div
                         class="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-between text-[9px] font-bold text-slate-400">
-                        <span>รายการเดือนนี้</span>
+                        <span id="summary-period-label">รายการเดือนนี้</span>
                         <span class="text-lineman" id="summary-gross-label">--</span>
+                    </div>
+                    <div
+                        class="pt-2 flex justify-between text-[9px] font-bold text-slate-400 border-t border-slate-50/50 dark:border-slate-800/50 mt-1">
+                        <span>Avg. basket size*</span>
+                        <span class="text-indigo-500 font-black" id="summary-avg-basket">฿0.00</span>
                     </div>
                 </div>
 
@@ -1977,6 +1982,22 @@
                 safeSetText('summary-gross', `฿${dailyGross.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
                 safeSetText('summary-gp', `฿${dailyGP.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
                 safeSetText('summary-gross-label', `${dailyCount} รายการ`);
+
+                // Calculate Avg Basket Size
+                const avgBasket = dailyCount > 0 ? dailyGross / dailyCount : 0;
+                safeSetText('summary-avg-basket', `฿${avgBasket.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+
+                // Update Period Label
+                const targetMonthSelect = document.getElementById('monthFilter').value;
+                if (targetMonthSelect) {
+                    const [ty, tm] = targetMonthSelect.split('-').map(Number);
+                    const lastD = new Date(ty, tm, 0).getDate();
+                    const nowD = new Date();
+                    const isFocusMonth = targetMonthSelect === nowD.toISOString().slice(0, 7);
+                    const dayToLabel = isFocusMonth ? Math.min(nowD.getDate(), lastD) : lastD;
+                    const thMnShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+                    safeSetText('summary-period-label', `รายการ 1 - ${dayToLabel} ${thMnShort[tm - 1]}`);
+                }
 
                 if (filtered.length === 0) {
                     tbody.innerHTML = `<tr><td colspan="5" class="p-20 text-center text-slate-300 font-bold uppercase tracking-widest">No Sales Found</td></tr>`;
