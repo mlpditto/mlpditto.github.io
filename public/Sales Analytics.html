@@ -884,6 +884,22 @@
                 </div>
                 <div class="p-6">
                     <input type="hidden" id="modalRowId">
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label
+                                class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">เลขที่
+                                (Order ID)</label>
+                            <input type="text" id="inputOrderId"
+                                class="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none text-sm bg-slate-50 dark:bg-slate-900 dark:text-white font-mono font-bold text-brand-600 dark:text-brand-400">
+                        </div>
+                        <div>
+                            <label
+                                class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">เลขที่ภาษี
+                                (Invoice ID)</label>
+                            <input type="text" id="inputInvoiceId"
+                                class="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none text-sm bg-slate-50 dark:bg-slate-900 dark:text-white font-mono">
+                        </div>
+                    </div>
                     <div class="mb-4"><label
                             class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">📝 บันทึกช่วยจำ
                             (Memo)</label><textarea id="inputMemo" rows="2"
@@ -2016,6 +2032,8 @@
             if (!row) return;
 
             document.getElementById('modalRowId').value = id;
+            document.getElementById('inputOrderId').value = row.orderId !== '-' ? row.orderId : '';
+            document.getElementById('inputInvoiceId').value = row.invoiceId !== '-' ? row.invoiceId : '';
             document.getElementById('inputMemo').value = row.memo;
             document.getElementById('inputTotalAmount').value = row.amountVal;
 
@@ -2067,6 +2085,8 @@
 
             const totalNet = netCash + netCredit + netAR + netLPM + netFiscal + netSCB;
 
+            row.orderId = document.getElementById('inputOrderId').value || '-';
+            row.invoiceId = document.getElementById('inputInvoiceId').value || '-';
             row.memo = document.getElementById('inputMemo').value;
             row.amountVal = totalNet;
             row.amountStr = totalNet.toFixed(2);
