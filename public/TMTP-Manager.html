@@ -356,7 +356,7 @@
                                 class="text-blue-500 dark:text-blue-400">Manager</span></h1>
                         <p onclick="openChangelog()"
                             class="text-[10px] text-slate-400 font-medium uppercase tracking-wider cursor-pointer hover:text-blue-500 transition-colors">
-                            v6.9 <i class="fa-solid fa-circle-info ml-1"></i></p>
+                            v6.10 <i class="fa-solid fa-circle-info ml-1"></i></p>
                     </div>
                 </div>
                 <div class="flex items-center gap-3">
@@ -402,6 +402,8 @@
                                 id="fileInput" accept=".json" class="hidden" onchange="loadDataFromJSON(event)"></label>
                         <button onclick="saveDataToJSON()" class="btn-secondary bg-white dark:bg-slate-800"><i
                                 class="fa-solid fa-floppy-disk text-blue-500 mr-2"></i> Save</button>
+                        <button onclick="openCloudModal()" class="btn-secondary bg-white dark:bg-slate-800"><i
+                                class="fa-solid fa-cloud-arrow-down text-emerald-500 mr-2"></i> Cloud</button>
                     </div>
                 </div>
                 <textarea id="rawData" rows="4"
@@ -960,6 +962,49 @@
 
     <div id="printArea" style="display:none;"></div>
     <div id="copyContainer" style="position: fixed; left: -9999px;"></div>
+
+    <!-- Cloud Restore Modal -->
+    <div id="cloudModal"
+        class="fixed inset-0 bg-black/60 hidden z-[70] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div
+            class="bg-white dark:bg-dark-card rounded-2xl shadow-2xl w-full max-w-md p-6 border border-slate-200 dark:border-slate-700 fade-in">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                    <i class="fa-solid fa-cloud-arrow-down text-emerald-500"></i> Cloud Restore
+                </h3>
+                <button onclick="closeCloudModal()" class="text-slate-400 hover:text-red-500 transition-colors"><i
+                        class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+
+            <div class="space-y-4">
+                <p class="text-sm text-slate-500 dark:text-slate-400">ระบุวันที่ต้องการดึงข้อมูลจาก Cloud (Firestore)
+                </p>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">เลือกวันที่ (Date)</label>
+                    <input type="date" id="cloudDateInput"
+                        class="w-full p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 dark:text-white font-bold text-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+                </div>
+
+                <div class="pt-4 flex gap-3">
+                    <button onclick="closeCloudModal()"
+                        class="flex-1 py-3 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">ยกเลิก</button>
+                    <button onclick="fetchCloudRecords()"
+                        class="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold shadow-lg shadow-emerald-200/50 hover:bg-emerald-700 transition-all transform active:scale-95 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-download"></i> ดึงข้อมูล
+                    </button>
+                </div>
+            </div>
+
+            <div
+                class="mt-6 p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-100 dark:border-emerald-800/30">
+                <p class="text-[11px] text-emerald-700 dark:text-emerald-300 leading-relaxed font-medium">
+                    <i class="fa-solid fa-circle-info mr-1"></i> ระบบจะดึงข้อมูลที่เคยผ่านการประมวลผล (Process)
+                    และซิงก์ขึ้น Cloud แล้วเท่านั้น ข้อมูลที่ดึงมาจะเขียนทับข้อมูลในเครื่องปัจจุบัน
+                </p>
+            </div>
+        </div>
+    </div>
+
     <div class="fixed bottom-8 right-8 flex flex-col gap-2 z-[70]">
         <button onclick="scrollToTop()" id="goTopBtn" class="nav-fab opacity-0 translate-y-10"><i
                 class="fa-solid fa-arrow-up"></i></button>
@@ -997,6 +1042,51 @@
         const staffToRemove = ["T. Trayaporn", "STAFF รัตนา ศิริโชคชัยมงคล", "Thipnaree J", "สุพิชญา โกศลกิตติพงศ์"];
 
         function getDocId(name) { if (!name) return ""; return name.replace(/\//g, '_'); }
+
+        // --- CLOUD FETCH ---
+        function openCloudModal() { document.getElementById('cloudModal').classList.remove('hidden'); }
+        function closeCloudModal() { document.getElementById('cloudModal').classList.add('hidden'); }
+
+        async function fetchCloudRecords() {
+            const dateStr = document.getElementById('cloudDateInput').value; // Expected DD/MM/YYYY but HTML date is YYYY-MM-DD
+            if (!dateStr) return showToast("กรุณาระบุวันที่", true);
+
+            // Convert YYYY-MM-DD to DD/MM/YYYY
+            const [y, m, d] = dateStr.split('-');
+            const formattedDate = `${d}/${m}/${y}`;
+
+            showLoading();
+            try {
+                const snap = await db.collection('tmtp_records').where('date', '==', formattedDate).get();
+                if (snap.empty) {
+                    showToast("ไม่พบข้อมูลสำหรับวันที่ " + formattedDate, true);
+                } else {
+                    const cloudData = [];
+                    snap.forEach(doc => {
+                        const data = doc.data();
+                        cloudData.push({
+                            ...data,
+                            id: data.id || doc.id,
+                            rawDate: data.rawDate ? (data.rawDate.seconds ? new Date(data.rawDate.seconds * 1000) : new Date(data.rawDate)) : parseDateForSort(data.date),
+                            isSelected: false
+                        });
+                    });
+                    // Sort by time or orderId if needed
+                    cloudData.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+
+                    globalData = cloudData;
+                    renderUI();
+                    saveToLocal();
+                    showToast(`โหลดสำเร็จ ${cloudData.length} รายการ`);
+                    closeCloudModal();
+                }
+            } catch (err) {
+                console.error(err);
+                showToast("เกิดข้อผิดพลาดในการดึงข้อมูล", true);
+            } finally {
+                hideLoading();
+            }
+        }
 
         // --- INIT ---
         document.addEventListener('DOMContentLoaded', () => {

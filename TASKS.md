@@ -1,8 +1,11 @@
 # 📝 Task Log - FKB Front Kanban
 
-## 📅 24 กุมภาพันธ์ 2026 (TMTP Auto-Backup & User Form Sync)
+## 📅 24 กุมภาพันธ์ 2026 (TMTP Cloud Restore & Auto-Backup)
 
 ### 🚀 ฟีเจอร์ใหม่ & การแก้ไข (Latest)
+*   **TMTP Manager Cloud Restore (v6.10):**
+    *   **Cloud Restore Feature:** เพิ่มระบบดึงข้อมูลย้อนหลังจาก Cloud (Firestore) โดยการระบุวันที่ ทำให้สามารถกู้คืนข้อมูลมาวิเคราะห์ต่อได้แม้จะล้างข้อมูลในเครื่องไปแล้ว
+    *   **Cloud Data Management:** ปรับปรุง UI เพิ่มปุ่ม "Cloud" ในส่วน Data Input เพื่อเปิด Modal สำหรับเลือกวันที่ต้องการ Restore
 *   **TMTP Manager Enhancements (v6.9):**
     *   **Instant Paste Backup:** เพิ่มระบบสำรองข้อมูลดิบอัตโนมัติทันทีที่ "วาง" (Paste) ข้อมูลลงในกล่องรับข้อมูล โดยระบบจะตรวจจับวันที่ (Extraction) และบันทึกลง Firestore (`tmtp_backups`) เพื่อป้องกันข้อมูลสูญหาย
     *   **Cloud Synchronization:** ข้อมูลที่ผ่านการประมวลผลแล้วจะถูกซิงก์ขึ้น Cloud (`tmtp_records`) โดยอัตโนมัติ เพื่อสะสมเป็นประวัติยาวนาน (History) สำหรับการดึงมาวิเคราะห์ (Analyze) ย้อนหลังได้แม้อยู่คนละเครื่องหรือล้างข้อมูลในเครื่องไปแล้ว
@@ -63,9 +66,10 @@
 *   **Sales Analytics:** เพิ่มคู่มือการใช้งานระบบวิเคราะห์ยอดขายเชิงลึกและการซ่อนตัวเลขยอดเงิน
 *   **Searchable References:** แสดงเลขที่อ้างอิง (REF) ใต้เลขที่ใบกำกับภาษีในตารางหลัก และสามารถใช้ค้นหาข้อมูล (Reverse Lookup) ได้ทันที
 *   **Editable Tables:** ข้อมูลในตารางสามารถแก้ไขได้ทันที (Inline Edit) ทั้งเลข INV, ยอดเงิน, และพนักงาน
-*   **Cloud Auto-Backup (v6.9):**
-    *   **Instant Paste Backup:** ระบบสำรองข้อมูลดิบอัตโนมัติทันทีที่ "วาง" (Paste) ข้อมูลลงในกล่องรับข้อมูล โดยระบบจะตรวจจับวันที่ (Extraction) และบันทึกลง Firestore (`tmtp_backups`) เพื่อป้องกันข้อมูลสูญหาย
-    *   **Cloud Synchronization:** ข้อมูลที่ผ่านการประมวลผลแล้วจะถูกซิงก์ขึ้น Cloud (`tmtp_records`) โดยอัตโนมัติ เพื่อสะสมเป็นประวัติยาวนาน (History) สำหรับการดึงมาวิเคราะห์ (Analyze) ย้อนหลังได้แม้อยู่คนละเครื่องหรือล้างข้อมูลในเครื่องไปแล้ว
+*   **Cloud Operations (v6.10):**
+    *   **Cloud Restore:** ระบบดึงข้อมูลออเดอร์ย้อนหลังตามวันที่จาก Cloud (Firestore) ช่วยให้ทำงานต่อเนื่องได้ทุกที่
+    *   **Instant Paste Backup:** ระบบสำรองข้อมูลดิบอัตโนมัติเมื่อมีการ "วาง" ข้อมูล ปลอดภัยกว่าเดิม
+    *   **Cloud Sync:** ข้อมูลที่ผ่านการ Process จะถูกเก็บขึ้น Cloud อัตโนมัติเพื่อใช้ในการวิเคราะห์ระยะยาว
 *   **ProOrder Manager:** ปรับปรุงรายละเอียดระบบ Master Database, การรวมชื่อบริษัท (Merge), และระบบค้นหาอัจฉริยะที่คงผลลัพธ์ขณะแก้ไข
 *   **VCI (Visitor Check-in) System Enhancements:**
     *   **Permission Center:** รวมเมนู "Approval" และ "Visit requests" เป็น **"Permission"** (Combined Badge & KPI Table) เพื่อความคล่องตัว
