@@ -1,8 +1,12 @@
 # 📝 Task Log - FKB Front Kanban
 
-## 📅 24 กุมภาพันธ์ 2026 (ระบบสั่งซื้อ & Kanban Sync)
+## 📅 24 กุมภาพันธ์ 2026 (TMTP Auto-Backup & User Form Sync)
 
 ### 🚀 ฟีเจอร์ใหม่ & การแก้ไข (Latest)
+*   **TMTP Manager Enhancements (v6.9):**
+    *   **Instant Paste Backup:** เพิ่มระบบสำรองข้อมูลดิบอัตโนมัติทันทีที่ "วาง" (Paste) ข้อมูลลงในกล่องรับข้อมูล โดยระบบจะตรวจจับวันที่ (Extraction) และบันทึกลง Firestore (`tmtp_backups`) เพื่อป้องกันข้อมูลสูญหาย
+    *   **Cloud Synchronization:** ข้อมูลที่ผ่านการประมวลผลแล้วจะถูกซิงก์ขึ้น Cloud (`tmtp_records`) โดยอัตโนมัติ เพื่อสะสมเป็นประวัติยาวนาน (History) สำหรับการดึงมาวิเคราะห์ (Analyze) ย้อนหลังได้แม้อยู่คนละเครื่องหรือล้างข้อมูลในเครื่องไปแล้ว
+    *   **Historical Analysis Ready:** ข้อมูลที่ซิงก์ขึ้น Cloud จะถูกจัดเก็บแบบแยกรายการอย่างเป็นระเบียบ ทำให้แอดมินสามารถนำข้อมูลไปทำรายงานสรุปยอดขายระยะยาวได้แม่นยำขึ้น
 *   **User Order Form Refactoring (index.html):**
     *   **Admin Sync:** ปรับเปลี่ยนฟิลด์ในแบบฟอร์มสั่งซื้อฝั่งลูกค้าให้สอดคล้องกับระบบบันทึกงานของแอดมิน เพื่อความสม่ำเสมอของข้อมูล
     *   **Work Details Area:** เปลี่ยนจากช่องกรอกชื่อสินค้าบรรทัดเดียวเป็น **Textarea** ขนาดใหญ่ เพื่อรองรับการพิมพ์รายละเอียดงานหรือรายการสั่งซื้อที่ละเอียดเหมือนฝั่งแอดมิน
@@ -57,7 +61,11 @@
 *   **Firestore Security Fix (proorder.html):** แก้ไขปัญหา "Invalid document reference" เมื่อใช้ชื่อสินค้าที่มีเครื่องหมาย `/` โดยการเพิ่มระบบ Sanitize ชื่อไฟล์อัตโนมัติก่อนบันทึก `master_products` (ใช้ฟังก์ชัน `getDocId`)
 *   **Documentation Milestone:** ปรับปรุง `FEATURES.md`, `README.md` และ `TASKS.md` ให้เป็นปัจจุบันที่สุด ครอบคลุมฟีเจอร์ใหม่ๆ เช่น Sales Analytics (Privacy Mode), Premium Tax Invoice (BahtText) และ LINE MAN Recorder (V7.0 Redesign)
 *   **Sales Analytics:** เพิ่มคู่มือการใช้งานระบบวิเคราะห์ยอดขายเชิงลึกและการซ่อนตัวเลขยอดเงิน
-*   **TMTP Manager:** เพิ่มรายละเอียดระบบออกใบกำกับภาษีอัตโนมัติและระบบแปลงยอดเงินเป็นตัวอักษรไทย
+*   **Searchable References:** แสดงเลขที่อ้างอิง (REF) ใต้เลขที่ใบกำกับภาษีในตารางหลัก และสามารถใช้ค้นหาข้อมูล (Reverse Lookup) ได้ทันที
+*   **Editable Tables:** ข้อมูลในตารางสามารถแก้ไขได้ทันที (Inline Edit) ทั้งเลข INV, ยอดเงิน, และพนักงาน
+*   **Cloud Auto-Backup (v6.9):**
+    *   **Instant Paste Backup:** ระบบสำรองข้อมูลดิบอัตโนมัติทันทีที่ "วาง" (Paste) ข้อมูลลงในกล่องรับข้อมูล โดยระบบจะตรวจจับวันที่ (Extraction) และบันทึกลง Firestore (`tmtp_backups`) เพื่อป้องกันข้อมูลสูญหาย
+    *   **Cloud Synchronization:** ข้อมูลที่ผ่านการประมวลผลแล้วจะถูกซิงก์ขึ้น Cloud (`tmtp_records`) โดยอัตโนมัติ เพื่อสะสมเป็นประวัติยาวนาน (History) สำหรับการดึงมาวิเคราะห์ (Analyze) ย้อนหลังได้แม้อยู่คนละเครื่องหรือล้างข้อมูลในเครื่องไปแล้ว
 *   **ProOrder Manager:** ปรับปรุงรายละเอียดระบบ Master Database, การรวมชื่อบริษัท (Merge), และระบบค้นหาอัจฉริยะที่คงผลลัพธ์ขณะแก้ไข
 *   **VCI (Visitor Check-in) System Enhancements:**
     *   **Permission Center:** รวมเมนู "Approval" และ "Visit requests" เป็น **"Permission"** (Combined Badge & KPI Table) เพื่อความคล่องตัว

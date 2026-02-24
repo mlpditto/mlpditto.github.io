@@ -356,7 +356,7 @@
                                 class="text-blue-500 dark:text-blue-400">Manager</span></h1>
                         <p onclick="openChangelog()"
                             class="text-[10px] text-slate-400 font-medium uppercase tracking-wider cursor-pointer hover:text-blue-500 transition-colors">
-                            v6.8 <i class="fa-solid fa-circle-info ml-1"></i></p>
+                            v6.9 <i class="fa-solid fa-circle-info ml-1"></i></p>
                     </div>
                 </div>
                 <div class="flex items-center gap-3">
@@ -1006,6 +1006,7 @@
             }
             setupDragDrop();
             document.getElementById('emailDateSelect').addEventListener('change', (e) => updateEmailDraft(e.target.value));
+            document.getElementById('rawData').addEventListener('paste', handleAutoBackup);
             loadSellerInfo();
             fetchMasterData();
 
@@ -2005,6 +2006,48 @@
         function loadDataFromJSON(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = function (e) { try { const json = JSON.parse(e.target.result); if (!Array.isArray(json)) throw new Error("ไฟล์ไม่ถูกต้อง (Not Array)"); globalData = sanitizeLoadedData(json); renderUI(); saveToLocal(); showToast("โหลดไฟล์สำเร็จ"); event.target.value = ''; } catch (err) { console.error(err); showToast("ไฟล์ไม่ถูกต้อง", true); } }; reader.readAsText(file); }
         function sanitizeLoadedData(jsonArray) { return jsonArray.map(item => { let rDate; if (item.rawDate) { rDate = new Date(item.rawDate); if (isNaN(rDate.getTime())) rDate = parseDateForSort(item.date || ""); } else { rDate = parseDateForSort(item.date || ""); } return { id: item.id || Math.random().toString(36).substr(2, 9), date: item.date || "-", time: item.time || "", orderId: item.orderId || "-", invoiceId: item.invoiceId || "", qty: Number(item.qty) || 0, base: Number(item.base) || 0, vat: Number(item.vat) || 0, total: Number(item.total) || 0, tracking: item.tracking || "", note: item.note || "", type: item.type || "telepharmacy", rawDate: rDate, isHighlighted: item.isHighlighted || false, isSelected: false }; }); }
 
+        // --- AUTO BACKUP ---
+        async function handleAutoBackup(e) {
+            const text = (e.clipboardData || window.clipboardData).getData('text');
+            if (!text || text.trim().length < 50) return;
+
+            const dateMatch = text.match(/\d{2}\/\d{2}\/\d{4}/);
+            const dateStr = dateMatch ? dateMatch[0] : "Unknown";
+
+            try {
+                await db.collection('tmtp_backups').add({
+                    rawData: text,
+                    extractedDate: dateStr,
+                    pastedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    user: auth.currentUser ? auth.currentUser.displayName : 'Anonymous'
+                });
+                console.log("Auto Backup Saved:", dateStr);
+            } catch (err) {
+                console.warn("Auto Backup Failed:", err);
+            }
+        }
+
+        async function syncProcessedToCloud(items) {
+            if (!items || items.length === 0) return;
+            const batch = db.batch();
+            items.forEach(item => {
+                // Use a combination of orderId and date to avoid conflicts across days
+                const safeId = (item.orderId + "_" + (item.date || "nodate")).replace(/[^a-zA-Z0-9]/g, '_');
+                const docRef = db.collection('tmtp_records').doc(safeId);
+                batch.set(docRef, {
+                    ...item,
+                    syncedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedBy: auth.currentUser ? auth.currentUser.displayName : 'System'
+                }, { merge: true });
+            });
+            try {
+                await batch.commit();
+                console.log("Sync to cloud successful");
+            } catch (err) {
+                console.error("Cloud Sync Error:", err);
+            }
+        }
+
         function processData() {
             showLoading();
             setTimeout(() => {
@@ -2065,7 +2108,9 @@
                     });
                     if (globalData.length === 0) throw new Error("ไม่พบข้อมูลที่ตรงเงื่อนไข");
                     currentSort = { key: null, direction: 'asc' }; dateSortOrder = 'desc'; isMergedView = false;
-                    renderUI(); saveToLocal(); showToast(`ประมวลผลสำเร็จ ${globalData.length} รายการ`);
+                    renderUI(); saveToLocal();
+                    showToast(`ประมวลผลสำเร็จ ${globalData.length} รายการ`);
+                    syncProcessedToCloud(globalData); // Auto Sync to Cloud for analysis
                 } catch (err) { showToast(err.message, true); } finally { hideLoading(); }
             }, 500);
         }
