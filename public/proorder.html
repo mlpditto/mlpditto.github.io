@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ProOrder Manager (v4.15)</title>
+    <title>ProOrder Manager (v4.16)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -290,7 +290,7 @@
             <div class="bg-white/10 p-2 rounded-lg"><i class="fas fa-notes-medical text-xl"></i></div>
             <div>
                 <h1 class="text-lg font-bold leading-tight">ระบบสั่งยา</h1>
-                <p class="text-[10px] text-teal-200 opacity-90 font-light">v4.15</p>
+                <p class="text-[10px] text-teal-200 opacity-90 font-light">v4.16</p>
             </div>
         </div>
         <div class="flex gap-2">
@@ -658,6 +658,10 @@
                         class="hidden-el bg-white text-indigo-600 px-3 py-1 rounded-lg text-xs font-bold hover:bg-indigo-50 transition shadow-sm animate-pulse">
                         <i class="fas fa-object-group"></i> รวม (<span id="mergeCount">0</span>)
                     </button>
+                    <button onclick="autoDetectSimilarCompanies()"
+                        class="bg-indigo-500 text-white px-3 py-1 rounded-lg text-xs font-bold border border-indigo-400 hover:bg-indigo-400 transition shadow-sm">
+                        <i class="fas fa-magic"></i> ค้นหาชื่อคล้ายกัน
+                    </button>
                 </div>
                 <button onclick="closeModal('companyExplorerModal')" class="text-indigo-200 hover:text-white"><i
                         class="fas fa-times text-xl"></i></button>
@@ -897,7 +901,8 @@
             if (!name) return '';
             return name.toLowerCase()
                 .replace(/[\.,\-\(\)\[\]]/g, ' ')
-                .replace(/\b(co|ltd|limited|corp|company|inc|part|store|shop)\b/g, '')
+                .replace(/\b(co|ltd|limited|corp|company|inc|part|store|shop|บจก|หจก|บมจ|บริษัท|จำกัด|ห้างหุ้นส่วน)\b/g, '')
+                .replace(/(สำนักงานใหญ่|สาขาที่\s*\d+|สาขาหลัก)/g, '')
                 .replace(/\s+/g, '')
                 .trim();
         }
@@ -1214,6 +1219,36 @@
                     </button>
                 </div>
             `}).join('');
+        }
+
+        function autoDetectSimilarCompanies() {
+            const groups = {};
+            const sorted = Array.from(allCompaniesData).sort();
+            let detectCount = 0;
+
+            sorted.forEach(c => {
+                const norm = normalizeCompName(c);
+                if (!norm || norm.length < 3) return;
+                if (!groups[norm]) groups[norm] = [];
+                groups[norm].push(c);
+            });
+
+            let foundGroups = 0;
+            for (const norm in groups) {
+                if (groups[norm].length > 1) {
+                    groups[norm].forEach(c => selectedCompanies.add(c));
+                    foundGroups++;
+                    detectCount += groups[norm].length;
+                }
+            }
+
+            if (foundGroups > 0) {
+                renderCompanyExplorer();
+                updateMergeButton();
+                showToast(`ตรวจพบ ${foundGroups} กลุ่มบริษัทที่มีชื่อคล้ายกัน (${detectCount} รายการ)`);
+            } else {
+                showToast("ไม่พบชื่อบริษัทที่คล้ายกันเพิ่มเติม");
+            }
         }
 
         function toggleCompanySelect(name) {
