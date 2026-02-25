@@ -1741,8 +1741,6 @@
 
                 // If name changed, we need to create new and delete old
                 if (newName !== originalName && originalName) {
-                    if (!confirm(`คุณกำลังเปลี่ยนชื่อสินค้าจาก "${originalName}" เป็น "${newName}"\nระบบจะย้ายข้อมูลทั้งหมดไปยังชื่อใหม่และลบชื่อเดิมทิ้ง ตกลงหรือไม่?`)) return;
-
                     const oldDocRef = db.collection('master_products').doc(getDocId(originalName));
                     batch.set(newDocRef, {
                         name: newName, unit, minQty, companyProductId, mlpId, prices, units: Array.from(unitsSet), aliases,
@@ -1757,7 +1755,7 @@
                 }
 
                 await batch.commit();
-                alert('บันทึกข้อมูลหลักสำเร็จ');
+                showToast('บันทึกข้อมูลหลักสำเร็จ');
 
                 // Sync current session products
                 products.forEach(p => {
