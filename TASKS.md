@@ -1,5 +1,18 @@
 # 📝 Task Log - FKB Front Kanban
 
+## 📅 26 กุมภาพันธ์ 2026 (Product Alias & PC Readability)
+
+### 🚀 ฟีเจอร์ใหม่ & การแก้ไข (Latest)
+*   **ProOrder Manager (proorder.html):**
+    *   **Product Alias (AKA) Functionality:** เพิ่มระบบ "ชื่อเรียกอื่นๆ" ให้สินค้าในฐานข้อมูล Master เพื่อรองรับสินค้าที่มีหลายชื่อจาก Supplier ต่างกัน
+    *   **Smart Name Resolution:** ระบบ `batchAddProducts` และการ Import จะค้นหาชื่อสินค้าจากทั้งชื่อหลักและ Alias อัตโนมัติ (Resolved via Firestore `array-contains`) ทำให้ข้อมูลรวมกลุ่มกันได้แม่นยำขึ้น
+    *   **Master Modal Update:** เพิ่ม UI สำหรับจัดการ Alias ในหน้าแก้ไขข้อมูลสินค้าหลัก พร้อมระบบเพิ่มฟิลด์แบบ Dynamic
+    *   **Alias Matches Visibility:** แสดงชื่อ Alias ที่ถูกจับคู่ในหน้าค้นหา (Master Explorer) และหน้าประมวลผลการสั่งซื้อเพื่อให้ผู้ใช้ทราบว่ารายการนั้นถูกจับคู่มาจากชื่อใด
+*   **LINE MAN Sales Recorder (lineman-mgr.html):**
+    *   **PC UI Typography & Comfort:** ปรับปรุงความสบายตาในการใช้งานบนคอมพิวเตอร์ โดยเพิ่มขนาด Font พื้นฐานและปรับปรุง Hierarchy ของตัวอักษรในโหมด Responsive (PC View)
+    *   **Global Layout Adjustments:** ขยายขนาดตาราง ป้ายสถานะ และระยะห่างของ Label ต่างๆ ให้เหมาะสมกับหน้าจอใหญ่ ลดภาระสายตาสำหรับเภสัชกร/แอดมินที่ต้องดูจอเป็นเวลานาน
+    *   **Tailwind Style Fixes:** แก้ไขปัญหา CSS Lint ในส่วนการ Custom ขนาดตัวอักษรแบบเจาะจงที่ใช้ร่วมกับ Tailwind Utility Classes
+
 ## 📅 25 กุมภาพันธ์ 2026 (Smart Company Merge)
 
 ### 🚀 ฟีเจอร์ใหม่ & การแก้ไข (Latest)

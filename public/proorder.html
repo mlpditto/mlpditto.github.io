@@ -178,9 +178,17 @@
                 <input type="hidden" id="master-original-name">
                 <input type="hidden" id="master-session-id">
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">ชื่อสินค้า (ในระบบ)</label>
-                    <input type="text" id="master-name" class="w-full p-3 border rounded-xl bg-white font-bold"
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="block text-xs font-bold text-gray-500 uppercase">ชื่อสินค้า (ในระบบ)</label>
+                        <button onclick="addMasterAliasField()"
+                            class="text-[10px] bg-teal-50 text-teal-600 border border-teal-200 px-2 py-0.5 rounded hover:bg-teal-100 font-bold">+
+                            เพิ่มชื่อเรียกอื่น</button>
+                    </div>
+                    <input type="text" id="master-name" class="w-full p-3 border rounded-xl bg-white font-bold mb-2"
                         placeholder="ระบุชื่อสินค้า">
+                    <div id="master-aliases-container" class="space-y-2">
+                        <!-- Alias inputs will be here -->
+                    </div>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
@@ -996,8 +1004,8 @@
             finalizePaste(pendingPasteItems, textAreaTempRef);
         }
 
-        function finalizePaste(items, textArea) {
-            const result = batchAddProducts(items);
+        async function finalizePaste(items, textArea) {
+            const result = await batchAddProducts(items);
             renderProducts(products); updateSummary(); refreshDashboard();
             saveState();
             if (textArea) textArea.value = '';
@@ -1059,25 +1067,53 @@
             return items;
         }
 
-        function batchAddProducts(newItems) {
+        async function batchAddProducts(newItems) {
             let added = 0, updated = 0;
-            newItems.forEach(item => {
+            for (let item of newItems) {
+                let systemName = item.name;
+                let aliases = [];
+
+                // --- Alias Resolution ---
+                try {
+                    // 1. Check if it's already a system name (doc ID)
+                    const docId = getDocId(item.name);
+                    const doc = await db.collection('master_products').doc(docId).get();
+
+                    if (doc.exists) {
+                        const d = doc.data();
+                        systemName = d.name || item.name;
+                        aliases = d.aliases || [];
+                    } else {
+                        // 2. Not a doc ID, check if it's an alias
+                        const aliasSnap = await db.collection('master_products').where('aliases', 'array-contains', item.name).limit(1).get();
+                        if (!aliasSnap.empty) {
+                            const d = aliasSnap.docs[0].data();
+                            systemName = d.name;
+                            aliases = d.aliases || [];
+                        }
+                    }
+                } catch (e) { console.error("Alias resolution failed", e); }
+
+                item.name = systemName;
                 const existingProduct = products.find(p => p.name === item.name);
+
                 if (existingProduct) {
+                    existingProduct.aliases = aliases; // Update aliases even for existing
                     cart[existingProduct.id] = (cart[existingProduct.id] || 0) + item.qty;
-                    products = products.filter(p => p.id !== existingProduct.id); products.unshift(existingProduct);
+                    products = products.filter(p => p.id !== existingProduct.id);
+                    products.unshift(existingProduct);
                     setTimeout(() => { const card = document.getElementById(`card-${existingProduct.id}`); if (card) card.classList.add('flash-update'); }, 100);
                     updated++;
                 } else {
                     const id = `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-                    products.unshift({ id: id, name: item.name, price: item.price, unit: item.unit, company: item.company });
+                    products.unshift({ id: id, name: item.name, price: item.price, unit: item.unit, company: item.company, aliases: aliases });
                     cart[id] = item.qty;
                     setTimeout(() => { const card = document.getElementById(`card-${id}`); if (card) card.classList.add('flash-success'); }, 100);
                     added++;
                 }
                 // Auto-record to Master Database
                 recordToMaster(item.name, item.unit, item.company, item.price);
-            });
+            }
             return { added, updated };
         }
 
@@ -1127,7 +1163,7 @@
             } catch (err) { console.error("Master Record Error", err); }
         }
 
-        function addCustomMedicine() { const n = document.getElementById('newMedicineName').value.trim(), c = document.getElementById('newMedicineCompany').value.trim(), u = document.getElementById('newMedicineUnit').value.trim(), q = parseInt(document.getElementById('newMedicineQty').value) || 1, p = parseFloat(document.getElementById('newMedicinePrice').value) || 0; if (!n) return alert('ระบุชื่อ'); batchAddProducts([{ name: n, company: c, unit: u, qty: q, price: p }]); renderProducts(products); updateSummary(); refreshDashboard(); saveState(); closeModal('addMedicineModal'); }
+        async function addCustomMedicine() { const n = document.getElementById('newMedicineName').value.trim(), c = document.getElementById('newMedicineCompany').value.trim(), u = document.getElementById('newMedicineUnit').value.trim(), q = parseInt(document.getElementById('newMedicineQty').value) || 1, p = parseFloat(document.getElementById('newMedicinePrice').value) || 0; if (!n) return alert('ระบุชื่อ'); await batchAddProducts([{ name: n, company: c, unit: u, qty: q, price: p }]); renderProducts(products); updateSummary(); refreshDashboard(); saveState(); closeModal('addMedicineModal'); }
         function saveJSON() { if (products.length === 0) return alert('ไม่มีข้อมูล'); const d = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ timestamp: new Date(), products, cart })); const a = document.createElement('a'); a.href = d; a.download = "order_" + new Date().toISOString().slice(0, 10) + ".json"; document.body.appendChild(a); a.click(); a.remove(); }
         function loadJSON(i) { const f = i.files[0]; if (!f) return; const r = new FileReader(); r.onload = e => { try { const d = JSON.parse(e.target.result); if (d.products && d.cart) { products = d.products || []; cart = d.cart || {}; renderProducts(products); updateSummary(); refreshDashboard(); saveState(); } else { alert('❌ รูปแบบไฟล์ไม่ถูกต้อง'); } } catch (x) { alert('❌ ไม่สามารถอ่านไฟล์ได้'); console.error(x); } i.value = ''; }; r.readAsText(f); }
         function showPanel(panelName) { const right = document.getElementById('panel-analysis'); const navInput = document.getElementById('nav-input'); const navAnalysis = document.getElementById('nav-analysis'); if (panelName === 'input') { right.classList.add('translate-x-full'); navInput.classList.add('text-teal-600', 'bg-teal-50', 'border-teal-600'); navInput.classList.remove('text-gray-400', 'border-transparent'); navAnalysis.classList.remove('text-indigo-600', 'bg-indigo-50', 'border-indigo-600'); navAnalysis.classList.add('text-gray-400', 'border-transparent'); } else { right.classList.remove('translate-x-full'); navAnalysis.classList.add('text-indigo-600', 'bg-indigo-50', 'border-indigo-600'); navAnalysis.classList.remove('text-gray-400', 'border-transparent'); navInput.classList.remove('text-teal-600', 'bg-teal-50', 'border-teal-600'); navInput.classList.add('text-gray-400', 'border-transparent'); } }
@@ -1158,19 +1194,28 @@
         function renderMasterExplorer() {
             const search = document.getElementById('master-explorer-search').value.toLowerCase().trim();
             const list = document.getElementById('master-explorer-list');
-            const filtered = allMasterData.filter(x => x.name.toLowerCase().includes(search));
+            const filtered = allMasterData.filter(x => {
+                const nameMatch = x.name.toLowerCase().includes(search);
+                const aliasMatch = x.aliases && x.aliases.some(a => a.toLowerCase().includes(search));
+                return nameMatch || aliasMatch;
+            });
 
             if (filtered.length === 0) { list.innerHTML = '<div class="text-center py-10 text-gray-400">ไม่พบสินค้า</div>'; return; }
 
-            list.innerHTML = filtered.map(x => `
+            list.innerHTML = filtered.map(x => {
+                const matchedAlias = search && x.aliases ? x.aliases.find(a => a.toLowerCase().includes(search)) : null;
+                const aliasHtml = matchedAlias ? `<div class="text-[10px] text-teal-600 font-bold mt-0.5"><i class="fas fa-tag mr-1 text-[8px]"></i> AKA: ${matchedAlias}</div>` : '';
+
+                return `
                 <div onclick="openMasterProductModal('${x.name.replace(/'/g, "\\'")}')" class="p-3 border rounded-xl hover:bg-teal-50 hover:border-teal-200 transition cursor-pointer flex justify-between items-center group">
-                    <div>
-                        <div class="font-bold text-gray-700">${x.name}</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="font-bold text-gray-700 truncate">${x.name}</div>
+                        ${aliasHtml}
                         <div class="text-[10px] text-gray-400">หน่วยหลัก: ${x.unit || '-'} | ขั้นต่ำ: ${x.minQty || 0}</div>
                     </div>
-                    <i class="fas fa-chevron-right text-gray-200 group-hover:text-teal-400"></i>
+                    <i class="fas fa-chevron-right text-gray-200 group-hover:text-teal-400 ml-2"></i>
                 </div>
-            `).join('');
+            `}).join('');
         }
 
         let allCompaniesData = new Set();
@@ -1450,13 +1495,23 @@
         function renderProducts(list) {
             const c = document.getElementById('productList');
             if (list.length === 0) { c.innerHTML = `<div class="text-center py-10 text-gray-400"><i class="fas fa-magic text-5xl mb-3 opacity-30"></i><p>เริ่มใช้งาน</p></div>`; return; }
+
+            const searchVal = document.getElementById('searchInput').value.toLowerCase().trim();
+
             c.innerHTML = list.map(p => {
                 const q = cart[p.id] || 0; if (q === 0 && Object.keys(cart).length > 0 && !cart[p.id]) return '';
                 const badge = p.company ? `<div class="text-[10px] text-orange-500 mb-0.5"><i class="fas fa-building text-[10px]"></i> ${p.company}</div>` : '';
+
+                const matchedAlias = searchVal && p.aliases ? p.aliases.find(a => a.toLowerCase().includes(searchVal)) : null;
+                const aliasBadge = matchedAlias ? `<div class="text-[9px] text-teal-600 font-bold bg-teal-50 px-1.5 py-0.5 rounded-md inline-block mb-1"><i class="fas fa-tag text-[7px] mr-1"></i>AKA: ${matchedAlias}</div>` : '';
+
                 return `<div class="flex justify-between items-start p-3 border rounded-lg transition-all duration-200 bg-white ${q > 0 ? 'border-teal-500 shadow-sm ring-1 ring-teal-100' : 'border-gray-200'}" id="card-${p.id}" onclick="handleCardClick('${p.id}')">
                         <div class="flex-1 pr-2 cursor-pointer">
                             ${badge}
-                            <div class="mb-1"><span class="font-bold text-gray-800 text-base leading-tight break-words">${p.name}</span></div>
+                            <div class="mb-1">
+                                ${aliasBadge}
+                                <span class="font-bold text-gray-800 text-base leading-tight break-words block">${p.name}</span>
+                            </div>
                             <div class="text-sm font-bold text-teal-700">${p.price > 0 ? p.price.toLocaleString() + ' ฿' : ''}</div>
                         </div>
                         <div class="flex flex-col items-end gap-2 pointer-events-auto">
@@ -1540,6 +1595,7 @@
                         if (!exists) normalizedPrices.push({ company: sessionProd.company, unit: sessionProd.unit || '', price: sessionProd.price || 0 });
                     }
                     renderMasterPrices(normalizedPrices);
+                    renderMasterAliases(d.aliases || []);
                 } else {
                     document.getElementById('master-unit').value = sessionProd ? sessionProd.unit : '';
                     document.getElementById('master-min-qty').value = 0;
@@ -1558,6 +1614,7 @@
                         normalizedPrices.push({ company: sessionProd.company, unit: sessionProd.unit || '', price: sessionProd.price || 0 });
                     }
                     renderMasterPrices(normalizedPrices);
+                    renderMasterAliases([]);
                 }
                 // Refresh suggestions again after potentially getting more data
                 refreshMasterSuggestions();
@@ -1621,6 +1678,28 @@
             container.appendChild(div);
         }
 
+        function addMasterAliasField(value = '') {
+            const container = document.getElementById('master-aliases-container');
+            const div = document.createElement('div');
+            div.className = "flex gap-2 items-center animate-in fade-in duration-200";
+            div.innerHTML = `
+                <div class="flex-1 relative">
+                    <i class="fas fa-tag absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-[10px]"></i>
+                    <input type="text" placeholder="ชื่อเรียกอื่นๆ (Alias)" class="w-full pl-8 pr-3 py-2 border rounded-xl text-xs bg-gray-50/50 focus:ring-1 focus:ring-teal-500 outline-none" value="${value}">
+                </div>
+                <button onclick="this.parentElement.remove()" class="text-gray-300 hover:text-red-500 p-1 transition"><i class="fas fa-times-circle"></i></button>
+            `;
+            container.appendChild(div);
+        }
+
+        function renderMasterAliases(aliases = []) {
+            const container = document.getElementById('master-aliases-container');
+            container.innerHTML = '';
+            if (Array.isArray(aliases)) {
+                aliases.forEach(a => addMasterAliasField(a));
+            }
+        }
+
         async function saveMasterProduct() {
             const originalName = document.getElementById('master-original-name').value;
             const newName = document.getElementById('master-name').value.trim();
@@ -1628,6 +1707,9 @@
             const minQty = parseInt(document.getElementById('master-min-qty').value) || 0;
             const companyProductId = document.getElementById('master-company-code').value.trim();
             const mlpId = document.getElementById('master-mlp-code').value.trim();
+
+            const aliasInputs = document.querySelectorAll('#master-aliases-container input');
+            const aliases = Array.from(aliasInputs).map(i => i.value.trim()).filter(v => v);
 
             const sellPriceStore = parseFloat(document.getElementById('master-sell-store').value) || 0;
             const sellPricePlatform = parseFloat(document.getElementById('master-sell-platform').value) || 0;
@@ -1663,13 +1745,13 @@
 
                     const oldDocRef = db.collection('master_products').doc(getDocId(originalName));
                     batch.set(newDocRef, {
-                        name: newName, unit, minQty, companyProductId, mlpId, prices, units: Array.from(unitsSet),
+                        name: newName, unit, minQty, companyProductId, mlpId, prices, units: Array.from(unitsSet), aliases,
                         sellPriceStore, sellPricePlatform, sellPriceWholesale, sellPriceSuggested
                     });
                     batch.delete(oldDocRef);
                 } else {
                     batch.set(newDocRef, {
-                        name: newName, unit, minQty, companyProductId, mlpId, prices, units: Array.from(unitsSet),
+                        name: newName, unit, minQty, companyProductId, mlpId, prices, units: Array.from(unitsSet), aliases,
                         sellPriceStore, sellPricePlatform, sellPriceWholesale, sellPriceSuggested
                     }, { merge: true });
                 }
@@ -1732,7 +1814,11 @@
             const v = document.getElementById('searchInput').value;
             const t = v.toLowerCase().trim();
             if (t) {
-                renderProducts(products.filter(p => p.name.toLowerCase().includes(t) || (p.company && p.company.toLowerCase().includes(t))));
+                renderProducts(products.filter(p =>
+                    p.name.toLowerCase().includes(t) ||
+                    (p.company && p.company.toLowerCase().includes(t)) ||
+                    (p.aliases && p.aliases.some(a => a.toLowerCase().includes(t)))
+                ));
             } else {
                 renderProducts(products);
             }
@@ -1741,7 +1827,7 @@
         function removeProduct(id) { delete cart[id]; products = products.filter(p => p.id != id); renderActiveView(); updateSummary(); refreshDashboard(); saveState(); }
         function updateCart(id, chg) { let n = (cart[id] || 0) + chg; if (n <= 0) { delete cart[id]; products = products.filter(p => p.id != id); } else { cart[id] = n; } renderActiveView(); updateSummary(); refreshDashboard(); saveState(); }
         function updateSummary() { let t = 0, c = 0; for (const [id, q] of Object.entries(cart)) { const p = products.find(x => x.id == id); if (p && q > 0) { t += p.price * q; c++; } } document.getElementById('leftPanelCount').innerText = c; document.getElementById('mobileTotalLeft').innerText = t.toLocaleString() + ' ฿'; document.getElementById('dashGrandTotal').innerText = t.toLocaleString() + ' ฿'; document.getElementById('dashTotalItems').innerText = c; }
-        function handleSearch(v) { setTimeout(() => { const t = v.toLowerCase().trim(); renderProducts(products.filter(p => p.name.toLowerCase().includes(t) || (p.company && p.company.toLowerCase().includes(t)))); }, 250); }
+        function handleSearch(v) { setTimeout(() => { renderActiveView(); }, 250); }
         function toggleSort() { sortMode = sortMode === 'time' ? 'az' : 'time'; const b = document.getElementById('sortBtn'); if (b) { if (sortMode === 'az') { b.innerHTML = '<i class="fas fa-sort-alpha-down"></i> A-Z'; b.classList.add('bg-indigo-50', 'text-indigo-700', 'border-indigo-200'); } else { b.innerHTML = '<i class="fas fa-clock"></i> TIME'; b.classList.remove('bg-indigo-50', 'text-indigo-700', 'border-indigo-200'); } } refreshDashboard(); }
 
         function refreshDashboard() {
@@ -1898,7 +1984,7 @@
     <script>
         function closeModal(id) { document.getElementById(id).classList.add('hidden-el'); }
         function showChangelogModal() { document.getElementById('changelogModal').classList.remove('hidden-el'); }
-        function addCustomMedicine() { const n = document.getElementById('newMedicineName').value.trim(), c = document.getElementById('newMedicineCompany').value.trim(), u = document.getElementById('newMedicineUnit').value.trim(), q = parseInt(document.getElementById('newMedicineQty').value) || 1, p = parseFloat(document.getElementById('newMedicinePrice').value) || 0; if (!n) return alert('ระบุชื่อ'); batchAddProducts([{ name: n, company: c, unit: u, qty: q, price: p }]); renderProducts(products); updateSummary(); refreshDashboard(); saveState(); closeModal('addMedicineModal'); }
+        async function addCustomMedicine() { const n = document.getElementById('newMedicineName').value.trim(), c = document.getElementById('newMedicineCompany').value.trim(), u = document.getElementById('newMedicineUnit').value.trim(), q = parseInt(document.getElementById('newMedicineQty').value) || 1, p = parseFloat(document.getElementById('newMedicinePrice').value) || 0; if (!n) return alert('ระบุชื่อ'); await batchAddProducts([{ name: n, company: c, unit: u, qty: q, price: p }]); renderProducts(products); updateSummary(); refreshDashboard(); saveState(); closeModal('addMedicineModal'); }
         function addProductAndAddToCart(n, q, p = 0, u = "", c = "") { const id = `custom-${Date.now()}-${Math.floor(Math.random() * 1000)}`; products.unshift({ id, name: n, price: p, unit: u, company: c }); cart[id] = q; renderProducts(products); updateCart(id, 0); }
         function openEditNameModal(id) { const p = products.find(x => x.id == id); if (!p) return; document.getElementById('editMedicineId').value = id; document.getElementById('editMedicineNameInput').value = p.name; document.getElementById('editMedicineCompanyInput').value = p.company || ""; document.getElementById('editMedicineUnitInput').value = p.unit || ""; document.getElementById('editMedicinePriceInput').value = p.price > 0 ? p.price : ''; document.getElementById('editNameModal').classList.remove('hidden-el'); }
         function saveEditName() { const id = document.getElementById('editMedicineId').value, p = products.find(x => x.id == id); if (p) { p.name = document.getElementById('editMedicineNameInput').value.trim(); p.company = document.getElementById('editMedicineCompanyInput').value.trim(); p.unit = document.getElementById('editMedicineUnitInput').value.trim(); p.price = parseFloat(document.getElementById('editMedicinePriceInput').value) || 0; renderProducts(products); updateCart(id, 0); saveState(); closeModal('editNameModal'); } }
@@ -2313,7 +2399,7 @@
             if (rawPdfLines.length > 0) renderLinePicker();
         }
 
-        function addQuoteToAnalysis() {
+        async function addQuoteToAnalysis() {
             if (currentQuoteItems.length === 0) return;
             const company = document.getElementById('quote-company').value.trim();
             if (!company) return alert("กรุณาระบุชื่อบริษัทที่เสนอราคา");
@@ -2326,7 +2412,7 @@
                 company: company
             }));
 
-            const result = batchAddProducts(formattedItems);
+            const result = await batchAddProducts(formattedItems);
             renderProducts(products);
             updateSummary();
             refreshDashboard();
