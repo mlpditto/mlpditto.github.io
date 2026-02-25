@@ -19,6 +19,11 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -344,6 +349,9 @@
                     <button onclick="document.getElementById('jsonFileInput').click()"
                         class="text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 px-2.5 py-1 rounded-lg border border-blue-200 dark:border-blue-800 transition-all flex items-center gap-1"
                         title="โหลดไฟล์งานเดิม"><i class="ph-bold ph-folder-open"></i> Open</button>
+                    <button onclick="openCloudLoadModal()"
+                        class="text-xs font-bold text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/30 px-2.5 py-1 rounded-lg border border-orange-200 dark:border-orange-800 transition-all flex items-center gap-1"
+                        title="โหลดข้อมูลจากคลาวด์"><i class="ph-bold ph-cloud-arrow-down"></i> Cloud</button>
                     <button onclick="saveProject()"
                         class="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 px-2.5 py-1 rounded-lg border border-emerald-200 dark:border-emerald-800 transition-all flex items-center gap-1"
                         title="บันทึกงานเพื่อทำต่อภายหลัง"><i class="ph-bold ph-floppy-disk"></i> Save</button>
@@ -1098,6 +1106,127 @@
             return "******" + name.substring(Math.max(0, name.length - 2));
         }
 
+        // --- Firebase Cloud Functions ---
+        function formatDateForDoc(dateStr) {
+            const parts = dateStr.split('/');
+            if (parts.length !== 3) return dateStr.replace(/\//g, '-');
+            const d = parts[0].padStart(2, '0');
+            const m = parts[1].padStart(2, '0');
+            const y = parts[2];
+            return `${y}-${m}-${d}`;
+        }
+
+        async function autoSaveToFirebase() {
+            if (allData.length === 0 || !window.db) return;
+
+            const dateGroups = {};
+            allData.forEach(item => {
+                const d = item.date || "-";
+                if (d === "-") return;
+                if (!dateGroups[d]) dateGroups[d] = [];
+                dateGroups[d].push(item);
+            });
+
+            const dates = Object.keys(dateGroups);
+            if (dates.length === 0) return;
+
+            for (const dStr of dates) {
+                const docId = formatDateForDoc(dStr);
+                const records = dateGroups[dStr];
+                try {
+                    await window.db.collection('sales_analytics').doc(docId).set({
+                        date: dStr,
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+                        count: records.length,
+                        records: records
+                    }, { merge: true });
+                } catch (e) {
+                    console.error("Cloud Save Error for " + dStr, e);
+                }
+            }
+        }
+
+        async function openCloudLoadModal() {
+            document.getElementById('cloudLoadModal').classList.remove('hidden');
+            document.getElementById('cloudLoadModal').classList.add('flex');
+            renderCloudDateList();
+        }
+
+        function closeCloudLoadModal() {
+            document.getElementById('cloudLoadModal').classList.add('hidden');
+            document.getElementById('cloudLoadModal').classList.remove('flex');
+        }
+
+        async function renderCloudDateList() {
+            const list = document.getElementById('cloudDateList');
+            list.innerHTML = '<p class="text-center text-slate-400 py-8 animate-pulse">กำลังโหลดรายการวันที่...</p>';
+
+            try {
+                const snapshot = await window.db.collection('sales_analytics').orderBy('date', 'desc').limit(30).get();
+                if (snapshot.empty) {
+                    list.innerHTML = '<p class="text-center text-slate-400 py-8">ไม่พบข้อมูลบนคลาวด์</p>';
+                    return;
+                }
+
+                list.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const date = data.date;
+                    const count = data.count || (data.records ? data.records.length : 0);
+                    const lastUpdated = data.lastUpdated ? data.lastUpdated.toDate().toLocaleString('th-TH') : '-';
+
+                    const btn = document.createElement('button');
+                    btn.className = "w-full text-left p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/10 transition-all flex justify-between items-center group";
+                    btn.onclick = () => loadCloudData(doc.id);
+                    btn.innerHTML = `
+                        <div>
+                            <div class="font-bold text-slate-700 dark:text-slate-200 group-hover:text-brand-600 flex items-center gap-2">
+                                <i class="ph-bold ph-calendar text-brand-500"></i> ${date}
+                            </div>
+                            <div class="text-[10px] text-slate-400 mt-1"><i class="ph ph-clock"></i> อัปเดตล่าสุด: ${lastUpdated}</div>
+                        </div>
+                        <div class="text-xs font-bold bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 px-3 py-1.5 rounded-full group-hover:bg-brand-500 group-hover:text-white transition-colors">${count} รายการ</div>
+                    `;
+                    list.appendChild(btn);
+                });
+            } catch (e) {
+                list.innerHTML = `<p class="text-center text-red-500 py-8 italic">Error: ${e.message}</p>`;
+            }
+        }
+
+        async function loadCloudData(docId) {
+            closeCloudLoadModal();
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+            document.getElementById('loadingOverlay').classList.add('flex');
+
+            try {
+                const doc = await window.db.collection('sales_analytics').doc(docId).get();
+                if (doc.exists) {
+                    resetUI();
+                    const data = doc.data();
+                    allData = data.records || [];
+
+                    if (allData.length > 0) {
+                        document.getElementById('resultSection').classList.remove('hidden');
+                        document.getElementById('emptyState').classList.add('hidden');
+                        refreshData();
+                        filterCustomers();
+                        showToast(`โหลดวันที่ ${data.date} สำเร็จ (${allData.length} รายการ)`);
+                    } else {
+                        showToast("ไม่พบข้อมูลในชุดนี้", "error");
+                    }
+                } else {
+                    showToast("ไม่พบเอกสารบนคลาวด์", "error");
+                }
+            } catch (e) {
+                showToast("โหลดไม่สำเร็จ: " + e.message, "error");
+                console.error(e);
+            } finally {
+                document.getElementById('loadingOverlay').classList.add('hidden');
+                document.getElementById('loadingOverlay').classList.remove('flex');
+            }
+        }
+
         function highlightText(t, q) {
             if (!q) return t;
             return String(t).replace(new RegExp(`(${q})`, 'gi'), '<mark>$1</mark>');
@@ -1235,10 +1364,16 @@
             document.getElementById('loadingOverlay').classList.add('flex');
             resetUI();
 
-            setTimeout(() => {
+            setTimeout(async () => {
                 try {
                     processData(text);
                     showToast("เสร็จสิ้น");
+
+                    if (allData.length > 0) {
+                        // Auto Save to Cloud
+                        await autoSaveToFirebase();
+                        showToast("บันทึกข้อมูลเข้าคลาวด์เรียบร้อย", "info");
+                    }
                 } catch (e) {
                     showToast("Error: " + e.message, "error");
                     console.error(e);
@@ -2343,7 +2478,42 @@
                 showToast("ล้างข้อมูลเรียบร้อย");
             }
         }
+
     </script>
+
+    <!-- Cloud Load Modal -->
+    <div id="cloudLoadModal"
+        class="fixed inset-0 bg-black/50 z-[100] hidden items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+        <div
+            class="bg-white dark:bg-dark-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-700 animate-slide-up">
+            <div
+                class="bg-slate-50/50 dark:bg-slate-800/50 px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center">
+                        <i class="ph-bold ph-cloud-arrow-down text-xl text-orange-600 dark:text-orange-400"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-800 dark:text-slate-200 leading-none">คลาวด์ (Cloud Records)
+                        </h3>
+                        <p class="text-[10px] text-slate-400 mt-1">เลือกวันที่ที่ต้องการโหลดข้อมูล</p>
+                    </div>
+                </div>
+                <button onclick="closeCloudLoadModal()"
+                    class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-slate-400 hover:text-red-500"><i
+                        class="ph-bold ph-x text-xl"></i></button>
+            </div>
+            <div id="cloudDateList" class="p-4 max-h-[60vh] overflow-y-auto space-y-2 custom-scrollbar">
+                <!-- List of dates will be here -->
+                <p class="text-center text-slate-400 py-8 animate-pulse">กำลังโหลดรายการวันที่...</p>
+            </div>
+            <div
+                class="bg-slate-50 dark:bg-slate-800/50 p-4 border-t border-slate-100 dark:border-slate-700 text-center">
+                <p class="text-[10px] text-slate-400 italic font-light">ข้อมูลจะถูกบันทึกอัตโนมัติทุกครั้งที่กดประมวลผล
+                </p>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>
