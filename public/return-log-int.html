@@ -138,6 +138,11 @@
                                 <i class="fas fa-folder-open text-yellow-500"></i> Open
                             </button>
 
+                            <button onclick="app.exportCSV()"
+                                class="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-blue-100 dark:border-blue-900/30 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-bold hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors text-sm">
+                                <i class="fas fa-file-csv"></i> Export CSV
+                            </button>
+
                             <button onclick="app.saveJSON()"
                                 class="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-emerald-100 dark:border-emerald-900/30 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 font-bold hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors text-sm">
                                 <i class="fas fa-save"></i> Save JSON
@@ -181,7 +186,7 @@
                     class="flex justify-between items-center mb-4 border-b border-gray-100 dark:border-darkBorder pb-3">
                     <h2 class="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2"><i
                             class="fas fa-pen-to-square text-indigo-500"></i> บันทึกข้อมูล</h2>
-                    <button onclick="app.resetForm()"
+                    <button type="button" onclick="app.confirmReset()"
                         class="text-sm text-gray-500 hover:text-indigo-600 dark:text-gray-400 transition"><i
                             class="fas fa-undo mr-1"></i>Reset</button>
                 </div>
@@ -191,9 +196,10 @@
                         <div class="md:col-span-12 lg:col-span-4 space-y-4">
                             <div><label
                                     class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">ชื่อสินค้า</label><input
-                                    type="text" id="productName" required
+                                    type="text" id="productName" required list="productList"
                                     class="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-white"
                                     oninput="app.handleProductInput(this)">
+                                <datalist id="productList"></datalist>
                             </div>
                             <div class="grid grid-cols-2 gap-3">
                                 <div><label
@@ -210,7 +216,7 @@
                             <div class="grid grid-cols-2 gap-3">
                                 <div><label
                                         class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">จำนวน</label><input
-                                        type="number" id="qty" required
+                                        type="number" id="qty" required min="1"
                                         class="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-white">
                                 </div>
                                 <div><label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Lot
@@ -403,8 +409,15 @@
             loadMasterData() {
                 window.db.collection('master_products').onSnapshot(snapshot => {
                     this.masterProducts = {};
+                    const datalist = document.getElementById('productList');
+                    if (datalist) datalist.innerHTML = '';
                     snapshot.forEach(doc => {
                         this.masterProducts[doc.data().name] = doc.data(); // Index by Name for easy lookup
+                        if (datalist) {
+                            const option = document.createElement('option');
+                            option.value = doc.data().name;
+                            datalist.appendChild(option);
+                        }
                     });
                 });
             },
@@ -434,6 +447,101 @@
                     if (e.key === 'Escape') this.cancelEdit();
                     if (e.altKey && e.key === 'n') { e.preventDefault(); document.getElementById('productName').focus(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
                 });
+
+                // Auto-save draft listeners
+                const formInputs = document.querySelectorAll('#returnForm input');
+                formInputs.forEach(input => {
+                    input.addEventListener('input', () => this.saveDraft());
+                    input.addEventListener('change', () => this.saveDraft());
+                });
+
+                this.loadDraft();
+            },
+
+            saveDraft() {
+                if (document.getElementById('editId').value) return; // Don't save draft while editing
+                const form = {
+                    productName: document.getElementById('productName').value || '',
+                    companyProductId: document.getElementById('companyProductId').value || '',
+                    mlpId: document.getElementById('mlpId').value || '',
+                    qty: document.getElementById('qty').value || '',
+                    lotNo: document.getElementById('lotNo').value || '',
+                    companyName: document.getElementById('companyName').value || '',
+                    purchaseDate: document.getElementById('purchaseDate').value || '',
+                    expDate: document.getElementById('expDate').value || '',
+                    notifyDate: document.getElementById('notifyDate').value || '',
+                    returnDate: document.getElementById('returnDate').value || ''
+                };
+                localStorage.setItem('returnFormDraft', JSON.stringify(form));
+            },
+
+            loadDraft() {
+                const draft = localStorage.getItem('returnFormDraft');
+                if (draft) {
+                    try {
+                        const form = JSON.parse(draft);
+                        Object.keys(form).forEach(key => {
+                            const el = document.getElementById(key);
+                            if (el && form[key]) el.value = form[key];
+                        });
+                    } catch (e) {
+                        console.error('Failed to load draft:', e);
+                    }
+                }
+            },
+
+            clearDraft() {
+                localStorage.removeItem('returnFormDraft');
+            },
+
+            confirmReset() {
+                if (document.getElementById('productName').value || document.getElementById('companyName').value || document.getElementById('lotNo').value) {
+                    Swal.fire({
+                        title: 'แน่ใจหรือไม่?',
+                        text: 'ข้อมูลที่กรอกไว้จะถูกล้างทั้งหมด',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#3085d6',
+                        confirmButtonText: 'ล้างข้อมูล',
+                        cancelButtonText: 'ยกเลิก'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            this.resetForm(true);
+                            this.clearDraft();
+                        }
+                    });
+                } else {
+                    this.resetForm(true);
+                    this.clearDraft();
+                }
+            },
+
+            exportCSV() {
+                const processed = this.getProcessedData();
+                if (processed.length === 0) return Swal.fire('Warning', 'ไม่มีข้อมูลสำหรับ Export', 'warning');
+
+                const headers = ['Product', 'Company', 'Lot No', 'Qty', 'Analysis', 'Status', 'Days Left'];
+                const csvRows = [headers.join(',')];
+
+                processed.forEach(item => {
+                    const row = [
+                        `"${item.product || ''}"`,
+                        `"${item.company || ''}"`,
+                        `"${item.lot || ''}"`,
+                        item.qty || 0,
+                        item.shelfLifeDays < 30 ? 'Expired' : (item.shelfLifeDays < 180 ? 'Short Date' : 'Normal'),
+                        item.returnDate ? 'Completed' : 'Pending',
+                        item.remainingDays || 0
+                    ];
+                    csvRows.push(row.join(','));
+                });
+
+                const blob = new Blob(['\uFEFF' + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `stock_return_${new Date().toISOString().slice(0, 10)}.csv`;
+                a.click();
             },
 
             // --- Open JSON Function (RESTORED & IMPROVED) ---
@@ -469,9 +577,50 @@
                 a.click();
             },
 
-            saveItem() {
+            async saveItem() {
                 if (!this.validateDates()) return Swal.fire({ icon: 'error', title: 'วันที่ไม่ถูกต้อง', toast: true, position: 'top-end', timer: 2000 });
+                const qtyVal = Number(document.getElementById('qty').value);
+                if (qtyVal <= 0) return Swal.fire({ icon: 'error', title: 'จำนวนต้องมากกว่า 0', toast: true, position: 'top-end', timer: 2000 });
+
                 const editId = document.getElementById('editId').value;
+                const lotInput = document.getElementById('lotNo').value.trim();
+                const productInput = document.getElementById('productName').value.trim();
+
+                // Check for duplicate lot (excluding the current item being edited)
+                const duplicateItemIndex = this.data.findIndex(item =>
+                    item.lot.trim().toLowerCase() === lotInput.toLowerCase() &&
+                    item.product.trim().toLowerCase() === productInput.toLowerCase() &&
+                    String(item.id) !== String(editId)
+                );
+
+                let shouldMerge = false;
+
+                if (duplicateItemIndex !== -1) {
+                    const result = await Swal.fire({
+                        title: 'พบข้อมูลซ้ำ!',
+                        html: `มีสินค้ารายการนี้ (Lot No. <b>${lotInput}</b>) จำนวน <b>${this.data[duplicateItemIndex].qty}</b> ชิ้น อยู่ในระบบแล้ว<br>คุณต้องการรวมจำนวนเข้าด้วยกัน หรือสร้างรายการใหม่แยกกัน?`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        showDenyButton: true,
+                        confirmButtonColor: '#10b981', // emerald
+                        denyButtonColor: '#6366f1',    // indigo
+                        cancelButtonColor: '#9ca3af',
+                        confirmButtonText: 'รวมข้อมูล (Merge)',
+                        denyButtonText: 'สร้างรายการใหม่แยก',
+                        cancelButtonText: 'ยกเลิก',
+                        customClass: {
+                            actions: 'flex flex-col sm:flex-row gap-2'
+                        }
+                    });
+
+                    if (result.isDismissed) {
+                        return; // User cancelled
+                    } else if (result.isConfirmed) {
+                        shouldMerge = true;
+                    }
+                    // If result.isDenied, shouldMerge remains false, will create new independent entry
+                }
+
                 const form = {
                     product: document.getElementById('productName').value,
                     qty: document.getElementById('qty').value,
@@ -488,8 +637,6 @@
                 // Sync to Master
                 if (form.product) {
                     const masterRef = window.db.collection('master_products').doc(form.product);
-                    // We only update if we have new info, to avoid overwriting existing good data with empty?
-                    // But requirement says "update together", so we should trust the user input here.
                     const updateData = {
                         name: form.product,
                         companyProductId: form.companyProductId,
@@ -510,16 +657,36 @@
                     remainingDays = Math.ceil((exp - now) / 86400000);
                 }
 
-                const newItem = { ...form, returnDays, shelfLifeDays, remainingDays, id: editId ? Number(editId) : Date.now() };
+                if (shouldMerge) {
+                    // Merge quantities
+                    const existingItem = this.data[duplicateItemIndex];
+                    existingItem.qty = Number(existingItem.qty) + Number(form.qty);
+                    // Optionally update dates to latest if needed, but retaining existing might be safer for returns
 
-                if (editId) {
-                    const idx = this.data.findIndex(i => i.id == editId);
-                    if (idx !== -1) this.data[idx] = newItem;
-                    this.cancelEdit();
-                } else {
-                    this.data.push(newItem);
                     this.resetForm(true);
+                    this.clearDraft();
+                    if (editId) {
+                        // If we were editing A, but merged into B, we should delete A
+                        this.data = this.data.filter(i => i.id != editId);
+                        this.cancelEdit();
+                    }
+                    Swal.fire({ icon: 'success', title: 'รวมข้อมูลสำเร็จ', text: `อัปเดตจำนวนเป็น ${existingItem.qty} ชิ้นแล้ว`, toast: true, position: 'top-end', timer: 3000, showConfirmButton: false });
+                } else {
+                    const newItem = { ...form, returnDays, shelfLifeDays, remainingDays, id: editId ? Number(editId) : Date.now() };
+
+                    if (editId) {
+                        const idx = this.data.findIndex(i => i.id == editId);
+                        if (idx !== -1) this.data[idx] = newItem;
+                        this.cancelEdit();
+                        Swal.fire({ icon: 'success', title: 'อัปเดตข้อมูลสำเร็จ', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
+                    } else {
+                        this.data.push(newItem);
+                        this.resetForm(true);
+                        this.clearDraft();
+                        Swal.fire({ icon: 'success', title: 'บันทึกข้อมูลแบบแยกรายการสำเร็จ', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
+                    }
                 }
+
                 saveDataToCloud(); // 🔥 Cloud Sync
                 this.renderTable();
             },
@@ -531,6 +698,7 @@
                             this.data = this.data.filter(i => i.id !== id);
                             saveDataToCloud(); // 🔥 Cloud Sync
                             this.renderTable();
+                            Swal.fire({ icon: 'success', title: 'ลบข้อมูลสำเร็จ', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
                         }
                     });
             },
