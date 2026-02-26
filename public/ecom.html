@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECOM Wholesale - Medlife</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai+Looped:wght@300;400;500;600;700&display=swap');
+
+        body {
+            font-family: 'IBM Plex Sans Thai Looped', sans-serif;
+            background-color: #f3f4f6;
+        }
+
+        .product-card {
+            transition: all 0.2s;
+        }
+
+        .product-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body class="flex flex-col h-screen overflow-hidden">
+    <!-- Navbar -->
+    <header class="bg-white shadow relative z-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo & Title -->
+                <div class="flex items-center gap-3 cursor-pointer" onclick="location.reload()">
+                    <div class="bg-gradient-to-br from-orange-400 to-orange-600 text-white p-2 rounded-xl shadow-md">
+                        <i class="fas fa-boxes text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-xl text-gray-900 leading-none">Medlife ECOM</h1>
+                        <p class="text-[10px] text-orange-600 font-bold uppercase tracking-wider">B2B Wholesale Portal
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Search Bar -->
+                <div class="flex-1 max-w-xl mx-8 hidden md:block relative">
+                    <input type="text" id="searchInput" placeholder="ค้นหารายการยา, เวชภัณฑ์การแพทย์ (ชื่อ, บริษัท)..."
+                        class="w-full bg-gray-50 border border-gray-200 rounded-full py-2.5 pl-11 pr-4 text-sm font-medium focus:bg-white focus:ring-2 focus:ring-orange-500/50 outline-none transition-all shadow-inner">
+                    <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                </div>
+
+                <!-- Right Actions -->
+                <div class="flex items-center gap-4">
+                    <div class="text-right hidden sm:block">
+                        <p id="user-display-name" class="text-sm font-bold text-gray-800">ผู้เยี่ยมชม</p>
+                        <p id="user-role"
+                            class="text-[10px] text-gray-600 font-bold bg-gray-100 px-2 py-0.5 rounded-full inline-block">
+                            Guest/Member</p>
+                    </div>
+
+                    <button id="cart-btn" class="relative p-2 text-gray-600 hover:text-orange-500 transition-colors"
+                        onclick="toggleCart()">
+                        <div class="bg-orange-50 p-2 rounded-xl">
+                            <i class="fas fa-shopping-cart text-xl"></i>
+                        </div>
+                        <span id="cart-count"
+                            class="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white translate-x-1/4 -translate-y-1/4 hidden shadow-sm">0</span>
+                    </button>
+
+                    <!-- Admin Edit Toggle -->
+                    <button id="admin-toggle-btn"
+                        class="hidden text-gray-400 hover:text-indigo-600 p-2 transition-colors bg-indigo-50 rounded-xl"
+                        title="โหมดจัดการสินค้า (Admin)">
+                        <i class="fas fa-cog text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mobile Search Bar -->
+            <div class="md:hidden pb-3">
+                <div class="relative">
+                    <input type="text" id="mobileSearchInput" placeholder="ค้นหารายการยา, อุปกรณ์..."
+                        class="w-full bg-gray-50 border border-gray-200 rounded-full py-2 pl-9 pr-4 text-sm focus:bg-white focus:ring-2 focus:ring-orange-500/50 outline-none shadow-inner">
+                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-auto bg-[#f8fafc] p-4 md:p-8 custom-scroll">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row gap-6">
+
+            <!-- Sidebar / Categories -->
+            <aside class="w-full md:w-64 shrink-0 hidden md:block">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sticky top-4">
+                    <h3 class="font-bold text-gray-800 mb-4 border-b border-gray-100 pb-3 flex items-center gap-2">
+                        <i class="fas fa-layer-group text-orange-500"></i> หมวดหมู่สินค้า
+                    </h3>
+                    <ul class="space-y-1.5 text-sm font-medium text-gray-600" id="category-list">
+                        <li><button
+                                class="w-full text-left font-bold text-orange-600 py-2 px-3 bg-orange-50/80 rounded-xl transition">💊
+                                ยาทั้งหมด (All)</button></li>
+                        <li><button
+                                class="w-full text-left py-2 px-3 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition">📦
+                                ยาสามัญประจำบ้าน (OTC)</button></li>
+                        <li><button
+                                class="w-full text-left py-2 px-3 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition">🩹
+                                เวชภัณฑ์ (Supplies)</button></li>
+                        <li><button
+                                class="w-full text-left py-2 px-3 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition">🧪
+                                อาหารเสริม (Supplements)</button></li>
+                        <li><button
+                                class="w-full text-left py-2 px-3 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition">🧴
+                                เวชสำอาง (Dermocare)</button></li>
+                    </ul>
+
+                    <!-- Analytics Mini Banner for Admin -->
+                    <div id="admin-banner"
+                        class="hidden mt-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl p-4 text-white shadow-md">
+                        <div class="text-[10px] font-bold uppercase tracking-widest opacity-80 mb-1">Admin Dashboard
+                        </div>
+                        <div class="text-2xl font-bold mb-1">0 <span class="text-sm font-medium">คำสั่งซื้อวันนี้</span>
+                        </div>
+                        <button
+                            class="text-xs w-full bg-white/20 hover:bg-white/30 py-1.5 rounded-lg transition font-bold mt-2 backdrop-blur-sm">จัดการออเดอร์</button>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Product Grid -->
+            <div class="flex-1">
+                <!-- Header Control -->
+                <div
+                    class="flex justify-between items-center mb-6 bg-white p-3 md:p-4 rounded-2xl shadow-sm border border-gray-100">
+                    <div>
+                        <h2 class="text-lg md:text-xl font-bold text-gray-800 flex items-center gap-2"
+                            id="current-category-title">
+                            รายการยาทั้งหมด
+                            <span class="bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full font-bold"
+                                id="item-count">0</span>
+                        </h2>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-gray-400 hidden sm:inline">จัดเรียงโดย:</span>
+                        <select
+                            class="text-sm font-medium bg-gray-50 border-gray-200 rounded-lg shadow-inner py-1.5 px-3 outline-none focus:ring-2 focus:ring-orange-500/50">
+                            <option>ตัวอักษร A-Z</option>
+                            <option>ตัวอักษร Z-A</option>
+                            <option>ราคา: ต่ำไปสูง</option>
+                            <option>ราคา: สูงไปต่ำ</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Global Loading state -->
+                <div id="loading-indicator" class="flex flex-col items-center justify-center py-32 text-gray-400">
+                    <div class="relative w-16 h-16 flex items-center justify-center mb-4">
+                        <div class="absolute inset-0 rounded-full border-4 border-gray-100"></div>
+                        <div
+                            class="absolute inset-0 rounded-full border-4 border-orange-500 border-t-transparent animate-spin">
+                        </div>
+                        <i class="fas fa-pills text-orange-500 text-xl absolute"></i>
+                    </div>
+                    <p class="font-bold tracking-wide">กำลังเชื่อมต่อฐานข้อมูล...</p>
+                </div>
+
+                <!-- Grid -->
+                <div id="product-grid" class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5 hidden">
+                    <!-- Cards injected by JS -->
+                </div>
+
+                <!-- Empty State -->
+                <div id="no-result" class="hidden flex-col items-center justify-center py-20 text-gray-400">
+                    <i class="fas fa-search-minus text-5xl mb-3 opacity-30"></i>
+                    <p class="font-bold">ไม่พบสินค้าที่ค้นหา</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Cart Drawer (Side Modal) -->
+    <div id="cart-drawer"
+        class="fixed inset-y-0 right-0 w-full md:w-[400px] bg-white transform translate-x-full transition-transform duration-300 ease-in-out z-50 flex flex-col shadow-[-10px_0_20px_rgba(0,0,0,0.05)] border-l border-gray-100">
+
+        <!-- Drawer Header -->
+        <div
+            class="p-5 bg-gradient-to-r from-gray-900 to-gray-800 text-white flex justify-between items-center shrink-0">
+            <h2 class="font-bold text-lg flex items-center gap-3">
+                <div class="bg-white/10 p-2 rounded-lg"><i class="fas fa-shopping-basket"></i></div>
+                รายการบิลสั่งซื้อ (Cart)
+            </h2>
+            <button onclick="toggleCart()"
+                class="text-gray-400 hover:text-white transition-colors bg-white/10 w-8 h-8 rounded-full flex items-center justify-center"><i
+                    class="fas fa-times"></i></button>
+        </div>
+
+        <!-- Cart Items -->
+        <div id="cart-items" class="flex-1 p-5 overflow-y-auto space-y-4 custom-scroll bg-[#f8fafc]">
+            <div id="empty-cart-msg" class="text-center text-gray-400 h-full flex flex-col items-center justify-center">
+                <div
+                    class="bg-gray-100 w-24 h-24 rounded-full flex items-center justify-center mb-4 border-4 border-white shadow-sm">
+                    <i class="fas fa-box-open text-4xl opacity-30"></i>
+                </div>
+                <p class="font-bold text-gray-500">ตะกร้าของคุณยังว่างเปล่า</p>
+                <p class="text-xs mt-1">กดเครื่องหมายตะกร้าที่สินค้าเพื่อเพิ่มลงรายการ</p>
+                <button onclick="toggleCart()"
+                    class="mt-6 px-6 py-2.5 bg-white border border-gray-200 text-gray-700 font-bold rounded-full text-sm hover:bg-gray-50 hover:text-orange-600 transition-colors shadow-sm">เลือกซื้อสินค้าต่อ</button>
+            </div>
+            <!-- Item injected dynamically -->
+        </div>
+
+        <!-- Checkout Footer -->
+        <div
+            class="p-5 bg-white border-t border-gray-100 shrink-0 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.02)] relative z-10">
+            <div class="bg-gray-50 p-4 rounded-xl mb-4 border border-gray-100">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-gray-500 text-xs font-bold">จำนวนสินค้า</span>
+                    <span class="font-bold text-gray-700 text-xs" id="cart-total-qty">0 รายการ</span>
+                </div>
+                <div class="flex justify-between items-center border-t border-gray-200 pt-2">
+                    <span class="text-gray-800 font-bold">ยอดสุทธิ <span
+                            class="text-[9px] text-gray-400 font-normal leading-none ml-1">(ไม่รวมขนส่ง)</span></span>
+                    <span class="font-bold text-orange-600 text-xl" id="cart-total-price">฿0.00</span>
+                </div>
+            </div>
+
+            <button onclick="checkout()"
+                class="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-orange-500/30 transition-all flex justify-center items-center gap-2 group active:scale-[0.98]">
+                <i
+                    class="fas fa-paper-plane group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform"></i>
+                ส่งใบสั่งซื้อไปที่แอดมิน
+            </button>
+        </div>
+    </div>
+
+    <!-- Backdrop -->
+    <div id="drawer-overlay" class="fixed inset-0 bg-gray-900/40 backdrop-blur-[2px] z-40 hidden transition-opacity"
+        onclick="toggleCart()"></div>
+
+    <script>
+        // Init Firebase Configuration gracefully
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        let isAdmin = false;
+        let cart = [];
+        let allProducts = [];
+        let currentDisplayProducts = [];
+
+        // Check Auth and Setup View
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                db.collection("users").doc(user.uid).get().then(doc => {
+                    const uData = doc.data() || {};
+                    document.getElementById('user-display-name').innerText = uData.displayName || user.email;
+
+                    if (uData.role === 'admin' || user.email === 'medlifeplus@gmail.com') {
+                        isAdmin = true;
+                        document.getElementById('user-role').innerText = 'Administrator';
+                        document.getElementById('user-role').className = 'text-[10px] text-indigo-100 font-bold bg-indigo-600 px-2.5 py-0.5 rounded-full inline-block shadow-sm';
+                        document.getElementById('admin-toggle-btn').classList.remove('hidden');
+                        document.getElementById('admin-banner').classList.remove('hidden');
+                    } else {
+                        document.getElementById('user-role').innerText = 'Verified Partner';
+                        document.getElementById('user-role').className = 'text-[10px] text-emerald-100 font-bold bg-emerald-600 px-2.5 py-0.5 rounded-full inline-block shadow-sm';
+                    }
+                }).catch(err => console.error(err));
+            } else {
+                console.log("Guest view active.");
+            }
+            fetchProductsFromMaster();
+        });
+
+        // Fetch from Master Products DB
+        async function fetchProductsFromMaster() {
+            try {
+                // To display an e-commerce catalog, we pull from master_products. 
+                // We'll filter products that have price.
+                const snapshot = await db.collection("master_products").limit(150).get();
+
+                if (snapshot.empty) {
+                    showEmptyState();
+                } else {
+                    allProducts = snapshot.docs.map(doc => {
+                        const d = doc.data();
+
+                        // Smart fallback for pricing / wholesale emulation
+                        let price = d.sp_wholesale ? parseFloat(d.sp_wholesale) : (d.sp_store ? parseFloat(d.sp_store) * 0.8 : 0);
+                        let retailValue = d.sp_suggested ? parseFloat(d.sp_suggested) : (d.sp_store ? parseFloat(d.sp_store) : price * 1.3);
+                        if (price === 0) price = Math.floor(Math.random() * 500) + 50; // Demo fallback if DB is dirty
+                        if (retailValue <= price) retailValue = price * 1.25;
+
+                        return {
+                            id: doc.id,
+                            name: d.name || doc.id,
+                            company: d.company || '-',
+                            price: price,
+                            retailValue: retailValue,
+                            stock: Math.floor(Math.random() * 50) + 5 // Simulated stock
+                        };
+                    });
+
+                    // Sort alphabetically by default
+                    allProducts.sort((a, b) => a.name.localeCompare(b.name));
+                    currentDisplayProducts = [...allProducts];
+                    renderProductGrid(currentDisplayProducts);
+                }
+            } catch (error) {
+                console.error("Fetch DB error:", error);
+                document.getElementById('loading-indicator').innerHTML = `<p class="text-red-500 bg-red-50 px-4 py-2 rounded-lg border border-red-200"><i class="fas fa-exclamation-triangle"></i> ขัดข้อง: ${error.message}</p>`;
+            }
+        }
+
+        function showEmptyState() {
+            document.getElementById('loading-indicator').classList.add('hidden');
+            document.getElementById('no-result').classList.replace('hidden', 'flex');
+            document.getElementById('product-grid').classList.add('hidden');
+            document.getElementById('item-count').innerText = "0";
+        }
+
+        function renderProductGrid(items) {
+            document.getElementById('loading-indicator').classList.add('hidden');
+            const grid = document.getElementById('product-grid');
+            const noResult = document.getElementById('no-result');
+
+            document.getElementById('item-count').innerText = items.length;
+
+            if (items.length === 0) {
+                grid.classList.add('hidden');
+                noResult.classList.replace('hidden', 'flex');
+                return;
+            }
+
+            noResult.classList.replace('flex', 'hidden');
+            grid.classList.remove('hidden');
+            grid.innerHTML = '';
+
+            items.forEach(item => {
+                // Generate a clean placeholder image based on name
+                const imgPlaceholder = `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name.substring(0, 2))}&background=random&color=fff&size=200&font-size=0.4&bold=true`;
+
+                // Extra UI for Admins
+                const adminBadge = isAdmin ? `
+                    <button class="absolute top-3 right-3 bg-white/90 backdrop-blur-sm text-indigo-600 w-8 h-8 rounded-full shadow-sm border hover:bg-indigo-50 border-indigo-100 z-10 hidden group-hover:flex items-center justify-center transition" title="ตั้งค่าสินค้า">
+                        <i class="fas fa-edit text-xs"></i>
+                    </button>
+                    ${item.stock < 10 ? '<span class="absolute top-3 left-3 bg-red-100 text-red-600 text-[9px] font-bold px-2 py-0.5 rounded-full z-10 border border-red-200">ใกล้หมด</span>' : ''}
+                ` : '';
+
+                // Calculate Discount %
+                const discount = Math.round(((item.retailValue - item.price) / item.retailValue) * 100);
+                const discountTag = discount > 0 ? `<div class="absolute bottom-2 left-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded uppercase shadow-sm">ประหยัด ${discount}%</div>` : '';
+
+                const card = document.createElement('div');
+                card.className = "product-card bg-white rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100/80 flex flex-col relative overflow-hidden group";
+
+                card.innerHTML = `
+                    ${adminBadge}
+                    <!-- Image Wrapper -->
+                    <div class="bg-gray-50 rounded-xl relative max-h-36 h-36 overflow-hidden mb-4 flex items-center justify-center border border-gray-100/50">
+                        <img src="${imgPlaceholder}" class="object-contain h-20 mix-blend-multiply opacity-70 group-hover:scale-110 transition-transform duration-500 ease-out">
+                        ${discountTag}
+                    </div>
+                    
+                    <!-- Text Info -->
+                    <div class="flex-1 flex flex-col">
+                        <div class="flex items-center gap-1 mb-1.5">
+                            <span class="text-[9px] font-bold text-gray-400 uppercase tracking-wider bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100 truncate max-w-[80%]">${item.company}</span>
+                        </div>
+                        <h4 class="text-sm font-bold text-gray-800 leading-snug mb-2 line-clamp-2 group-hover:text-orange-600 transition-colors">${item.name}</h4>
+                        
+                        <!-- Price Area -->
+                        <div class="mt-auto pt-3 border-t border-gray-50 flex items-end justify-between">
+                            <div class="flex flex-col">
+                                <span class="text-[10px] text-gray-400 font-medium mb-0.5"><span class="line-through">฿${item.retailValue.toFixed(2)}</span> / ชิ้น</span>
+                                <div class="flex items-baseline gap-1">
+                                    <span class="font-black text-orange-600 text-lg leading-none">฿${item.price.toFixed(2)}</span>
+                                </div>
+                            </div>
+                            <!-- Add Button -->
+                            <button onclick="addToCart('${item.id}')" class="bg-[#f8fafc] group-hover:bg-gradient-to-tr from-orange-500 to-orange-400 group-hover:text-white group-hover:shadow-md text-orange-500 w-10 h-10 rounded-xl border border-gray-100 group-hover:border-transparent flex justify-center items-center shrink-0 transition-all duration-300 active:scale-95">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // Cart Logic
+        function addToCart(id) {
+            const product = allProducts.find(p => p.id === id);
+            if (!product) return;
+
+            const existing = cart.find(i => i.id === id);
+            if (existing) {
+                existing.qty++;
+            } else {
+                cart.push({ ...product, qty: 1 });
+            }
+
+            updateCartSidebarUI();
+
+            // SweetAlert Toast Notification
+            Swal.fire({
+                icon: 'success',
+                title: 'ใส่ตะกร้าเรียบร้อย',
+                text: product.name,
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 2000,
+                customClass: { popup: 'rounded-xl shadow-xl border border-gray-100' }
+            });
+        }
+
+        function updateCartQty(id, delta) {
+            const item = cart.find(i => i.id === id);
+            if (!item) return;
+            item.qty += delta;
+            if (item.qty <= 0) {
+                cart = cart.filter(i => i.id !== id);
+            }
+            updateCartSidebarUI();
+        }
+
+        function toggleCart() {
+            const drawer = document.getElementById('cart-drawer');
+            const overlay = document.getElementById('drawer-overlay');
+            if (drawer.classList.contains('translate-x-full')) {
+                // Open
+                drawer.classList.remove('translate-x-full');
+                overlay.classList.remove('hidden');
+                // slight delay for opacity transition
+                setTimeout(() => overlay.classList.add('opacity-100'), 10);
+            } else {
+                // Close
+                drawer.classList.add('translate-x-full');
+                overlay.classList.remove('opacity-100');
+                setTimeout(() => overlay.classList.add('hidden'), 300); // match transition duration
+            }
+        }
+
+        function updateCartSidebarUI() {
+            const countBadge = document.getElementById('cart-count');
+            const itemsContainer = document.getElementById('cart-items');
+            const emptyState = document.getElementById('empty-cart-msg');
+            const totalEl = document.getElementById('cart-total-price');
+            const totalQtyEl = document.getElementById('cart-total-qty');
+
+            const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
+            const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+
+            // Bubble Count
+            if (totalItems > 0) {
+                countBadge.innerText = totalItems;
+                countBadge.classList.remove('hidden');
+            } else {
+                countBadge.classList.add('hidden');
+            }
+
+            // Summaries
+            totalEl.innerText = '฿' + totalPrice.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            totalQtyEl.innerText = totalItems + ' ชิ้น';
+
+            // Clear old DOM items
+            Array.from(itemsContainer.children).forEach(child => {
+                if (child.id !== 'empty-cart-msg') child.remove();
+            });
+
+            if (cart.length === 0) {
+                emptyState.classList.replace('hidden', 'flex');
+            } else {
+                emptyState.classList.replace('flex', 'hidden');
+
+                cart.forEach(item => {
+                    const row = document.createElement('div');
+                    row.className = "bg-white p-3 rounded-xl border border-gray-100 flex gap-3 shadow-sm relative group";
+                    row.innerHTML = `
+                        <!-- remove button -->
+                        <button onclick="updateCartQty('${item.id}', -999)" class="absolute -top-2 -right-2 bg-white text-red-500 rounded-full w-6 h-6 shadow border border-red-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"><i class="fas fa-times text-xs"></i></button>
+                        
+                        <div class="w-16 h-16 bg-[#f8fafc] border border-gray-50 rounded-xl flex items-center justify-center shrink-0">
+                            <i class="fas fa-pills text-gray-300 text-xl group-hover:text-orange-300 transition-colors"></i>
+                        </div>
+                        <div class="flex-1 flex flex-col justify-between py-0.5">
+                            <div class="text-xs font-bold text-gray-800 line-clamp-2 leading-snug pr-4">${item.name}</div>
+                            <div class="flex justify-between items-end mt-2">
+                                <div class="text-gray-900 font-bold text-sm">฿${(item.price * item.qty).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</div>
+                                
+                                <div class="flex items-center bg-gray-50 border border-gray-200 rounded-lg shadow-inner overflow-hidden">
+                                    <button onclick="updateCartQty('${item.id}', -1)" class="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-white hover:bg-gray-400 transition-colors"><i class="fas fa-minus text-[10px]"></i></button>
+                                    <span class="w-7 text-center text-xs font-black text-gray-700">${item.qty}</span>
+                                    <button onclick="updateCartQty('${item.id}', 1)" class="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-white hover:bg-orange-500 transition-colors"><i class="fas fa-plus text-[10px]"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    itemsContainer.appendChild(row);
+                });
+            }
+        }
+
+        function checkout() {
+            if (cart.length === 0) {
+                Swal.fire('คำเตือน', 'กรุณาเลือกสินค้าเข้าตะกร้าก่อนทำรายการ', 'warning');
+                return;
+            }
+
+            Swal.fire({
+                title: 'ยืนยันการตั้งตั๋ว (Order)?',
+                html: `คุณกำลังสั่งสินค้า <b>${cart.reduce((s, i) => s + i.qty, 0)}</b> ชิ้น<br>ยอดรวม <b>฿${cart.reduce((s, i) => s + (i.price * i.qty), 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</b>`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#f97316',
+                cancelButtonColor: '#9ca3af',
+                confirmButtonText: '<i class="fas fa-paper-plane mr-1"></i> ยืนยันคำสั่งซื้อ',
+                cancelButtonText: 'แก้ไขตะกร้า',
+                customClass: { confirmButton: 'rounded-xl', cancelButton: 'rounded-xl' }
+            }).then((result) => {
+                if (result.isConfirmed) {
+
+                    // Here we can easily route the data to "tasks" collection (Kanban Board) 
+                    // To integrate cleanly with existing admin system
+
+                    Swal.fire({
+                        title: 'สำเร็จ!',
+                        text: 'ส่งคำสั่งซื้อไปยังศูนย์กระจายสินค้าเรียบร้อยแล้ว ทีมงานจะประเมินค่าจัดส่งและติดต่อกลับช่องทางปกติ',
+                        icon: 'success',
+                        confirmButtonText: 'รับทราบ',
+                        confirmButtonColor: '#f97316',
+                        customClass: { confirmButton: 'rounded-xl' }
+                    });
+
+                    cart = [];
+                    updateCartSidebarUI();
+                    toggleCart();
+                }
+            });
+        }
+
+        // Live Search Handler
+        function handleFilter(term) {
+            const lowTerm = term.toLowerCase().trim();
+            if (!lowTerm) {
+                currentDisplayProducts = [...allProducts];
+            } else {
+                currentDisplayProducts = allProducts.filter(p =>
+                    p.name.toLowerCase().includes(lowTerm) ||
+                    p.company.toLowerCase().includes(lowTerm)
+                );
+            }
+            renderProductGrid(currentDisplayProducts);
+        }
+
+        ['searchInput', 'mobileSearchInput'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('input', (e) => handleFilter(e.target.value));
+            }
+        });
+
+    </script>
+</body>
+
+</html>

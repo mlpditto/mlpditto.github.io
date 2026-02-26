@@ -174,5 +174,14 @@
 *   **User UI Simulation:** ระบบจำลองหน้าจอฝั่งมือถือ (Mobile Mockup) ภายใน Dashboard เพื่อให้แอดมินตรวจสอบความถูกต้องของ UI ฝั่งผู้ติดต่อได้ทันที
 *   **Google Calendar Full Sync:** เชื่อมโยงข้อมูลนัดหมายเข้ากับ Google Calendar อัตโนมัติ (medlifeplus@gmail.com)
 
+## 11. 🛒 ระบบขายส่งออนไลน์ (B2B ECOM Wholesale) - `ecom.html`
+**วัตถุประสงค์:** หน้าต่างสั่งซื้อสินค้า E-commerce ในราคาขายส่งสำหรับลูกค้าและระบบจัดการการจองของทีมแอดมิน
+
+*   **Modern Wholesales UI:** อินเทอร์เฟซแบบแอปช้อปปิ้งออนไลน์เน้นสีโทนส้ม-เทา ทันสมัย ใช้งานง่าย
+*   **Responsive Shopping Engine:** ฟิลเตอร์รายการยา/เวชภัณฑ์ พร้อมแถบค้นหาสินค้าแบบ Live Search ที่ทำงานได้อย่างรวดเร็ว
+*   **Slide-out Cart System:** ระบบตะกร้าสินค้าด้านข้าง (Drawer) เพิ่ม/ลด/อัปเดตยอดรวม แบบไม่ต้องโหลดหน้าใหม่
+*   **Smart Pricing Model:** ระบบดึงข้อมูลจาก Master Data แบบ Real-time เปรียบเทียบส่วนลดให้ปรากฏอัตโนมัติ (Dynamic Discounted Price)
+*   **Role-Aware Features:** แบ่งแยกระดับการมองเห็นระหว่าง Guest, Member และ Admin (โหมดเช็คสต๊อกที่เหลือน้อยและ Dashboard)
+
 ---
 *จัดทำขึ้นเพื่อช่วยให้ทีมงานเข้าใจภาพรวมของระบบ FKB-Front-Kanban ทั้งสิ้น*

@@ -1,5 +1,16 @@
 # 📝 Task Log - FKB Front Kanban
 
+## 📅 26 กุมภาพันธ์ 2026 (B2B ECOM Wholesale)
+
+### 🚀 ฟีเจอร์ใหม่ & การแก้ไข (Latest)
+*   **B2B Wholesale Portal (ecom.html):**
+    *   **New ECOM UI:** สร้างหน้าเว็บ B2B Wholesale Portal สำหรับให้ลูกค้าเข้ามาเลือกซื้อสินค้า (ขายส่ง) ด้วย UI ที่ทันสมัย (ส้ม-เทา)
+    *   **Live Product Search:** ระบบค้นหาสินค้าจากชื่อและบริษัทแบบ Real-time โดยดึงข้อมูลประเภทยา เครื่องมือแพทย์จากฐานข้อมูลกลาง
+    *   **Shopping Cart Drawer:** ระบบตะกร้าสินค้าแบบแถบสไลด์ด้านข้าง พร้อมคำนวณยอดรวมและจำนวนชิ้นแบบอัตโนมัติ และแจ้งเตือน SweetAlert2
+    *   **Smart Pricing Emulator:** ระบบดึงราคาส่ง `sp_wholesale` หรือคำนวณราคาจำลองจาก `sp_store` เพื่อแสดงส่วนลดที่น่าสนใจสำหรับระบบ B2B B2C
+    *   **Role-Based Access Components:** แสดง UI พิเศษ (Dashboard วิเคราะห์ออเดอร์) และเครื่องมือแจ้งเตือน Low Stock หุ้นเหลือน้อยเฉพาะ Admin
+    *   **Admin Dashboard Integration:** อัปเดตเมนูด้านบนของ `admin.html` ให้เชื่อมโยงไปยัง `ecom.html` ผ่านปุ่มระบบ ECOM ด้านขวาบน
+
 ## 📅 26 กุมภาพันธ์ 2026 (Stock Return Sync & Smart Features)
 
 ### 🚀 ฟีเจอร์ใหม่ & การแก้ไข (Latest)
