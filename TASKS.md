@@ -9,6 +9,10 @@
     *   **Shopping Cart Drawer:** ระบบตะกร้าสินค้าแบบแถบสไลด์ด้านข้าง พร้อมคำนวณยอดรวมและจำนวนชิ้นแบบอัตโนมัติ และแจ้งเตือน SweetAlert2
     *   **Smart Pricing Emulator:** ระบบดึงราคาส่ง `sp_wholesale` หรือคำนวณราคาจำลองจาก `sp_store` เพื่อแสดงส่วนลดที่น่าสนใจสำหรับระบบ B2B B2C
     *   **Role-Based Access Components:** แสดง UI พิเศษ (Dashboard วิเคราะห์ออเดอร์) และเครื่องมือแจ้งเตือน Low Stock หุ้นเหลือน้อยเฉพาะ Admin
+    *   **Admin Product Management:** เพิ่มระบบแก้ไขข้อมูลสินค้าสำหรับ Admin บนหน้า ECOM (Product Modal)
+    *   **Smart Category Filtering:** เพิ่มระบบจัดหมวดหมู่สินค้าและแสดงผลตัวกรอง Sidebar แบบ Real-time
+    *   **Auto Resize Image Upload:** ระบบอัปโหลดรูปภาพสินค้าพร้อมบีบอัดขนาดอัตโนมัติ (ไม่เกิน 800px) แปลงไฟล์แนบแบบ Base64 ไปยัง Firestore
+    *   **Product Visibility Control:** เพิ่มคุณสมบัติซ่อน/แสดงสินค้าสำหรับ Admin เพื่อความรัดกุมในการจำหน่าย
     *   **Admin Dashboard Integration:** อัปเดตเมนูด้านบนของ `admin.html` ให้เชื่อมโยงไปยัง `ecom.html` ผ่านปุ่มระบบ ECOM ด้านขวาบน
 
 ## 📅 26 กุมภาพันธ์ 2026 (Stock Return Sync & Smart Features)

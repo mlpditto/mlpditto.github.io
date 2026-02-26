@@ -9,6 +9,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
     <script src="firebase-config.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -113,20 +114,25 @@
                         <i class="fas fa-layer-group text-orange-500"></i> หมวดหมู่สินค้า
                     </h3>
                     <ul class="space-y-1.5 text-sm font-medium text-gray-600" id="category-list">
-                        <li><button
-                                class="w-full text-left font-bold text-orange-600 py-2 px-3 bg-orange-50/80 rounded-xl transition">💊
+                        <li><button onclick="filterCategory('All')"
+                                class="cat-btn w-full text-left font-bold text-orange-600 py-2 px-3 bg-orange-50/80 rounded-xl transition"
+                                data-cat="All">💊
                                 ยาทั้งหมด (All)</button></li>
-                        <li><button
-                                class="w-full text-left py-2 px-3 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition">📦
+                        <li><button onclick="filterCategory('OTC')"
+                                class="cat-btn w-full text-left py-2 px-3 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition"
+                                data-cat="OTC">📦
                                 ยาสามัญประจำบ้าน (OTC)</button></li>
-                        <li><button
-                                class="w-full text-left py-2 px-3 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition">🩹
+                        <li><button onclick="filterCategory('Supplies')"
+                                class="cat-btn w-full text-left py-2 px-3 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition"
+                                data-cat="Supplies">🩹
                                 เวชภัณฑ์ (Supplies)</button></li>
-                        <li><button
-                                class="w-full text-left py-2 px-3 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition">🧪
+                        <li><button onclick="filterCategory('Supplements')"
+                                class="cat-btn w-full text-left py-2 px-3 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition"
+                                data-cat="Supplements">🧪
                                 อาหารเสริม (Supplements)</button></li>
-                        <li><button
-                                class="w-full text-left py-2 px-3 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition">🧴
+                        <li><button onclick="filterCategory('Dermocare')"
+                                class="cat-btn w-full text-left py-2 px-3 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition"
+                                data-cat="Dermocare">🧴
                                 เวชสำอาง (Dermocare)</button></li>
                     </ul>
 
@@ -253,6 +259,79 @@
     <div id="drawer-overlay" class="fixed inset-0 bg-gray-900/40 backdrop-blur-[2px] z-40 hidden transition-opacity"
         onclick="toggleCart()"></div>
 
+    <!-- Product Edit Modal (Admin) -->
+    <div id="product-edit-modal"
+        class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col">
+            <div class="bg-indigo-600 p-4 text-white flex justify-between items-center">
+                <h2 class="font-bold flex items-center gap-2"><i class="fas fa-edit"></i> จัดการข้อมูลสินค้า</h2>
+                <button onclick="closeProductModal()"
+                    class="hover:bg-indigo-700 p-1 rounded-full transition w-8 h-8 flex items-center justify-center"><i
+                        class="fas fa-times"></i></button>
+            </div>
+            <div class="p-5 space-y-4 overflow-y-auto max-h-[70vh] custom-scroll">
+                <input type="hidden" id="edit-prod-id">
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">ชื่อสินค้า</label>
+                    <input type="text" id="edit-prod-name"
+                        class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm font-bold text-gray-800"
+                        readonly>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">หมวดหมู่ (Category)</label>
+                        <select id="edit-prod-category"
+                            class="w-full border border-gray-300 p-2.5 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <option value="All">ทั่วไป</option>
+                            <option value="OTC">ยาสามัญประจำบ้าน (OTC)</option>
+                            <option value="Supplies">เวชภัณฑ์ (Supplies)</option>
+                            <option value="Supplements">อาหารเสริม (Supplements)</option>
+                            <option value="Dermocare">เวชสำอาง (Dermocare)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">สถานะแสดงผล</label>
+                        <select id="edit-prod-visibility"
+                            class="w-full border border-gray-300 p-2.5 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <option value="show">แสดงบน ECOM</option>
+                            <option value="hide">ซ่อนไม่ให้เห็น</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="border-t border-gray-100 pt-4 mt-2">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">รูปภาพสินค้า (Image)</label>
+                    <div class="flex gap-4 items-start">
+                        <div
+                            class="w-24 h-24 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center overflow-hidden shrink-0 relative">
+                            <img id="edit-prod-img-preview" src="" class="w-full h-full object-contain hidden">
+                            <div id="edit-prod-img-placeholder" class="text-gray-400 text-center">
+                                <i class="fas fa-image text-2xl mb-1"></i>
+                                <div class="text-[9px]">No Image</div>
+                            </div>
+                        </div>
+                        <div class="flex-1 space-y-2">
+                            <input type="file" id="edit-prod-img-file" accept="image/*" onchange="previewImage(this)"
+                                class="text-sm w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                            <p class="text-[10px] text-gray-400 leading-tight w-full">รองรับไฟล์ภาพขนาดไม่เกิน
+                                2MB.<br>รูปภาพจะถูกเปลี่ยนขนาดและแนบ Base64 ไปกับไฟล์ทันที</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 p-4 border-t border-gray-100 flex justify-end gap-2 shrink-0">
+                <button onclick="closeProductModal()"
+                    class="px-4 py-2 rounded-xl text-gray-500 font-bold hover:bg-gray-200 transition text-sm">ยกเลิก</button>
+                <button onclick="saveProductChanges()" id="btn-save-prod"
+                    class="px-6 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-md transition text-sm flex items-center gap-2">
+                    <i class="fas fa-save"></i> บันทึกข้อมูล
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Init Firebase Configuration gracefully
         if (!firebase.apps.length) {
@@ -315,12 +394,19 @@
                             company: d.company || '-',
                             price: price,
                             retailValue: retailValue,
-                            stock: Math.floor(Math.random() * 50) + 5 // Simulated stock
+                            stock: Math.floor(Math.random() * 50) + 5, // Simulated stock
+                            imageUrl: d.imageUrl || null,
+                            category: d.ecomCategory || 'All',
+                            visibility: d.ecomVisibility || 'show'
                         };
                     });
 
-                    // Sort alphabetically by default
+                    // Process items
                     allProducts.sort((a, b) => a.name.localeCompare(b.name));
+                    // Filter visible only for non-admin
+                    if (!isAdmin) {
+                        allProducts = allProducts.filter(p => p.visibility !== 'hide');
+                    }
                     currentDisplayProducts = [...allProducts];
                     renderProductGrid(currentDisplayProducts);
                 }
@@ -355,15 +441,16 @@
             grid.innerHTML = '';
 
             items.forEach(item => {
-                // Generate a clean placeholder image based on name
-                const imgPlaceholder = `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name.substring(0, 2))}&background=random&color=fff&size=200&font-size=0.4&bold=true`;
+                // Use actual image or placeholder
+                const imgSrc = item.imageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name.substring(0, 2))}&background=random&color=fff&size=200&font-size=0.4&bold=true`;
 
                 // Extra UI for Admins
                 const adminBadge = isAdmin ? `
-                    <button class="absolute top-3 right-3 bg-white/90 backdrop-blur-sm text-indigo-600 w-8 h-8 rounded-full shadow-sm border hover:bg-indigo-50 border-indigo-100 z-10 hidden group-hover:flex items-center justify-center transition" title="ตั้งค่าสินค้า">
+                    <button onclick="openProductModal('${item.id}')" class="absolute top-3 right-3 bg-white/90 backdrop-blur-sm text-indigo-600 w-8 h-8 rounded-full shadow-sm border hover:bg-indigo-50 border-indigo-100 z-10 hidden group-hover:flex items-center justify-center transition" title="ตั้งค่าสินค้า">
                         <i class="fas fa-edit text-xs"></i>
                     </button>
                     ${item.stock < 10 ? '<span class="absolute top-3 left-3 bg-red-100 text-red-600 text-[9px] font-bold px-2 py-0.5 rounded-full z-10 border border-red-200">ใกล้หมด</span>' : ''}
+                    ${item.visibility === 'hide' ? '<span class="absolute bottom-3 right-3 bg-gray-800 text-white text-[9px] font-bold px-2 py-0.5 rounded-full z-10 opacity-80">ซ่อน (Hidden)</span>' : ''}
                 ` : '';
 
                 // Calculate Discount %
@@ -377,7 +464,7 @@
                     ${adminBadge}
                     <!-- Image Wrapper -->
                     <div class="bg-gray-50 rounded-xl relative max-h-36 h-36 overflow-hidden mb-4 flex items-center justify-center border border-gray-100/50">
-                        <img src="${imgPlaceholder}" class="object-contain h-20 mix-blend-multiply opacity-70 group-hover:scale-110 transition-transform duration-500 ease-out">
+                        <img src="${imgSrc}" class="object-contain h-full mix-blend-multiply ${item.imageUrl ? '' : 'opacity-70 p-4'} group-hover:scale-110 transition-transform duration-500 ease-out">
                         ${discountTag}
                     </div>
                     
@@ -580,6 +667,139 @@
             }
         });
 
+
+        // Category Filter Logic
+        let currentCategory = 'All';
+        function filterCategory(cat) {
+            currentCategory = cat;
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                if (btn.dataset.cat === cat) {
+                    btn.className = "cat-btn w-full text-left font-bold text-orange-600 py-2 px-3 bg-orange-50/80 rounded-xl transition";
+                } else {
+                    btn.className = "cat-btn w-full text-left py-2 px-3 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition";
+                }
+            });
+
+            let filtered = allProducts;
+            if (cat !== 'All') {
+                filtered = allProducts.filter(p => p.category === cat);
+            }
+
+            document.getElementById('current-category-title').innerHTML = `รายการยาทั้งหมด <span class="bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full font-bold" id="item-count">${filtered.length}</span>`;
+            currentDisplayProducts = filtered;
+            renderProductGrid(currentDisplayProducts);
+        }
+
+        // Admin Product Modal Logic
+        let currentEditImageBase64 = null;
+
+        function openProductModal(id) {
+            const p = allProducts.find(x => x.id === id);
+            if (!p) return;
+
+            document.getElementById('edit-prod-id').value = p.id;
+            document.getElementById('edit-prod-name').value = p.name;
+            document.getElementById('edit-prod-category').value = p.category || 'All';
+            document.getElementById('edit-prod-visibility').value = p.visibility || 'show';
+
+            const preview = document.getElementById('edit-prod-img-preview');
+            const placeholder = document.getElementById('edit-prod-img-placeholder');
+
+            if (p.imageUrl) {
+                preview.src = p.imageUrl;
+                preview.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+            } else {
+                preview.src = '';
+                preview.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+            }
+
+            currentEditImageBase64 = null;
+            document.getElementById('edit-prod-img-file').value = '';
+            document.getElementById('product-edit-modal').classList.remove('hidden');
+        }
+
+        function closeProductModal() {
+            document.getElementById('product-edit-modal').classList.add('hidden');
+        }
+
+        function previewImage(input) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                if (file.size > 2 * 1024 * 1024) {
+                    alert('ขนาดไฟล์เกิน 2MB');
+                    input.value = '';
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const img = new Image();
+                    img.onload = function () {
+                        // Resize image to max 800px
+                        const canvas = document.createElement('canvas');
+                        const MAX_SIZE = 800;
+                        let width = img.width;
+                        let height = img.height;
+                        if (width > height && width > MAX_SIZE) {
+                            height *= MAX_SIZE / width;
+                            width = MAX_SIZE;
+                        } else if (height > MAX_SIZE) {
+                            width *= MAX_SIZE / height;
+                            height = MAX_SIZE;
+                        }
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        currentEditImageBase64 = canvas.toDataURL('image/jpeg', 0.8);
+
+                        const preview = document.getElementById('edit-prod-img-preview');
+                        preview.src = currentEditImageBase64;
+                        preview.classList.remove('hidden');
+                        document.getElementById('edit-prod-img-placeholder').classList.add('hidden');
+                    }
+                    img.src = e.target.result;
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        async function saveProductChanges() {
+            const btn = document.getElementById('btn-save-prod');
+            const id = document.getElementById('edit-prod-id').value;
+            const cat = document.getElementById('edit-prod-category').value;
+            const vis = document.getElementById('edit-prod-visibility').value;
+
+            btn.innerText = 'กำลังบันทึก...';
+            btn.disabled = true;
+
+            try {
+                const updates = {
+                    ecomCategory: cat,
+                    ecomVisibility: vis
+                };
+                if (currentEditImageBase64) {
+                    updates.imageUrl = currentEditImageBase64;
+                }
+
+                await db.collection('master_products').doc(id).update(updates);
+                Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
+
+                closeProductModal();
+                // Refresh data to show updates instantly
+                fetchProductsFromMaster().then(() => {
+                    filterCategory(currentCategory);
+                });
+            } catch (e) {
+                console.error(e);
+                alert('เกิดข้อผิดพลาด: ' + e.message);
+            } finally {
+                btn.innerHTML = '<i class="fas fa-save"></i> บันทึกข้อมูล';
+                btn.disabled = false;
+            }
+        }
     </script>
 </body>
 
