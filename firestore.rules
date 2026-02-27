@@ -88,5 +88,10 @@ service cloud.firestore {
     match /system_test/{docId} {
       allow read, write: if isAdmin();
     }
+
+    // Sales Analytics
+    match /sales_analytics/{docId} {
+      allow read, write: if true;
+    }
   }
 }

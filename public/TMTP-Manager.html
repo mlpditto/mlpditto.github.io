@@ -1355,12 +1355,12 @@
                     const name = trimmed.replace(qtyMatch ? qtyMatch[0] : '', '').trim();
 
                     if (name.length > 2) {
-                        const masterProd = masterProducts.find(p => p.name.toLowerCase().includes(name.toLowerCase()));
+                        const masterProd = masterProducts.find(p => p.name && p.name.toLowerCase().includes(name.toLowerCase()));
                         invoiceItems.push({
                             code: masterProd ? (masterProd.code || "") : "",
                             name: masterProd ? masterProd.name : name,
                             qty: qty || item.qty || 1,
-                            unit: masterProd ? masterProd.unit : (qtyMatch ? (qtyMatch[3] || "") : "รายการ"),
+                            unit: masterProd ? (masterProd.unit || "รายการ") : (qtyMatch ? (qtyMatch[3] || "") : "รายการ"),
                             price: masterProd ? (masterProd.prices?.['TMTP'] || masterProd.prices?.['LINEMAN'] || 0) : 0,
                             discount: 0
                         });
@@ -1699,6 +1699,7 @@
                         <div class="flex items-center gap-2">
                             <button onclick="exportDaily('${type}', '${dateStr}', 'pdf')" class="btn-xs bg-white/50 hover:bg-white dark:bg-black/20 dark:hover:bg-black/40"><i class="fa-solid fa-file-pdf"></i></button>
                             <button onclick="exportDaily('${type}', '${dateStr}', 'excel')" class="btn-xs bg-white/50 hover:bg-white dark:bg-black/20 dark:hover:bg-black/40"><i class="fa-solid fa-file-excel"></i></button>
+                            <button onclick="downloadSystemPDF('${type}', '${dateStr}')" class="btn-xs bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 ml-1 shadow-sm" title="โหลด PDF ต้นฉบับด้วย BOT"><i class="fa-solid fa-robot"></i> BOT PDF</button>
                             <div class="h-4 w-px bg-current opacity-20 mx-1"></div>
                             <button onclick="bulkAction('${type}', 'highlight')" class="btn-xs" title="Highlight"><i class="fa-solid fa-highlighter"></i></button>
                             <button onclick="bulkAction('${type}', 'move')" class="btn-xs" title="Move Category"><i class="fa-solid fa-arrows-up-down-left-right"></i> Move</button>
@@ -2017,6 +2018,51 @@
             items.sort((a, b) => a.orderId.localeCompare(b.orderId));
             if (format === 'excel') generateExcelFile(items, `BillPro_${type.toUpperCase()}_${dateStr.replace(/\//g, '-')}`);
             else printReport(items, type, dateStr);
+        }
+
+        async function downloadSystemPDF(type, dateStr) {
+            let items = (type === 'mixed') ? globalData.filter(i => i.date === dateStr) : globalData.filter(i => i.type === type && i.date === dateStr);
+            const selected = items.filter(i => i.isSelected);
+            if (selected.length > 0) items = selected;
+
+            if (items.length === 0) return showToast("ไม่มีข้อมูล", true);
+
+            // ใช้ทั้ง Invoice ID และ Order ID สำหรับให้ Bot ค้นหา
+            const targets = items.map(i => i.invoiceId && i.invoiceId.trim() !== "" ? i.invoiceId : i.orderId).filter(id => id && id.trim() !== "" && id !== "-");
+            if (targets.length === 0) return showToast("ไม่มีเลข INV/Order สำหรับดาวน์โหลด", true);
+
+            showLoading();
+            try {
+                showToast(`กำลังสั่ง Bot โหลด ${targets.length} ไฟล์... (อาจใช้เวลาหลายนาที)`);
+
+                const response = await fetch('http://localhost:5000/api/download_invoices', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ invoices: targets })
+                });
+
+                if (response.ok) {
+                    // Start download of the returned ZIP file
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `Invoices_Bot_${dateStr.replace(/\\/ / g, '')}_${type.toUpperCase()}.zip`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                    showToast(`ดาวน์โหลด ${targets.length} ไฟล์ สำเร็จแล้ว!`);
+                } else {
+                    const data = await response.json();
+                    showToast("Error: " + (data.message || "Unknown Error"), true);
+                }
+            } catch (error) {
+                console.error(error);
+                showToast("ไม่สามารถเชื่อมต่อโปรแกรมบอทได้ (ลองรัน invoice_server.py ก่อน)", true);
+            } finally {
+                hideLoading();
+            }
         }
         function exportToPDF(filterType) { let items = globalData.filter(i => i.type === filterType); if (items.length === 0) return showToast("ไม่มีข้อมูล", true); items.sort((a, b) => a.rawDate - b.rawDate); printReport(items, filterType, "All Dates"); }
         function generateExcelFile(items, filename) { let table = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"></head><body><table border="1"><thead><tr><th>#</th><th>Date</th><th>Order ID</th><th>Qty</th><th>Base</th><th>VAT</th><th>Total</th><th>Tracking</th><th>INV</th><th>Time</th><th>Note</th></tr></thead><tbody>`; items.forEach((i, idx) => { table += `<tr><td>${idx + 1}</td><td>${i.date}</td><td style='mso-number-format:"\\@"'>${i.orderId}</td><td>${i.qty}</td><td>${i.base.toFixed(2)}</td><td>${i.vat.toFixed(2)}</td><td>${i.total.toFixed(2)}</td><td>${i.tracking}</td><td style='mso-number-format:"\\@"'>${i.invoiceId}</td><td>${i.time}</td><td>${i.note}</td></tr>`; }); table += `</tbody></table></body></html>`; const blob = new Blob([table], { type: 'application/vnd.ms-excel' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${filename}.xls`; document.body.appendChild(a); a.click(); document.body.removeChild(a); }

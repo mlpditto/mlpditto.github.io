@@ -1,5 +1,16 @@
 # 📝 Task Log - FKB Front Kanban
 
+## 📅 27 กุมภาพันธ์ 2026 (Local Invoice Bot & Analytics Security)
+
+### 🚀 ฟีเจอร์ใหม่ & การแก้ไข (Latest)
+*   **TMTP Manager (TMTP-Manager.html):**
+    *   **BOT PDF Download:** เพิ่มปุ่ม "BOT PDF" สีแดงแบบพิเศษในหน้า Daily Summary เพื่อเรียกใช้งาน Local Invoice Bot ให้ดาวน์โหลดไฟล์ใบกำกับภาษีต้นฉบับรูปแบบ PDF (แทนการ Render ผ่านเบราว์เซอร์ปกติ) 
+*   **Local Invoice Bot (Python Server):**
+    *   **Automated Playwright PDF Downloader:** สร้างสคริปต์ `download_invoice.py` ที่ล็อกอินเข้าสู่ระบบหลังบ้านอัตโนมัติ ค้นหาเอกสารตามเงื่อนไข (ซ่อน SSRS Toolbar) และ Export เป็น PDF แท้
+    *   **Local Flask API:** สร้าง `invoice_server.py` เพื่อเปิด Local Server ที่พอร์ต 5000 รับ Request รายชื่อ Invoice จากหน้าเว็บรวมเป็นไฟล์ `.zip` ให้ดาวน์โหลด
+*   **Firestore Security (firestore.rules):**
+    *   **Sales Analytics Rules:** เพิ่ม Rules ให้อ่านและเขียนข้อมูลคอลเลกชัน `sales_analytics` เพื่อรองรับการเซฟโปรเจกต์งานวิเคราะห์ยอดขาย
+
 ## 📅 26 กุมภาพันธ์ 2026 (B2B ECOM Wholesale)
 
 ### 🚀 ฟีเจอร์ใหม่ & การแก้ไข (Latest)
