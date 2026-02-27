@@ -5,7 +5,8 @@
 ### 🚀 ฟีเจอร์ใหม่ & การแก้ไข (Latest)
 *   **TMTP Manager (TMTP-Manager.html):**
     *   **BOT PDF Download:** เพิ่มปุ่ม "BOT PDF" สีแดงแบบพิเศษในหน้า Daily Summary เพื่อเรียกใช้งาน Local Invoice Bot ให้ดาวน์โหลดไฟล์ใบกำกับภาษีต้นฉบับรูปแบบ PDF
-    *   **Custom Save Path:** เพิ่มกล่องข้อความสอบถาม (Prompt) และระบบจำค่า (LocalStorage) เพื่อให้ผู้ใช้ระบุโฟลเดอร์ในเครื่องสำหรับการเซฟไฟล์ PDF อัตโนมัติ โดยไม่ต้องดาวน์โหลดเป็น .zip แต่อย่างใด
+    *   **Custom Save Path:** ปรับปรุง UI ใหม่เป็น Custom Modal พร้อมเพิ่มปุ่มลัด (Preset Buttons) สำหรับเลือกโฟลเดอร์ปลายทาง (.เช่น `C:\Invoices`, `CHIIWII Date`) เพื่อความสะดวกรวดเร็วในการดาวน์โหลด
+    *   **Python Command Shortcut:** เพิ่มปุ่ม "Code" หน้าตาคล้าย Terminal ตรงเมนูด้านบน เพื่อคลิกคัดลอกคำสั่ง `python invoice_server.py` ได้ทันที ช่วยให้แอดมินไม่ต้องพิมพ์คำสั่งเองเมื่อเริ่มใช้งานบอท
 *   **Local Invoice Bot (Python Server):**
     *   **Automated Playwright PDF Downloader:** สร้างสคริปต์ `download_invoice.py` ที่ล็อกอินเข้าสู่ระบบหลังบ้านอัตโนมัติ ค้นหาเอกสารตามเงื่อนไข และ Export เป็น PDF แท้
     *   **Smart Auto-Stop:** บอทจะหยุดค้นหาในหน้าเว็บทันทีที่พบออเดอร์เป้าหมายครบถ้วน ช่วยให้ทำงานเร็วขึ้นมาก
