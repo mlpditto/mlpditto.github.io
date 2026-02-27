@@ -2031,6 +2031,18 @@
             const targets = items.map(i => i.invoiceId && i.invoiceId.trim() !== "" ? i.invoiceId : i.orderId).filter(id => id && id.trim() !== "" && id !== "-");
             if (targets.length === 0) return showToast("ไม่มีเลข INV/Order สำหรับดาวน์โหลด", true);
 
+            // Ask user for custom path. Use localStorage to remember their preference.
+            const savedPath = localStorage.getItem('tmtp_custom_dl_path') || `C:\\Invoices`;
+            const defaultPath = `${savedPath}\\${dateStr.replace(/\//g, '-')}\\${type.toUpperCase()}`;
+            const userPath = prompt(`ระบุโฟลเดอร์สำหรับเซฟ PDF\n\n- (ไม่ต้องมี / ต่อท้าย)\n- ระบบจะสร้างแยกโฟลเดอร์ วันที่/หมวด ให้เอง\n- หากเว้นช่องว่างไว้ ระบบจะโหลดลงเบราว์เซอร์เป็นไฟล์ .zip\n\nโฟลเดอร์สำหรับรอบนี้:`, defaultPath);
+
+            if (userPath === null) return; // Users cancelled the prompt
+
+            // Save base path without the dynamic parts if it looks like they kept the default structure
+            if (userPath !== "" && !userPath.includes(dateStr.replace(/\//g, '-'))) {
+                localStorage.setItem('tmtp_custom_dl_path', userPath);
+            }
+
             showLoading();
             try {
                 showToast(`กำลังสั่ง Bot โหลด ${targets.length} ไฟล์... (อาจใช้เวลาหลายนาที)`);
@@ -2038,21 +2050,28 @@
                 const response = await fetch('http://localhost:5000/api/download_invoices', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ invoices: targets })
+                    body: JSON.stringify({ invoices: targets, custom_path: userPath })
                 });
 
                 if (response.ok) {
-                    // Start download of the returned ZIP file
-                    const blob = await response.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `Invoices_Bot_${dateStr.replace(/\\/ / g, '')}_${type.toUpperCase()}.zip`;
-                    document.body.appendChild(a);
-                    a.click();
-                    a.remove();
-                    window.URL.revokeObjectURL(url);
-                    showToast(`ดาวน์โหลด ${targets.length} ไฟล์ สำเร็จแล้ว!`);
+                    const contentType = response.headers.get("content-type");
+                    if (contentType && contentType.includes("application/zip")) {
+                        // Start download of the returned ZIP file
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `Invoices_Bot_${dateStr.replace(/\//g, '')}_${type.toUpperCase()}.zip`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        window.URL.revokeObjectURL(url);
+                        showToast(`ดาวน์โหลด ${targets.length} ไฟล์ สำเร็จแล้ว! (เป็น .zip)`);
+                    } else {
+                        // Custom path used, server just returns JSON success message (files are saved directly on the PC)
+                        const data = await response.json();
+                        showToast(data.message || `โหลด ${targets.length} ไฟล์ ลงโฟลเดอร์สำเร็จ!`);
+                    }
                 } else {
                     const data = await response.json();
                     showToast("Error: " + (data.message || "Unknown Error"), true);
