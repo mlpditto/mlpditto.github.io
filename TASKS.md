@@ -4,11 +4,14 @@
 
 ### 🚀 ฟีเจอร์ใหม่ & การแก้ไข (Latest)
 *   **TMTP Manager (TMTP-Manager.html):**
-    *   **BOT PDF Download:** เพิ่มปุ่ม "BOT PDF" สีแดงแบบพิเศษในหน้า Daily Summary เพื่อเรียกใช้งาน Local Invoice Bot ให้ดาวน์โหลดไฟล์ใบกำกับภาษีต้นฉบับรูปแบบ PDF (แทนการ Render ผ่านเบราว์เซอร์ปกติ) 
+    *   **BOT PDF Download:** เพิ่มปุ่ม "BOT PDF" สีแดงแบบพิเศษในหน้า Daily Summary เพื่อเรียกใช้งาน Local Invoice Bot ให้ดาวน์โหลดไฟล์ใบกำกับภาษีต้นฉบับรูปแบบ PDF
+    *   **Custom Save Path:** เพิ่มกล่องข้อความสอบถาม (Prompt) และระบบจำค่า (LocalStorage) เพื่อให้ผู้ใช้ระบุโฟลเดอร์ในเครื่องสำหรับการเซฟไฟล์ PDF อัตโนมัติ โดยไม่ต้องดาวน์โหลดเป็น .zip แต่อย่างใด
 *   **Local Invoice Bot (Python Server):**
-    *   **Automated Playwright PDF Downloader:** สร้างสคริปต์ `download_invoice.py` ที่ล็อกอินเข้าสู่ระบบหลังบ้านอัตโนมัติ ค้นหาเอกสารตามเงื่อนไข (ซ่อน SSRS Toolbar) และ Export เป็น PDF แท้
-    *   **Local Flask API:** สร้าง `invoice_server.py` เพื่อเปิด Local Server ที่พอร์ต 5000 รับ Request รายชื่อ Invoice จากหน้าเว็บรวมเป็นไฟล์ `.zip` ให้ดาวน์โหลด
+    *   **Automated Playwright PDF Downloader:** สร้างสคริปต์ `download_invoice.py` ที่ล็อกอินเข้าสู่ระบบหลังบ้านอัตโนมัติ ค้นหาเอกสารตามเงื่อนไข และ Export เป็น PDF แท้
+    *   **Smart Auto-Stop:** บอทจะหยุดค้นหาในหน้าเว็บทันทีที่พบออเดอร์เป้าหมายครบถ้วน ช่วยให้ทำงานเร็วขึ้นมาก
+    *   **Local Flask API:** สร้าง `invoice_server.py` เพื่อเปิด Local Server รับ Request จัดการสร้างโฟลเดอร์ตามวันที่/หมวดหมู่ และเซฟไฟล์เข้าเครื่องโดยตรง
 *   **Firestore Security (firestore.rules):**
+    *   **TMTP Cloud Access:** เพิ่ม Rules ให้สามารถอ่านและเขียนข้อมูลคอลเลกชัน `tmtp_records` และ `tmtp_backups` เพื่อรองรับฟีเจอร์ Cloud Sync และ Cloud Restore
     *   **Sales Analytics Rules:** เพิ่ม Rules ให้อ่านและเขียนข้อมูลคอลเลกชัน `sales_analytics` เพื่อรองรับการเซฟโปรเจกต์งานวิเคราะห์ยอดขาย
 
 ## 📅 26 กุมภาพันธ์ 2026 (B2B ECOM Wholesale)

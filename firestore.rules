@@ -93,5 +93,14 @@ service cloud.firestore {
     match /sales_analytics/{docId} {
       allow read, write: if true;
     }
+
+    // TMTP Manager
+    match /tmtp_records/{docId} {
+      allow read, write: if true;
+    }
+    
+    match /tmtp_backups/{docId} {
+      allow read, write: if true;
+    }
   }
 }

@@ -1005,6 +1005,64 @@
         </div>
     </div>
 
+    <!-- Bot PDF Modal -->
+    <div id="botPdfModal"
+        class="fixed inset-0 bg-black/60 hidden z-[70] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div
+            class="bg-white dark:bg-dark-card rounded-2xl shadow-2xl w-full max-w-md p-6 border border-slate-200 dark:border-slate-700 fade-in">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                    <i class="fa-solid fa-robot text-red-500"></i> Local Invoice Bot
+                </h3>
+                <button onclick="closeBotPdfModal()" class="text-slate-400 hover:text-red-500 transition-colors"><i
+                        class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+
+            <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <p class="text-sm font-bold text-slate-700 dark:text-slate-300">ระบุโฟลเดอร์สำหรับเซฟ PDF</p>
+                </div>
+                <div>
+                    <input type="text" id="botPdfPathInput"
+                        class="w-full p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 dark:text-white font-mono text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all"
+                        placeholder="เช่น C:\Invoices">
+                </div>
+
+                <div class="flex flex-wrap gap-2 mt-2">
+                    <button onclick="setBotPdfPreset('C:\\Invoices')"
+                        class="text-xs font-mono px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 rounded-lg transition-colors border border-slate-200 dark:border-slate-700"><i
+                            class="fa-solid fa-folder text-blue-500 mr-1"></i> C:\Invoices</button>
+                    <button onclick="setBotPdfPreset('D:\\Invoices')"
+                        class="text-xs font-mono px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 rounded-lg transition-colors border border-slate-200 dark:border-slate-700"><i
+                            class="fa-solid fa-folder text-emerald-500 mr-1"></i> D:\Invoices</button>
+                    <button
+                        onclick="setBotPdfPreset('C:\\Users\\medli\\OneDrive\\เอกสาร\\CHIIWII\\2026 CW\\202602 CW FEB')"
+                        class="text-xs font-mono px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 rounded-lg transition-colors border border-slate-200 dark:border-slate-700"><i
+                            class="fa-solid fa-folder-open text-purple-500 mr-1"></i> เอกสาร CHIIWII</button>
+                </div>
+
+                <div class="pt-4 flex gap-3">
+                    <button onclick="closeBotPdfModal()"
+                        class="flex-1 py-3 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">ยกเลิก</button>
+                    <button onclick="confirmBotPdfDownload()"
+                        class="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold shadow-lg shadow-red-200/50 hover:bg-red-700 transition-all transform active:scale-95 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-check"></i> ตกลง
+                    </button>
+                </div>
+            </div>
+
+            <div
+                class="mt-6 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700/50">
+                <ul
+                    class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium space-y-1 list-disc pl-4">
+                    <li>ไม่ต้องระบุวันที่หรือหมวดหมู่ใหม่ ระบบจะ<span
+                            class="text-red-500 font-bold">สร้างแยกโฟลเดอร์</span>ให้เองจากชื่อนี้</li>
+                    <li>หากปล่อยช่องว่างไว้ จะโหลดกลับมาเป็น <span class="text-blue-500 font-bold">.zip</span> เสมอ</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
     <div class="fixed bottom-8 right-8 flex flex-col gap-2 z-[70]">
         <button onclick="scrollToTop()" id="goTopBtn" class="nav-fab opacity-0 translate-y-10"><i
                 class="fa-solid fa-arrow-up"></i></button>
@@ -2020,6 +2078,20 @@
             else printReport(items, type, dateStr);
         }
 
+        let currentBotPdfTargets = [];
+        let currentBotPdfType = '';
+        let currentBotPdfDateStr = '';
+
+        function closeBotPdfModal() {
+            document.getElementById('botPdfModal').classList.add('hidden');
+        }
+
+        function setBotPdfPreset(basePath) {
+            if (!currentBotPdfDateStr || !currentBotPdfType) return;
+            const defaultPath = `${basePath}\\${currentBotPdfDateStr.replace(/\//g, '-')}\\${currentBotPdfType.toUpperCase()}`;
+            document.getElementById('botPdfPathInput').value = defaultPath;
+        }
+
         async function downloadSystemPDF(type, dateStr) {
             let items = (type === 'mixed') ? globalData.filter(i => i.date === dateStr) : globalData.filter(i => i.type === type && i.date === dateStr);
             const selected = items.filter(i => i.isSelected);
@@ -2031,12 +2103,24 @@
             const targets = items.map(i => i.invoiceId && i.invoiceId.trim() !== "" ? i.invoiceId : i.orderId).filter(id => id && id.trim() !== "" && id !== "-");
             if (targets.length === 0) return showToast("ไม่มีเลข INV/Order สำหรับดาวน์โหลด", true);
 
+            currentBotPdfTargets = targets;
+            currentBotPdfType = type;
+            currentBotPdfDateStr = dateStr;
+
             // Ask user for custom path. Use localStorage to remember their preference.
             const savedPath = localStorage.getItem('tmtp_custom_dl_path') || `C:\\Invoices`;
             const defaultPath = `${savedPath}\\${dateStr.replace(/\//g, '-')}\\${type.toUpperCase()}`;
-            const userPath = prompt(`ระบุโฟลเดอร์สำหรับเซฟ PDF\n\n- (ไม่ต้องมี / ต่อท้าย)\n- ระบบจะสร้างแยกโฟลเดอร์ วันที่/หมวด ให้เอง\n- หากเว้นช่องว่างไว้ ระบบจะโหลดลงเบราว์เซอร์เป็นไฟล์ .zip\n\nโฟลเดอร์สำหรับรอบนี้:`, defaultPath);
 
-            if (userPath === null) return; // Users cancelled the prompt
+            document.getElementById('botPdfPathInput').value = defaultPath;
+            document.getElementById('botPdfModal').classList.remove('hidden');
+        }
+
+        async function confirmBotPdfDownload() {
+            closeBotPdfModal();
+            const targets = currentBotPdfTargets;
+            const type = currentBotPdfType;
+            const dateStr = currentBotPdfDateStr;
+            const userPath = document.getElementById('botPdfPathInput').value.trim();
 
             // Save base path without the dynamic parts if it looks like they kept the default structure
             if (userPath !== "" && !userPath.includes(dateStr.replace(/\//g, '-'))) {
