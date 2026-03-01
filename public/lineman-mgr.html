@@ -398,10 +398,18 @@
                             </div>
                             <div
                                 class="flex justify-between items-baseline border-t border-slate-50 dark:border-slate-800/50 pt-2">
-                                <span class="text-[10px] font-black text-emerald-500 uppercase">กำไร (Profit)</span>
+                                <div class="flex flex-col">
+                                    <span class="text-[10px] font-black text-emerald-500 uppercase">กำไร (Profit)</span>
+                                    <span id="summary-profit-percent"
+                                        class="text-[9px] font-bold text-emerald-600/60 leading-none">-- %</span>
+                                </div>
                                 <span class="text-xl font-black text-emerald-600" id="summary-profit">฿0</span>
                             </div>
                         </div>
+                    </div>
+                    <div id="profit-comparison"
+                        class="mt-3 pt-3 border-t border-slate-50 dark:border-slate-800/50 space-y-1">
+                        <!-- History items will be injected here -->
                     </div>
                     <p class="text-[9px] text-blue-400 font-bold mt-2 uppercase">เฉพาะรายการโอนสำเร็จ</p>
                 </div>
@@ -1642,20 +1650,22 @@
             }).catch(e => console.warn('[Backup] Failed:', e));
         }
 
+        let globalMonthList = [];
         async function ensureMonthInIndex(month) {
             try {
                 const ref = window.db.collection('system').doc(getIndexDocId());
                 const doc = await ref.get();
-                const months = doc.exists ? (doc.data().months || []) : [];
-                if (!months.includes(month)) {
-                    months.push(month); months.sort().reverse();
-                    await ref.set({ months });
-                    updateMonthDropdownsFromList(months);
+                globalMonthList = doc.exists ? (doc.data().months || []) : [];
+                if (!globalMonthList.includes(month)) {
+                    globalMonthList.push(month); globalMonthList.sort().reverse();
+                    await ref.set({ months: globalMonthList });
+                    updateMonthDropdownsFromList(globalMonthList);
                 }
             } catch (e) { console.error('ensureMonthInIndex:', e); }
         }
 
         function updateMonthDropdownsFromList(months) {
+            globalMonthList = months;
             const now = new Date().toISOString().slice(0, 7);
             const sorted = [...new Set([now, ...months])].sort().reverse();
             const thMn = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
@@ -2018,7 +2028,13 @@
                 safeSetText('stat-count-year', countYear);
                 safeSetText('stat-net-month', `฿${netPaidMonth.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
                 safeSetText('summary-profit', `฿${totalProfitMonth.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+
+                const profitPercent = netPaidMonth > 0 ? (totalProfitMonth / netPaidMonth * 100) : 0;
+                safeSetText('summary-profit-percent', `${profitPercent.toFixed(1)} % เปอร์เซ็นต์กำไร`);
+
                 safeSetClass('summary-profit', `text-xl font-black ${totalProfitMonth < 0 ? 'text-rose-600' : 'text-emerald-600'}`);
+                safeSetClass('summary-profit-percent', `text-[9px] font-bold leading-none ${totalProfitMonth < 0 ? 'text-rose-500/60' : 'text-emerald-600/60'}`);
+
                 safeSetText('stat-net-year', `฿${netPaidYear.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
 
                 if (perfCount > 0) {
@@ -2257,10 +2273,11 @@
                     const thMnShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
                     safeSetText('summary-period-label', `รายการ 1 - ${dayToLabel} ${thMnShort[tm - 1]}`);
                 }
-
                 if (filtered.length === 0) {
                     tbody.innerHTML = `<tr><td colspan="5" class="p-20 text-center text-slate-300 font-bold uppercase tracking-widest">No Sales Found</td></tr>`;
                 }
+
+                renderProfitHistory();
             } catch (err) {
                 console.error("Render error:", err);
                 if (!window.lastRenderError || (Date.now() - window.lastRenderError > 5000)) {
@@ -2273,6 +2290,50 @@
                     window.lastRenderError = Date.now();
                 }
             }
+        }
+
+        async function renderProfitHistory() {
+            const container = document.getElementById('profit-comparison');
+            if (!container) return;
+
+            const mFilter = document.getElementById('monthFilter')?.value;
+            if (!mFilter) return;
+
+            // Get previous 3 months from index
+            const idx = globalMonthList.indexOf(mFilter);
+            const prevMonths = globalMonthList.slice(idx + 1, idx + 4);
+
+            if (prevMonths.length === 0) {
+                container.innerHTML = '<p class="text-[8px] text-slate-400 italic">ไม่มีข้อมูลย้อนหลัง</p>';
+                return;
+            }
+
+            let html = '';
+            for (const m of prevMonths) {
+                try {
+                    const recs = await getMonthRecords(m);
+                    let histProfit = 0;
+                    recs.forEach(r => {
+                        if (r.isPaid && (r.cost || 0) > 0) {
+                            histProfit += ((r.net || 0) - (r.cost || 0));
+                        }
+                    });
+
+                    const thMnShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+                    const [y, mm] = m.split('-').map(Number);
+                    const monthLabel = `${thMnShort[mm - 1]} ${String(y + 543).slice(-2)}`;
+
+                    html += `
+                        <div class="flex justify-between items-center text-[9px]">
+                            <span class="text-slate-400 font-bold">${monthLabel}</span>
+                            <span class="font-black ${histProfit < 0 ? 'text-rose-400' : 'text-slate-500'}">฿${histProfit.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                        </div>
+                    `;
+                } catch (e) {
+                    console.warn(`History fetch fail for ${m}`, e);
+                }
+            }
+            container.innerHTML = html;
         }
 
         document.getElementById('salesForm').onsubmit = async (e) => {
