@@ -102,5 +102,10 @@ service cloud.firestore {
     match /tmtp_backups/{docId} {
       allow read, write: if true;
     }
+
+    // LINE MAN Sales Backups (auto-backup snapshots)
+    match /lineman_backups/{docId} {
+      allow read, write: if isAdmin();
+    }
   }
 }

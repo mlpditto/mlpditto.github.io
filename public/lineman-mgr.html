@@ -1616,6 +1616,25 @@
         async function saveMonthRecords(month, records) {
             await window.db.collection('system').doc(getMonthDocId(month)).set({ records });
             await ensureMonthInIndex(month);
+            autoBackupIfNeeded(month, records); // Fire-and-forget backup
+        }
+
+        function autoBackupIfNeeded(month, records) {
+            const today = new Date().toISOString().slice(0, 10);
+            const key = `bk_${currentStore}_${month}_${today}`;
+            if (sessionStorage.getItem(key)) return; // Already backed up this session/day
+            sessionStorage.setItem(key, '1');
+
+            const docId = `${currentStore}_${month}_${today}`;
+            window.db.collection('lineman_backups').doc(docId).set({
+                records,
+                store: currentStore,
+                month,
+                date: today,
+                savedAt: new Date().toISOString()
+            }).then(() => {
+                console.log(`[Backup] ✅ ${docId}`);
+            }).catch(e => console.warn('[Backup] Failed:', e));
         }
 
         async function ensureMonthInIndex(month) {
