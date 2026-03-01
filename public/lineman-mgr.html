@@ -411,7 +411,7 @@
                         class="mt-3 pt-3 border-t border-slate-50 dark:border-slate-800/50 space-y-1">
                         <!-- History items will be injected here -->
                     </div>
-                    <p class="text-[9px] text-blue-400 font-bold mt-2 uppercase">เฉพาะรายการโอนสำเร็จ</p>
+
                 </div>
 
                 <div
@@ -3120,8 +3120,49 @@
             });
 
             if (recordsToImport.length > 0) {
-                showLoading(true);
+                // Branch Guard: Detect Merchant Name from header or first row
+                const headerLine = lines[0];
+                const colsHeader = headerLine.split(',');
+                const merchantColIdx = colsHeader.findIndex(h => h.includes('Merchant') || h.includes('StoreID') || h.includes('ShopName'));
 
+                let detectedMerchant = 'ไม่พบรหัสร้านค้าในไฟล์';
+                if (merchantColIdx !== -1) {
+                    const firstRow = lines.find((l, i) => i > 0 && l.includes(','));
+                    if (firstRow) detectedMerchant = firstRow.split(',')[merchantColIdx]?.replace(/['"]/g, '').trim() || detectedMerchant;
+                }
+
+                const totalRevenue = recordsToImport.reduce((sum, r) => sum + r.gross, 0);
+                const branchDisplay = currentStore === 'lineman_sales' ? 'MLP (สาขาหลัก)' : 'PNP (สาขารอง)';
+
+                // Branch Check Warning
+                let branchWarning = '';
+                if (currentStore === 'lineman_sales_pnp' && detectedMerchant.toUpperCase().includes('MLP')) {
+                    branchWarning = `<div class="bg-rose-50 text-rose-600 p-2 rounded text-[10px] mt-2 font-bold flex items-center gap-1"><i class="fas fa-exclamation-triangle"></i> คำเตือน: ไฟล์ดูเหมือนข้อมูลของ MLP แต่คุณกำลังนำเข้าที่ PNP!</div>`;
+                } else if (currentStore === 'lineman_sales' && detectedMerchant.toUpperCase().includes('PNP')) {
+                    branchWarning = `<div class="bg-rose-50 text-rose-600 p-2 rounded text-[10px] mt-2 font-bold flex items-center gap-1"><i class="fas fa-exclamation-triangle"></i> คำเตือน: ไฟล์ดูเหมือนข้อมูลของ PNP แต่คุณกำลังนำเข้าที่ MLP!</div>`;
+                }
+
+                const confirmRes = await Swal.fire({
+                    title: 'ตรวจสอบข้อมูลก่อนส่ง',
+                    html: `
+                        <div class="text-left space-y-2 text-sm">
+                            <div class="flex justify-between"><span>สาขาปลายทาง:</span> <span class="font-bold text-blue-600">${branchDisplay}</span></div>
+                            <div class="flex justify-between"><span>ร้านในไฟล์:</span> <span class="font-bold text-slate-600">${detectedMerchant}</span></div>
+                            <div class="flex justify-between border-t pt-2"><span>จำนวนรายการ:</span> <span class="font-bold">${recordsToImport.length} ออเดอร์</span></div>
+                            <div class="flex justify-between"><span>ยอดรวมเบื้องต้น:</span> <span class="font-bold text-emerald-600">฿${totalRevenue.toLocaleString()}</span></div>
+                            ${branchWarning}
+                        </div>
+                    `,
+                    icon: 'info',
+                    showCancelButton: true,
+                    confirmButtonText: 'ยืนยัน นำเข้าข้อมูล',
+                    cancelButtonText: 'ยกเลิก',
+                    confirmButtonColor: '#00B14F'
+                });
+
+                if (!confirmRes.isConfirmed) return;
+
+                showLoading(true);
                 let addedCount = 0;
                 let updatedCount = 0;
                 let ignoredCount = 0;
