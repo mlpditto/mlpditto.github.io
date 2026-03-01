@@ -2269,7 +2269,7 @@
 
                 salesData.sort((a, b) => b.date.localeCompare(a.date) || b.recordedAt - a.recordedAt);
 
-                await window.db.collection('system').doc('lineman_sales').set({ records: salesData });
+                await window.db.collection('system').doc(currentStore).set({ records: salesData });
 
                 closeRecordModal();
                 document.getElementById('salesForm').reset();
@@ -2833,7 +2833,7 @@
                 // เรียงลำดับตามวันที่ใหม่
                 salesData.sort((a, b) => b.date.localeCompare(a.date) || b.recordedAt - a.recordedAt);
 
-                await window.db.collection('system').doc('lineman_sales').set({ records: salesData });
+                await window.db.collection('system').doc(currentStore).set({ records: salesData });
                 showLoading(false);
                 closeImportModal();
 

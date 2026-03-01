@@ -1,5 +1,13 @@
 # 📝 Task Log - FKB Front Kanban
 
+## 📅 1 มีนาคม 2026 (LINE MAN Sub-Branch CSV Import Fix)
+
+### 🔧 การแก้ไขบัค
+*   **LINE MAN Sales Recorder (lineman-mgr.html):**
+    *   **CSV Import สาขารอง (PNP) ไม่แสดงข้อมูล:** แก้ไขบัค Critical ที่ทำให้ข้อมูลที่ Import จาก CSV ขณะอยู่ใน Tab สาขารอง (`lineman_sales_pnp`) ไม่ปรากฏขึ้น
+    *   **Root Cause:** ฟังก์ชัน `processCSV()` และ `salesForm.onsubmit` ใช้ชื่อ Collection แบบ Hardcode ว่า `'lineman_sales'` เสมอ แทนที่จะใช้ตัวแปร `currentStore` ที่เปลี่ยนตาม Tab ที่เลือก
+    *   **Fix:** เปลี่ยน 2 จุดให้ใช้ `currentStore` แทน Hardcode ครอบคลุมทั้งการ Import CSV และการบันทึก Record ใหม่
+
 ## 📅 27 กุมภาพันธ์ 2026 (Local Invoice Bot & Analytics Security)
 
 ### 🚀 ฟีเจอร์ใหม่ & การแก้ไข (Latest)
