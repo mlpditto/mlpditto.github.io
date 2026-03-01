@@ -1651,9 +1651,20 @@
         async function reloadMonthIndex() {
             const now = new Date().toISOString().slice(0, 7);
             try {
-                const doc = await window.db.collection('system').doc(getIndexDocId()).get();
-                const months = doc.exists ? (doc.data().months || []) : [];
-                updateMonthDropdownsFromList(months);
+                const idxDoc = await window.db.collection('system').doc(getIndexDocId()).get();
+                if (idxDoc.exists) {
+                    updateMonthDropdownsFromList(idxDoc.data().months || []);
+                    return;
+                }
+                // Fallback: extract months from old single-doc format
+                const oldDoc = await window.db.collection('system').doc(currentStore).get();
+                if (oldDoc.exists) {
+                    const recs = oldDoc.data().records || [];
+                    const months = [...new Set(recs.map(r => String(r.date || '').slice(0, 7)).filter(m => m.length === 7))];
+                    updateMonthDropdownsFromList(months);
+                } else {
+                    updateMonthDropdownsFromList([now]);
+                }
             } catch (e) { updateMonthDropdownsFromList([now]); }
         }
 
@@ -1661,10 +1672,27 @@
             if (unsubscribeSync) { unsubscribeSync(); unsubscribeSync = null; }
             currentMonth = month;
             unsubscribeSync = window.db.collection('system').doc(getMonthDocId(month))
-                .onSnapshot(doc => {
-                    showLoading(false);
-                    salesData = doc.exists ? (doc.data().records || []) : [];
-                    renderUI();
+                .onSnapshot(async doc => {
+                    if (doc.exists) {
+                        showLoading(false);
+                        salesData = doc.data().records || [];
+                        renderUI();
+                    } else {
+                        // Fallback: load from old single-doc format and filter by month
+                        try {
+                            const oldDoc = await window.db.collection('system').doc(currentStore).get();
+                            showLoading(false);
+                            if (oldDoc.exists) {
+                                salesData = (oldDoc.data().records || []).filter(r => String(r.date || '').startsWith(month));
+                            } else {
+                                salesData = [];
+                            }
+                        } catch (fe) {
+                            showLoading(false);
+                            salesData = [];
+                        }
+                        renderUI();
+                    }
                 }, err => { showLoading(false); console.error('Snapshot:', err); });
         }
 
@@ -1675,29 +1703,32 @@
 
         async function migrateOldFormatIfNeeded() {
             try {
+                // Skip if already migrated (index exists)
+                const idxCheck = await window.db.collection('system').doc(getIndexDocId()).get();
+                if (idxCheck.exists) return;
+
                 const oldRef = window.db.collection('system').doc(currentStore);
                 const oldDoc = await oldRef.get();
                 if (!oldDoc.exists) return;
                 const recs = oldDoc.data().records || [];
-                if (recs.length === 0) { await oldRef.delete(); return; }
+                if (recs.length === 0) return;
                 console.log(`[Migrate] ${currentStore}: ${recs.length} records`);
                 const groups = {};
                 recs.forEach(r => {
                     const m = String(r.date || '').slice(0, 7);
                     if (m.length === 7) { if (!groups[m]) groups[m] = []; groups[m].push(r); }
                 });
-                const batch = window.db.batch();
                 const months = [];
+                // Write each month doc separately (not batch) for reliability
                 for (const [m, rs] of Object.entries(groups)) {
                     rs.sort((a, b) => b.date.localeCompare(a.date) || b.recordedAt - a.recordedAt);
-                    batch.set(window.db.collection('system').doc(`${currentStore}_${m}`), { records: rs });
+                    await window.db.collection('system').doc(`${currentStore}_${m}`).set({ records: rs });
                     months.push(m);
                 }
                 months.sort().reverse();
-                batch.set(window.db.collection('system').doc(getIndexDocId()), { months });
-                batch.delete(oldRef);
-                await batch.commit();
-                console.log(`[Migrate] Done: ${months.length} months`);
+                await window.db.collection('system').doc(getIndexDocId()).set({ months });
+                // NOTE: old doc kept as backup — delete manually from Firestore console after verifying
+                console.log(`[Migrate] Done: ${months.length} months. Old doc kept as backup.`);
             } catch (e) { console.error('[Migrate] Error:', e); }
         }
         // ─────────────────────────────────────────────────────────
