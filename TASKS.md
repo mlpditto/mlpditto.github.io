@@ -1,12 +1,18 @@
 # 📝 Task Log - FKB Front Kanban
 
-## 📅 1 มีนาคม 2026 (LINE MAN Sub-Branch CSV Import Fix)
+## 📅 1 มีนาคม 2026 (LINE MAN Monthly Storage Refactor)
 
 ### 🔧 การแก้ไขบัค
 *   **LINE MAN Sales Recorder (lineman-mgr.html):**
-    *   **CSV Import สาขารอง (PNP) ไม่แสดงข้อมูล:** แก้ไขบัค Critical ที่ทำให้ข้อมูลที่ Import จาก CSV ขณะอยู่ใน Tab สาขารอง (`lineman_sales_pnp`) ไม่ปรากฏขึ้น
-    *   **Root Cause:** ฟังก์ชัน `processCSV()` และ `salesForm.onsubmit` ใช้ชื่อ Collection แบบ Hardcode ว่า `'lineman_sales'` เสมอ แทนที่จะใช้ตัวแปร `currentStore` ที่เปลี่ยนตาม Tab ที่เลือก
-    *   **Fix:** เปลี่ยน 2 จุดให้ใช้ `currentStore` แทน Hardcode ครอบคลุมทั้งการ Import CSV และการบันทึก Record ใหม่
+    *   **CSV Import สาขารอง (PNP) ไม่แสดงข้อมูล:** แก้ไขบัค Critical ที่ทำให้ข้อมูลที่ Import จาก CSV ขณะอยู่ใน Tab สาขารอง ไม่ปรากฏขึ้น (Hardcoded `'lineman_sales'` แทน `currentStore`)
+
+### 🚀 ฟีเจอร์ใหม่ (Major Refactor)
+*   **Per-Month Firestore Storage:** ปรับสถาปัตยกรรมการจัดเก็บข้อมูลจาก Single Document ต่อ Store เป็น **Monthly Documents** (`system/{store}_{YYYY-MM}`) เพื่อแก้ปัญหา Firestore 1MB limit เมื่อมีข้อมูลสะสมจำนวนมาก
+    *   **Auto-Migration:** ระบบตรวจจับและ Migrate ข้อมูลรูปแบบเก่าไปยังรูปแบบใหม่อัตโนมัติเมื่อโหลดครั้งแรก
+    *   **Month Index Document:** จัดการรายชื่อเดือนที่มีข้อมูลผ่าน `{store}_index` document แทนการ scan Records
+    *   **Month-Aware CSV Import:** Import CSV ได้หลายเดือนพร้อมกัน ระบบจะจัดกลุ่มและบันทึกแยก Document ต่อเดือนอัตโนมัติ แสดงสรุปว่า Import เดือนใดบ้าง
+    *   **Smart Month Switching:** เปลี่ยนเดือนใน Dropdown จะ Subscribe Firestore listener ของเดือนนั้นแทนการ Filter ใน Memory
+    *   **Cross-Month Edit Support:** แก้ไขรายการเปลี่ยนวันที่ข้ามเดือนได้ — ระบบย้าย Record จาก Doc เดือนเก่าไปเดือนใหม่อัตโนมัติ
 
 ## 📅 27 กุมภาพันธ์ 2026 (Local Invoice Bot & Analytics Security)
 

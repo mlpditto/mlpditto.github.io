@@ -459,7 +459,7 @@
                                     Transaction History</p>
                             </div>
                             <div class="flex items-center gap-2">
-                                <select id="monthFilter" onchange="renderUI()"
+                                <select id="monthFilter" onchange="onMonthChange()"
                                     class="text-xs p-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-lineman outline-none font-bold cursor-pointer">
                                 </select>
                                 <button onclick="openImportModal()"
@@ -1215,6 +1215,7 @@
         const GP_RATE = 0.30; // GP 30% รวม VAT
 
         let currentStore = 'lineman_sales';
+        let currentMonth = new Date().toISOString().slice(0, 7);
         let unsubscribeSync = null;
 
         const safeSetText = (id, text) => {
@@ -1603,91 +1604,127 @@
             }, 100);
         }
 
-        async function syncData() {
-            if (unsubscribeSync) {
-                unsubscribeSync();
-            }
+        // ── Monthly-doc Storage Helpers ──────────────────────────
+        function getMonthDocId(month) { return `${currentStore}_${month}`; }
+        function getIndexDocId() { return `${currentStore}_index`; }
 
-            showLoading(true);
-            unsubscribeSync = window.db.collection('system').doc(currentStore).onSnapshot(doc => {
-                showLoading(false);
-                if (doc.exists) {
-                    salesData = doc.data().records || [];
-                    updateMonthDropdowns();
-                    renderUI();
-                } else {
-                    window.db.collection('system').doc(currentStore).set({ records: [] });
+        async function getMonthRecords(month) {
+            const doc = await window.db.collection('system').doc(getMonthDocId(month)).get();
+            return doc.exists ? (doc.data().records || []) : [];
+        }
+
+        async function saveMonthRecords(month, records) {
+            await window.db.collection('system').doc(getMonthDocId(month)).set({ records });
+            await ensureMonthInIndex(month);
+        }
+
+        async function ensureMonthInIndex(month) {
+            try {
+                const ref = window.db.collection('system').doc(getIndexDocId());
+                const doc = await ref.get();
+                const months = doc.exists ? (doc.data().months || []) : [];
+                if (!months.includes(month)) {
+                    months.push(month); months.sort().reverse();
+                    await ref.set({ months });
+                    updateMonthDropdownsFromList(months);
                 }
+            } catch (e) { console.error('ensureMonthInIndex:', e); }
+        }
+
+        function updateMonthDropdownsFromList(months) {
+            const now = new Date().toISOString().slice(0, 7);
+            const sorted = [...new Set([now, ...months])].sort().reverse();
+            const thMn = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+            const fmt = m => { const p = m.split('-'); return p.length < 2 ? m : `${thMn[+p[1] - 1]} ${+p[0] + 543}`; };
+            const html = sorted.map(m => `<option value="${m}">${fmt(m)} (${m})</option>`).join('');
+            ['monthFilter', 'payoutMonthFilter'].forEach(id => {
+                const el = document.getElementById(id); if (!el) return;
+                const cur = el.value || now;
+                el.innerHTML = html;
+                el.value = sorted.includes(cur) ? cur : sorted[0];
             });
+            currentMonth = document.getElementById('monthFilter')?.value || now;
+        }
+
+        function updateMonthDropdowns() { /* managed by reloadMonthIndex */ }
+
+        async function reloadMonthIndex() {
+            const now = new Date().toISOString().slice(0, 7);
+            try {
+                const doc = await window.db.collection('system').doc(getIndexDocId()).get();
+                const months = doc.exists ? (doc.data().months || []) : [];
+                updateMonthDropdownsFromList(months);
+            } catch (e) { updateMonthDropdownsFromList([now]); }
+        }
+
+        function subscribeToMonth(month) {
+            if (unsubscribeSync) { unsubscribeSync(); unsubscribeSync = null; }
+            currentMonth = month;
+            unsubscribeSync = window.db.collection('system').doc(getMonthDocId(month))
+                .onSnapshot(doc => {
+                    showLoading(false);
+                    salesData = doc.exists ? (doc.data().records || []) : [];
+                    renderUI();
+                }, err => { showLoading(false); console.error('Snapshot:', err); });
+        }
+
+        function onMonthChange() {
+            const m = document.getElementById('monthFilter')?.value;
+            if (m && m !== currentMonth) { showLoading(true); subscribeToMonth(m); }
+        }
+
+        async function migrateOldFormatIfNeeded() {
+            try {
+                const oldRef = window.db.collection('system').doc(currentStore);
+                const oldDoc = await oldRef.get();
+                if (!oldDoc.exists) return;
+                const recs = oldDoc.data().records || [];
+                if (recs.length === 0) { await oldRef.delete(); return; }
+                console.log(`[Migrate] ${currentStore}: ${recs.length} records`);
+                const groups = {};
+                recs.forEach(r => {
+                    const m = String(r.date || '').slice(0, 7);
+                    if (m.length === 7) { if (!groups[m]) groups[m] = []; groups[m].push(r); }
+                });
+                const batch = window.db.batch();
+                const months = [];
+                for (const [m, rs] of Object.entries(groups)) {
+                    rs.sort((a, b) => b.date.localeCompare(a.date) || b.recordedAt - a.recordedAt);
+                    batch.set(window.db.collection('system').doc(`${currentStore}_${m}`), { records: rs });
+                    months.push(m);
+                }
+                months.sort().reverse();
+                batch.set(window.db.collection('system').doc(getIndexDocId()), { months });
+                batch.delete(oldRef);
+                await batch.commit();
+                console.log(`[Migrate] Done: ${months.length} months`);
+            } catch (e) { console.error('[Migrate] Error:', e); }
+        }
+        // ─────────────────────────────────────────────────────────
+
+        async function syncData() {
+            if (unsubscribeSync) { unsubscribeSync(); unsubscribeSync = null; }
+            showLoading(true);
+            try {
+                await migrateOldFormatIfNeeded();
+                await reloadMonthIndex();
+                const m = document.getElementById('monthFilter')?.value || currentMonth;
+                subscribeToMonth(m);
+            } catch (e) { showLoading(false); console.error('syncData:', e); }
         }
 
         function switchStore(storeId) {
             if (currentStore === storeId) return;
             currentStore = storeId;
-
-            // Update Tab UI
+            salesData = [];
             const tabs = ['lineman_sales', 'lineman_sales_pnp'];
             tabs.forEach(tab => {
                 const el = document.getElementById(`tab-${tab}`);
-                if (el) {
-                    if (tab === storeId) {
-                        el.className = "px-5 py-2.5 rounded-xl font-black text-sm transition-all bg-lineman text-white shadow-lg shadow-green-500/30 whitespace-nowrap";
-                    } else {
-                        el.className = "px-5 py-2.5 rounded-xl font-black text-sm transition-all bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white whitespace-nowrap";
-                    }
-                }
+                if (el) el.className = tab === storeId
+                    ? "px-5 py-2.5 rounded-xl font-black text-sm transition-all bg-lineman text-white shadow-lg shadow-green-500/30 whitespace-nowrap"
+                    : "px-5 py-2.5 rounded-xl font-black text-sm transition-all bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white whitespace-nowrap";
             });
-
-            // Sync New Store Data
             syncData();
-        }
-
-        function updateMonthDropdowns() {
-            const now = new Date();
-            const currentMonthStr = now.toISOString().slice(0, 7);
-            const monthsSet = new Set();
-            monthsSet.add(currentMonthStr);
-
-            if (salesData && salesData.length > 0) {
-                salesData.forEach(r => {
-                    if (r.date) {
-                        const m = String(r.date).slice(0, 7);
-                        if (m.length === 7) monthsSet.add(m);
-                    }
-                    if (r.paidDate) {
-                        const m = String(r.paidDate).slice(0, 7);
-                        if (m.length === 7) monthsSet.add(m);
-                    }
-                });
-            }
-
-            const sortedMonths = Array.from(monthsSet).sort().reverse();
-            const thMnList = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
-            const formatMonthTH = (yyyyMM) => {
-                const parts = yyyyMM.split('-');
-                if (parts.length < 2) return yyyyMM;
-                const mIdx = parseInt(parts[1]) - 1;
-                const thYear = parseInt(parts[0]) + 543;
-                return `${thMnList[mIdx]} ${thYear}`;
-            };
-
-            let optionsHTML = '';
-            sortedMonths.forEach(m => {
-                optionsHTML += `<option value="${m}">${formatMonthTH(m)} (${m})</option>`;
-            });
-
-            ['monthFilter', 'payoutMonthFilter'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) {
-                    const currentVal = el.value || currentMonthStr;
-                    el.innerHTML = optionsHTML;
-                    if (sortedMonths.includes(currentVal)) {
-                        el.value = currentVal;
-                    } else {
-                        el.value = sortedMonths[0]; // fallback
-                    }
-                }
-            });
         }
 
         function setDateFilter(date) {
@@ -1938,9 +1975,9 @@
                     if (bar) bar.style.width = '0%';
                 }
 
-                // Filter for the month for the list view
-                let filtered = (salesData || []).filter(r => r && String(r.date || '').startsWith(termMonth));
-                console.log("renderUI - Filtered (Month):", filtered.length);
+                // salesData already contains only currentMonth's data (loaded by subscribeToMonth)
+                let filtered = [...(salesData || [])];
+                console.log("renderUI - Records:", filtered.length, "Month:", currentMonth);
 
                 // Pagination Rendering
                 const uniqueDates = [...new Set(filtered.map(r => String(r.date || '')))].filter(d => d).sort((a, b) => String(b).localeCompare(String(a)));
@@ -1987,8 +2024,8 @@
                     } catch (e) { }
                 });
 
-                // Calculate daily totals for PAID ribbons (using the month's filtered data to be consistent)
-                const monthFiltered = salesData.filter(r => (r.date || '').startsWith(termMonth));
+                // Calculate daily totals for PAID ribbons
+                const monthFiltered = [...salesData];
                 const dailyPaidTotals = {};
                 monthFiltered.forEach(r => {
                     if (r.isPaid) {
@@ -2264,12 +2301,14 @@
                     } catch (mErr) { console.warn("Master Update Failed for:", update.name, mErr); }
                 }
 
-                salesData.unshift(record);
+                // Save to per-month document
+                const recordMonth = record.date.slice(0, 7);
+                let monthlyRecs = await getMonthRecords(recordMonth);
+                monthlyRecs = monthlyRecs.filter(r => r.recordedAt !== record.recordedAt);
+                monthlyRecs.unshift(record);
+                monthlyRecs.sort((a, b) => b.date.localeCompare(a.date) || b.recordedAt - a.recordedAt);
+                await saveMonthRecords(recordMonth, monthlyRecs);
                 Swal.fire({ icon: 'success', title: 'บันทึกยอดขายแล้ว', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
-
-                salesData.sort((a, b) => b.date.localeCompare(a.date) || b.recordedAt - a.recordedAt);
-
-                await window.db.collection('system').doc(currentStore).set({ records: salesData });
 
                 closeRecordModal();
                 document.getElementById('salesForm').reset();
@@ -2389,16 +2428,29 @@
                     } catch (mErr) { console.warn("Master Update Failed for:", update.name, mErr); }
                 }
 
-                console.log("Updating Sales Data...");
-                const finalIdx = salesData.findIndex(r => r.recordedAt === editingUid);
-                if (finalIdx !== -1) {
-                    salesData[finalIdx] = updatedRecord;
-                } else {
-                    salesData.unshift(updatedRecord);
-                }
+                // Save to per-month document (handles month change if date was edited)
+                const originalMonth = String(salesData[targetIdx]?.date || '').slice(0, 7);
+                const newRecordMonth = updatedRecord.date.slice(0, 7);
+                const sortFn = (a, b) => b.date.localeCompare(a.date) || b.recordedAt - a.recordedAt;
 
-                salesData.sort((a, b) => b.date.localeCompare(a.date) || b.recordedAt - a.recordedAt);
-                await window.db.collection('system').doc(currentStore).set({ records: salesData });
+                if (originalMonth === newRecordMonth) {
+                    let monthRecs = await getMonthRecords(originalMonth);
+                    const ei = monthRecs.findIndex(r => r.recordedAt === editingUid);
+                    if (ei !== -1) monthRecs[ei] = updatedRecord; else monthRecs.unshift(updatedRecord);
+                    monthRecs.sort(sortFn);
+                    await saveMonthRecords(originalMonth, monthRecs);
+                } else {
+                    // Date moved to different month
+                    let oldRecs = await getMonthRecords(originalMonth);
+                    oldRecs = oldRecs.filter(r => r.recordedAt !== editingUid);
+                    oldRecs.sort(sortFn);
+                    await saveMonthRecords(originalMonth, oldRecs);
+
+                    let newRecs = await getMonthRecords(newRecordMonth);
+                    newRecs.unshift(updatedRecord);
+                    newRecs.sort(sortFn);
+                    await saveMonthRecords(newRecordMonth, newRecs);
+                }
 
                 closeEditModal();
                 Swal.fire({
@@ -2628,9 +2680,11 @@
             if (res.isConfirmed) {
                 const idx = salesData.findIndex(r => r.recordedAt === uid);
                 if (idx !== -1) {
-                    salesData.splice(idx, 1);
+                    const recMonth = String(salesData[idx]?.date || '').slice(0, 7) || currentMonth;
                     showLoading(true);
-                    await window.db.collection('system').doc(currentStore).set({ records: salesData });
+                    let monthRecs = await getMonthRecords(recMonth);
+                    monthRecs = monthRecs.filter(r => r.recordedAt !== uid);
+                    await saveMonthRecords(recMonth, monthRecs);
                     showLoading(false);
                 }
             }
@@ -2791,49 +2845,55 @@
                     if (r.items && r.items.length > 0) s += r.items.length * 10;
                     if (r.notes) s += r.notes.length;
                     if (r.customerName) s += 10;
-                    if (r.isPaid) s += 100; // Manual paid status is high value
-                    if (r.receivedTime) s += 50; // completion time found
+                    if (r.isPaid) s += 100;
+                    if (r.receivedTime) s += 50;
                     return s;
                 };
 
-                recordsToImport.forEach(newRec => {
-                    // Find duplicate
-                    const existingIdx = salesData.findIndex(r =>
-                        (r.orderIdFull && newRec.orderIdFull && r.orderIdFull === newRec.orderIdFull) ||
-                        (!r.orderIdFull && !newRec.orderIdFull && r.orderId === newRec.orderId && r.date === newRec.date)
-                    );
-
-                    if (existingIdx === -1) {
-                        salesData.push(newRec);
-                        addedCount++;
-                    } else {
-                        const existingRec = salesData[existingIdx];
-                        const sOld = getScore(existingRec);
-                        const sNew = getScore(newRec);
-
-                        if (sNew > sOld) {
-                            // Link existing manual info if any
-                            const merged = {
-                                ...newRec,
-                                customerName: existingRec.customerName || newRec.customerName,
-                                customerPhone: existingRec.customerPhone || newRec.customerPhone,
-                                isPaid: existingRec.isPaid || newRec.isPaid,
-                                paidDate: existingRec.paidDate || newRec.paidDate,
-                                paidTime: existingRec.paidTime || newRec.paidTime,
-                                recordedAt: existingRec.recordedAt // Keep original order
-                            };
-                            salesData[existingIdx] = merged;
-                            updatedCount++;
-                        } else {
-                            ignoredCount++;
-                        }
-                    }
+                // Group new records by month
+                const byMonth = {};
+                recordsToImport.forEach(r => {
+                    const m = r.date.slice(0, 7);
+                    if (!byMonth[m]) byMonth[m] = [];
+                    byMonth[m].push(r);
                 });
 
-                // เรียงลำดับตามวันที่ใหม่
-                salesData.sort((a, b) => b.date.localeCompare(a.date) || b.recordedAt - a.recordedAt);
+                // Process each month separately
+                for (const [month, newRecs] of Object.entries(byMonth)) {
+                    let existingRecs = await getMonthRecords(month);
 
-                await window.db.collection('system').doc(currentStore).set({ records: salesData });
+                    newRecs.forEach(newRec => {
+                        const existIdx = existingRecs.findIndex(r =>
+                            (r.orderIdFull && newRec.orderIdFull && r.orderIdFull === newRec.orderIdFull) ||
+                            (!r.orderIdFull && !newRec.orderIdFull && r.orderId === newRec.orderId && r.date === newRec.date)
+                        );
+                        if (existIdx === -1) {
+                            existingRecs.push(newRec);
+                            addedCount++;
+                        } else {
+                            const sOld = getScore(existingRecs[existIdx]);
+                            const sNew = getScore(newRec);
+                            if (sNew > sOld) {
+                                existingRecs[existIdx] = {
+                                    ...newRec,
+                                    customerName: existingRecs[existIdx].customerName || newRec.customerName,
+                                    customerPhone: existingRecs[existIdx].customerPhone || newRec.customerPhone,
+                                    isPaid: existingRecs[existIdx].isPaid || newRec.isPaid,
+                                    paidDate: existingRecs[existIdx].paidDate || newRec.paidDate,
+                                    paidTime: existingRecs[existIdx].paidTime || newRec.paidTime,
+                                    recordedAt: existingRecs[existIdx].recordedAt
+                                };
+                                updatedCount++;
+                            } else { ignoredCount++; }
+                        }
+                    });
+
+                    existingRecs.sort((a, b) => b.date.localeCompare(a.date) || b.recordedAt - a.recordedAt);
+                    await saveMonthRecords(month, existingRecs);
+                }
+
+                // Refresh current month view
+                await reloadMonthIndex();
                 showLoading(false);
                 closeImportModal();
 
@@ -2845,6 +2905,7 @@
                             <div class="flex justify-between"><span>เพิ่มใหม่:</span> <span class="font-bold text-emerald-600">${addedCount}</span></div>
                             <div class="flex justify-between"><span>อัปเดตข้อมูล:</span> <span class="font-bold text-blue-600">${updatedCount}</span></div>
                             <div class="flex justify-between"><span>ข้าม (ซ้ำ):</span> <span class="font-bold text-slate-400">${ignoredCount}</span></div>
+                            <div class="flex justify-between border-t pt-2 mt-2"><span>เดือนที่นำเข้า:</span> <span class="font-bold text-purple-600">${Object.keys(byMonth).sort().join(', ')}</span></div>
                         </div>
                     `,
                     confirmButtonColor: '#00B14F'
@@ -2852,6 +2913,7 @@
             } else {
                 Swal.fire('ไม่พบข้อมูล', 'ไม่พบรายการที่สำเร็จ (FINISH) ในข้อมูลที่วาง', 'warning');
             }
+
         }
 
         // File Selection Handlers
