@@ -343,6 +343,19 @@
                         </button>
                     </div>
                 </div>
+
+                <!-- Store Tabs -->
+                <div
+                    class="mt-4 pt-4 flex gap-2 overflow-x-auto no-scrollbar pb-1 border-t border-slate-100 dark:border-slate-800">
+                    <button id="tab-lineman_sales" onclick="switchStore('lineman_sales')"
+                        class="px-5 py-2.5 rounded-xl font-black text-sm transition-all bg-lineman text-white shadow-lg shadow-green-500/30 whitespace-nowrap">
+                        <i class="fas fa-store mr-2"></i> สาขาหลัก (Yum)
+                    </button>
+                    <button id="tab-lineman_sales_pnp" onclick="switchStore('lineman_sales_pnp')"
+                        class="px-5 py-2.5 rounded-xl font-black text-sm transition-all bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white whitespace-nowrap">
+                        <i class="fas fa-pepper-hot mr-2 text-rose-500"></i> สาขารอง (PNP)
+                    </button>
+                </div>
             </nav>
 
             <!-- Financial Summary Cards -->
@@ -424,7 +437,8 @@
                     </div>
                     <div class="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                         <div id="stat-avg-progress" class="h-full bg-amber-400 transition-all duration-1000"
-                            style="width: 0%"></div>
+                            style="width: 0%">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -445,8 +459,9 @@
                                     Transaction History</p>
                             </div>
                             <div class="flex items-center gap-2">
-                                <input type="month" id="monthFilter" onchange="renderUI()"
-                                    class="text-xs p-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-lineman outline-none">
+                                <select id="monthFilter" onchange="renderUI()"
+                                    class="text-xs p-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-lineman outline-none font-bold cursor-pointer">
+                                </select>
                                 <button onclick="openImportModal()"
                                     class="px-4 py-2.5 rounded-xl bg-lineman/10 text-lineman font-bold hover:bg-lineman hover:text-white transition-all text-xs border border-lineman/20">
                                     <i class="fas fa-file-import mr-2"></i> IMPORT
@@ -1161,8 +1176,9 @@
             <!-- Filter -->
             <div class="p-4 bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700">
                 <div class="relative">
-                    <input type="month" id="payoutMonthFilter" onchange="renderPayoutUI()"
-                        class="w-full bg-slate-100 dark:bg-slate-900 border-none rounded-xl px-4 py-3 text-sm font-bold text-slate-600 dark:text-slate-300 outline-none">
+                    <select id="payoutMonthFilter" onchange="renderPayoutUI()"
+                        class="w-full bg-slate-100 dark:bg-slate-900 border-none rounded-xl px-4 py-3 text-sm font-bold text-slate-600 dark:text-slate-300 outline-none cursor-pointer">
+                    </select>
                 </div>
             </div>
 
@@ -1197,6 +1213,9 @@
         let editingUid = null;
         let currentSelectedDate = null; // null means "All" or "Default to Today"
         const GP_RATE = 0.30; // GP 30% รวม VAT
+
+        let currentStore = 'lineman_sales';
+        let unsubscribeSync = null;
 
         const safeSetText = (id, text) => {
             const el = id instanceof HTMLElement ? id : document.getElementById(id);
@@ -1546,8 +1565,12 @@
             document.getElementById('e-receivedDate').oninput = (e) => { e.target.dataset.manual = "true"; };
             document.getElementById('e-paidDate').oninput = (e) => { e.target.dataset.manual = "true"; };
 
-            document.getElementById('monthFilter').value = now.toISOString().slice(0, 7);
-            document.getElementById('payoutMonthFilter').value = now.toISOString().slice(0, 7);
+            const currentMonthStr = now.toISOString().slice(0, 7);
+            const initialOpt = `<option value="${currentMonthStr}">${currentMonthStr}</option>`;
+            document.getElementById('monthFilter').innerHTML = initialOpt;
+            document.getElementById('monthFilter').value = currentMonthStr;
+            document.getElementById('payoutMonthFilter').innerHTML = initialOpt;
+            document.getElementById('payoutMonthFilter').value = currentMonthStr;
 
             if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
                 document.documentElement.classList.add('dark');
@@ -1581,12 +1604,88 @@
         }
 
         async function syncData() {
-            window.db.collection('system').doc('lineman_sales').onSnapshot(doc => {
+            if (unsubscribeSync) {
+                unsubscribeSync();
+            }
+
+            showLoading(true);
+            unsubscribeSync = window.db.collection('system').doc(currentStore).onSnapshot(doc => {
+                showLoading(false);
                 if (doc.exists) {
                     salesData = doc.data().records || [];
+                    updateMonthDropdowns();
                     renderUI();
                 } else {
-                    window.db.collection('system').doc('lineman_sales').set({ records: [] });
+                    window.db.collection('system').doc(currentStore).set({ records: [] });
+                }
+            });
+        }
+
+        function switchStore(storeId) {
+            if (currentStore === storeId) return;
+            currentStore = storeId;
+
+            // Update Tab UI
+            const tabs = ['lineman_sales', 'lineman_sales_pnp'];
+            tabs.forEach(tab => {
+                const el = document.getElementById(`tab-${tab}`);
+                if (el) {
+                    if (tab === storeId) {
+                        el.className = "px-5 py-2.5 rounded-xl font-black text-sm transition-all bg-lineman text-white shadow-lg shadow-green-500/30 whitespace-nowrap";
+                    } else {
+                        el.className = "px-5 py-2.5 rounded-xl font-black text-sm transition-all bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white whitespace-nowrap";
+                    }
+                }
+            });
+
+            // Sync New Store Data
+            syncData();
+        }
+
+        function updateMonthDropdowns() {
+            const now = new Date();
+            const currentMonthStr = now.toISOString().slice(0, 7);
+            const monthsSet = new Set();
+            monthsSet.add(currentMonthStr);
+
+            if (salesData && salesData.length > 0) {
+                salesData.forEach(r => {
+                    if (r.date) {
+                        const m = String(r.date).slice(0, 7);
+                        if (m.length === 7) monthsSet.add(m);
+                    }
+                    if (r.paidDate) {
+                        const m = String(r.paidDate).slice(0, 7);
+                        if (m.length === 7) monthsSet.add(m);
+                    }
+                });
+            }
+
+            const sortedMonths = Array.from(monthsSet).sort().reverse();
+            const thMnList = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+            const formatMonthTH = (yyyyMM) => {
+                const parts = yyyyMM.split('-');
+                if (parts.length < 2) return yyyyMM;
+                const mIdx = parseInt(parts[1]) - 1;
+                const thYear = parseInt(parts[0]) + 543;
+                return `${thMnList[mIdx]} ${thYear}`;
+            };
+
+            let optionsHTML = '';
+            sortedMonths.forEach(m => {
+                optionsHTML += `<option value="${m}">${formatMonthTH(m)} (${m})</option>`;
+            });
+
+            ['monthFilter', 'payoutMonthFilter'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    const currentVal = el.value || currentMonthStr;
+                    el.innerHTML = optionsHTML;
+                    if (sortedMonths.includes(currentVal)) {
+                        el.value = currentVal;
+                    } else {
+                        el.value = sortedMonths[0]; // fallback
+                    }
                 }
             });
         }
@@ -2299,7 +2398,7 @@
                 }
 
                 salesData.sort((a, b) => b.date.localeCompare(a.date) || b.recordedAt - a.recordedAt);
-                await window.db.collection('system').doc('lineman_sales').set({ records: salesData });
+                await window.db.collection('system').doc(currentStore).set({ records: salesData });
 
                 closeEditModal();
                 Swal.fire({
@@ -2531,7 +2630,7 @@
                 if (idx !== -1) {
                     salesData.splice(idx, 1);
                     showLoading(true);
-                    await window.db.collection('system').doc('lineman_sales').set({ records: salesData });
+                    await window.db.collection('system').doc(currentStore).set({ records: salesData });
                     showLoading(false);
                 }
             }
