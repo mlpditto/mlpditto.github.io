@@ -2199,12 +2199,12 @@
                         <td class="p-4 text-center relative max-w-[120px]">
                             <div class="flex flex-col items-center gap-2">
                                 ${record.isPaid ? `
-                                    <div class="bg-emerald-100/80 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 text-[9px] font-black px-3 py-1.5 rounded-full shadow-sm flex items-center gap-1.5 border border-emerald-200 dark:border-emerald-700">
+                                    <div onclick="quickUnsetPaid(${record.recordedAt})" class="cursor-pointer bg-emerald-100/80 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 text-[9px] font-black px-3 py-1.5 rounded-full shadow-sm flex items-center gap-1.5 border border-emerald-200 dark:border-emerald-700 hover:scale-105 active:scale-95 transition-all">
                                         <i class="fas fa-check-circle"></i> PAID
                                     </div>
-                                    <div class="text-[8px] font-bold text-slate-400">${record.paidDate || record.date}</div>
+                                    <div class="text-[8px] font-bold text-slate-400 mt-1">${record.paidDate || record.date} | ${record.paidTime || '--:--'}</div>
                                 ` : `
-                                    <div class="bg-slate-100/50 dark:bg-slate-800/50 text-slate-400 text-[9px] font-black px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700">
+                                    <div onclick="quickSetPaid(${record.recordedAt})" class="cursor-pointer bg-slate-100/50 dark:bg-slate-800/50 text-slate-400 text-[9px] font-black px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 hover:scale-105 active:scale-95 transition-all">
                                         UNPAID
                                     </div>
                                 `}
@@ -2756,6 +2756,120 @@
                 showLoading(false);
                 console.error("Quick Toggle No Fee Error:", err);
                 Swal.fire('Error', err.message, 'error');
+            }
+        }
+
+        async function quickSetPaid(uid) {
+            try {
+                const idx = salesData.findIndex(r => r.recordedAt === uid);
+                if (idx === -1) return;
+                const record = salesData[idx];
+
+                const now = new Date();
+                const defaultDate = now.toISOString().slice(0, 10);
+                const defaultHH = now.getHours().toString().padStart(2, '0');
+                const defaultMM = now.getMinutes().toString().padStart(2, '0');
+
+                const { value: formValues } = await Swal.fire({
+                    title: 'บันทึกการชำระเงิน',
+                    html: `
+                        <div class="p-2 space-y-4 text-left">
+                            <div>
+                                <label class="text-[10px] font-black text-slate-400 uppercase mb-1 block">วันที่ได้รับเงิน</label>
+                                <input id="swal-p-date" type="date" value="${defaultDate}" class="swal2-input !m-0 w-full text-sm font-bold !rounded-xl !border-slate-100">
+                            </div>
+                            <div class="flex gap-4">
+                                <div class="flex-1">
+                                    <label class="text-[10px] font-black text-slate-400 uppercase mb-1 block">ชั่วโมง (HH)</label>
+                                    <input id="swal-p-hh" type="number" value="${defaultHH}" min="0" max="23" oninput="if(value.length>2)value=value.slice(0,2); if(value>23)value=23" class="swal2-input !m-0 w-full text-center font-black !rounded-xl !border-slate-100">
+                                </div>
+                                <div class="flex-1">
+                                    <label class="text-[10px] font-black text-slate-400 uppercase mb-1 block">นาที (MM)</label>
+                                    <input id="swal-p-mm" type="number" value="${defaultMM}" min="0" max="59" oninput="if(value.length>2)value=value.slice(0,2); if(value>59)value=59" class="swal2-input !m-0 w-full text-center font-black !rounded-xl !border-slate-100">
+                                </div>
+                            </div>
+                        </div>
+                    `,
+                    focusConfirm: false,
+                    showCancelButton: true,
+                    confirmButtonText: '<i class="fas fa-check-circle mr-2"></i> บันทึก PAID',
+                    confirmButtonColor: '#10b981',
+                    cancelButtonText: 'ยกเลิก',
+                    preConfirm: () => {
+                        const d = document.getElementById('swal-p-date').value;
+                        const h = document.getElementById('swal-p-hh').value.toString().padStart(2, '0');
+                        const m = document.getElementById('swal-p-mm').value.toString().padStart(2, '0');
+                        if (!d || !h || !m) {
+                            Swal.showValidationMessage('กรุณากรอกวันที่และเวลาให้ครบถ้วน');
+                            return false;
+                        }
+                        return { date: d, time: `${h}:${m}` };
+                    }
+                });
+
+                if (formValues) {
+                    showLoading(true);
+                    const recMonth = String(record.date || '').slice(0, 7) || currentMonth;
+                    let monthRecs = await getMonthRecords(recMonth);
+                    const targetIdx = monthRecs.findIndex(r => r.recordedAt === uid);
+                    if (targetIdx !== -1) {
+                        const r = monthRecs[targetIdx];
+                        r.isPaid = true;
+                        r.paidDate = formValues.date;
+                        r.paidTime = formValues.time;
+                        await saveMonthRecords(recMonth, monthRecs);
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'บันทึกสถานะ PAID แล้ว',
+                            toast: true,
+                            position: 'top-end',
+                            timer: 2000,
+                            showConfirmButton: false,
+                            timerProgressBar: true
+                        });
+                    }
+                    showLoading(false);
+                }
+            } catch (err) {
+                showLoading(false);
+                console.error("Quick Set Paid Error:", err);
+            }
+        }
+
+        async function quickUnsetPaid(uid) {
+            const res = await Swal.fire({
+                title: 'ยกเลิกการโอนเงิน?',
+                text: "ต้องการสลับสถานะกลับเป็น UNPAID ใช่หรือไม่?",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'ใช่, เปลี่ยนเป็น UNPAID',
+                cancelButtonText: 'คงเดิม',
+                confirmButtonColor: '#64748b'
+            });
+
+            if (res.isConfirmed) {
+                try {
+                    const idx = salesData.findIndex(r => r.recordedAt === uid);
+                    if (idx === -1) return;
+                    const record = salesData[idx];
+                    const recMonth = String(record.date || '').slice(0, 7) || currentMonth;
+
+                    showLoading(true);
+                    let monthRecs = await getMonthRecords(recMonth);
+                    const targetIdx = monthRecs.findIndex(r => r.recordedAt === uid);
+                    if (targetIdx !== -1) {
+                        const r = monthRecs[targetIdx];
+                        r.isPaid = false;
+                        delete r.paidDate;
+                        delete r.paidTime;
+                        await saveMonthRecords(recMonth, monthRecs);
+                    }
+                    showLoading(false);
+                } catch (err) {
+                    showLoading(false);
+                    console.error("Quick Unset Paid Error:", err);
+                }
             }
         }
 
