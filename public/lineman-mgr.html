@@ -1421,8 +1421,9 @@
 
                 // Auto-calc cost from master if possible
                 const master = masterProducts.find(p => p.name === name);
-                if (master && master.cost) {
-                    totalCost += (qty * master.cost);
+                const masterCost = master ? (master.cost || (master.prices && master.prices['COST']) || 0) : 0;
+                if (masterCost > 0) {
+                    totalCost += (qty * masterCost);
                 }
             });
             document.getElementById(displayId).value = totalGross.toFixed(2);
@@ -1430,7 +1431,7 @@
             // Auto-update cost field
             const costId = displayId === 'grossAmount' ? 'orderCost' : 'e-orderCost';
             const costField = document.getElementById(costId);
-            if (costField && totalCost > 0) {
+            if (costField) {
                 costField.value = totalCost.toFixed(2);
             }
 
@@ -2648,6 +2649,11 @@
 
             document.getElementById('e-grossAmount').value = record.gross;
             document.getElementById('e-orderCost').value = record.cost || 0;
+            // Auto-refresh cost if 0/empty to help update old records
+            if (!record.cost) {
+                calculateTotalFromItems('e-items-container', 'e-grossAmount');
+            }
+
             document.getElementById('e-isNoFee').checked = record.isNoFee;
             document.getElementById('e-isManualNet').checked = record.isManualNet;
             document.getElementById('e-manualNet').value = record.net || record.gross;
@@ -3020,9 +3026,10 @@
 
                         const master = masterProducts.find(m => m.name === name);
                         const price = (master && master.prices) ? (master.prices['LINEMAN'] || master.prices[Object.keys(master.prices)[0]] || 0) : 0;
-                        let rowCost = (master && master.cost) ? (qty * master.cost) : 0;
+                        const masterCost = master ? (master.cost || (master.prices && master.prices['COST']) || 0) : 0;
+                        let rowCost = masterCost ? (qty * masterCost) : 0;
 
-                        items.push({ name, qty, price, cost: master?.cost || 0 });
+                        items.push({ name, qty, price, cost: masterCost });
                         return rowCost;
                     }).reduce((a, b) => a + (b || 0), 0);
 
