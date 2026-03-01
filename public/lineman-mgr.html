@@ -349,11 +349,11 @@
                     class="mt-4 pt-4 flex gap-2 overflow-x-auto no-scrollbar pb-1 border-t border-slate-100 dark:border-slate-800">
                     <button id="tab-lineman_sales" onclick="switchStore('lineman_sales')"
                         class="px-5 py-2.5 rounded-xl font-black text-sm transition-all bg-lineman text-white shadow-lg shadow-green-500/30 whitespace-nowrap">
-                        <i class="fas fa-store mr-2"></i> สาขาหลัก (MLP)
+                        <i class="fas fa-store mr-2"></i> MLP
                     </button>
                     <button id="tab-lineman_sales_pnp" onclick="switchStore('lineman_sales_pnp')"
                         class="px-5 py-2.5 rounded-xl font-black text-sm transition-all bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white whitespace-nowrap">
-                        <i class="fas fa-pepper-hot mr-2 text-rose-500"></i> สาขารอง (PNP)
+                        <i class="fas fa-pepper-hot mr-2 text-rose-500"></i> PNP
                     </button>
                 </div>
             </nav>
@@ -2892,8 +2892,23 @@
                     await saveMonthRecords(month, existingRecs);
                 }
 
-                // Refresh current month view
-                await reloadMonthIndex();
+                // Batch-update index with ALL imported months at once (more reliable)
+                const importedMonths = Object.keys(byMonth).sort();
+                try {
+                    const idxRef = window.db.collection('system').doc(getIndexDocId());
+                    const idxDoc = await idxRef.get();
+                    const existingMonths = idxDoc.exists ? (idxDoc.data().months || []) : [];
+                    const allMonths = [...new Set([...existingMonths, ...importedMonths])].sort().reverse();
+                    await idxRef.set({ months: allMonths });
+                    updateMonthDropdownsFromList(allMonths);
+                    // Auto-switch to the oldest imported month so user can verify
+                    const oldestImported = importedMonths[0];
+                    if (oldestImported && oldestImported !== currentMonth) {
+                        subscribeToMonth(oldestImported);
+                        document.getElementById('monthFilter').value = oldestImported;
+                    }
+                } catch (idxErr) { console.error('Index rebuild error:', idxErr); }
+
                 showLoading(false);
                 closeImportModal();
 
@@ -2905,7 +2920,7 @@
                             <div class="flex justify-between"><span>เพิ่มใหม่:</span> <span class="font-bold text-emerald-600">${addedCount}</span></div>
                             <div class="flex justify-between"><span>อัปเดตข้อมูล:</span> <span class="font-bold text-blue-600">${updatedCount}</span></div>
                             <div class="flex justify-between"><span>ข้าม (ซ้ำ):</span> <span class="font-bold text-slate-400">${ignoredCount}</span></div>
-                            <div class="flex justify-between border-t pt-2 mt-2"><span>เดือนที่นำเข้า:</span> <span class="font-bold text-purple-600">${Object.keys(byMonth).sort().join(', ')}</span></div>
+                            <div class="flex justify-between border-t pt-2 mt-2"><span>เดือนที่นำเข้า:</span> <span class="font-bold text-purple-600">${importedMonths.join(', ')}</span></div>
                         </div>
                     `,
                     confirmButtonColor: '#00B14F'
