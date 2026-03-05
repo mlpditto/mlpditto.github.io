@@ -238,7 +238,8 @@
             <div class="sidebar-link" onclick="showSection('lineman')"><span class="icon"><i
                         class="fas fa-motorcycle"></i></span> LINE MAN Sales</div>
             <div class="sidebar-link font-black text-orange-600 bg-orange-50/50" onclick="showSection('access-codes')">
-                <span class="icon"><i class="fas fa-key"></i></span> Access Codes</div>
+                <span class="icon"><i class="fas fa-key"></i></span> Access Codes
+            </div>
             <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest px-2 mb-1 mt-4">ภาพรวม</p>
             <div class="sidebar-link" onclick="showSection('stats')"><span class="icon"><i
                         class="fas fa-chart-bar"></i></span> สถิติ</div>
@@ -363,6 +364,16 @@
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+                    <!-- Pagination Footer -->
+                    <div class="bg-gray-50/50 border-t border-gray-100 px-6 py-4 flex items-center justify-between">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wide">
+                            Showing <span id="page-range" class="text-indigo-600">0 - 0</span> of <span
+                                id="total-filtered" class="text-gray-600">0</span> items
+                        </p>
+                        <div id="pagination-controls" class="flex gap-1.5">
+                            <!-- Page buttons -->
+                        </div>
                     </div>
                 </div>
             </section>
@@ -782,6 +793,10 @@
         let masterCompanies = new Set();
         let emImageBase64 = null;
 
+        // Pagination State
+        let currentPage = 1;
+        const itemsPerPage = 30;
+
         // ===== AUTH =====
         auth.onAuthStateChanged(async user => {
             if (!user) { location.href = 'ecom.html'; return; }
@@ -893,6 +908,7 @@
                 return true;
             });
             document.getElementById('filter-count').innerText = filteredProducts.length;
+            currentPage = 1; // Reset to first page
             renderProductTable();
         }
 
@@ -900,14 +916,30 @@
             const tbody = document.getElementById('product-table-body');
             if (filteredProducts.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="12" class="text-center py-16 text-gray-300"><i class="fas fa-box-open text-4xl mb-2 block"></i>ไม่พบสินค้า</td></tr>`;
+                document.getElementById('page-range').innerText = '0 - 0';
+                document.getElementById('total-filtered').innerText = '0';
+                document.getElementById('pagination-controls').innerHTML = '';
                 return;
             }
-            tbody.innerHTML = filteredProducts.map((p, i) => {
+
+            const total = filteredProducts.length;
+            const totalPages = Math.ceil(total / itemsPerPage);
+            if (currentPage > totalPages) currentPage = totalPages;
+            if (currentPage < 1) currentPage = 1;
+
+            const startIdx = (currentPage - 1) * itemsPerPage;
+            const endIdx = Math.min(startIdx + itemsPerPage, total);
+            const pageItems = filteredProducts.slice(startIdx, endIdx);
+
+            document.getElementById('page-range').innerText = `${startIdx + 1} - ${endIdx}`;
+            document.getElementById('total-filtered').innerText = total;
+
+            tbody.innerHTML = pageItems.map((p, i) => {
+                const globalIndex = startIdx + i + 1;
                 const vis = p.ecomVisibility || 'show';
                 const stock = p.ecomStock !== undefined ? parseInt(p.ecomStock) : '—';
                 const isLow = stock !== '—' && stock < 10;
                 const imgSrc = p.imageUrl || '';
-                const safeName = (p.name || p.id || '').replace(/'/g, "\\'");
                 const cost = p.cost || (p.prices && p.prices['COST']) || '';
                 const lmPrice = (p.prices && (p.prices['LINEMAN'] || p.prices['LINE_MAN'])) || '';
                 const isSelected = selectedIds.has(p.id);
@@ -918,7 +950,7 @@
                 <td class="px-3 py-2.5" onclick="event.stopPropagation()">
                     <input type="checkbox" onchange="toggleSelectProduct('${safeId}')" ${isSelected ? 'checked' : ''} class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
                 </td>
-                <td class="px-3 py-2.5 text-gray-400 text-xs font-bold">${i + 1}</td>
+                <td class="px-3 py-2.5 text-gray-400 text-xs font-bold">${globalIndex}</td>
                 <td class="px-3 py-2.5">${imgSrc
                         ? `<img src="${imgSrc}" class="w-9 h-9 object-contain rounded-lg bg-gray-50 border">`
                         : `<div class="w-9 h-9 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-300 font-black text-xs border border-indigo-100">${(p.name || '?').charAt(0)}</div>`
@@ -937,13 +969,44 @@
                     <span class="badge ${vis === 'show' ? 'badge-show' : 'badge-hide'} animate-pulse-subtle">${vis === 'show' ? 'ACTIVE' : 'HIDDEN'}</span>
                 </td>
                 <td class="px-3 py-2.5 text-center">
-                    <button onclick="event.stopPropagation(); quickToggleVisibility('${safeName}', '${vis}')" class="text-xs text-gray-400 hover:text-indigo-600 transition p-1">
+                    <button onclick="event.stopPropagation(); quickToggleVisibility('${p.id.replace(/'/g, "\\'")}', '${vis}')" class="text-xs text-gray-400 hover:text-indigo-600 transition p-1">
                         <i class="fas fa-ellipsis-v"></i>
                     </button>
                 </td>
             </tr>`;
             }).join('');
+
+            renderPagination(totalPages);
             updateSelectionUI();
+        }
+
+        function renderPagination(total) {
+            const controls = document.getElementById('pagination-controls');
+            let html = '';
+
+            // Prev Button
+            html += `<button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''} class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 transition disabled:opacity-30 disabled:hover:bg-transparent"><i class="fas fa-chevron-left text-[10px]"></i></button>`;
+
+            // Simple pagination logic (show current and some around)
+            const range = 2;
+            for (let i = 1; i <= total; i++) {
+                if (i === 1 || i === total || (i >= currentPage - range && i <= currentPage + range)) {
+                    html += `<button onclick="changePage(${i})" class="w-8 h-8 rounded-lg text-[10px] font-bold transition ${currentPage === i ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100' : 'text-gray-500 hover:bg-gray-100 border border-transparent'}">${i}</button>`;
+                } else if (i === currentPage - range - 1 || i === currentPage + range + 1) {
+                    html += `<span class="w-8 h-8 flex items-center justify-center text-gray-300 text-[10px]">...</span>`;
+                }
+            }
+
+            // Next Button
+            html += `<button onclick="changePage(${currentPage + 1})" ${currentPage === total ? 'disabled' : ''} class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 transition disabled:opacity-30 disabled:hover:bg-transparent"><i class="fas fa-chevron-right text-[10px]"></i></button>`;
+
+            controls.innerHTML = html;
+        }
+
+        function changePage(p) {
+            currentPage = p;
+            renderProductTable();
+            document.querySelector('main').scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         // ===== SELECTION & MERGE =====
