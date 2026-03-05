@@ -174,10 +174,35 @@
             display: block;
         }
 
-        .compact-row {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 12px;
+        .alpha-btn {
+            width: 26px;
+            height: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 800;
+            color: #64748b;
+            border-radius: 8px;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+
+        .alpha-btn:hover {
+            background: #eef2ff;
+            color: #4f46e5;
+        }
+
+        .alpha-btn.active {
+            background: #4f46e5 !important;
+            color: white !important;
+            box-shadow: 0 4px 6px -1px rgb(79 70 229 / 0.2);
+        }
+
+        .alpha-btn.disabled {
+            opacity: 0.2;
+            pointer-events: none;
         }
     </style>
 </head>
@@ -310,7 +335,15 @@
             <section id="section-products" class="fade-slide">
                 <!-- Toolbar -->
                 <div class="flex flex-wrap items-center gap-3 mb-4">
-                    <h2 class="text-lg font-black text-gray-800 flex-1">รายการสินค้าทั้งหมด</h2>
+                    <h2 class="text-lg font-black text-gray-800 shrink-0">รายการสินค้าทั้งหมด</h2>
+
+                    <!-- Alpha Navbar -->
+                    <div class="flex items-center gap-0.5 bg-gray-100/50 p-1 rounded-xl overflow-x-auto no-scrollbar mx-2"
+                        id="alpha-bar">
+                        <!-- Filled by JS -->
+                    </div>
+
+                    <div class="flex-1"></div>
                     <div class="relative">
                         <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
                         <input id="admin-search" oninput="applyAdminFilter()" type="text"
@@ -793,6 +826,7 @@
         let customCategories = new Set(['All', 'OTC', 'Supplies', 'Supplements', 'Dermocare']);
         let masterCompanies = new Set();
         let emImageBase64 = null;
+        let activeAlpha = 'ALL';
 
         // Pagination State
         let currentPage = 1;
@@ -851,6 +885,28 @@
             renderCategorySection();
             renderPricingTable();
             renderStatsSection();
+            renderAlphaBar();
+        }
+
+        function renderAlphaBar() {
+            const bar = document.getElementById('alpha-bar');
+            const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+            const chars = ["ALL", ...letters, "#"];
+
+            bar.innerHTML = chars.map(c => `
+                <button onclick="setAlphaFilter('${c}')" id="alpha-${c}" 
+                    class="alpha-btn ${activeAlpha === c ? 'active' : ''} flex-shrink-0">
+                    ${c}
+                </button>
+            `).join('');
+        }
+
+        function setAlphaFilter(c) {
+            activeAlpha = c;
+            renderAlphaBar();
+            // Reset search box if it was used
+            // document.getElementById('admin-search').value = ''; 
+            applyAdminFilter();
         }
 
         function updateCompanySuggestions() {
@@ -904,9 +960,26 @@
             filteredProducts = allProducts.filter(p => {
                 const name = (p.name || p.id || '').toLowerCase();
                 const aliasesStr = (p.aliases || []).join(' ').toLowerCase();
+
+                // 1. Alpha Filter
+                if (activeAlpha !== 'ALL') {
+                    const firstChar = (p.name || p.id || '').charAt(0).toUpperCase();
+                    if (activeAlpha === '#') {
+                        // Include if NOT A-Z
+                        if (/[A-Z]/.test(firstChar)) return false;
+                    } else {
+                        // Include only if match
+                        if (firstChar !== activeAlpha) return false;
+                    }
+                }
+
+                // 2. Search Query
                 if (q && !name.includes(q) && !(p.ecomCategory || '').toLowerCase().includes(q) && !aliasesStr.includes(q)) return false;
+
+                // 3. Category
                 if (cat && (p.ecomCategory || 'All') !== cat) return false;
 
+                // 4. Visibility (Soft Delete)
                 const pVis = p.ecomVisibility || 'show';
                 if (vis) {
                     if (pVis !== vis) return false;
