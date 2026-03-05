@@ -151,6 +151,34 @@
         .fade-slide {
             animation: fadeSlide .25s ease;
         }
+
+        .tab-btn {
+            padding: 10px 16px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #64748b;
+            border-bottom: 2px solid transparent;
+            transition: all .2s;
+        }
+
+        .tab-btn.active {
+            color: #4f46e5;
+            border-bottom-color: #4f46e5;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .compact-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+        }
     </style>
 </head>
 
@@ -209,6 +237,8 @@
                         class="fas fa-tags"></i></span> ราคาและหน่วย</div>
             <div class="sidebar-link" onclick="showSection('lineman')"><span class="icon"><i
                         class="fas fa-motorcycle"></i></span> LINE MAN Sales</div>
+            <div class="sidebar-link font-black text-orange-600 bg-orange-50/50" onclick="showSection('access-codes')">
+                <span class="icon"><i class="fas fa-key"></i></span> Access Codes</div>
             <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest px-2 mb-1 mt-4">ภาพรวม</p>
             <div class="sidebar-link" onclick="showSection('stats')"><span class="icon"><i
                         class="fas fa-chart-bar"></i></span> สถิติ</div>
@@ -222,6 +252,37 @@
 
         <!-- Main -->
         <main class="flex-1 overflow-y-auto p-6">
+
+            <!-- === SECTION: ACCESS CODES === -->
+            <section id="section-access-codes" class="fade-slide hidden">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 class="text-xl font-black text-gray-800">จัดการรหัสเข้าใช้งาน (Access Codes)</h2>
+                        <p class="text-xs text-gray-400 font-bold">แชร์รหัสเหล่านี้ให้ USER เพื่อเข้าถึงหน้า ECOM</p>
+                    </div>
+                    <button onclick="generateNewAccessCode()"
+                        class="bg-indigo-600 text-white px-5 py-2.5 rounded-2xl font-black text-xs shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition flex items-center gap-2">
+                        <i class="fas fa-magic"></i> สร้างรหัสใหม่
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr
+                                class="bg-gray-50 border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                <th class="px-6 py-4">Status</th>
+                                <th class="px-6 py-4">Access Code</th>
+                                <th class="px-6 py-4">Created At</th>
+                                <th class="px-3 py-4 text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="access-codes-table-body">
+                            <!-- Rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
 
             <!-- Stats Bar -->
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" id="stats-bar">
@@ -280,18 +341,19 @@
                             <thead>
                                 <tr
                                     class="bg-gray-50 border-b border-gray-100 text-[10px] font-black text-gray-500 uppercase tracking-wider">
-                                    <th class="px-3 py-3 text-left w-8">#</th>
-                                    <th class="px-3 py-3 text-left">รูป</th>
-                                    <th class="px-3 py-3 text-left min-w-[150px]">ชื่อสินค้า</th>
+                                    <th class="px-3 py-3 text-left w-10">
+                                        <input type="checkbox" id="select-all-cb" onchange="toggleSelectAll(this)"
+                                            class="w-4 h-4 rounded border-gray-300">
+                                    </th>
+                                    <th class="px-3 py-3 text-left w-8 text-gray-400">#</th>
+                                    <th class="px-3 py-3 text-left w-12 text-gray-400">รูป</th>
+                                    <th class="px-3 py-3 text-left min-w-[200px]">ชื่อสินค้า</th>
                                     <th class="px-3 py-3 text-left">หมวด</th>
-                                    <th class="px-3 py-3 text-right">ทุน</th>
+                                    <th class="px-3 py-3 text-right">ต้นทุน</th>
                                     <th class="px-3 py-3 text-right">LINE MAN</th>
-                                    <th class="px-3 py-3 text-right">ปลีก</th>
-                                    <th class="px-3 py-3 text-right">ส่ง</th>
-                                    <th class="px-3 py-3 text-left">หน่วย</th>
                                     <th class="px-3 py-3 text-center">สต็อก</th>
                                     <th class="px-3 py-3 text-center">สถานะ</th>
-                                    <th class="px-3 py-3 text-center w-16">...</th>
+                                    <th class="px-3 py-3 text-center w-10 text-gray-400">...</th>
                                 </tr>
                             </thead>
                             <tbody id="product-table-body">
@@ -434,177 +496,277 @@
 
     <!-- ===== EDIT MODAL ===== -->
     <div id="edit-modal" class="modal-overlay">
-        <div class="bg-white rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
-            <div
-                class="bg-gradient-to-r from-indigo-600 to-purple-600 p-5 text-white flex justify-between items-center shrink-0">
-                <h2 class="font-bold flex items-center gap-2"><i class="fas fa-edit"></i> แก้ไขข้อมูลสินค้า</h2>
+        <div class="bg-white rounded-3xl w-full max-w-3xl shadow-2xl flex flex-col max-h-[95vh] overflow-hidden">
+            <div class="bg-indigo-600 p-5 text-white flex justify-between items-center shrink-0">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-edit text-xl"></i>
+                    <div>
+                        <h2 id="modal-title-name" class="font-black text-lg leading-none">แก้ไขข้อมูลสินค้า</h2>
+                        <p class="text-[10px] text-indigo-200 font-bold uppercase mt-1">Product Configuration</p>
+                    </div>
+                </div>
                 <button onclick="closeEditModal()"
                     class="hover:bg-white/20 w-8 h-8 rounded-full flex items-center justify-center transition"><i
                         class="fas fa-times"></i></button>
             </div>
-            <div class="flex-1 overflow-y-auto p-6 space-y-5 bg-gray-50">
+
+            <!-- Tabs Nav -->
+            <div class="flex bg-white border-b px-4 shrink-0 overflow-x-auto">
+                <button class="tab-btn active" onclick="switchTab(this, 'tab-info')">ข้อมูลทั่วไป</button>
+                <button class="tab-btn" onclick="switchTab(this, 'tab-pricing')">ราคา & หน่วย</button>
+                <button class="tab-btn" onclick="switchTab(this, 'tab-inventory')">สต็อก & Lot</button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-6 bg-gray-50/50">
                 <input type="hidden" id="em-id">
 
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="col-span-2">
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">ชื่อสินค้า</label>
-                        <input id="em-name" type="text"
-                            class="w-full border rounded-xl p-3 font-bold text-gray-800 outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
-                            readonly>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">หมวดหมู่ (ECOM)</label>
-                        <select id="em-category"
-                            class="w-full border rounded-xl p-3 outline-none focus:ring-2 focus:ring-indigo-400 bg-white text-sm"
-                            onchange="checkNewCatEM(this.value)">
-                            <option value="All">ทั่วไป</option>
-                        </select>
-                        <input id="em-category-new" type="text" placeholder="ชื่อหมวดหมู่ใหม่"
-                            class="hidden w-full mt-2 border rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-400 bg-indigo-50">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">การแสดงผล (ECOM)</label>
-                        <select id="em-visibility"
-                            class="w-full border rounded-xl p-3 outline-none focus:ring-2 focus:ring-indigo-400 bg-white text-sm">
-                            <option value="show">✅ แสดงบนหน้าร้าน</option>
-                            <option value="hide">🚫 ซ่อน (ไม่แสดงลูกค้า)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">หน่วยหลัก</label>
-                        <input id="em-unit" type="text" placeholder="เช่น กล่อง, แผง"
-                            class="w-full border rounded-xl p-3 outline-none focus:ring-2 focus:ring-indigo-400 bg-white text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">สต็อก (ECOM)</label>
-                        <input id="em-stock" type="number"
-                            class="w-full border rounded-xl p-3 outline-none focus:ring-2 focus:ring-indigo-400 bg-white font-bold text-lg">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">LOT</label>
-                        <input id="em-lot" type="text"
-                            class="w-full border rounded-xl p-3 outline-none focus:ring-2 focus:ring-indigo-400 bg-white text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">EXP</label>
-                        <input id="em-exp" type="date"
-                            class="w-full border rounded-xl p-3 outline-none focus:ring-2 focus:ring-indigo-400 bg-white text-sm">
-                    </div>
-                </div>
-
-                <!-- MASTER Pricing -->
-                <div class="border-t pt-4">
-                    <p class="text-xs font-black text-gray-500 uppercase mb-3 flex items-center gap-2"><i
-                            class="fas fa-database text-indigo-400"></i> ราคา Master (ใช้ทุก Platform)</p>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-[10px] font-black text-red-500 uppercase mb-1">ราคาทุน
-                                (Cost)</label>
-                            <input id="em-cost" type="number" step="0.01" placeholder="0.00"
-                                class="w-full border border-red-100 rounded-xl p-2.5 text-sm font-bold text-red-700 bg-red-50 outline-none focus:ring-2 focus:ring-red-300">
+                <!-- Tab: Info -->
+                <div id="tab-info" class="tab-content active space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-4">
+                            <div>
+                                <label
+                                    class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">ชื่อสินค้า</label>
+                                <input id="em-name" type="text"
+                                    class="w-full border rounded-2xl p-3.5 font-bold text-gray-800 bg-white shadow-sm outline-none focus:ring-2 focus:ring-indigo-400"
+                                    readonly>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label
+                                        class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">หมวดหมู่
+                                        (ECOM)</label>
+                                    <select id="em-category"
+                                        class="w-full border rounded-2xl p-3 text-sm font-bold bg-white shadow-sm outline-none focus:ring-2 focus:ring-indigo-400"
+                                        onchange="checkNewCatEM(this.value)">
+                                    </select>
+                                    <input id="em-category-new" type="text" placeholder="ระบุใหม่..."
+                                        class="hidden w-full mt-2 border border-indigo-100 rounded-xl p-2.5 text-sm bg-indigo-50 outline-none">
+                                </div>
+                                <div>
+                                    <label
+                                        class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">การแสดงผล</label>
+                                    <select id="em-visibility"
+                                        class="w-full border rounded-2xl p-3 text-sm font-bold bg-white shadow-sm outline-none focus:ring-2 focus:ring-indigo-400">
+                                        <option value="show">✅ แสดงหน้าร้าน</option>
+                                        <option value="hide">🚫 ซ่อนชั่วคราว</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <label class="block text-[10px] font-black text-green-600 uppercase mb-1">ราคา LINE
-                                MAN</label>
-                            <input id="em-price-lineman" type="number" step="0.01" placeholder="0.00"
-                                class="w-full border border-green-100 rounded-xl p-2.5 text-sm font-bold text-green-700 bg-green-50 outline-none focus:ring-2 focus:ring-green-300">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-black text-blue-600 uppercase mb-1">ราคาปลีก
-                                (Retail)</label>
-                            <input id="em-price-retail" type="number" step="0.01" placeholder="0.00"
-                                class="w-full border border-blue-100 rounded-xl p-2.5 text-sm font-bold text-blue-700 bg-blue-50 outline-none focus:ring-2 focus:ring-blue-300">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-black text-purple-600 uppercase mb-1">ราคาส่ง
-                                (Wholesale)</label>
-                            <input id="em-price-wholesale" type="number" step="0.01" placeholder="0.00"
-                                class="w-full border border-purple-100 rounded-xl p-2.5 text-sm font-bold text-purple-700 bg-purple-50 outline-none focus:ring-2 focus:ring-purple-300">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="border-t pt-4">
-                    <div class="flex justify-between items-center mb-3">
-                        <label class="text-xs font-bold text-gray-500 uppercase">ราคาตามหน่วยและ Platform</label>
-                        <button onclick="addEMPriceRow()"
-                            class="text-xs bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg hover:bg-indigo-100 font-bold flex items-center gap-1"><i
-                                class="fas fa-plus"></i> เพิ่มแถว</button>
-                    </div>
-                    <div id="em-prices" class="space-y-2"></div>
-                </div>
-
-                <div class="border-t pt-4">
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">รูปภาพสินค้า</label>
-                    <div class="flex gap-4 items-start">
                         <div
-                            class="w-24 h-24 bg-gray-100 rounded-xl overflow-hidden border-2 border-dashed border-gray-300 flex items-center justify-center shrink-0">
-                            <img id="em-img-preview" src="" class="w-full h-full object-contain hidden">
-                            <i id="em-img-icon" class="fas fa-image text-gray-300 text-2xl"></i>
-                        </div>
-                        <div class="flex-1">
+                            class="bg-white p-4 rounded-3xl border border-dashed border-gray-200 flex flex-col items-center justify-center text-center">
+                            <div id="em-img-container"
+                                class="w-32 h-32 bg-gray-50 rounded-2xl overflow-hidden flex items-center justify-center relative group mb-3">
+                                <img id="em-img-preview" src="" class="w-full h-full object-contain hidden">
+                                <i id="em-img-icon" class="fas fa-image text-gray-200 text-3xl"></i>
+                                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center cursor-pointer"
+                                    onclick="document.getElementById('em-img-file').click()">
+                                    <i class="fas fa-camera text-white"></i>
+                                </div>
+                            </div>
                             <input type="file" id="em-img-file" accept="image/*" onchange="previewEMImage(this)"
-                                class="text-xs w-full file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
-                            <p class="text-xs text-gray-400 mt-2">รองรับไฟล์ภาพขนาดไม่เกิน 2MB — จะ compress ก่อนบันทึก
-                            </p>
+                                class="hidden">
+                            <button onclick="document.getElementById('em-img-file').click()"
+                                class="text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-wide">เปลี่ยนรูปภาพ</button>
+                        </div>
+                    </div>
+
+                    <!-- Company Costs -->
+                    <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-xs font-black text-gray-700 uppercase flex items-center gap-2"><i
+                                    class="fas fa-building text-indigo-400"></i> บันทึกต้นทุนแยกตามบริษัท</h3>
+                            <button onclick="addCompanyCostRow()"
+                                class="text-[10px] bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-xl font-black hover:bg-indigo-100 transition"><i
+                                    class="fas fa-plus mr-1"></i> เพิ่มบริษัท</button>
+                        </div>
+                        <div id="em-company-costs" class="space-y-2">
+                            <!-- Rows -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Pricing -->
+                <div id="tab-pricing" class="tab-content space-y-6">
+                    <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-xs font-black text-gray-700 uppercase flex items-center gap-2"><i
+                                    class="fas fa-tags text-indigo-400"></i> ราคาขาย ECOM (ตาม Platform & หน่วย)</h3>
+                            <button onclick="addEMPriceRow()"
+                                class="text-[10px] bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-xl font-black hover:bg-indigo-100 transition"><i
+                                    class="fas fa-plus mr-1"></i> เพิ่มแถวราคา</button>
+                        </div>
+                        <div class="grid grid-cols-12 gap-2 mb-2 px-2 text-[10px] font-black text-gray-400 uppercase">
+                            <div class="col-span-3">Platform</div>
+                            <div class="col-span-2">หน่วย</div>
+                            <div class="col-span-3">ราคาอ้างอิง (สูง)</div>
+                            <div class="col-span-3">ราคาขายจริง</div>
+                            <div class="col-span-1"></div>
+                        </div>
+                        <div id="em-prices" class="space-y-2">
+                            <!-- Rows -->
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-blue-50/50 p-5 rounded-3xl border border-blue-100">
+                            <h3 class="text-xs font-black text-blue-800 uppercase mb-3 ml-1">ราคา Master</h3>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="text-[9px] font-black text-blue-500 uppercase block mb-1">LINE
+                                        MAN</label>
+                                    <input id="em-price-lineman" type="number" step="0.01"
+                                        class="w-full border rounded-xl p-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-400">
+                                </div>
+                                <div>
+                                    <label
+                                        class="text-[9px] font-black text-blue-500 uppercase block mb-1">หน่วยหลัก</label>
+                                    <input id="em-unit" type="text" placeholder="กล่อง"
+                                        class="w-full border rounded-xl p-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-400">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] font-black text-blue-500 uppercase block mb-1">ราคาปลีก
+                                        (Retail)</label>
+                                    <input id="em-price-retail" type="number" step="0.01"
+                                        class="w-full border rounded-xl p-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-400">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] font-black text-blue-500 uppercase block mb-1">ราคาส่ง
+                                        (Wholesale)</label>
+                                    <input id="em-price-wholesale" type="number" step="0.01"
+                                        class="w-full border rounded-xl p-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-400">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-gray-100/50 p-5 rounded-3xl border border-gray-200">
+                            <h3 class="text-xs font-black text-gray-600 uppercase mb-3 ml-1">ข้อมูลอื่นๆ</h3>
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="text-[9px] font-black text-gray-500 uppercase block mb-1">ชื่อเล่น /
+                                        Aliases (คั่นด้วย comma)</label>
+                                    <input id="em-aliases" type="text"
+                                        class="w-full border rounded-xl p-2.5 text-xs outline-none focus:ring-1 focus:ring-gray-400">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Inventory -->
+                <div id="tab-inventory" class="tab-content space-y-6">
+                    <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm">
+                        <div class="flex justify-between items-center mb-4">
+                            <div class="flex flex-col">
+                                <h3 class="text-xs font-black text-gray-700 uppercase flex items-center gap-2">
+                                    <i class="fas fa-boxes text-orange-400"></i> จัดการ Stock & Lot
+                                </h3>
+                                <p class="text-[9px] text-gray-400 font-bold mt-0.5">ระบุหลาย Lot เพื่อติดตามการหมดอายุ
+                                </p>
+                            </div>
+                            <button onclick="addLotRow()"
+                                class="text-[10px] bg-orange-50 text-orange-600 px-3 py-1.5 rounded-xl font-black hover:bg-orange-100 transition"><i
+                                    class="fas fa-plus mr-1"></i> เพิ่ม Lot</button>
+                        </div>
+
+                        <div class="grid grid-cols-12 gap-2 mb-2 px-2 text-[10px] font-black text-gray-400 uppercase">
+                            <div class="col-span-4">Lot Number</div>
+                            <div class="col-span-4">วันหมดอายุ (EXP)</div>
+                            <div class="col-span-3">จำนวนคลัง (Stock)</div>
+                            <div class="col-span-1"></div>
+                        </div>
+                        <div id="em-lots" class="space-y-2">
+                            <!-- Rows -->
+                        </div>
+
+                        <div class="mt-6 pt-5 border-t border-gray-100">
+                            <div class="flex justify-between items-center bg-gray-50 p-4 rounded-2xl">
+                                <div>
+                                    <p class="text-[10px] font-black text-gray-400 uppercase mb-1">ยอดรวมสต็อกทั้งหมด
+                                    </p>
+                                    <p id="em-total-stock-display" class="text-2xl font-black text-gray-800">0</p>
+                                </div>
+                                <div class="text-right">
+                                    <label class="text-[10px] font-black text-indigo-500 uppercase block mb-1">สต็อก
+                                        ECOM (ตัวเลขที่โชว์ลูกค้า)</label>
+                                    <input id="em-stock" type="number"
+                                        class="w-32 border border-indigo-200 rounded-xl p-2 text-xl font-black text-center text-indigo-600 outline-none focus:ring-2 focus:ring-indigo-400">
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="shrink-0 bg-white border-t p-4 flex gap-3 justify-end">
-                <button onclick="closeEditModal()"
-                    class="px-5 py-2.5 bg-gray-100 text-gray-600 font-bold rounded-xl hover:bg-gray-200 transition text-sm">ยกเลิก</button>
+
+            <div class="shrink-0 bg-white border-t p-5 flex gap-3 justify-between items-center">
                 <button onclick="deleteProduct()"
-                    class="px-4 py-2.5 bg-red-50 text-red-600 font-bold rounded-xl hover:bg-red-600 hover:text-white transition text-sm flex items-center gap-2 border border-red-100"><i
-                        class="fas fa-trash-alt"></i> ลบ</button>
-                <button onclick="saveProduct()"
-                    class="px-6 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition text-sm flex items-center gap-2 shadow-md"><i
-                        class="fas fa-save"></i> บันทึก</button>
+                    class="px-4 py-2.5 text-red-500 hover:text-white hover:bg-red-500 font-bold rounded-2xl transition text-xs flex items-center gap-2">
+                    <i class="fas fa-trash-alt"></i> ลบสินค้านี้
+                </button>
+                <div class="flex gap-3">
+                    <button onclick="closeEditModal()"
+                        class="px-6 py-2.5 bg-gray-100 text-gray-600 font-bold rounded-2xl hover:bg-gray-200 transition text-sm">ยกเลิก</button>
+                    <button onclick="saveProduct()"
+                        class="px-8 py-2.5 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 transition text-sm flex items-center gap-2 shadow-lg shadow-indigo-100">
+                        <i class="fas fa-save"></i> บันทึกข้อมูล
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- ===== ADD MODAL ===== -->
-    <div id="add-modal" class="modal-overlay">
-        <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl">
-            <div class="bg-teal-600 p-5 text-white flex justify-between items-center">
-                <h2 class="font-bold flex items-center gap-2"><i class="fas fa-plus"></i> เพิ่มสินค้าใหม่</h2>
-                <button onclick="closeAddModal()"
+    <!-- ===== MERGE MODAL ===== -->
+    <div id="merge-modal" class="modal-overlay">
+        <div class="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="bg-indigo-900 p-5 text-white flex justify-between items-center shrink-0">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-object-group text-xl"></i>
+                    <div>
+                        <h2 class="font-black text-lg leading-none">รวมรายการสินค้า (Merge)</h2>
+                        <p class="text-[10px] text-indigo-300 font-bold uppercase mt-1">Combine records into one</p>
+                    </div>
+                </div>
+                <button onclick="closeMergeModal()"
                     class="hover:bg-white/20 w-8 h-8 rounded-full flex items-center justify-center transition"><i
                         class="fas fa-times"></i></button>
             </div>
-            <div class="p-6 space-y-4">
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">ชื่อสินค้า (ใช้เป็น
-                        ID)</label>
-                    <input id="add-name" type="text" placeholder="เช่น Paracetamol 500mg Tab"
-                        class="w-full border rounded-xl p-3 outline-none focus:ring-2 focus:ring-teal-400 font-bold">
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">หมวดหมู่</label>
-                        <select id="add-cat"
-                            class="w-full border rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-teal-400">
-                            <option value="All">ทั่วไป</option>
-                            <option value="OTC">OTC</option>
-                            <option value="Supplies">Supplies</option>
-                            <option value="Supplements">Supplements</option>
-                            <option value="Dermocare">Dermocare</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">สต็อก</label>
-                        <input id="add-stock" type="number" value="0"
-                            class="w-full border rounded-xl p-3 outline-none focus:ring-2 focus:ring-teal-400 font-bold text-center">
+            <div class="p-6 overflow-y-auto space-y-4">
+                <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex gap-3">
+                    <i class="fas fa-exclamation-triangle text-amber-500 mt-1"></i>
+                    <div class="text-xs text-amber-800 leading-relaxed font-bold">
+                        เลือกสินค้าที่จะใช้เป็น <span class="text-amber-600 font-black underline">MASTER</span>
+                        (ข้อมูลหน่วยและราคาจะยึดตามตัวนี้เป็นหลัก)
+                        ส่วนตัวอื่นๆ จะถูกลบทิ้งหลังจากย้ายสต็อกและชื่อไปเป็น Alias แล้ว
                     </div>
                 </div>
-                <div class="flex gap-3 pt-2">
-                    <button onclick="closeAddModal()"
-                        class="flex-1 py-3 bg-gray-100 font-bold rounded-xl text-gray-600 hover:bg-gray-200 transition">ยกเลิก</button>
-                    <button onclick="confirmAddProduct()"
-                        class="flex-1 py-3 bg-teal-600 text-white font-bold rounded-xl hover:bg-teal-700 transition shadow-md">เพิ่มสินค้า</button>
+                <div id="merge-list-container" class="space-y-2">
+                    <!-- Merge items here -->
                 </div>
             </div>
+            <div class="p-5 border-t bg-gray-50 flex gap-3">
+                <button onclick="closeMergeModal()"
+                    class="flex-1 py-3 bg-white border border-gray-200 font-black rounded-2xl text-gray-500 hover:bg-gray-100 transition text-sm text-center">ยกเลิก</button>
+                <button onclick="confirmMergeProducts()"
+                    class="flex-1 py-3 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 transition text-sm text-center shadow-lg shadow-indigo-200">ยืนยันการรวม</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Merge Action Bar -->
+    <div id="merge-action-bar"
+        class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-indigo-900 text-white px-6 py-4 rounded-3xl shadow-2xl flex items-center gap-6 z-[60] scale-90 opacity-0 pointer-events-none transition-all duration-300">
+        <div class="flex items-center gap-3 border-r border-indigo-700/50 pr-6">
+            <span class="w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center text-sm font-black"
+                id="selected-count">0</span>
+            <span class="text-xs font-bold text-indigo-200">รายการที่เลือก</span>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="clearSelection()"
+                class="px-4 py-2 hover:bg-white/10 rounded-xl text-xs font-bold transition">ล้างการเลือก</button>
+            <button onclick="openMergeModal()"
+                class="px-6 py-2 bg-indigo-500 hover:bg-indigo-400 text-white font-black rounded-xl text-xs transition flex items-center gap-2 shadow-lg shadow-indigo-500/30">
+                <i class="fas fa-object-group"></i> รวมสินค้า (Merge)
+            </button>
         </div>
     </div>
 
@@ -615,7 +777,9 @@
 
         let allProducts = [];
         let filteredProducts = [];
+        let selectedIds = new Set();
         let customCategories = new Set(['All', 'OTC', 'Supplies', 'Supplements', 'Dermocare']);
+        let masterCompanies = new Set();
         let emImageBase64 = null;
 
         // ===== AUTH =====
@@ -635,14 +799,48 @@
         // ===== DATA =====
         async function fetchAllProducts() {
             const snap = await db.collection('master_products').orderBy('name').get();
-            allProducts = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            allProducts.forEach(p => { if (p.ecomCategory) customCategories.add(p.ecomCategory); });
-            updateStats();
+            allProducts = [];
+            masterCompanies.clear();
+            snap.forEach(doc => {
+                const p = doc.data();
+                p.id = doc.id;
+                allProducts.push(p);
+                if (p.ecomCategory) customCategories.add(p.ecomCategory);
+
+                // Collect companies for suggestions
+                if (p.prices) {
+                    const stdPlatforms = ['LINEMAN', 'LINE_MAN', 'RETAIL', 'WHOLESALE', 'COST'];
+                    Object.keys(p.prices).forEach(k => {
+                        let comp = k.split('_')[0];
+                        if (!stdPlatforms.includes(comp.toUpperCase())) {
+                            // If it has underscore, it's typically Company_Unit
+                            masterCompanies.add(comp);
+                        }
+                    });
+                }
+            });
+
+            updateCompanySuggestions();
+            // Update Stats Cards
+            const lowStockCount = allProducts.filter(p => (parseInt(p.ecomStock) || 0) < 10).length;
+            const hiddenCount = allProducts.filter(p => p.ecomVisibility === 'hide').length;
+
+            document.getElementById('st-total').innerText = allProducts.length;
+            document.getElementById('st-low').innerText = lowStockCount;
+            document.getElementById('st-hidden').innerText = hiddenCount;
+            document.getElementById('st-cats').innerText = customCategories.size;
+
             applyAdminFilter();
-            populateCategoryFilter();
             renderCategorySection();
             renderPricingTable();
             renderStatsSection();
+        }
+
+        function updateCompanySuggestions() {
+            const dl = document.getElementById('company-suggestions');
+            if (dl) {
+                dl.innerHTML = Array.from(masterCompanies).sort().map(c => `<option value="${c}">`).join('');
+            }
         }
 
         function getDocId(name) { return name.trim(); }
@@ -662,12 +860,17 @@
         // ===== SECTION NAV =====
         function showSection(name) {
             ['products', 'categories', 'pricing', 'lineman', 'stats'].forEach(s => {
-                document.getElementById('section-' + s).classList.add('hidden');
+                const el = document.getElementById('section-' + s);
+                if (el) el.classList.add('hidden');
             });
-            document.getElementById('section-' + name).classList.remove('hidden');
+            const target = document.getElementById('section-' + name);
+            if (target) target.classList.remove('hidden');
             document.querySelectorAll('.sidebar-link').forEach(el => el.classList.remove('active'));
-            event.currentTarget.classList.add('active');
+            if (event && event.currentTarget) event.currentTarget.classList.add('active');
             if (name === 'lineman') fetchLinemanSales();
+            if (name === 'categories') renderCategorySection();
+            if (name === 'pricing') renderPricingTable();
+            if (name === 'stats') renderStatsSection();
         }
 
         // ===== FILTER =====
@@ -683,7 +886,8 @@
             const vis = document.getElementById('filter-vis').value;
             filteredProducts = allProducts.filter(p => {
                 const name = (p.name || p.id || '').toLowerCase();
-                if (q && !name.includes(q) && !(p.ecomCategory || '').toLowerCase().includes(q)) return false;
+                const aliasesStr = (p.aliases || []).join(' ').toLowerCase();
+                if (q && !name.includes(q) && !(p.ecomCategory || '').toLowerCase().includes(q) && !aliasesStr.includes(q)) return false;
                 if (cat && (p.ecomCategory || 'All') !== cat) return false;
                 if (vis && (p.ecomVisibility || 'show') !== vis) return false;
                 return true;
@@ -706,11 +910,14 @@
                 const safeName = (p.name || p.id || '').replace(/'/g, "\\'");
                 const cost = p.cost || (p.prices && p.prices['COST']) || '';
                 const lmPrice = (p.prices && (p.prices['LINEMAN'] || p.prices['LINE_MAN'])) || '';
-                const retail = p.retail || (p.prices && p.prices['RETAIL']) || '';
-                const wholesale = p.wholesale || (p.prices && p.prices['WHOLESALE']) || '';
-                const unit = p.unit || '';
-                const fmt = v => v ? `฿${parseFloat(v).toLocaleString()}` : '<span class="text-gray-300">—</span>';
-                return `<tr class="product-row cursor-pointer" onclick="openEditModal('${safeName}')">
+                const isSelected = selectedIds.has(p.id);
+                // Escape single quotes for the onclick handler
+                const safeId = p.id.replace(/'/g, "\\'");
+
+                return `<tr class="product-row cursor-pointer ${isSelected ? 'bg-indigo-50/50' : ''}" onclick="openEditModal('${safeId}')">
+                <td class="px-3 py-2.5" onclick="event.stopPropagation()">
+                    <input type="checkbox" onchange="toggleSelectProduct('${safeId}')" ${isSelected ? 'checked' : ''} class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                </td>
                 <td class="px-3 py-2.5 text-gray-400 text-xs font-bold">${i + 1}</td>
                 <td class="px-3 py-2.5">${imgSrc
                         ? `<img src="${imgSrc}" class="w-9 h-9 object-contain rounded-lg bg-gray-50 border">`
@@ -718,27 +925,179 @@
                     }</td>
                 <td class="px-3 py-2.5">
                     <p class="font-bold text-gray-800 text-xs leading-snug">${p.name || p.id}</p>
-                    ${p.aliases && p.aliases.length ? `<p class="text-[9px] text-gray-400">${p.aliases.slice(0, 2).join(', ')}</p>` : ''}
+                    ${p.aliases && p.aliases.length ? `<p class="text-[9px] text-gray-400 truncate max-w-[200px]">${p.aliases.join(', ')}</p>` : ''}
                 </td>
                 <td class="px-3 py-2.5 text-xs text-gray-600">${p.ecomCategory || 'All'}</td>
-                <td class="px-3 py-2.5 text-right text-xs font-bold text-red-600">${fmt(cost)}</td>
-                <td class="px-3 py-2.5 text-right text-xs font-bold text-green-700">${fmt(lmPrice)}</td>
-                <td class="px-3 py-2.5 text-right text-xs text-blue-700">${fmt(retail)}</td>
-                <td class="px-3 py-2.5 text-right text-xs text-purple-700">${fmt(wholesale)}</td>
-                <td class="px-3 py-2.5 text-xs text-gray-500">${unit}</td>
+                <td class="px-3 py-2.5 text-right text-xs font-bold text-red-600">฿${(parseFloat(cost) || 0).toLocaleString()}</td>
+                <td class="px-3 py-2.5 text-right text-xs font-bold text-green-700">฿${(parseFloat(lmPrice) || 0).toLocaleString()}</td>
                 <td class="px-3 py-2.5 text-center">
-                    <span class="${isLow ? 'badge badge-low' : 'font-bold text-sm text-gray-700'}">${stock}${isLow ? ' ⚠️' : ''}</span>
+                    <span class="${isLow ? 'badge badge-low' : 'font-black text-xs text-gray-700'}">${stock}</span>
                 </td>
                 <td class="px-3 py-2.5 text-center">
-                    <span class="badge ${vis === 'show' ? 'badge-show' : 'badge-hide'}">${vis === 'show' ? '✅' : '🚫'}</span>
+                    <span class="badge ${vis === 'show' ? 'badge-show' : 'badge-hide'} animate-pulse-subtle">${vis === 'show' ? 'ACTIVE' : 'HIDDEN'}</span>
                 </td>
                 <td class="px-3 py-2.5 text-center">
-                    <button onclick="event.stopPropagation(); quickToggleVisibility('${safeName}', '${vis}')" class="text-xs px-2 py-1 rounded-lg ${vis === 'show' ? 'bg-red-50 text-red-500 hover:bg-red-500 hover:text-white' : 'bg-green-50 text-green-600 hover:bg-green-500 hover:text-white'} font-bold transition" title="${vis === 'show' ? 'ซ่อน' : 'แสดง'}">
-                        ${vis === 'show' ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>'}
+                    <button onclick="event.stopPropagation(); quickToggleVisibility('${safeName}', '${vis}')" class="text-xs text-gray-400 hover:text-indigo-600 transition p-1">
+                        <i class="fas fa-ellipsis-v"></i>
                     </button>
                 </td>
             </tr>`;
             }).join('');
+            updateSelectionUI();
+        }
+
+        // ===== SELECTION & MERGE =====
+        function toggleSelectProduct(id) {
+            if (selectedIds.has(id)) selectedIds.delete(id);
+            else selectedIds.add(id);
+            renderProductTable();
+        }
+
+        function toggleSelectAll(cb) {
+            if (cb.checked) filteredProducts.forEach(p => selectedIds.add(p.id));
+            else filteredProducts.forEach(p => selectedIds.delete(p.id));
+            renderProductTable();
+        }
+
+        function clearSelection() {
+            selectedIds.clear();
+            document.getElementById('select-all-cb').checked = false;
+            renderProductTable();
+        }
+
+        function updateSelectionUI() {
+            const count = selectedIds.size;
+            const bar = document.getElementById('merge-action-bar');
+            const countEl = document.getElementById('selected-count');
+            if (count > 1) {
+                bar.classList.add('opacity-100', 'scale-100', 'pointer-events-auto');
+                bar.classList.remove('opacity-0', 'scale-90', 'pointer-events-none');
+                countEl.innerText = count;
+            } else {
+                bar.classList.add('opacity-0', 'scale-90', 'pointer-events-none');
+                bar.classList.remove('opacity-100', 'scale-100', 'pointer-events-auto');
+            }
+        }
+
+        function openMergeModal() {
+            const container = document.getElementById('merge-list-container');
+            const items = allProducts.filter(p => selectedIds.has(p.id));
+            container.innerHTML = items.map((p, i) => `
+                <div class="flex items-center gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all border-gray-100 bg-gray-50 hover:border-indigo-200" onclick="selectMasterForMerge('${p.id}')" id="merge-item-${p.id}">
+                    <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 merge-radio border-gray-300">
+                        <div class="w-2.5 h-2.5 bg-indigo-600 rounded-full opacity-0 transition-opacity"></div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-black text-sm text-gray-800 truncate">${p.name || p.id}</p>
+                        <p class="text-[10px] text-gray-400 font-bold uppercase">STOCK: ${p.ecomStock || 0} | CAT: ${p.ecomCategory || 'All'}</p>
+                    </div>
+                    ${i === 0 ? '<span class="text-[9px] font-black bg-indigo-100 text-indigo-600 px-2 py-1 rounded-lg">RECOMMENDED</span>' : ''}
+                </div>
+            `).join('');
+            document.getElementById('merge-modal').classList.add('open');
+            // Select first as default master
+            if (items.length) selectMasterForMerge(items[0].id);
+        }
+
+        let masterMergeId = null;
+        function selectMasterForMerge(id) {
+            masterMergeId = id;
+            document.querySelectorAll('[id^="merge-item-"]').forEach(el => {
+                el.classList.remove('border-indigo-600', 'bg-indigo-50/50');
+                el.classList.add('border-gray-100', 'bg-gray-50');
+                el.querySelector('.merge-radio').classList.remove('border-indigo-600');
+                el.querySelector('.merge-radio div').classList.add('opacity-0');
+            });
+            const selected = document.getElementById('merge-item-' + id);
+            selected.classList.add('border-indigo-600', 'bg-indigo-50/50');
+            selected.classList.remove('border-gray-100', 'bg-gray-50');
+            selected.querySelector('.merge-radio').classList.add('border-indigo-600');
+            selected.querySelector('.merge-radio div').classList.remove('opacity-0');
+        }
+
+        function closeMergeModal() { document.getElementById('merge-modal').classList.remove('open'); }
+
+        async function confirmMergeProducts() {
+            if (!masterMergeId) return;
+            const master = allProducts.find(p => p.id === masterMergeId);
+            const others = allProducts.filter(p => selectedIds.has(p.id) && p.id !== masterMergeId);
+
+            const res = await Swal.fire({
+                title: 'ยืนยันการรวมสินค้า?',
+                text: `จะรวม ${others.length} รายการเข้าสู่ "${master.name}" ข้อมูลส่วนเกินจะถูกลบทิ้ง`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#4f46e5',
+                confirmButtonText: 'รวมเลย!',
+                cancelButtonText: 'ยกเลิก'
+            });
+
+            if (!res.isConfirmed) return;
+
+            // Start Merge Logic
+            Swal.fire({ title: 'กำลังรวมข้อมูล...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+            try {
+                const batch = db.batch();
+                let combinedStock = parseInt(master.ecomStock) || 0;
+                let combinedAliases = new Set(master.aliases || []);
+                let combinedLots = [...(master.inventorySlots || [])];
+                let combinedPrices = { ...(master.prices || {}) };
+
+                // If master has no slots but has single lot data, migrate it first
+                if (combinedLots.length === 0 && (master.lot || master.exp)) {
+                    combinedLots.push({ lot: master.lot || '', exp: master.exp || '', stock: parseInt(master.ecomStock) || 0 });
+                }
+
+                for (const other of others) {
+                    // 1. Stock
+                    combinedStock += (parseInt(other.ecomStock) || 0);
+
+                    // 2. Aliases (add the name and existing aliases of the merged item)
+                    combinedAliases.add(other.name || other.id);
+                    if (other.aliases) other.aliases.forEach(a => combinedAliases.add(a));
+
+                    // 3. Inventory Slots
+                    if (other.inventorySlots) {
+                        combinedLots = [...combinedLots, ...other.inventorySlots];
+                    } else if (other.lot || other.exp) {
+                        combinedLots.push({ lot: other.lot || '', exp: other.exp || '', stock: parseInt(other.ecomStock) || 0 });
+                    }
+
+                    // 4. Prices (Company Costs)
+                    if (other.prices) {
+                        Object.keys(other.prices).forEach(k => {
+                            // Only add if master doesnt have it or if we want to pick the latest/cheapest?
+                            // For now, let's keep master's value if conflict, or take other's if master is empty
+                            if (!combinedPrices[k]) combinedPrices[k] = other.prices[k];
+                        });
+                    }
+
+                    // 5. Delete the other
+                    batch.delete(db.collection('master_products').doc(other.id));
+                }
+
+                // Update Master
+                batch.update(db.collection('master_products').doc(master.id), {
+                    ecomStock: combinedStock,
+                    aliases: Array.from(combinedAliases).filter(a => a !== master.name),
+                    inventorySlots: combinedLots,
+                    prices: combinedPrices,
+                    // If multiple slots, ensure the head lot/exp are updated for legacy compatibility
+                    lot: combinedLots.length ? combinedLots[0].lot : (master.lot || ''),
+                    exp: combinedLots.length ? combinedLots[0].exp : (master.exp || '')
+                });
+
+                await batch.commit();
+                Swal.fire({ icon: 'success', title: 'รวมสินค้าเรียบร้อยแล้ว', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
+
+                clearSelection();
+                closeMergeModal();
+                await fetchAllProducts();
+            } catch (e) {
+                console.error(e);
+                Swal.fire({ icon: 'error', title: 'Error', text: e.message });
+            }
         }
 
         async function quickToggleVisibility(name, currentVis) {
@@ -750,25 +1109,136 @@
             applyAdminFilter();
         }
 
+        // ===== UI HELPERS =====
+        function switchTab(btn, tabId) {
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        // ===== ACCESS CODES =====
+        async function fetchAccessCodes() {
+            const body = document.getElementById('access-codes-table-body');
+            body.innerHTML = '<tr><td colspan="4" class="text-center py-12 text-gray-300"><i class="fas fa-circle-notch fa-spin text-2xl"></i></td></tr>';
+            try {
+                const snap = await db.collection('ecom_access_codes').orderBy('createdAt', 'desc').get();
+                if (snap.empty) {
+                    body.innerHTML = '<tr><td colspan="4" class="text-center py-16 text-gray-400 font-bold"><i class="fas fa-key text-4xl mb-3 block opacity-20"></i>ยังไม่มีรหัสการเข้าถึง</td></tr>';
+                    return;
+                }
+                body.innerHTML = snap.docs.map(doc => {
+                    const d = doc.data();
+                    const date = d.createdAt ? d.createdAt.toDate().toLocaleString('th-TH') : '—';
+                    return `<tr class="border-b border-gray-50 hover:bg-gray-50/50 transition">
+                        <td class="px-6 py-4">
+                            <span class="badge ${d.active ? 'badge-show' : 'badge-hide'}">${d.active ? 'ACTIVE' : 'DISABLED'}</span>
+                        </td>
+                        <td class="px-6 py-4 font-black text-indigo-600 text-sm tracking-widest font-mono">${d.code}</td>
+                        <td class="px-6 py-4 text-xs text-gray-500 font-bold">${date}</td>
+                        <td class="px-3 py-4 text-center">
+                            <button onclick="toggleAccessCode('${doc.id}', ${d.active})" class="text-xs font-bold ${d.active ? 'text-orange-500' : 'text-green-600'} hover:underline mr-3">
+                                ${d.active ? 'Disable' : 'Enable'}
+                            </button>
+                            <button onclick="deleteAccessCode('${doc.id}')" class="text-xs font-bold text-red-400 hover:text-red-700 transition">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>`;
+                }).join('');
+            } catch (e) {
+                body.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-red-400">Error: ${e.message}</td></tr>`;
+            }
+        }
+
+        async function generateNewAccessCode() {
+            // Simple random string
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Avoid ambiguous chars
+            let code = '';
+            for (let i = 0; i < 6; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+
+            try {
+                await db.collection('ecom_access_codes').add({
+                    code: code,
+                    active: true,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                Swal.fire({ icon: 'success', title: 'สร้างรหัสสำเร็จ', text: `รหัสคือ: ${code}`, confirmButtonColor: '#4f46e5' });
+                fetchAccessCodes();
+            } catch (e) { alert(e.message); }
+        }
+
+        async function toggleAccessCode(id, current) {
+            try {
+                await db.collection('ecom_access_codes').doc(id).update({ active: !current });
+                fetchAccessCodes();
+            } catch (e) { alert(e.message); }
+        }
+
+        async function deleteAccessCode(id) {
+            if (!confirm('ยืนยันลบรหัสนี้?')) return;
+            try {
+                await db.collection('ecom_access_codes').doc(id).delete();
+                fetchAccessCodes();
+            } catch (e) { alert(e.message); }
+        }
+
+        function showSection(id) {
+            document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
+            document.getElementById(`section-${id}`).classList.remove('hidden');
+            document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            if (id === 'access-codes') fetchAccessCodes();
+        }
+
         // ===== EDIT MODAL =====
-        function openEditModal(name) {
-            const p = allProducts.find(x => (x.name || x.id) === name);
-            if (!p) return;
+        async function openEditModal(id) {
+            const p = allProducts.find(x => x.id === id);
+            if (!p) {
+                console.error("Product not found with ID:", id);
+                Swal.fire({ icon: 'error', title: 'ไม่พบข้อมูลสินค้า', text: 'กรุณารีโหลดหน้าเว็บแล้วลองใหม่' });
+                return;
+            }
             emImageBase64 = null;
             document.getElementById('em-id').value = p.id;
             document.getElementById('em-name').value = p.name || p.id;
-            document.getElementById('em-lot').value = p.lot || '';
-            document.getElementById('em-exp').value = p.exp || '';
+            document.getElementById('modal-title-name').innerText = p.name || p.id;
             document.getElementById('em-stock').value = p.ecomStock || 0;
             document.getElementById('em-visibility').value = p.ecomVisibility || 'show';
             document.getElementById('em-unit').value = p.unit || '';
+            document.getElementById('em-aliases').value = (p.aliases || []).join(', ');
 
             // Master prices
             const prices = p.prices || {};
-            document.getElementById('em-cost').value = p.cost || prices['COST'] || '';
             document.getElementById('em-price-lineman').value = prices['LINEMAN'] || prices['LINE_MAN'] || p.price || '';
             document.getElementById('em-price-retail').value = p.retail || prices['RETAIL'] || '';
             document.getElementById('em-price-wholesale').value = p.wholesale || prices['WHOLESALE'] || '';
+
+            // Multi-Company Costs
+            const companyCostsContainer = document.getElementById('em-company-costs');
+            companyCostsContainer.innerHTML = '';
+            // Extraction: Support Company_Unit keys from proorder.html
+            const stdPlatforms = ['LINEMAN', 'LINE_MAN', 'RETAIL', 'WHOLESALE', 'COST'];
+            let hasCompanyCosts = false;
+            Object.keys(prices).forEach(k => {
+                const upKey = k.toUpperCase();
+                if (stdPlatforms.includes(upKey)) return;
+
+                // Show as Company (Unit) if underscore present
+                let label = k;
+                if (k.includes('_')) {
+                    const [c, u] = k.split('_');
+                    label = `${c}${u ? ` (${u})` : ''}`;
+                }
+                addCompanyCostRow(label, prices[k]);
+                hasCompanyCosts = true;
+            });
+            // Also check for 'COST' key if present
+            if (prices['COST'] !== undefined) {
+                addCompanyCostRow('ต้นทุนกลาง (COST)', prices['COST']);
+                hasCompanyCosts = true;
+            }
+            if (!hasCompanyCosts) companyCostsContainer.innerHTML = '<p class="text-[10px] text-gray-300 italic text-center py-2">ยังไม่มีบันทึกทุนแยกบริษัท</p>';
 
             // Category
             const catSel = document.getElementById('em-category');
@@ -784,15 +1254,119 @@
             else { prev.classList.add('hidden'); icon.classList.remove('hidden'); }
             document.getElementById('em-img-file').value = '';
 
-            // ECOM Unit Prices
+            // ECOM Unit Prices (Advanced)
             const priceContainer = document.getElementById('em-prices');
             priceContainer.innerHTML = '';
             if (p.unitPrices && p.unitPrices.length > 0) {
-                p.unitPrices.forEach(u => addEMPriceRow(u.unit, u.price, u.platform));
+                p.unitPrices.forEach(u => addEMPriceRow(u.unit, u.price, u.platform, u.comparePrice));
             } else {
                 priceContainer.innerHTML = `<p class="text-xs text-gray-400 text-center py-3">ยังไม่มีราคา ECOM — กด "+ เพิ่มแถว"</p>`;
             }
+
+            // Multi-Lots
+            const lotContainer = document.getElementById('em-lots');
+            lotContainer.innerHTML = '';
+            if (p.inventorySlots && p.inventorySlots.length > 0) {
+                p.inventorySlots.forEach(slot => addLotRow(slot.lot, slot.exp, slot.stock));
+            } else if (p.lot || p.exp || p.ecomStock) {
+                // Migration from old single lot
+                addLotRow(p.lot || '', p.exp || '', p.ecomStock || 0);
+            } else {
+                lotContainer.innerHTML = '<p class="text-[10px] text-gray-300 italic text-center py-4">ยังไม่ระบุ Lot สต็อก</p>';
+            }
+
+            // Reset tab
+            switchTab(document.querySelector('.tab-btn'), 'tab-info');
+            updateTotalStockDisplay();
+
             document.getElementById('edit-modal').classList.add('open');
+        }
+
+        function addCompanyCostRow(company = '', cost = '') {
+            const container = document.getElementById('em-company-costs');
+            const p = container.querySelector('p'); if (p) p.remove();
+            const div = document.createElement('div');
+            div.className = 'flex gap-2 items-center bg-gray-50 border border-gray-100 rounded-xl p-2 animate-in fade-in duration-200';
+            div.innerHTML = `
+                <input type="text" placeholder="บริษัท" value="${company}" list="company-suggestions" class="flex-1 border rounded-lg p-2 text-xs font-bold outline-none focus:ring-1 focus:ring-indigo-400">
+                <input type="number" step="0.01" placeholder="ทุน" value="${cost}" class="w-24 border rounded-lg p-2 text-xs font-black text-red-600 outline-none focus:ring-1 focus:ring-red-400">
+                <button onclick="this.parentElement.remove()" class="text-gray-300 hover:text-red-500 px-2 transition"><i class="fas fa-times"></i></button>
+            `;
+            container.appendChild(div);
+        }
+
+        function addLotRow(lot = '', exp = '', stock = '') {
+            const container = document.getElementById('em-lots');
+            const p = container.querySelector('p'); if (p) p.remove();
+            const div = document.createElement('div');
+            div.className = 'grid grid-cols-12 gap-2 items-center bg-white border border-gray-100 rounded-xl p-2 shadow-sm animate-in zoom-in-95 duration-200';
+            div.innerHTML = `
+                <div class="col-span-4"><input type="text" placeholder="Lot #" value="${lot}" class="w-full border rounded-lg p-2 text-xs outline-none"></div>
+                <div class="col-span-4"><input type="date" value="${exp}" class="w-full border rounded-lg p-2 text-xs outline-none"></div>
+                <div class="col-span-3"><input type="number" placeholder="จำนวน" value="${stock}" oninput="updateTotalStockDisplay()" class="w-full border rounded-lg p-2 text-xs font-black text-center outline-none"></div>
+                <div class="col-span-1 text-center"><button onclick="this.closest('.grid').remove(); updateTotalStockDisplay()" class="text-gray-300 hover:text-red-500 transition"><i class="fas fa-times"></i></button></div>
+            `;
+            container.appendChild(div);
+            updateTotalStockDisplay();
+        }
+
+        function updateTotalStockDisplay() {
+            let total = 0;
+            document.querySelectorAll('#em-lots input[type="number"]').forEach(input => {
+                total += (parseInt(input.value) || 0);
+            });
+            document.getElementById('em-total-stock-display').innerText = total;
+            // Also sync to the main ecomStock field optionally
+            const emStockField = document.getElementById('em-stock');
+            if (!emStockField.dataset.manual) emStockField.value = total;
+        }
+
+        // Add manual flag to ecom stock
+        document.getElementById('em-stock').oninput = (e) => { e.target.dataset.manual = "true"; };
+
+        function addEMPriceRow(unit = '', pr = '', plat = 'ECOM', comp = '') {
+            const c = document.getElementById('em-prices');
+            const p = c.querySelector('p'); if (p) p.remove();
+            const d = document.createElement('div');
+            d.className = 'grid grid-cols-12 gap-2 items-center bg-white border border-gray-100 rounded-2xl p-2 shadow-sm animate-in slide-in-from-right-2 duration-200';
+
+            const calcSavings = (p, c) => {
+                if (!p || !c || c <= p) return '';
+                const pct = Math.round(((c - p) / c) * 100);
+                return `<span class="text-[9px] font-black text-green-500 ml-1">-${pct}%</span>`;
+            };
+
+            d.innerHTML = `
+                <div class="col-span-3">
+                    <select class="w-full border border-gray-100 rounded-xl p-2 text-[10px] font-black outline-none bg-gray-50">
+                        <option value="ECOM" ${plat === 'ECOM' ? 'selected' : ''}>ECOM</option>
+                        <option value="Retail" ${plat === 'Retail' ? 'selected' : ''}>หน้าร้าน</option>
+                        <option value="Lineman" ${plat === 'Lineman' ? 'selected' : ''}>Lineman</option>
+                        <option value="Grab" ${plat === 'Grab' ? 'selected' : ''}>Grab</option>
+                    </select>
+                </div>
+                <div class="col-span-2"><input type="text" placeholder="หน่วย" value="${unit}" class="w-full border rounded-xl p-2 text-xs outline-none"></div>
+                <div class="col-span-3"><input type="number" placeholder="ราคาอ้างอิง" value="${comp}" oninput="recalcPriceSavings(this)" class="w-full border rounded-xl p-2 text-xs font-bold text-gray-400 text-right outline-none"></div>
+                <div class="col-span-3 relative">
+                    <input type="number" placeholder="ส่ง" value="${pr}" oninput="recalcPriceSavings(this)" class="w-full border rounded-xl p-2 text-xs font-black text-indigo-600 text-right outline-none pr-8">
+                    <div class="savings-badge absolute right-2 top-1/2 -translate-y-1/2">${calcSavings(pr, comp)}</div>
+                </div>
+                <div class="col-span-1 text-center"><button onclick="this.closest('.grid').remove()" class="text-gray-300 hover:text-red-500 transition"><i class="fas fa-times"></i></button></div>
+            `;
+            c.appendChild(d);
+        }
+
+        function recalcPriceSavings(input) {
+            const row = input.closest('.grid');
+            const refPrice = parseFloat(row.querySelector('div:nth-child(3) input').value) || 0;
+            const salePrice = parseFloat(row.querySelector('div:nth-child(4) input').value) || 0;
+            const badge = row.querySelector('.savings-badge');
+            if (refPrice > salePrice && salePrice > 0) {
+                const pct = Math.round(((refPrice - salePrice) / refPrice) * 100);
+                badge.innerHTML = `<span class="text-[9px] font-black text-green-500">-${pct}%</span>`;
+            } else {
+                badge.innerHTML = '';
+            }
         }
 
         function closeEditModal() { document.getElementById('edit-modal').classList.remove('open'); }
@@ -800,25 +1374,6 @@
         function checkNewCatEM(val) {
             const inp = document.getElementById('em-category-new');
             val === 'new' ? inp.classList.remove('hidden') : inp.classList.add('hidden');
-        }
-
-        function addEMPriceRow(unit = '', price = '', platform = 'ECOM') {
-            const c = document.getElementById('em-prices');
-            const p = c.querySelector('p'); if (p) p.remove();
-            const d = document.createElement('div');
-            d.className = 'flex gap-2 items-center bg-white border border-gray-100 rounded-xl p-2 shadow-sm';
-            d.innerHTML = `
-            <select class="w-28 border border-gray-200 rounded-lg p-2 text-xs font-bold outline-none focus:ring-1 focus:ring-indigo-400 bg-gray-50">
-                <option value="ECOM" ${platform === 'ECOM' ? 'selected' : ''}>ECOM</option>
-                <option value="Retail" ${platform === 'Retail' ? 'selected' : ''}>หน้าร้าน</option>
-                <option value="Grab" ${platform === 'Grab' ? 'selected' : ''}>Grab</option>
-                <option value="Lineman" ${platform === 'Lineman' ? 'selected' : ''}>Lineman</option>
-                <option value="Shopee" ${platform === 'Shopee' ? 'selected' : ''}>Shopee</option>
-            </select>
-            <input type="text" placeholder="หน่วย" value="${unit}" class="flex-1 border border-gray-200 rounded-lg p-2 text-sm outline-none focus:ring-1 focus:ring-indigo-400">
-            <input type="number" placeholder="ราคา" value="${price}" class="w-24 border border-gray-200 rounded-lg p-2 text-sm font-bold text-right outline-none focus:ring-1 focus:ring-indigo-400">
-            <button onclick="this.parentElement.remove()" class="text-gray-300 hover:text-red-500 px-1 transition"><i class="fas fa-times"></i></button>`;
-            c.appendChild(d);
         }
 
         function previewEMImage(input) {
@@ -845,63 +1400,145 @@
         }
 
         async function saveProduct() {
-            const id = document.getElementById('em-id').value;
-            let cat = document.getElementById('em-category').value;
-            const newCat = document.getElementById('em-category-new').value.trim();
-            if (cat === 'new') { if (!newCat) { alert('ระบุชื่อหมวดหมู่ใหม่'); return; } cat = newCat; customCategories.add(cat); }
-
-            const ecomPrices = [];
-            document.querySelectorAll('#em-prices > div').forEach(row => {
-                const inputs = row.querySelectorAll('input');
-                const sel = row.querySelector('select');
-                const u = inputs[0].value.trim(), pr = parseFloat(inputs[1].value);
-                if (u && !isNaN(pr)) ecomPrices.push({ platform: sel.value, unit: u, price: pr });
-            });
-
-            // Build master prices object
-            const masterPrices = {};
-            const costVal = parseFloat(document.getElementById('em-cost').value);
-            const lmVal = parseFloat(document.getElementById('em-price-lineman').value);
-            const retailVal = parseFloat(document.getElementById('em-price-retail').value);
-            const wholesaleVal = parseFloat(document.getElementById('em-price-wholesale').value);
-            if (!isNaN(costVal)) masterPrices['COST'] = costVal;
-            if (!isNaN(lmVal)) masterPrices['LINEMAN'] = lmVal;
-            if (!isNaN(retailVal)) masterPrices['RETAIL'] = retailVal;
-            if (!isNaN(wholesaleVal)) masterPrices['WHOLESALE'] = wholesaleVal;
-
-            const updates = {
-                ecomCategory: cat,
-                ecomVisibility: document.getElementById('em-visibility').value,
-                lot: document.getElementById('em-lot').value,
-                exp: document.getElementById('em-exp').value,
-                ecomStock: parseInt(document.getElementById('em-stock').value) || 0,
-                unitPrices: ecomPrices,
-                unit: document.getElementById('em-unit').value.trim(),
-                cost: !isNaN(costVal) ? costVal : null,
-                price: !isNaN(lmVal) ? lmVal : null,
-                retail: !isNaN(retailVal) ? retailVal : null,
-                wholesale: !isNaN(wholesaleVal) ? wholesaleVal : null,
-                prices: masterPrices
-            };
-            if (emImageBase64) updates.imageUrl = emImageBase64;
-
             try {
-                await db.collection('master_products').doc(id).update(updates);
+                const id = document.getElementById('em-id').value;
+                if (!id) throw new Error("Product ID is missing in modal");
+
+                const p = allProducts.find(x => x.id === id);
+                if (!p) {
+                    console.error("Save failed: Cannot find product in local array", id);
+                    Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาดในการระบุสินค้า', text: 'ไม่พบสินค้าในรายการปัจจุบัน กรุณารีโหลดหน้าเว็บแล้วลองใหม่' });
+                    return;
+                }
+
+                // Show Loading
+                Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+                let cat = document.getElementById('em-category').value;
+                const newCat = document.getElementById('em-category-new').value.trim();
+                if (cat === 'new') {
+                    if (!newCat) throw new Error('กรุณาระบุชื่อหมวดหมู่ใหม่');
+                    cat = newCat;
+                    customCategories.add(cat);
+                }
+
+                // 1. ECOM Unit Prices (Advanced)
+                const ecomPrices = [];
+                document.querySelectorAll('#em-prices > .grid').forEach(row => {
+                    const inputs = row.querySelectorAll('input');
+                    const sel = row.querySelector('select');
+                    const u = inputs[0].value.trim();
+                    const refPrice = parseFloat(inputs[1].value);
+                    const selPrice = parseFloat(inputs[2].value);
+                    if (u && !isNaN(selPrice)) {
+                        ecomPrices.push({
+                            platform: sel.value,
+                            unit: u,
+                            price: selPrice,
+                            comparePrice: isNaN(refPrice) ? null : refPrice
+                        });
+                    }
+                });
+
+                // 2. Company Costs & Master Prices
+                const masterPrices = { ...(p.prices || {}) };
+                const lmVal = parseFloat(document.getElementById('em-price-lineman').value);
+                const retailVal = parseFloat(document.getElementById('em-price-retail').value);
+                const wholesaleVal = parseFloat(document.getElementById('em-price-wholesale').value);
+
+                if (!isNaN(lmVal)) masterPrices['LINEMAN'] = lmVal;
+                if (!isNaN(retailVal)) masterPrices['RETAIL'] = retailVal;
+                if (!isNaN(wholesaleVal)) masterPrices['WHOLESALE'] = wholesaleVal;
+
+                // Sync Multi-Company Costs
+                const stdPlatforms = ['LINEMAN', 'LINE_MAN', 'RETAIL', 'WHOLESALE', 'COST'];
+                // Clean non-std platforms to re-populate from UI
+                Object.keys(masterPrices).forEach(k => {
+                    if (!stdPlatforms.includes(k.toUpperCase())) delete masterPrices[k];
+                });
+
+                document.querySelectorAll('#em-company-costs > div').forEach(row => {
+                    const inputs = row.querySelectorAll('input');
+                    let comp = inputs[0].value.trim();
+                    const cst = parseFloat(inputs[1].value);
+                    if (comp && !isNaN(cst)) {
+                        if (comp.includes(' (') && comp.endsWith(')')) {
+                            comp = comp.replace(' (', '_').replace(')', '');
+                        } else if (comp === 'ต้นทุนกลาง (COST)') {
+                            comp = 'COST';
+                        }
+                        masterPrices[comp] = cst;
+                    }
+                });
+
+                // 3. Inventory Slots
+                const slots = [];
+                let totalActualStock = 0;
+                document.querySelectorAll('#em-lots > .grid').forEach(row => {
+                    const inputs = row.querySelectorAll('input');
+                    const lotNum = inputs[0].value.trim();
+                    const expDate = inputs[1].value;
+                    const st = parseInt(inputs[2].value) || 0;
+                    if (lotNum || expDate || st > 0) {
+                        slots.push({ lot: lotNum, exp: expDate, stock: st });
+                        totalActualStock += st;
+                    }
+                });
+
+                const updates = {
+                    ecomCategory: cat,
+                    ecomVisibility: document.getElementById('em-visibility').value,
+                    ecomStock: parseInt(document.getElementById('em-stock').value) || totalActualStock,
+                    unitPrices: ecomPrices,
+                    unit: (document.getElementById('em-unit').value || '').trim(),
+                    price: !isNaN(lmVal) ? lmVal : (p.price || 0),
+                    retail: !isNaN(retailVal) ? retailVal : (p.retail || 0),
+                    wholesale: !isNaN(wholesaleVal) ? wholesaleVal : (p.wholesale || 0),
+                    prices: masterPrices,
+                    inventorySlots: slots,
+                    aliases: (document.getElementById('em-aliases').value || '').split(',').map(a => a.trim()).filter(Boolean),
+                    lot: slots.length ? slots[0].lot : (p.lot || ''),
+                    exp: slots.length ? slots[0].exp : (p.exp || ''),
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                if (emImageBase64) updates.imageUrl = emImageBase64;
+
+                await db.collection('master_products').doc(p.id).update(updates);
+
                 Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
                 closeEditModal();
                 await fetchAllProducts();
-            } catch (e) { alert('Error: ' + e.message); }
+            } catch (err) {
+                console.error("Save error:", err);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'บันทึกไม่สำเร็จ',
+                    text: err.message || 'เกิดข้อผิดพลาดภายในระบบ'
+                });
+            }
         }
 
         async function deleteProduct() {
             const id = document.getElementById('em-id').value;
             const name = document.getElementById('em-name').value;
-            const res = await Swal.fire({ title: `ลบ "${name}"?`, text: 'ไม่สามารถย้อนกลับได้', icon: 'warning', showCancelButton: true, confirmButtonColor: '#dc2626', cancelButtonText: 'ยกเลิก', confirmButtonText: 'ลบเลย' });
+            const res = await Swal.fire({
+                title: `ยืนยันลบ "${name}"?`,
+                text: 'ข้อมูลทั้งหมดสถิติและรูปภาพจะถูกลบถาวร ไม่สามารถกู้คืนได้',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc2626',
+                cancelButtonText: 'ยกเลิก',
+                confirmButtonText: 'ยืนยันลบเลย'
+            });
             if (res.isConfirmed) {
-                await db.collection('master_products').doc(id).delete();
-                Swal.fire({ icon: 'success', title: 'ลบเรียบร้อย', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
-                closeEditModal();
-                await fetchAllProducts();
+                try {
+                    await db.collection('master_products').doc(id).delete();
+                    Swal.fire({ icon: 'success', title: 'ลบเรียบร้อย', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
+                    closeEditModal();
+                    await fetchAllProducts();
+                } catch (e) {
+                    alert('Error deleting: ' + e.message);
+                }
             }
         }
 
@@ -925,18 +1562,24 @@
 
         // ===== CATEGORIES SECTION =====
         function renderCategorySection() {
-            const cats = [...new Set(allProducts.map(p => p.ecomCategory || 'All'))].sort();
+            const cats = [...customCategories].sort();
             const icons = { All: '💊', OTC: '📦', Supplies: '🩹', Supplements: '🧪', Dermocare: '🧴' };
             document.getElementById('cat-list-admin').innerHTML = cats.map(c => {
                 const count = allProducts.filter(p => (p.ecomCategory || 'All') === c).length;
-                return `<div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
-                <div class="flex items-center gap-2">
-                    <span class="text-lg">${icons[c] || '🏷️'}</span>
+                return `<div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100 mb-2">
+                <div class="flex items-center gap-3">
+                    <span class="text-xl bg-white w-10 h-10 flex items-center justify-center rounded-xl shadow-sm border border-gray-100">${icons[c] || '🏷️'}</span>
                     <span class="font-bold text-gray-700 text-sm">${c}</span>
                 </div>
-                <span class="text-xs font-bold text-gray-400 bg-white px-2 py-1 rounded-full border">${count} รายการ</span>
+                <div class="flex items-center gap-3">
+                    <span class="text-[11px] font-black text-gray-400 bg-white px-3 py-1.5 rounded-xl border border-gray-100 shadow-xs">${count} รายการ</span>
+                </div>
             </div>`;
             }).join('');
+
+            // Update Stat card in header too
+            const statEl = document.getElementById('stat-cat-count');
+            if (statEl) statEl.innerText = customCategories.size;
         }
 
         function addCategory() {
@@ -962,7 +1605,7 @@
                         <td class="px-4 py-3"><span class="badge bg-indigo-50 text-indigo-700">${u.platform || 'ECOM'}</span></td>
                         <td class="px-4 py-3 text-sm text-gray-600">${u.unit}</td>
                         <td class="px-4 py-3 text-right font-black text-orange-600">฿${(u.price || 0).toLocaleString()}</td>
-                        <td class="px-4 py-3 text-center"><button onclick="event.stopPropagation();openEditModal('${safeName}')" class="text-xs text-indigo-500 hover:text-indigo-700 font-bold"><i class="fas fa-edit"></i></button></td>
+                        <td class="px-4 py-3 text-center"><button onclick="event.stopPropagation();openEditModal('${p.id.replace(/'/g, "\\'")}')" class="text-xs text-indigo-500 hover:text-indigo-700 font-bold"><i class="fas fa-edit"></i></button></td>
                     </tr>`);
                     });
                 }
@@ -1068,6 +1711,7 @@
             }
         }
     </script>
+    <datalist id="company-suggestions"></datalist>
 </body>
 
 </html>

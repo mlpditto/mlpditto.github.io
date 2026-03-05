@@ -447,6 +447,32 @@
         </div>
     </div>
 
+    <!-- ===== ACCESS GATE ===== -->
+    <div id="access-gate" class="hidden">
+        <div class="access-card">
+            <div
+                class="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-inner">
+                <i class="fas fa-lock text-3xl"></i>
+            </div>
+            <h2 class="text-2xl font-black text-gray-800 mb-2">Medlife ECOM</h2>
+            <p class="text-gray-500 text-sm font-bold mb-8">กรุณากรอกรหัสผ่านเพื่อเข้าใช้งานหน้าร้าน</p>
+
+            <div class="space-y-4">
+                <input type="text" id="access-code-input" maxlength="6" placeholder="******"
+                    class="w-full border-2 border-gray-100 bg-gray-50 rounded-2xl py-4 text-center text-2xl font-black text-indigo-600 outline-none focus:border-indigo-400 focus:bg-white transition-all code-input">
+
+                <button onclick="validateAccessCode()" id="access-btn"
+                    class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 rounded-2xl shadow-lg shadow-indigo-200 transition-all flex justify-center items-center gap-2">
+                    เข้าสู่ระบบ <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+
+            <p class="mt-8 text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-loose">
+                ติดต่อแอดมินเพื่อขอรับรหัสผ่าน<br>FOR AUTHORIZED PARTNERS ONLY
+            </p>
+        </div>
+    </div>
+
     <script>
         // Init Firebase Configuration gracefully
         if (!firebase.apps.length) {
@@ -491,18 +517,82 @@
                         if (dashBtn) { dashBtn.classList.remove('hidden'); dashBtn.classList.add('flex'); }
                         document.getElementById('admin-banner').classList.remove('hidden');
 
+                        // Admin bypasses gate
+                        document.getElementById('access-gate').classList.add('hidden');
+
                         // Re-render to show admin tools if data already loaded
                         if (allProducts.length > 0) renderProductGrid(currentDisplayProducts);
                     } else {
                         document.getElementById('user-role').innerText = 'Verified Partner';
                         document.getElementById('user-role').className = 'text-[10px] text-emerald-100 font-bold bg-emerald-600 px-2.5 py-0.5 rounded-full inline-block shadow-sm';
+                        checkAccessControl();
                     }
-                }).catch(err => console.error(err));
+                }).catch(err => {
+                    console.error(err);
+                    checkAccessControl();
+                });
             } else {
                 console.log("Guest view active.");
+                checkAccessControl();
             }
             fetchProductsFromMaster();
         });
+
+        // ===== ACCESS CONTROL =====
+        function checkAccessControl() {
+            if (isAdmin) return; // Admin bypass
+
+            // Check URL param first
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlCode = urlParams.get('code');
+            if (urlCode) {
+                verifyCode(urlCode);
+                return;
+            }
+
+            // Check localStorage
+            const savedCode = localStorage.getItem('ecom_access_grant');
+            if (savedCode) {
+                // We'll trust local storage for now, but in a real app we'd periodicially re-verify
+                document.getElementById('access-gate').classList.add('hidden');
+                return;
+            }
+
+            // Show gate
+            document.getElementById('access-gate').classList.remove('hidden');
+        }
+
+        async function validateAccessCode() {
+            const input = document.getElementById('access-code-input').value.trim().toUpperCase();
+            if (!input) return;
+            const btn = document.getElementById('access-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> กำลังตรวจสอบ...';
+
+            await verifyCode(input);
+            btn.disabled = false;
+            btn.innerHTML = 'เข้าสู่ระบบ <i class="fas fa-arrow-right"></i>';
+        }
+
+        async function verifyCode(code) {
+            try {
+                const q = await db.collection('ecom_access_codes')
+                    .where('code', '==', code.toUpperCase())
+                    .where('active', '==', true)
+                    .get();
+
+                if (!q.empty) {
+                    localStorage.setItem('ecom_access_grant', code.toUpperCase());
+                    document.getElementById('access-gate').classList.add('hidden');
+                    Swal.fire({ icon: 'success', title: 'ยินดีต้อนรับ', text: 'เข้าสู่ระบบสำเร็จ', timer: 1500, showConfirmButton: false });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'รหัสไม่ถูกต้อง', text: 'กรุณาตรวจสอบรหัสหรือติดต่อแอดมิน' });
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Error verifying code: " + e.message);
+            }
+        }
 
         function toggleAdminView() {
             adminViewEnabled = !adminViewEnabled;
