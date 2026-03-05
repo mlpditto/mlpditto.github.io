@@ -323,9 +323,10 @@
                     </select>
                     <select id="filter-vis" onchange="applyAdminFilter()"
                         class="border border-gray-200 rounded-xl text-sm py-2 px-3 outline-none focus:ring-2 focus:ring-indigo-400">
-                        <option value="">ทุกสถานะ</option>
-                        <option value="show">แสดง</option>
-                        <option value="hide">ซ่อน</option>
+                        <option value="">ทุกสถานะ (ไม่รวมลบ)</option>
+                        <option value="show">แสดง (Active)</option>
+                        <option value="hide">ซ่อน (Hidden)</option>
+                        <option value="deleted">ถังขยะ (Trash)</option>
                     </select>
                     <button onclick="openAddModal()"
                         class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-md shadow-indigo-200 flex items-center gap-2 transition">
@@ -905,7 +906,14 @@
                 const aliasesStr = (p.aliases || []).join(' ').toLowerCase();
                 if (q && !name.includes(q) && !(p.ecomCategory || '').toLowerCase().includes(q) && !aliasesStr.includes(q)) return false;
                 if (cat && (p.ecomCategory || 'All') !== cat) return false;
-                if (vis && (p.ecomVisibility || 'show') !== vis) return false;
+
+                const pVis = p.ecomVisibility || 'show';
+                if (vis) {
+                    if (pVis !== vis) return false;
+                } else {
+                    // Default view: exclude deleted
+                    if (pVis === 'deleted') return false;
+                }
                 return true;
             });
             document.getElementById('filter-count').innerText = filteredProducts.length;
@@ -967,7 +975,11 @@
                     <span class="${isLow ? 'badge badge-low' : 'font-black text-xs text-gray-700'}">${stock}</span>
                 </td>
                 <td class="px-3 py-2.5 text-center">
-                    <span class="badge ${vis === 'show' ? 'badge-show' : 'badge-hide'} animate-pulse-subtle">${vis === 'show' ? 'ACTIVE' : 'HIDDEN'}</span>
+                    <span class="badge ${vis === 'show' ? 'badge-show' : (vis === 'deleted' ? 'bg-gray-100 text-gray-500' : 'badge-hide')} cursor-pointer hover:brightness-95 transition-all shadow-sm active:scale-95" 
+                      onclick="event.stopPropagation(); quickToggleVisibility('${safeId}', '${vis}')" 
+                      title="คลิกเพื่อสลับสถานะ แสดง/ซ่อน">
+                        ${vis === 'show' ? 'ACTIVE' : (vis === 'deleted' ? 'DELETED' : 'HIDDEN')}
+                    </span>
                 </td>
                 <td class="px-3 py-2.5 text-center">
                     <button onclick="event.stopPropagation(); quickToggleVisibility('${safeId}', '${vis}')" class="text-xs text-gray-400 hover:text-indigo-600 transition p-1">
@@ -1165,6 +1177,27 @@
         }
 
         async function quickToggleVisibility(id, currentVis) {
+            // Cannot toggle if deleted (must restore via modal)
+            if (currentVis === 'deleted') {
+                Swal.fire({
+                    title: 'กู้คืนสินค้า?',
+                    text: 'สินค้านี้ถูกลบอยู่ ต้องการกู้คืนกลับมาแสดงผลหรือไม่?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'กู้คืน',
+                    cancelButtonText: 'ยกเลิก'
+                }).then(async (res) => {
+                    if (res.isConfirmed) {
+                        await db.collection('master_products').doc(id).update({ ecomVisibility: 'show' });
+                        const p = allProducts.find(x => x.id === id);
+                        if (p) p.ecomVisibility = 'show';
+                        applyAdminFilter();
+                        Swal.fire({ icon: 'success', title: 'กู้คืนเรียบร้อย', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
+                    }
+                });
+                return;
+            }
+
             const newVis = currentVis === 'show' ? 'hide' : 'show';
             try {
                 await db.collection('master_products').doc(id).update({ ecomVisibility: newVis });
@@ -1172,6 +1205,10 @@
                 if (p) p.ecomVisibility = newVis;
                 updateStats();
                 applyAdminFilter();
+
+                // Optional: show small toast for feedback
+                const msg = newVis === 'show' ? 'แสดงสินค้าแล้ว' : 'ซ่อนสินค้าแล้ว';
+                Swal.fire({ icon: 'success', title: msg, toast: true, position: 'top-end', showConfirmButton: false, timer: 1000 });
             } catch (e) {
                 console.error("Toggle visibility error:", e);
                 alert("Error: " + e.message);
@@ -1590,23 +1627,54 @@
         async function deleteProduct() {
             const id = document.getElementById('em-id').value;
             const name = document.getElementById('em-name').value;
+            const currentVis = document.getElementById('em-visibility').value;
+
+            if (currentVis === 'deleted') {
+                // Permanent Delete
+                const res = await Swal.fire({
+                    title: `ยืนยันลบถาวร?`,
+                    text: `ต้องการลบ "${name}" ออกจากถังขยะถาวรหรือไม่? การกระทำนี้ไม่สามารถย้อนคืนได้`,
+                    icon: 'error',
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc2626',
+                    confirmButtonText: 'ลบถาวร',
+                    cancelButtonText: 'ยกเลิก'
+                });
+                if (res.isConfirmed) {
+                    try {
+                        await db.collection('master_products').doc(id).delete();
+                        Swal.fire({ icon: 'success', title: 'ลบถาวรเรียบร้อย', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
+                        closeEditModal();
+                        await fetchAllProducts();
+                    } catch (e) { alert('Error: ' + e.message); }
+                }
+                return;
+            }
+
             const res = await Swal.fire({
-                title: `ยืนยันลบ "${name}"?`,
-                text: 'ข้อมูลทั้งหมดสถิติและรูปภาพจะถูกลบถาวร ไม่สามารถกู้คืนได้',
+                title: `ย้ายไปถังขยะ?`,
+                text: `ต้องการย้าย "${name}" ไปที่ถังขยะหรือไม่? คุณสามารถกู้คืนได้ภายหลังจากฟิลเตอร์ "ถังขยะ"`,
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#dc2626',
+                confirmButtonColor: '#f59e0b',
                 cancelButtonText: 'ยกเลิก',
-                confirmButtonText: 'ยืนยันลบเลย'
+                confirmButtonText: 'ย้ายไปถังขยะ'
             });
             if (res.isConfirmed) {
                 try {
-                    await db.collection('master_products').doc(id).delete();
-                    Swal.fire({ icon: 'success', title: 'ลบเรียบร้อย', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
+                    await db.collection('master_products').doc(id).update({
+                        ecomVisibility: 'deleted',
+                        deletedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    const p = allProducts.find(x => x.id === id);
+                    if (p) p.ecomVisibility = 'deleted';
+
+                    Swal.fire({ icon: 'success', title: 'ย้ายไปถังขยะแล้ว', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
                     closeEditModal();
-                    await fetchAllProducts();
+                    applyAdminFilter();
+                    updateStats();
                 } catch (e) {
-                    alert('Error deleting: ' + e.message);
+                    alert('Error: ' + e.message);
                 }
             }
         }
