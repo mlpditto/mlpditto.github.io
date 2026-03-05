@@ -332,8 +332,8 @@
         onclick="toggleCart()"></div>
 
     <!-- Product Edit Modal (Admin) -->
-    <div id="product-edit-modal"
-        class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4">
+    <div id="product-edit-modal" style="display:none"
+        class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden flex flex-col">
             <div class="bg-indigo-600 p-5 text-white flex justify-between items-center">
                 <h2 class="font-bold text-lg flex items-center gap-2"><i class="fas fa-edit"></i> จัดการข้อมูลสินค้า
@@ -450,12 +450,21 @@
         const auth = firebase.auth();
 
         let isAdmin = false;
+        let adminViewEnabled = false;  // Separate toggle state for admin UI overlay
         let cart = [];
         let allProducts = [];
         let currentDisplayProducts = [];
         let currentCategory = 'All';
         let currentLetter = 'All';
         let searchQuery = '';
+
+        // Map from index to product ID for safe onclick calls
+        window._ecomProductMap = {};
+
+        function openEditByIndex(idx) {
+            const id = window._ecomProductMap[idx];
+            if (id) openProductModal(id);
+        }
 
         // Check Auth and Setup View
         auth.onAuthStateChanged(user => {
@@ -466,9 +475,12 @@
 
                     if (uData.role === 'admin' || user.email === 'medlifeplus@gmail.com') {
                         isAdmin = true;
+                        adminViewEnabled = true;  // Auto-enable admin UI for admin users
                         document.getElementById('user-role').innerText = 'Administrator';
                         document.getElementById('user-role').className = 'text-[10px] text-indigo-100 font-bold bg-indigo-600 px-2.5 py-0.5 rounded-full inline-block shadow-sm';
                         document.getElementById('admin-toggle-btn').classList.remove('hidden');
+                        document.getElementById('admin-toggle-btn').classList.add('bg-indigo-600', 'text-white');
+                        document.getElementById('admin-toggle-btn').classList.remove('bg-indigo-50', 'text-gray-400');
                         document.getElementById('admin-banner').classList.remove('hidden');
 
                         // Re-render to show admin tools if data already loaded
@@ -485,9 +497,9 @@
         });
 
         function toggleAdminView() {
-            isAdmin = !isAdmin;
+            adminViewEnabled = !adminViewEnabled;
             const btn = document.getElementById('admin-toggle-btn');
-            if (isAdmin) {
+            if (adminViewEnabled) {
                 btn.classList.add('bg-indigo-600', 'text-white');
                 btn.classList.remove('bg-indigo-50', 'text-gray-400');
             } else {
@@ -572,17 +584,20 @@
             grid.classList.remove('hidden');
             grid.innerHTML = '';
 
-            items.forEach(item => {
+            items.forEach((item, idx) => {
                 // Use actual image or placeholder
                 const imgSrc = item.imageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name.substring(0, 2))}&background=random&color=fff&size=200&font-size=0.4&bold=true`;
 
-                // Extra UI for Admins
-                const adminBadge = isAdmin ? `
-                    <button onclick="event.stopPropagation(); openProductModal('${item.id}')" class="absolute top-3 right-3 bg-white/95 backdrop-blur-sm text-indigo-600 w-9 h-9 rounded-full shadow-lg border hover:bg-indigo-50 border-indigo-100 z-50 flex items-center justify-center transition-all active:scale-90" title="ตั้งค่าสินค้า">
+                // Store product id in map for safe access from onclick
+                window._ecomProductMap[idx] = item.id;
+
+                // Extra UI for Admins - use index-based call to avoid ID escaping issues
+                const adminBadge = adminViewEnabled ? `
+                    <button onclick="event.stopPropagation(); openEditByIndex(${idx})" class="admin-edit-btn absolute -top-3 -right-3 bg-white text-indigo-600 w-10 h-10 rounded-full shadow-xl border-2 border-indigo-200 hover:bg-indigo-600 hover:text-white z-[60] flex items-center justify-center transition-all active:scale-90" title="แก้ไขสินค้า">
                         <i class="fas fa-edit text-sm"></i>
                     </button>
-                    ${item.stock < 10 ? '<span class="absolute top-3 left-3 bg-red-100 text-red-600 text-[9px] font-bold px-2 py-0.5 rounded-full z-10 border border-red-200">ใกล้หมด</span>' : ''}
-                    ${item.visibility === 'hide' ? '<span class="absolute bottom-3 right-3 bg-gray-800 text-white text-[9px] font-bold px-2 py-0.5 rounded-full z-10 opacity-80">ซ่อน (Hidden)</span>' : ''}
+                    ${item.stock < 10 ? '<span class="absolute top-2 left-2 bg-red-100 text-red-600 text-[9px] font-bold px-2 py-0.5 rounded-full border border-red-200">ใกล้หมด</span>' : ''}
+                    ${item.visibility === 'hide' ? '<span class="absolute bottom-2 left-2 bg-gray-800 text-white text-[9px] font-bold px-2 py-0.5 rounded-full opacity-80">ซ่อน</span>' : ''}
                 ` : '';
 
                 // Calculate Discount %
@@ -590,7 +605,7 @@
                 const discountTag = discount > 0 ? `<div class="absolute bottom-2 left-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded uppercase shadow-sm">ประหยัด ${discount}%</div>` : '';
 
                 const card = document.createElement('div');
-                card.className = "product-card bg-white rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100/80 flex flex-col relative overflow-hidden group";
+                card.className = "product-card bg-white rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100/80 flex flex-col relative group";
 
                 card.innerHTML = `
                     ${adminBadge}
@@ -956,11 +971,11 @@
 
             currentEditImageBase64 = null;
             document.getElementById('edit-prod-img-file').value = '';
-            document.getElementById('product-edit-modal').classList.remove('hidden');
+            document.getElementById('product-edit-modal').style.display = 'flex';
         }
 
         function closeProductModal() {
-            document.getElementById('product-edit-modal').classList.add('hidden');
+            document.getElementById('product-edit-modal').style.display = 'none';
         }
 
         function addUnitPriceRow(unit = '', price = '', platform = 'ECOM') {

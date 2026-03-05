@@ -2,6 +2,14 @@
 
 ## 📅 5 มีนาคม 2026 (Stock Intelligence & Layout Refactor)
 
+### 🐛 แก้ไขบัคสำคัญ — Admin Edit Button (ecom.html)
+*   **B2B Wholesale Portal (ecom.html):**
+    -   **ปุ่ม Edit ที่ Product Card ไม่ทำงาน — แก้ไขบัค 3 จุดพร้อมกัน:**
+        1.  **`toggleAdminView()` Toggle ค่า `isAdmin` ผิด:** แยก `adminViewEnabled` (ควบคุม UI Overlay) ออกจาก `isAdmin` (ตรวจสอบ Role Firebase) — กดปุ่ม Cog จะไม่ทำให้สิทธิ์ Admin หายแล้ว
+        2.  **Tailwind `hidden flex` Conflict:** Modal ที่มีทั้ง `class="hidden flex"` บังคับ `display:none !important` เสมอ แม้จะลบ `hidden` ออก — แก้โดยใช้ `style.display = 'flex'/'none'` โดยตรงแทน
+        3.  **Product ID มีอักขระพิเศษ:** ชื่อยาที่เป็น Firestore Doc ID ทำให้ inline `onclick` string พัง — แก้โดยใช้ `window._ecomProductMap[idx]` (index map) แทนการ inject ID โดยตรง
+    -   **Admin Auto-Enable:** Login ด้วย Role Admin ปุ่ม Cog จะ Active และ Edit Buttons ปรากฏทันทีโดยไม่ต้องกด Toggle ก่อน
+
 ### 🚀 ฟีเจอร์ใหม่ & การแก้ไข (Latest)
 *   **ProOrder Manager (v4.18):**
     -   **Smart Stock Parsing:** ปรับปรุงระบบ Paste ให้สามารถดึงข้อมูล "จำนวนคงเหลือ" (Remaining Stock) จากตารางข้อมูลดิบได้อัตโนมัติ
