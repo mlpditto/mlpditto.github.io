@@ -691,6 +691,28 @@
                             <h3 class="text-xs font-black text-gray-600 uppercase mb-3 ml-1">ข้อมูลอื่นๆ</h3>
                             <div class="space-y-3">
                                 <div>
+                                    <label
+                                        class="text-[9px] font-black text-gray-500 uppercase block mb-1">เลขทะเบียนตำรับยา
+                                        (Registration No.)</label>
+                                    <input id="em-reg-no" type="text"
+                                        class="w-full border rounded-xl p-2.5 text-xs outline-none focus:ring-1 focus:ring-gray-400">
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="text-[9px] font-black text-gray-500 uppercase block mb-1">ผู้ผลิต
+                                            (Manufacturer)</label>
+                                        <input id="em-manufacturer" type="text"
+                                            class="w-full border rounded-xl p-2.5 text-xs outline-none focus:ring-1 focus:ring-gray-400">
+                                    </div>
+                                    <div>
+                                        <label
+                                            class="text-[9px] font-black text-gray-500 uppercase block mb-1">ประเทศผู้ผลิต
+                                            (Country of Origin)</label>
+                                        <input id="em-country" type="text"
+                                            class="w-full border rounded-xl p-2.5 text-xs outline-none focus:ring-1 focus:ring-gray-400">
+                                    </div>
+                                </div>
+                                <div>
                                     <label class="text-[9px] font-black text-gray-500 uppercase block mb-1">ชื่อเล่น /
                                         Aliases (คั่นด้วย comma)</label>
                                     <input id="em-aliases" type="text"
@@ -919,9 +941,37 @@
             }
         }
 
-        function getDocId(name) { return name.trim(); }
+        function getDocId(name) {
+            if (!name) return "";
+            return name.trim().replace(/\//g, '_');
+        }
 
         // ===== STATS =====
+        function getCostStats(p) {
+            const prices = p.prices || {};
+            const stdPlatforms = ['LINEMAN', 'LINE_MAN', 'RETAIL', 'WHOLESALE', 'COST'];
+            const companyCosts = [];
+
+            Object.keys(prices).forEach(k => {
+                const upKey = k.toUpperCase();
+                if (!stdPlatforms.includes(upKey)) {
+                    const price = parseFloat(prices[k]);
+                    if (!isNaN(price) && price > 0) companyCosts.push(price);
+                }
+            });
+
+            const baseCost = parseFloat(p.cost || prices['COST']);
+            if (!isNaN(baseCost) && baseCost > 0) companyCosts.push(baseCost);
+
+            if (companyCosts.length === 0) return null;
+
+            const min = Math.min(...companyCosts);
+            const max = Math.max(...companyCosts);
+            const avg = companyCosts.reduce((a, b) => a + b, 0) / companyCosts.length;
+
+            return { min, max, avg, count: companyCosts.length };
+        }
+
         function updateStats() {
             const visible = allProducts.filter(p => p.ecomVisibility !== 'hide');
             const lowStock = allProducts.filter(p => p.ecomStock !== undefined && parseInt(p.ecomStock) < 10);
@@ -1025,9 +1075,26 @@
                 const stock = p.ecomStock !== undefined ? parseInt(p.ecomStock) : '—';
                 const isLow = stock !== '—' && stock < 10;
                 const imgSrc = p.imageUrl || '';
-                const cost = p.cost || (p.prices && p.prices['COST']) || '';
                 const lmPrice = (p.prices && (p.prices['LINEMAN'] || p.prices['LINE_MAN'])) || '';
                 const isSelected = selectedIds.has(p.id);
+
+                const stats = getCostStats(p);
+                let costHtml = '';
+                if (stats) {
+                    if (stats.min === stats.max) {
+                        costHtml = `฿${stats.min.toLocaleString()}`;
+                    } else {
+                        costHtml = `
+                            <div class="flex flex-col items-end leading-none gap-0.5">
+                                <span class="text-[8px] text-gray-400 font-bold uppercase">MIN ฿${stats.min.toLocaleString()}</span>
+                                <span class="text-[11px] font-black text-red-600">AVG ฿${Math.round(stats.avg).toLocaleString()}</span>
+                                <span class="text-[8px] text-gray-400 font-bold uppercase">MAX ฿${stats.max.toLocaleString()}</span>
+                            </div>
+                        `;
+                    }
+                } else {
+                    costHtml = '<span class="text-gray-300">฿0</span>';
+                }
                 // Escape characters that break HTML/JS (v2)
                 const safeId = p.id.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, "&quot;");
 
@@ -1045,7 +1112,7 @@
                     ${p.aliases && p.aliases.length ? `<p class="text-[9px] text-gray-400 truncate max-w-[200px]">${p.aliases.join(', ')}</p>` : ''}
                 </td>
                 <td class="px-3 py-2.5 text-xs text-gray-600">${p.ecomCategory || 'All'}</td>
-                <td class="px-3 py-2.5 text-right text-xs font-bold text-red-600">฿${(parseFloat(cost) || 0).toLocaleString()}</td>
+                <td class="px-3 py-2.5 text-right font-bold">${costHtml}</td>
                 <td class="px-3 py-2.5 text-right text-xs font-bold text-green-700">฿${(parseFloat(lmPrice) || 0).toLocaleString()}</td>
                 <td class="px-3 py-2.5 text-center">
                     <span class="${isLow ? 'badge badge-low' : 'font-black text-xs text-gray-700'}">${stock}</span>
@@ -1413,6 +1480,9 @@
             document.getElementById('em-visibility').value = p.ecomVisibility || 'show';
             document.getElementById('em-unit').value = p.unit || '';
             document.getElementById('em-aliases').value = (p.aliases || []).join(', ');
+            document.getElementById('em-reg-no').value = p.registrationNo || '';
+            document.getElementById('em-manufacturer').value = p.manufacturer || '';
+            document.getElementById('em-country').value = p.countryOfOrigin || '';
 
             // Master prices
             const prices = p.prices || {};
@@ -1610,7 +1680,8 @@
 
             // Check duplicate if add mode
             if (isAddMode) {
-                const exist = allProducts.find(x => x.id.toLowerCase() === name.toLowerCase());
+                const targetId = getDocId(name);
+                const exist = allProducts.find(x => x.id.toLowerCase() === targetId.toLowerCase());
                 if (exist) {
                     Swal.fire({ icon: 'error', title: 'ชื่อสินค้าซ้ำ', text: 'มีสินค้าชื่อนี้อยู่ในระบบแล้ว' });
                     return;
@@ -1703,6 +1774,9 @@
                     ecomStock: parseInt(document.getElementById('em-stock').value) || totalActualStock,
                     unitPrices: ecomPrices,
                     unit: (document.getElementById('em-unit').value || '').trim(),
+                    registrationNo: (document.getElementById('em-reg-no').value || '').trim(),
+                    manufacturer: (document.getElementById('em-manufacturer').value || '').trim(),
+                    countryOfOrigin: (document.getElementById('em-country').value || '').trim(),
                     price: !isNaN(lmVal) ? lmVal : 0,
                     retail: !isNaN(retailVal) ? retailVal : 0,
                     wholesale: !isNaN(wholesaleVal) ? wholesaleVal : 0,
@@ -1715,8 +1789,9 @@
                 };
                 if (emImageBase64) updates.imageUrl = emImageBase64;
 
-                const docId = isAddMode ? name : id;
-                await db.collection('master_products').doc(docId).set(updates, { merge: true });
+                const targetDocId = isAddMode ? getDocId(name) : id;
+                await db.collection('master_products').doc(targetDocId).set(updates, { merge: true });
+
 
                 Swal.fire({ icon: 'success', title: isAddMode ? 'เพิ่มสินค้าสำเร็จ' : 'บันทึกสำเร็จ', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
                 closeEditModal();
