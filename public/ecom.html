@@ -554,10 +554,8 @@
 
                     // Process items
                     allProducts.sort((a, b) => a.name.localeCompare(b.name));
-                    // Filter visible only for non-admin
-                    if (!isAdmin) {
-                        allProducts = allProducts.filter(p => p.visibility !== 'hide');
-                    }
+                    // Always filter hidden products on customer page (admin uses ecom-admin.html)
+                    allProducts = allProducts.filter(p => p.visibility !== 'hide');
                     currentDisplayProducts = [...allProducts];
                     updateCategoryFilterUI();
                     renderProductGrid(currentDisplayProducts);
@@ -599,11 +597,8 @@
                 // Store product id in map for safe access from onclick
                 window._ecomProductMap[idx] = item.id;
 
-                // Extra UI for Admins - use index-based call to avoid ID escaping issues
+                // Badges for admin info only (no edit button — use ecom-admin.html)
                 const adminBadge = adminViewEnabled ? `
-                    <button onclick="event.stopPropagation(); openEditByIndex(${idx})" class="admin-edit-btn absolute -top-3 -right-3 bg-white text-indigo-600 w-10 h-10 rounded-full shadow-xl border-2 border-indigo-200 hover:bg-indigo-600 hover:text-white z-[60] flex items-center justify-center transition-all active:scale-90" title="แก้ไขสินค้า">
-                        <i class="fas fa-edit text-sm"></i>
-                    </button>
                     ${item.stock < 10 ? '<span class="absolute top-2 left-2 bg-red-100 text-red-600 text-[9px] font-bold px-2 py-0.5 rounded-full border border-red-200">ใกล้หมด</span>' : ''}
                     ${item.visibility === 'hide' ? '<span class="absolute bottom-2 left-2 bg-gray-800 text-white text-[9px] font-bold px-2 py-0.5 rounded-full opacity-80">ซ่อน</span>' : ''}
                 ` : '';
