@@ -539,6 +539,51 @@
         </main>
     </div>
 
+    <!-- ===== ADD MODAL ===== -->
+    <div id="add-modal" class="modal-overlay">
+        <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl flex flex-col p-8 fade-slide relative">
+            <button onclick="closeAddModal()"
+                class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition"><i
+                    class="fas fa-times text-xl"></i></button>
+            <div class="mb-6 shrink-0">
+                <h2 class="text-2xl font-black text-gray-800">เพิ่มสินค้าใหม่</h2>
+                <p class="text-xs text-gray-400 font-bold uppercase mt-1 tracking-widest">Create New Record</p>
+            </div>
+            <div class="space-y-4 overflow-y-auto pr-1">
+                <div>
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">ชื่อสินค้า
+                        (Doc ID)</label>
+                    <input id="add-name" type="text" placeholder="ระบุชื่อสินค้า..."
+                        class="w-full border border-gray-200 rounded-2xl p-4 text-sm font-black outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50 transition">
+                </div>
+                <div>
+                    <label
+                        class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">หมวดหมู่</label>
+                    <select id="add-cat"
+                        class="w-full border border-gray-200 rounded-2xl p-4 text-sm font-black outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50 transition appearance-none">
+                        <option value="All">ทั่วไป (All)</option>
+                        <option value="OTC">OTC</option>
+                        <option value="Supplies">Supplies</option>
+                        <option value="Supplements">Supplements</option>
+                        <option value="Dermocare">Dermocare</option>
+                    </select>
+                </div>
+                <div>
+                    <label
+                        class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">สต็อกเริ่มต้น</label>
+                    <input id="add-stock" type="number" value="0"
+                        class="w-full border border-gray-200 rounded-2xl p-4 text-xl font-black outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50 transition text-center text-indigo-600">
+                </div>
+                <div class="pt-4 flex gap-3 shrink-0">
+                    <button onclick="closeAddModal()"
+                        class="flex-1 py-4 bg-gray-100 text-gray-600 font-black rounded-2xl hover:bg-gray-200 transition text-sm">ยกเลิก</button>
+                    <button onclick="confirmAddProduct()"
+                        class="flex-1 py-4 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 transition text-sm shadow-xl shadow-indigo-100">ยืนยันการเพิ่ม</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ===== EDIT MODAL ===== -->
     <div id="edit-modal" class="modal-overlay">
         <div class="bg-white rounded-3xl w-full max-w-3xl shadow-2xl flex flex-col max-h-[95vh] overflow-hidden">
