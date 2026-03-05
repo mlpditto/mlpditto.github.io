@@ -375,7 +375,7 @@
                                 class="fa-solid fa-file-invoice-dollar mr-2"></i> TAX</button>
                     </div>
                     <button
-                        onclick="navigator.clipboard.writeText('python invoice_server.py').then(()=>showToast('คัดลอกคำสั่งรัน Bot เรียบร้อยแล้ว'))"
+                        onclick="navigator.clipboard.writeText('python local_invoice_bot/invoice_server.py').then(()=>showToast('คัดลอกคำสั่งรัน Bot เรียบร้อยแล้ว'))"
                         class="px-3 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center justify-center font-mono text-xs font-bold border border-slate-200 dark:border-slate-700"
                         title="Copy Python Bot Command">
                         <i class="fa-solid fa-terminal mr-2 text-slate-500 dark:text-slate-400"></i> Code
@@ -1982,8 +1982,8 @@
 
             return `
                 <div class="email-content" style="font-family: 'Prompt', sans-serif; font-size: 12px; color: #000;">
-                    <p style="margin: 4px 0;">To: pattharawadi.s@chiiwii.com, thanyarat.c@chiiwii.com</p>
-                    <p style="margin: 4px 0;">Cc: supphakit.s@chiiwii.com, preecha.p@chiiwii.com, accounting@chiiwii.com</p>
+                    <p style="margin: 4px 0;">pattharawadi.s@chiiwii.com, thanyarat.c@chiiwii.com</p>
+                    <p style="margin: 4px 0;">supphakit.s@chiiwii.com, preecha.p@chiiwii.com, accounting@chiiwii.com</p>
                     <p style="margin: 4px 0;">สรุปยอด ${safeDate} --- ${title}</p>
                     <p style="margin: 4px 0;">BAR-00003-26-</p>
                     <p style="margin: 4px 0;">ค่ายา 💊 และค่าส่งสินค้า ยอดรวมชำระเข้า บัญชี บจก. เมดไลฟ์ พลัส</p>
@@ -2168,7 +2168,7 @@
                 }
             } catch (error) {
                 console.error(error);
-                showToast("ไม่สามารถเชื่อมต่อโปรแกรมบอทได้ (ลองรัน invoice_server.py ก่อน)", true);
+                showToast("ไม่สามารถเชื่อมต่อโปรแกรมบอทได้ (ลองรัน python local_invoice_bot/invoice_server.py)", true);
             } finally {
                 hideLoading();
             }

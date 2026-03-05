@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ProOrder Manager (v4.16)</title>
+    <title>ProOrder Manager (v4.18)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -298,7 +298,7 @@
             <div class="bg-white/10 p-2 rounded-lg"><i class="fas fa-notes-medical text-xl"></i></div>
             <div>
                 <h1 class="text-lg font-bold leading-tight">ระบบสั่งยา</h1>
-                <p class="text-[10px] text-teal-200 opacity-90 font-light">v4.16</p>
+                <p class="text-[10px] text-teal-200 opacity-90 font-light">v4.18</p>
             </div>
         </div>
         <div class="flex gap-2">
@@ -335,7 +335,13 @@
                             class="fas fa-search absolute left-2 top-2.5 text-gray-400 text-xs"></i><input type="text"
                             id="searchInput" placeholder="ค้นหา..."
                             class="w-full pl-7 pr-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white text-xs"
-                            oninput="handleSearch(this.value)"></div><button onclick="showAddMedicineForm()"
+                            oninput="handleSearch(this.value)"></div>
+                    <button id="toggleZeroBtn" onclick="toggleZeroFilter()"
+                        class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-1.5 rounded-lg shadow-sm transition active:scale-95 flex items-center gap-1 font-bold whitespace-nowrap text-xs"
+                        title="แสดงเฉพาะสินค้าที่ 'จำนวนคงเหลือ' เป็น 0">
+                        <i class="fas fa-boxes"></i> 0
+                    </button>
+                    <button onclick="showAddMedicineForm()"
                         class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg shadow-sm transition active:scale-95 flex items-center gap-1 font-bold whitespace-nowrap text-xs"><i
                             class="fas fa-plus"></i></button>
                 </div>
@@ -570,6 +576,27 @@
                 <div class="relative border-l-2 border-gray-200 ml-3 space-y-6">
                     <div class="ml-6 relative"><span
                             class="absolute -left-[31px] top-0 flex items-center justify-center w-8 h-8 bg-teal-500 rounded-full ring-4 ring-white text-white"><i
+                                class="fas fa-search text-xs"></i></span>
+                        <h3 class="font-bold text-gray-900">v4.18 Stock Filter</h3>
+                        <p class="text-xs text-gray-500">Current</p>
+                        <ul class="list-disc pl-4 mt-1 text-gray-600">
+                            <li><b>Stock Parsing:</b> ดึงข้อมูล "จำนวนคงเหลือ" จากตารางที่ Paste</li>
+                            <li><b>Zero Filter:</b> ปุ่มกรองแสดงเฉพาะสินค้าที่ "เหลือ 0" (In Stock = 0)</li>
+                            <li><b>Paste Logic:</b> ปรับปรุงการวางรายการซ้ำให้เขียนทับจำนวนเดิม</li>
+                        </ul>
+                    </div>
+                    <div class="ml-6 relative"><span
+                            class="absolute -left-[31px] top-0 flex items-center justify-center w-8 h-8 bg-gray-400 rounded-full ring-4 ring-white text-white"><i
+                                class="fas fa-search text-xs"></i></span>
+                        <h3 class="font-bold text-gray-900">v4.17 Paste & Filter</h3>
+                        <p class="text-xs text-gray-500">Current</p>
+                        <ul class="list-disc pl-4 mt-1 text-gray-600">
+                            <li><b>Paste Fix:</b> วางรายการซ้ำจะไม่เพิ่มจำนวนสะสม</li>
+                            <li><b>Zero Filter:</b> เพิ่มปุ่มดูรายการที่มียอดเป็น 0</li>
+                        </ul>
+                    </div>
+                    <div class="ml-6 relative"><span
+                            class="absolute -left-[31px] top-0 flex items-center justify-center w-8 h-8 bg-gray-400 rounded-full ring-4 ring-white text-white"><i
                                 class="fas fa-search text-xs"></i></span>
                         <h3 class="font-bold text-gray-900">v4.15 Search Fix</h3>
                         <p class="text-xs text-gray-500">Current</p>
@@ -831,6 +858,7 @@
         let products = []; let cart = {}; let sortMode = 'time'; let companyGroups = {}; let labItems = []; let labCleanMode = false;
         let expandedCompanies = new Set();
         let currentFilterChar = 'ALL';
+        let showZeroOnly = false;
         let uniqueUnits = new Set();
         let uniqueCompanies = new Set();
 
@@ -1029,7 +1057,7 @@
             const lines = raw.split('\n'); const items = [];
             lines.forEach(l => {
                 l = l.trim(); if (!l) return;
-                let n = l, q = 1, u = "", comp = "";
+                let n = l, q = 1, u = "", comp = "", itemRem = null;
 
                 // Pattern 1: P-xxxx : Company : Name Quantity
                 const pMatch = l.match(/^(.*?)P-\d+\s*:\s*(.*?)(?=\s+\d+\s*-\s*\d+|$)/);
@@ -1041,7 +1069,16 @@
                 if (pMatch) {
                     comp = pMatch[1].replace(/^[A-Za-z0-9-]+\s*:\s*/, '').trim();
                     n = pMatch[2].trim();
-                    const nm = l.match(/(\d+)$/); if (nm) q = parseInt(nm[1]);
+
+                    // Specific for the table in the image: ... [Min] - [Max] [Remaining] [Desired]
+                    const tailMatch = l.match(/(\d+)\s+(\d+)$/);
+                    if (tailMatch) {
+                        itemRem = parseInt(tailMatch[1]);
+                        q = parseInt(tailMatch[2]);
+                    } else {
+                        const nm = l.match(/(\d+)$/);
+                        if (nm) q = parseInt(nm[1]);
+                    }
                 } else if (xMatch) {
                     n = xMatch[1].trim();
                     q = parseInt(xMatch[2]);
@@ -1062,7 +1099,7 @@
                     n = n.replace(/\/([A-Za-z]+)$/, '');
                 }
 
-                n = n.trim(); if (n) { items.push({ name: n, qty: q, price: 0, unit: u, company: comp }); }
+                n = n.trim(); if (n) { items.push({ name: n, qty: q, price: 0, unit: u, company: comp, remaining: itemRem }); }
             });
             return items;
         }
@@ -1099,14 +1136,15 @@
 
                 if (existingProduct) {
                     existingProduct.aliases = aliases; // Update aliases even for existing
-                    cart[existingProduct.id] = (cart[existingProduct.id] || 0) + item.qty;
+                    existingProduct.remaining = item.remaining; // Update stock info if present
+                    cart[existingProduct.id] = item.qty; // FIXED: Overwrite instead of accumulate
                     products = products.filter(p => p.id !== existingProduct.id);
                     products.unshift(existingProduct);
                     setTimeout(() => { const card = document.getElementById(`card-${existingProduct.id}`); if (card) card.classList.add('flash-update'); }, 100);
                     updated++;
                 } else {
                     const id = `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-                    products.unshift({ id: id, name: item.name, price: item.price, unit: item.unit, company: item.company, aliases: aliases });
+                    products.unshift({ id: id, name: item.name, price: item.price, unit: item.unit, company: item.company, aliases: aliases, remaining: item.remaining });
                     cart[id] = item.qty;
                     setTimeout(() => { const card = document.getElementById(`card-${id}`); if (card) card.classList.add('flash-success'); }, 100);
                     added++;
@@ -1499,7 +1537,9 @@
             const searchVal = document.getElementById('searchInput').value.toLowerCase().trim();
 
             c.innerHTML = list.map(p => {
-                const q = cart[p.id] || 0; if (q === 0 && Object.keys(cart).length > 0 && !cart[p.id]) return '';
+                const q = cart[p.id] || 0;
+                // Only hide if not in zero-filter mode AND cart has items but this one isn't in it
+                if (!showZeroOnly && q === 0 && Object.keys(cart).length > 0 && !cart[p.id]) return '';
                 const badge = p.company ? `<div class="text-[10px] text-orange-500 mb-0.5"><i class="fas fa-building text-[10px]"></i> ${p.company}</div>` : '';
 
                 const matchedAlias = searchVal && p.aliases ? p.aliases.find(a => a.toLowerCase().includes(searchVal)) : null;
@@ -1512,7 +1552,10 @@
                                 ${aliasBadge}
                                 <span class="font-bold text-gray-800 text-base leading-tight break-words block">${p.name}</span>
                             </div>
-                            <div class="text-sm font-bold text-teal-700">${p.price > 0 ? p.price.toLocaleString() + ' ฿' : ''}</div>
+                            <div class="flex items-center gap-2">
+                                <div class="text-sm font-bold text-teal-700">${p.price > 0 ? p.price.toLocaleString() + ' ฿' : ''}</div>
+                                ${p.remaining === 0 ? '<span class="text-[9px] font-black bg-red-500 text-white px-1.5 py-0.5 rounded shadow-sm animate-pulse"><i class="fas fa-exclamation-circle text-[8px]"></i> เหลือ 0</span>' : ''}
+                            </div>
                         </div>
                         <div class="flex flex-col items-end gap-2 pointer-events-auto">
                             <div class="flex items-center gap-1 bg-gray-50 p-1 rounded-lg border border-gray-100">
@@ -1811,19 +1854,40 @@
         function renderActiveView() {
             const v = document.getElementById('searchInput').value;
             const t = v.toLowerCase().trim();
+            let filtered = products;
+
+            if (showZeroOnly) {
+                // Filter items where stock (remaining) is 0
+                filtered = filtered.filter(p => p.remaining === 0);
+            }
+
             if (t) {
-                renderProducts(products.filter(p =>
+                filtered = filtered.filter(p =>
                     p.name.toLowerCase().includes(t) ||
                     (p.company && p.company.toLowerCase().includes(t)) ||
                     (p.aliases && p.aliases.some(a => a.toLowerCase().includes(t)))
-                ));
-            } else {
-                renderProducts(products);
+                );
             }
+            renderProducts(filtered);
+        }
+
+        function toggleZeroFilter() {
+            showZeroOnly = !showZeroOnly;
+            const btn = document.getElementById('toggleZeroBtn');
+            if (showZeroOnly) {
+                btn.classList.remove('bg-gray-100', 'text-gray-600');
+                btn.classList.add('bg-orange-500', 'text-white');
+                btn.innerHTML = '<i class="fas fa-eye"></i> 0';
+            } else {
+                btn.classList.add('bg-gray-100', 'text-gray-600');
+                btn.classList.remove('bg-orange-500', 'text-white');
+                btn.innerHTML = '<i class="fas fa-boxes"></i> 0';
+            }
+            renderActiveView();
         }
 
         function removeProduct(id) { delete cart[id]; products = products.filter(p => p.id != id); renderActiveView(); updateSummary(); refreshDashboard(); saveState(); }
-        function updateCart(id, chg) { let n = (cart[id] || 0) + chg; if (n <= 0) { delete cart[id]; products = products.filter(p => p.id != id); } else { cart[id] = n; } renderActiveView(); updateSummary(); refreshDashboard(); saveState(); }
+        function updateCart(id, chg) { let n = (cart[id] || 0) + chg; if (n < 0) n = 0; cart[id] = n; renderActiveView(); updateSummary(); refreshDashboard(); saveState(); }
         function updateSummary() { let t = 0, c = 0; for (const [id, q] of Object.entries(cart)) { const p = products.find(x => x.id == id); if (p && q > 0) { t += p.price * q; c++; } } document.getElementById('leftPanelCount').innerText = c; document.getElementById('mobileTotalLeft').innerText = t.toLocaleString() + ' ฿'; document.getElementById('dashGrandTotal').innerText = t.toLocaleString() + ' ฿'; document.getElementById('dashTotalItems').innerText = c; }
         function handleSearch(v) { setTimeout(() => { renderActiveView(); }, 250); }
         function toggleSort() { sortMode = sortMode === 'time' ? 'az' : 'time'; const b = document.getElementById('sortBtn'); if (b) { if (sortMode === 'az') { b.innerHTML = '<i class="fas fa-sort-alpha-down"></i> A-Z'; b.classList.add('bg-indigo-50', 'text-indigo-700', 'border-indigo-200'); } else { b.innerHTML = '<i class="fas fa-clock"></i> TIME'; b.classList.remove('bg-indigo-50', 'text-indigo-700', 'border-indigo-200'); } } refreshDashboard(); }
