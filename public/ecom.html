@@ -263,28 +263,30 @@
     <!-- Product Edit Modal (Admin) -->
     <div id="product-edit-modal"
         class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col">
-            <div class="bg-indigo-600 p-4 text-white flex justify-between items-center">
-                <h2 class="font-bold flex items-center gap-2"><i class="fas fa-edit"></i> จัดการข้อมูลสินค้า</h2>
+        <div class="bg-white rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden flex flex-col">
+            <div class="bg-indigo-600 p-5 text-white flex justify-between items-center">
+                <h2 class="font-bold text-lg flex items-center gap-2"><i class="fas fa-edit"></i> จัดการข้อมูลสินค้า
+                </h2>
                 <button onclick="closeProductModal()"
-                    class="hover:bg-indigo-700 p-1 rounded-full transition w-8 h-8 flex items-center justify-center"><i
-                        class="fas fa-times"></i></button>
+                    class="hover:bg-indigo-700 p-1 rounded-full transition w-10 h-10 flex items-center justify-center"><i
+                        class="fas fa-times text-lg"></i></button>
             </div>
-            <div class="p-5 space-y-4 overflow-y-auto max-h-[70vh] custom-scroll">
+            <div class="p-6 space-y-5 overflow-y-auto max-h-[80vh] custom-scroll">
                 <input type="hidden" id="edit-prod-id">
 
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">ชื่อสินค้า</label>
+                    <label class="block text-sm font-bold text-gray-500 uppercase mb-1.5 ml-1">ชื่อสินค้า</label>
                     <input type="text" id="edit-prod-name"
-                        class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm font-bold text-gray-800"
+                        class="w-full bg-gray-100 border border-gray-200 rounded-xl p-3.5 text-base font-bold text-gray-800"
                         readonly>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-2 gap-5">
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">หมวดหมู่ (Category)</label>
+                        <label class="block text-sm font-bold text-gray-500 uppercase mb-1.5 ml-1">หมวดหมู่
+                            (Category)</label>
                         <select id="edit-prod-category"
-                            class="w-full border border-gray-300 p-2.5 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            class="w-full border border-gray-300 p-3.5 rounded-xl text-base focus:ring-2 focus:ring-indigo-500 outline-none">
                             <option value="All">ทั่วไป</option>
                             <option value="OTC">ยาสามัญประจำบ้าน (OTC)</option>
                             <option value="Supplies">เวชภัณฑ์ (Supplies)</option>
@@ -293,61 +295,62 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">สถานะแสดงผล</label>
+                        <label class="block text-sm font-bold text-gray-500 uppercase mb-1.5 ml-1">สถานะแสดงผล</label>
                         <select id="edit-prod-visibility"
-                            class="w-full border border-gray-300 p-2.5 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            class="w-full border border-gray-300 p-3.5 rounded-xl text-base focus:ring-2 focus:ring-indigo-500 outline-none">
                             <option value="show">แสดงบน ECOM</option>
                             <option value="hide">ซ่อนไม่ให้เห็น</option>
                         </select>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-3 gap-3">
+                <div class="grid grid-cols-3 gap-4">
                     <div>
-                        <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">LOT</label>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1.5 ml-1">LOT</label>
                         <input type="text" id="edit-prod-lot"
-                            class="w-full bg-gray-50 border border-transparent rounded-lg p-2 text-xs focus:bg-white focus:border-indigo-300 outline-none">
+                            class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:bg-white focus:border-indigo-400 outline-none transition-all">
                     </div>
                     <div>
-                        <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">EXP</label>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1.5 ml-1">EXP</label>
                         <input type="date" id="edit-prod-exp"
-                            class="w-full bg-gray-50 border border-transparent rounded-lg p-2 text-xs focus:bg-white focus:border-indigo-300 outline-none">
+                            class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:bg-white focus:border-indigo-400 outline-none transition-all">
                     </div>
                     <div>
-                        <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">สต็อกที่มี</label>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1.5 ml-1">สต็อกที่มี</label>
                         <input type="number" id="edit-prod-ecom-stock"
-                            class="w-full bg-gray-50 border border-transparent rounded-lg p-2 text-xs font-bold focus:bg-white focus:border-indigo-300 outline-none">
+                            class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm font-bold focus:bg-white focus:border-indigo-400 outline-none transition-all">
                     </div>
                 </div>
 
-                <div class="border-t border-gray-100 pt-4 mt-2">
-                    <div class="flex justify-between items-center mb-2">
-                        <label class="text-xs font-bold text-gray-500 uppercase">จัดการราคาตามหน่วย</label>
+                <div class="border-t border-gray-100 pt-5 mt-2">
+                    <div class="flex justify-between items-center mb-3">
+                        <label class="text-sm font-bold text-gray-500 uppercase ml-1">จัดการราคาตามหน่วย</label>
                         <button onclick="addUnitPriceRow()"
-                            class="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-1 rounded-md hover:bg-indigo-100 font-bold transition">
+                            class="text-xs bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg hover:bg-indigo-100 font-bold transition flex items-center gap-1">
                             <i class="fas fa-plus"></i> เพิ่มหน่วย
                         </button>
                     </div>
-                    <div id="unit-prices-list" class="space-y-2">
+                    <div id="unit-prices-list" class="space-y-3">
                         <!-- Dynamic rows here -->
                     </div>
                 </div>
 
-                <div class="border-t border-gray-100 pt-4 mt-2">
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">รูปภาพสินค้า (Image)</label>
-                    <div class="flex gap-4 items-start">
+                <div class="border-t border-gray-100 pt-5 mt-2">
+                    <label class="block text-sm font-bold text-gray-500 uppercase mb-3 ml-1">รูปภาพสินค้า
+                        (Image)</label>
+                    <div class="flex gap-5 items-start">
                         <div
-                            class="w-24 h-24 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center overflow-hidden shrink-0 relative">
+                            class="w-28 h-28 bg-gray-50 border-2 border-dashed border-gray-300 rounded-2xl flex items-center justify-center overflow-hidden shrink-0 relative">
                             <img id="edit-prod-img-preview" src="" class="w-full h-full object-contain hidden">
                             <div id="edit-prod-img-placeholder" class="text-gray-400 text-center">
-                                <i class="fas fa-image text-2xl mb-1"></i>
-                                <div class="text-[9px]">No Image</div>
+                                <i class="fas fa-image text-3xl mb-1"></i>
+                                <div class="text-[10px]">No Image</div>
                             </div>
                         </div>
-                        <div class="flex-1 space-y-2">
+                        <div class="flex-1 space-y-3">
                             <input type="file" id="edit-prod-img-file" accept="image/*" onchange="previewImage(this)"
-                                class="text-sm w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
-                            <p class="text-[10px] text-gray-400 leading-tight w-full">รองรับไฟล์ภาพขนาดไม่เกิน
+                                class="text-sm w-full file:mr-4 file:py-2.5 file:px-5 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 transition-all">
+                            <p class="text-xs text-gray-400 leading-relaxed font-medium">รองรับไฟล์ภาพขนาดไม่เกิน
                                 2MB.<br>รูปภาพจะถูกเปลี่ยนขนาดและแนบ Base64 ไปกับไฟล์ทันที</p>
                         </div>
                     </div>
@@ -790,11 +793,11 @@
         function addUnitPriceRow(unit = '', price = '') {
             const container = document.getElementById('unit-prices-list');
             const row = document.createElement('div');
-            row.className = 'flex gap-2 items-center unit-price-row';
+            row.className = 'flex gap-3 items-center unit-price-row group animate-in slide-in-from-left duration-200';
             row.innerHTML = `
-                <input type="text" placeholder="หน่วย (เช่น แผง)" value="${unit}" class="flex-1 bg-white border border-gray-200 rounded-lg p-2 text-xs outline-none focus:border-indigo-400">
-                <input type="number" placeholder="ราคา" value="${price}" class="w-24 bg-white border border-gray-200 rounded-lg p-2 text-xs outline-none focus:border-indigo-400">
-                <button onclick="this.parentElement.remove()" class="text-red-400 hover:text-red-600 p-2"><i class="fas fa-trash-alt"></i></button>
+                <input type="text" placeholder="หน่วย (เช่น แผง)" value="${unit}" class="flex-1 bg-white border border-gray-200 rounded-xl p-3 text-sm font-medium outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-100 transition-all">
+                <input type="number" placeholder="ราคา" value="${price}" class="w-32 bg-white border border-gray-200 rounded-xl p-3 text-sm font-bold outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-100 transition-all">
+                <button onclick="this.parentElement.remove()" class="text-gray-300 hover:text-red-500 p-2 transition-colors"><i class="fas fa-trash-alt"></i></button>
             `;
             container.appendChild(row);
         }
