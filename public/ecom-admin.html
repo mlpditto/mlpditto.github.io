@@ -1125,8 +1125,8 @@
                     </span>
                 </td>
                 <td class="px-3 py-2.5 text-center">
-                    <button onclick="event.stopPropagation(); quickToggleVisibility('${safeId}', '${vis}')" class="text-xs text-gray-400 hover:text-indigo-600 transition p-1">
-                        <i class="fas fa-ellipsis-v"></i>
+                    <button onclick="event.stopPropagation(); quickDeleteProduct('${safeId}', '${(p.name || p.id).replace(/'/g, "\\'")}', '${vis}')" class="text-xs text-gray-300 hover:text-red-500 transition p-1" title="ลบสินค้านี้">
+                        <i class="fas fa-trash-alt"></i>
                     </button>
                 </td>
             </tr>`;
@@ -1355,6 +1355,61 @@
             } catch (e) {
                 console.error("Toggle visibility error:", e);
                 alert("Error: " + e.message);
+            }
+        }
+
+        async function quickDeleteProduct(id, name, currentVis) {
+            await executeProductDeletion(id, name, currentVis);
+        }
+
+        async function executeProductDeletion(id, name, currentVis) {
+            if (currentVis === 'deleted') {
+                // Permanent Delete
+                const res = await Swal.fire({
+                    title: `ยืนยันลบถาวร?`,
+                    text: `ต้องการลบ "${name}" ออกจากถังขยะถาวรหรือไม่? การกระทำนี้ไม่สามารถย้อนคืนได้`,
+                    icon: 'error',
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc2626',
+                    confirmButtonText: 'ลบถาวร',
+                    cancelButtonText: 'ยกเลิก'
+                });
+                if (res.isConfirmed) {
+                    try {
+                        await db.collection('master_products').doc(id).delete();
+                        Swal.fire({ icon: 'success', title: 'ลบถาวรเรียบร้อย', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
+                        if (document.getElementById('edit-modal').classList.contains('open')) closeEditModal();
+                        await fetchAllProducts();
+                    } catch (e) { alert('Error: ' + e.message); }
+                }
+                return;
+            }
+
+            const res = await Swal.fire({
+                title: `ย้ายไปถังขยะ?`,
+                text: `ต้องการย้าย "${name}" ไปที่ถังขยะหรือไม่? คุณสามารถกู้คืนได้ภายหลังจากฟิลเตอร์ "ถังขยะ"`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#f59e0b',
+                cancelButtonText: 'ยกเลิก',
+                confirmButtonText: 'ย้ายไปถังขยะ'
+            });
+            if (res.isConfirmed) {
+                try {
+                    await db.collection('master_products').doc(id).update({
+                        ecomVisibility: 'deleted',
+                        deletedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    const p = allProducts.find(x => x.id === id);
+                    if (p) p.ecomVisibility = 'deleted';
+
+                    Swal.fire({ icon: 'success', title: 'ย้ายไปถังขยะแล้ว', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
+                    if (document.getElementById('edit-modal').classList.contains('open')) closeEditModal();
+                    applyAdminFilter();
+                    updateStats();
+                } catch (e) {
+                    alert('Error: ' + e.message);
+                }
             }
         }
 
@@ -1806,55 +1861,7 @@
             const id = document.getElementById('em-id').value;
             const name = document.getElementById('em-name').value;
             const currentVis = document.getElementById('em-visibility').value;
-
-            if (currentVis === 'deleted') {
-                // Permanent Delete
-                const res = await Swal.fire({
-                    title: `ยืนยันลบถาวร?`,
-                    text: `ต้องการลบ "${name}" ออกจากถังขยะถาวรหรือไม่? การกระทำนี้ไม่สามารถย้อนคืนได้`,
-                    icon: 'error',
-                    showCancelButton: true,
-                    confirmButtonColor: '#dc2626',
-                    confirmButtonText: 'ลบถาวร',
-                    cancelButtonText: 'ยกเลิก'
-                });
-                if (res.isConfirmed) {
-                    try {
-                        await db.collection('master_products').doc(id).delete();
-                        Swal.fire({ icon: 'success', title: 'ลบถาวรเรียบร้อย', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
-                        closeEditModal();
-                        await fetchAllProducts();
-                    } catch (e) { alert('Error: ' + e.message); }
-                }
-                return;
-            }
-
-            const res = await Swal.fire({
-                title: `ย้ายไปถังขยะ?`,
-                text: `ต้องการย้าย "${name}" ไปที่ถังขยะหรือไม่? คุณสามารถกู้คืนได้ภายหลังจากฟิลเตอร์ "ถังขยะ"`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#f59e0b',
-                cancelButtonText: 'ยกเลิก',
-                confirmButtonText: 'ย้ายไปถังขยะ'
-            });
-            if (res.isConfirmed) {
-                try {
-                    await db.collection('master_products').doc(id).update({
-                        ecomVisibility: 'deleted',
-                        deletedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    const p = allProducts.find(x => x.id === id);
-                    if (p) p.ecomVisibility = 'deleted';
-
-                    Swal.fire({ icon: 'success', title: 'ย้ายไปถังขยะแล้ว', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
-                    closeEditModal();
-                    applyAdminFilter();
-                    updateStats();
-                } catch (e) {
-                    alert('Error: ' + e.message);
-                }
-            }
+            await executeProductDeletion(id, name, currentVis);
         }
 
         // ===== ADD PRODUCT =====
