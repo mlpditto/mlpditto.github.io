@@ -187,7 +187,8 @@
                 </div>
 
                 <!-- Grid -->
-                <div id="product-grid" class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5 hidden">
+                <div id="product-grid"
+                    class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-5 hidden">
                     <!-- Cards injected by JS -->
                 </div>
 
@@ -301,6 +302,37 @@
                     </div>
                 </div>
 
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">LOT</label>
+                        <input type="text" id="edit-prod-lot"
+                            class="w-full bg-gray-50 border border-transparent rounded-lg p-2 text-xs focus:bg-white focus:border-indigo-300 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">EXP</label>
+                        <input type="date" id="edit-prod-exp"
+                            class="w-full bg-gray-50 border border-transparent rounded-lg p-2 text-xs focus:bg-white focus:border-indigo-300 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">สต็อกที่มี</label>
+                        <input type="number" id="edit-prod-ecom-stock"
+                            class="w-full bg-gray-50 border border-transparent rounded-lg p-2 text-xs font-bold focus:bg-white focus:border-indigo-300 outline-none">
+                    </div>
+                </div>
+
+                <div class="border-t border-gray-100 pt-4 mt-2">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="text-xs font-bold text-gray-500 uppercase">จัดการราคาตามหน่วย</label>
+                        <button onclick="addUnitPriceRow()"
+                            class="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-1 rounded-md hover:bg-indigo-100 font-bold transition">
+                            <i class="fas fa-plus"></i> เพิ่มหน่วย
+                        </button>
+                    </div>
+                    <div id="unit-prices-list" class="space-y-2">
+                        <!-- Dynamic rows here -->
+                    </div>
+                </div>
+
                 <div class="border-t border-gray-100 pt-4 mt-2">
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-2">รูปภาพสินค้า (Image)</label>
                     <div class="flex gap-4 items-start">
@@ -394,10 +426,13 @@
                             company: d.company || '-',
                             price: price,
                             retailValue: retailValue,
-                            stock: Math.floor(Math.random() * 50) + 5, // Simulated stock
+                            stock: d.ecomStock !== undefined ? parseInt(d.ecomStock) : Math.floor(Math.random() * 50) + 5,
+                            lot: d.lot || '-',
+                            exp: d.exp || '',
                             imageUrl: d.imageUrl || null,
                             category: d.ecomCategory || 'All',
-                            visibility: d.ecomVisibility || 'show'
+                            visibility: d.ecomVisibility || 'show',
+                            unitPrices: d.unitPrices || []
                         };
                     });
 
@@ -473,7 +508,25 @@
                         <div class="flex items-center gap-1 mb-1.5">
                             <span class="text-[9px] font-bold text-gray-400 uppercase tracking-wider bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100 truncate max-w-[80%]">${item.company}</span>
                         </div>
-                        <h4 class="text-sm font-bold text-gray-800 leading-snug mb-2 line-clamp-2 group-hover:text-orange-600 transition-colors">${item.name}</h4>
+                        <h4 class="text-sm font-bold text-gray-800 leading-snug mb-1.5 line-clamp-2 group-hover:text-orange-600 transition-colors">${item.name}</h4>
+                        
+                        <!-- Stock & Info -->
+                        <div class="flex flex-wrap gap-1 mb-2">
+                            ${item.stock > 0 ? `<span class="text-[9px] bg-teal-50 text-teal-600 px-1.5 py-0.5 rounded-full font-bold border border-teal-100"><i class="fas fa-cubes"></i> คลัง: ${item.stock}</span>` : '<span class="text-[9px] bg-gray-50 text-gray-400 px-1.5 py-0.5 rounded-full font-bold border border-gray-100">OUT OF STOCK</span>'}
+                            ${item.lot && item.lot !== '-' ? `<span class="text-[9px] bg-slate-50 text-slate-500 px-1.5 py-0.5 rounded-full border border-slate-100">L:${item.lot}</span>` : ''}
+                            ${item.exp ? `<span class="text-[9px] bg-rose-50 text-rose-500 px-1.5 py-0.5 rounded-full border border-rose-100 font-medium">E:${item.exp}</span>` : ''}
+                        </div>
+
+                        <!-- Unit Prices -->
+                        ${(item.unitPrices && item.unitPrices.length > 0) ? `
+                        <div class="bg-gray-50/50 rounded-lg p-1.5 space-y-1 mb-3 border border-gray-50">
+                            ${item.unitPrices.map(u => `
+                                <div class="flex justify-between items-center text-[10px]">
+                                    <span class="text-gray-500">${u.unit}</span>
+                                    <span class="font-bold text-gray-700">฿${u.price.toLocaleString()}</span>
+                                </div>
+                            `).join('')}
+                        </div>` : ''}
                         
                         <!-- Price Area -->
                         <div class="mt-auto pt-3 border-t border-gray-50 flex items-end justify-between">
@@ -701,6 +754,16 @@
             document.getElementById('edit-prod-name').value = p.name;
             document.getElementById('edit-prod-category').value = p.category || 'All';
             document.getElementById('edit-prod-visibility').value = p.visibility || 'show';
+            document.getElementById('edit-prod-lot').value = p.lot || '';
+            document.getElementById('edit-prod-exp').value = p.exp || '';
+            document.getElementById('edit-prod-ecom-stock').value = p.stock || 0;
+
+            // Load unit prices
+            const list = document.getElementById('unit-prices-list');
+            list.innerHTML = '';
+            if (p.unitPrices && p.unitPrices.length > 0) {
+                p.unitPrices.forEach(u => addUnitPriceRow(u.unit, u.price));
+            }
 
             const preview = document.getElementById('edit-prod-img-preview');
             const placeholder = document.getElementById('edit-prod-img-placeholder');
@@ -722,6 +785,18 @@
 
         function closeProductModal() {
             document.getElementById('product-edit-modal').classList.add('hidden');
+        }
+
+        function addUnitPriceRow(unit = '', price = '') {
+            const container = document.getElementById('unit-prices-list');
+            const row = document.createElement('div');
+            row.className = 'flex gap-2 items-center unit-price-row';
+            row.innerHTML = `
+                <input type="text" placeholder="หน่วย (เช่น แผง)" value="${unit}" class="flex-1 bg-white border border-gray-200 rounded-lg p-2 text-xs outline-none focus:border-indigo-400">
+                <input type="number" placeholder="ราคา" value="${price}" class="w-24 bg-white border border-gray-200 rounded-lg p-2 text-xs outline-none focus:border-indigo-400">
+                <button onclick="this.parentElement.remove()" class="text-red-400 hover:text-red-600 p-2"><i class="fas fa-trash-alt"></i></button>
+            `;
+            container.appendChild(row);
         }
 
         function previewImage(input) {
@@ -771,6 +846,20 @@
             const id = document.getElementById('edit-prod-id').value;
             const cat = document.getElementById('edit-prod-category').value;
             const vis = document.getElementById('edit-prod-visibility').value;
+            const lot = document.getElementById('edit-prod-lot').value;
+            const exp = document.getElementById('edit-prod-exp').value;
+            const stock = document.getElementById('edit-prod-ecom-stock').value;
+
+            // Collect unit prices
+            const unitPrices = [];
+            document.querySelectorAll('.unit-price-row').forEach(row => {
+                const inputs = row.querySelectorAll('input');
+                const u = inputs[0].value.trim();
+                const p = parseFloat(inputs[1].value);
+                if (u && !isNaN(p)) {
+                    unitPrices.push({ unit: u, price: p });
+                }
+            });
 
             btn.innerText = 'กำลังบันทึก...';
             btn.disabled = true;
@@ -778,7 +867,11 @@
             try {
                 const updates = {
                     ecomCategory: cat,
-                    ecomVisibility: vis
+                    ecomVisibility: vis,
+                    lot: lot,
+                    exp: exp,
+                    ecomStock: stock,
+                    unitPrices: unitPrices
                 };
                 if (currentEditImageBase64) {
                     updates.imageUrl = currentEditImageBase64;

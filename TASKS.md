@@ -1,5 +1,17 @@
 # 📝 Task Log - FKB Front Kanban
 
+## 📅 5 มีนาคม 2026 (Stock Intelligence & Layout Refactor)
+
+### 🚀 ฟีเจอร์ใหม่ & การแก้ไข (Latest)
+*   **ProOrder Manager (v4.18):**
+    -   **Smart Stock Parsing:** ปรับปรุงระบบ Paste ให้สามารถดึงข้อมูล "จำนวนคงเหลือ" (Remaining Stock) จากตารางข้อมูลดิบได้อัตโนมัติ
+    -   **Zero-Stock Filter (เหลือ 0):** เพิ่มปุ่มลัด (Box Icon) สำหรับกรองแสดงเฉพาะสินค้าที่ของขาดสต็อก (Remaining = 0) พร้อมทำแถบแจ้งเตือนสีแดงกระพริบให้เห็นชัดเจน
+    -   **Paste Overwrite Logic:** แก้ไขปัญหาการวางรายการซ้ำแล้วจำนวนบวกเพิ่มสะสม โดยเปลี่ยนเป็นระบบ "เขียนทับ" (Overwrite) ด้วยจำนวนล่าสุดที่ระบุแทน
+    -   **Version Up v4.18:** อัปเดต Changelog และเวอร์ชันของระบบเพื่อรองรับฟีเจอร์ใหม่
+*   **B2B Wholesale Portal (ecom.html):**
+    -   **PC Full-Width Layout:** ปลดล็อกข้อจำกัดความกว้างหน้าจอ (Max-width) สำหรับผู้ใช้งานบนคอมพิวเตอร์ ทำให้ระบบแสดงผลเต็มหน้าจอ (Full Width) เพื่อการดูรายการสินค้าที่ครบถ้วนและสบายตามากขึ้น
+
+
 ## 📅 1 มีนาคม 2026 (LINE MAN Monthly Storage Refactor)
 
 ### 🔧 การแก้ไขบัค
