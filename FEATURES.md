@@ -185,9 +185,16 @@
 *   **Modern Wholesales UI:** อินเทอร์เฟซแบบแอปช้อปปิ้งออนไลน์เน้นสีโทนส้ม-เทา ทันสมัย ใช้งานง่าย
 *   **Responsive Shopping Engine:** ฟิลเตอร์รายการยา/เวชภัณฑ์ พร้อมแถบค้นหาสินค้าแบบ Live Search ที่ทำงานได้อย่างรวดเร็ว
 *   **Slide-out Cart System:** ระบบตะกร้าสินค้าด้านข้าง (Drawer) เพิ่ม/ลด/อัปเดตยอดรวม แบบไม่ต้องโหลดหน้าใหม่
-*   **Full-Width Responsive UI (New):** ปรับจูนหน้าตาเว็บให้แสดงผลเต็มความกว้างหน้าจอ (Full Width) สำหรับผู้ใช้งานบน PC/Desktop เพื่อเพิ่มพื้นที่ในการดูสินค้าแบบจุใจ
-*   **Smart Pricing Model:** ระบบดึงข้อมูลจาก Master Data แบบ Real-time เปรียบเทียบส่วนลดให้ปรากฏอัตโนมัติ (Dynamic Discounted Price)
-*   **Role-Aware Features:** แบ่งแยกระดับการมองเห็นระหว่าง Guest, Member และ Admin (โหมดเช็คสต๊อกที่เหลือน้อยและ Dashboard)
+*   **Full-Width High-Density UI (New):** ปรับปรุงหน้าจอแสดงผลสินค้าให้เต็มความกว้าง (Full Width) และใช้ระบบ 6-Column Grid บน Desktop เพื่อแสดงรายการสินค้าจำนวนมากพร้อมกันในหน้าเดียว
+*   **Alphabetic & Thai Nav Bar (A-Z/ก-ฮ):** แถบเมนูลัดสำหรับกรองสินค้าตามตัวอักษรภาษาอังกฤษและภาษาไทย ช่วยให้ค้นหายาหรือเวชภัณฑ์ได้รวดเร็วขึ้นอย่างมากในแคตตาล็อกขนาดใหญ่
+*   **Multi-Platform Pricing Engine:** ระบบจัดการและแสดงผลราคาขายส่งแยกตามหน่วย (Unit) และตามช่องทางการจำหน่าย (Platform) เช่น ECOM, หน้าร้าน, Grab, Lineman, Shopee เพื่อความแม่นยำในการเสนอราคา
+*   **Dynamic Admin Product Manager:** หน้าต่างจัดการสินค้า (Modal) ที่ทรงพลังกว่าเดิม:
+    -   **Lot, Exp & Stock Tracking:** จัดการข้อมูลล็อตสินค้า วันหมดอายุ และจำนวนสต็อกได้ทันที
+    -   **On-the-fly Category Creator:** เพิ่มหมวดหมู่สินค้าใหม่ได้ทันทีผ่าน Modal โดยระบบจะจำและอัปเดตฟิลเตอร์อัตโนมัติ (Dynamic Categories)
+    -   **UI Optimizations:** ปรับปรุงขนาดฟอนต์และระยะห่าง (Modal XL) ให้เหมาะสมกับการใช้งานบน PC อย่างมีประสิทธิภาพสูงสุด
+*   **Smart Pricing & Cart:** ระบบตะกร้าสินค้าแบบ Slide-out Drawer พร้อมคำนวณส่วนลดเปรียบเทียบจาก Master Data แบบ Real-time (Dynamic Discounted Price)
+*   **Role-Aware Access Control:** แยกสิทธิ์การมองเห็นระหว่าง Guest, Member และ Admin ชัดเจน พร้อมระบบแจ้งเตือนสินค้าใกล้หมด (Low Stock Alerts) สำหรับแอดมิน
+
 
 ---
 *จัดทำขึ้นเพื่อช่วยให้ทีมงานเข้าใจภาพรวมของระบบ FKB-Front-Kanban ทั้งสิ้น*
