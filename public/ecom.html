@@ -89,6 +89,12 @@
                         title="โหมดจัดการสินค้า (Admin)">
                         <i class="fas fa-cog text-xl"></i>
                     </button>
+                    <!-- Admin Dashboard Link -->
+                    <a id="admin-dashboard-btn" href="ecom-admin.html"
+                        class="hidden items-center gap-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-2 rounded-xl transition shadow-md shadow-indigo-200"
+                        title="Admin Dashboard">
+                        <i class="fas fa-tachometer-alt"></i> <span class="hidden sm:inline">Dashboard</span>
+                    </a>
                 </div>
             </div>
 
@@ -481,6 +487,8 @@
                         document.getElementById('admin-toggle-btn').classList.remove('hidden');
                         document.getElementById('admin-toggle-btn').classList.add('bg-indigo-600', 'text-white');
                         document.getElementById('admin-toggle-btn').classList.remove('bg-indigo-50', 'text-gray-400');
+                        const dashBtn = document.getElementById('admin-dashboard-btn');
+                        if (dashBtn) { dashBtn.classList.remove('hidden'); dashBtn.classList.add('flex'); }
                         document.getElementById('admin-banner').classList.remove('hidden');
 
                         // Re-render to show admin tools if data already loaded
