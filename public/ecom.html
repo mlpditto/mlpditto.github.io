@@ -356,14 +356,17 @@
                     <div>
                         <label class="block text-sm font-bold text-gray-500 uppercase mb-1.5 ml-1">หมวดหมู่
                             (Category)</label>
-                        <select id="edit-prod-category"
+                        <select id="edit-prod-category" onchange="checkNewCategory(this.value)"
                             class="w-full border border-gray-300 p-3.5 rounded-xl text-base focus:ring-2 focus:ring-indigo-500 outline-none">
                             <option value="All">ทั่วไป</option>
                             <option value="OTC">ยาสามัญประจำบ้าน (OTC)</option>
                             <option value="Supplies">เวชภัณฑ์ (Supplies)</option>
                             <option value="Supplements">อาหารเสริม (Supplements)</option>
                             <option value="Dermocare">เวชสำอาง (Dermocare)</option>
+                            <option value="new" class="font-bold text-indigo-600">+ ระบุใหม่...</option>
                         </select>
+                        <input type="text" id="edit-prod-category-new" placeholder="ระบุชื่อหมวดหมู่ใหม่"
+                            class="hidden w-full mt-2 border border-indigo-300 p-3 rounded-xl text-base focus:ring-2 focus:ring-indigo-500 outline-none bg-indigo-50/30">
                     </div>
                     <div>
                         <label class="block text-sm font-bold text-gray-500 uppercase mb-1.5 ml-1">สถานะแสดงผล</label>
@@ -520,6 +523,7 @@
                         allProducts = allProducts.filter(p => p.visibility !== 'hide');
                     }
                     currentDisplayProducts = [...allProducts];
+                    updateCategoryFilterUI();
                     renderProductGrid(currentDisplayProducts);
                 }
             } catch (error) {
@@ -796,12 +800,48 @@
             currentCategory = cat;
             document.querySelectorAll('.cat-btn').forEach(btn => {
                 if (btn.dataset.cat === cat) {
-                    btn.className = "cat-btn w-full text-left font-bold text-orange-600 py-2 px-3 bg-orange-50/80 rounded-xl transition";
+                    btn.classList.add('bg-orange-50', 'text-orange-600', 'font-bold');
+                    btn.classList.remove('hover:bg-gray-50', 'text-gray-600');
                 } else {
-                    btn.className = "cat-btn w-full text-left py-2 px-3 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition";
+                    btn.classList.remove('bg-orange-50', 'text-orange-600', 'font-bold');
+                    btn.classList.add('hover:bg-gray-50', 'text-gray-600');
                 }
             });
             applyFilters();
+        }
+
+        function updateCategoryFilterUI() {
+            const list = document.getElementById('category-list');
+            const modalSelect = document.getElementById('edit-prod-category');
+
+            // Get unique categories from allProducts
+            const cats = [...new Set(allProducts.map(p => p.category))].filter(c => c && c !== 'All').sort();
+
+            // Icons & Names mapping
+            const map = {
+                'OTC': { icon: '📦', label: 'ยาสามัญฯ (OTC)' },
+                'Supplies': { icon: '🩹', label: 'เวชภัณฑ์ (Supplies)' },
+                'Supplements': { icon: '🧪', label: 'อาหารเสริม (Supplements)' },
+                'Dermocare': { icon: '🧴', label: 'เวชสำอาง (Dermocare)' }
+            };
+
+            // Sidebar Update
+            let sidebarHtml = `<li><button onclick="filterCategory('All')" class="cat-btn w-full text-left py-2 px-3 rounded-xl transition ${currentCategory === 'All' ? 'bg-orange-50 text-orange-600 font-bold' : 'hover:bg-gray-50 text-gray-600'}" data-cat="All">💊 ยาทั้งหมด (All)</button></li>`;
+
+            cats.forEach(c => {
+                const info = map[c] || { icon: '🏷️', label: c };
+                sidebarHtml += `<li><button onclick="filterCategory('${c}')" class="cat-btn w-full text-left py-2 px-3 rounded-xl transition ${currentCategory === c ? 'bg-orange-50 text-orange-600 font-bold' : 'hover:bg-gray-50 text-gray-600'}" data-cat="${c}">${info.icon} ${info.label}</button></li>`;
+            });
+            list.innerHTML = sidebarHtml;
+
+            // Modal Select Update
+            let modalHtml = `<option value="All">ทั่วไป / ไม่ระบุ</option>`;
+            cats.forEach(c => {
+                const info = map[c] || { label: c };
+                modalHtml += `<option value="${c}">${info.label}</option>`;
+            });
+            modalHtml += `<option value="new" class="font-bold text-indigo-600">+ ระบุใหม่...</option>`;
+            modalSelect.innerHTML = modalHtml;
         }
 
         function filterByLetter(letter) {
@@ -863,7 +903,12 @@
 
             document.getElementById('edit-prod-id').value = p.id;
             document.getElementById('edit-prod-name').value = p.name;
+
+            // Set category
             document.getElementById('edit-prod-category').value = p.category || 'All';
+            document.getElementById('edit-prod-category-new').value = '';
+            document.getElementById('edit-prod-category-new').classList.add('hidden');
+
             document.getElementById('edit-prod-visibility').value = p.visibility || 'show';
             document.getElementById('edit-prod-lot').value = p.lot || '';
             document.getElementById('edit-prod-exp').value = p.exp || '';
@@ -959,10 +1004,30 @@
             }
         }
 
+        function checkNewCategory(val) {
+            const input = document.getElementById('edit-prod-category-new');
+            if (val === 'new') {
+                input.classList.remove('hidden');
+                input.focus();
+            } else {
+                input.classList.add('hidden');
+            }
+        }
+
         async function saveProductChanges() {
             const btn = document.getElementById('btn-save-prod');
             const id = document.getElementById('edit-prod-id').value;
-            const cat = document.getElementById('edit-prod-category').value;
+            let cat = document.getElementById('edit-prod-category').value;
+            const newCat = document.getElementById('edit-prod-category-new').value.trim();
+
+            if (cat === 'new') {
+                if (!newCat) {
+                    Swal.fire('Oops!', 'กรุณาระบุชื่อหมวดหมู่ใหม่', 'warning');
+                    return;
+                }
+                cat = newCat;
+            }
+
             const vis = document.getElementById('edit-prod-visibility').value;
             const lot = document.getElementById('edit-prod-lot').value;
             const exp = document.getElementById('edit-prod-exp').value;
