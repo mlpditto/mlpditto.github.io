@@ -943,8 +943,8 @@
                 const cost = p.cost || (p.prices && p.prices['COST']) || '';
                 const lmPrice = (p.prices && (p.prices['LINEMAN'] || p.prices['LINE_MAN'])) || '';
                 const isSelected = selectedIds.has(p.id);
-                // Escape single quotes for the onclick handler
-                const safeId = p.id.replace(/'/g, "\\'");
+                // Escape characters that break HTML/JS (v2)
+                const safeId = p.id.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, "&quot;");
 
                 return `<tr class="product-row cursor-pointer ${isSelected ? 'bg-indigo-50/50' : ''}" onclick="openEditModal('${safeId}')">
                 <td class="px-3 py-2.5" onclick="event.stopPropagation()">
@@ -969,7 +969,7 @@
                     <span class="badge ${vis === 'show' ? 'badge-show' : 'badge-hide'} animate-pulse-subtle">${vis === 'show' ? 'ACTIVE' : 'HIDDEN'}</span>
                 </td>
                 <td class="px-3 py-2.5 text-center">
-                    <button onclick="event.stopPropagation(); quickToggleVisibility('${p.id.replace(/'/g, "\\'")}', '${vis}')" class="text-xs text-gray-400 hover:text-indigo-600 transition p-1">
+                    <button onclick="event.stopPropagation(); quickToggleVisibility('${safeId}', '${vis}')" class="text-xs text-gray-400 hover:text-indigo-600 transition p-1">
                         <i class="fas fa-ellipsis-v"></i>
                     </button>
                 </td>
@@ -1163,13 +1163,18 @@
             }
         }
 
-        async function quickToggleVisibility(name, currentVis) {
+        async function quickToggleVisibility(id, currentVis) {
             const newVis = currentVis === 'show' ? 'hide' : 'show';
-            await db.collection('master_products').doc(name).update({ ecomVisibility: newVis });
-            const p = allProducts.find(x => x.name === name || x.id === name);
-            if (p) p.ecomVisibility = newVis;
-            updateStats();
-            applyAdminFilter();
+            try {
+                await db.collection('master_products').doc(id).update({ ecomVisibility: newVis });
+                const p = allProducts.find(x => x.id === id);
+                if (p) p.ecomVisibility = newVis;
+                updateStats();
+                applyAdminFilter();
+            } catch (e) {
+                console.error("Toggle visibility error:", e);
+                alert("Error: " + e.message);
+            }
         }
 
         // ===== UI HELPERS =====
@@ -1661,14 +1666,14 @@
             const rows = [];
             allProducts.forEach(p => {
                 if (p.unitPrices && p.unitPrices.length > 0) {
+                    const safeId = p.id.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, "&quot;");
                     p.unitPrices.forEach(u => {
-                        const safeName = (p.name || p.id || '').replace(/'/g, "\\'");
-                        rows.push(`<tr class="product-row cursor-pointer" onclick="openEditModal('${safeName}')">
+                        rows.push(`<tr class="product-row cursor-pointer" onclick="openEditModal('${safeId}')">
                         <td class="px-4 py-3 font-bold text-sm text-gray-800">${p.name || p.id}</td>
                         <td class="px-4 py-3"><span class="badge bg-indigo-50 text-indigo-700">${u.platform || 'ECOM'}</span></td>
                         <td class="px-4 py-3 text-sm text-gray-600">${u.unit}</td>
                         <td class="px-4 py-3 text-right font-black text-orange-600">฿${(u.price || 0).toLocaleString()}</td>
-                        <td class="px-4 py-3 text-center"><button onclick="event.stopPropagation();openEditModal('${p.id.replace(/'/g, "\\'")}')" class="text-xs text-indigo-500 hover:text-indigo-700 font-bold"><i class="fas fa-edit"></i></button></td>
+                        <td class="px-4 py-3 text-center"><button onclick="event.stopPropagation();openEditModal('${safeId}')" class="text-xs text-indigo-500 hover:text-indigo-700 font-bold"><i class="fas fa-edit"></i></button></td>
                     </tr>`);
                     });
                 }
@@ -1695,8 +1700,8 @@
 
             const lowStock = allProducts.filter(p => p.ecomStock !== undefined && parseInt(p.ecomStock) < 10).sort((a, b) => parseInt(a.ecomStock) - parseInt(b.ecomStock));
             document.getElementById('stat-low-stock').innerHTML = lowStock.map(p => {
-                const safeName = (p.name || p.id || '').replace(/'/g, "\\'");
-                return `<div onclick="openEditModal('${safeName}');showSection('products')" class="flex justify-between items-center p-2 rounded-lg hover:bg-orange-50 cursor-pointer transition">
+                const safeId = p.id.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                return `<div onclick="openEditModal('${safeId}');showSection('products')" class="flex justify-between items-center p-2 rounded-lg hover:bg-orange-50 cursor-pointer transition">
                 <span class="text-xs text-gray-700 leading-tight pr-2">${p.name || p.id}</span>
                 <span class="text-xs font-black ${parseInt(p.ecomStock) === 0 ? 'text-red-500' : 'text-orange-500'} shrink-0">${p.ecomStock}</span>
             </div>`;
@@ -1704,8 +1709,8 @@
 
             const hidden = allProducts.filter(p => p.ecomVisibility === 'hide');
             document.getElementById('stat-hidden').innerHTML = hidden.map(p => {
-                const safeName = (p.name || p.id || '').replace(/'/g, "\\'");
-                return `<div onclick="openEditModal('${safeName}')" class="flex justify-between items-center p-2 rounded-lg hover:bg-red-50 cursor-pointer transition">
+                const safeId = p.id.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                return `<div onclick="openEditModal('${safeId}')" class="flex justify-between items-center p-2 rounded-lg hover:bg-red-50 cursor-pointer transition">
                 <span class="text-xs text-gray-700 leading-tight">${p.name || p.id}</span>
                 <span class="text-[9px] font-bold text-red-400 bg-red-50 px-1.5 py-0.5 rounded border border-red-100">ซ่อน</span>
             </div>`;
