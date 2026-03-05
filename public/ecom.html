@@ -174,6 +174,77 @@
                     </div>
                 </div>
 
+                <!-- Alphabetic Nav Bar -->
+                <div class="mb-6 overflow-x-auto no-scrollbar pb-2">
+                    <div class="flex gap-2 min-w-max" id="az-nav">
+                        <button onclick="filterByLetter('All')" class="az-btn active">ALL</button>
+                        <!-- Letters A-Z will be generated or hardcoded, let's hardcode for simplicity and reliability -->
+                        <button onclick="filterByLetter('A')" class="az-btn">A</button>
+                        <button onclick="filterByLetter('B')" class="az-btn">B</button>
+                        <button onclick="filterByLetter('C')" class="az-btn">C</button>
+                        <button onclick="filterByLetter('D')" class="az-btn">D</button>
+                        <button onclick="filterByLetter('E')" class="az-btn">E</button>
+                        <button onclick="filterByLetter('F')" class="az-btn">F</button>
+                        <button onclick="filterByLetter('G')" class="az-btn">G</button>
+                        <button onclick="filterByLetter('H')" class="az-btn">H</button>
+                        <button onclick="filterByLetter('I')" class="az-btn">I</button>
+                        <button onclick="filterByLetter('J')" class="az-btn">J</button>
+                        <button onclick="filterByLetter('K')" class="az-btn">K</button>
+                        <button onclick="filterByLetter('L')" class="az-btn">L</button>
+                        <button onclick="filterByLetter('M')" class="az-btn">M</button>
+                        <button onclick="filterByLetter('N')" class="az-btn">N</button>
+                        <button onclick="filterByLetter('O')" class="az-btn">O</button>
+                        <button onclick="filterByLetter('P')" class="az-btn">P</button>
+                        <button onclick="filterByLetter('Q')" class="az-btn">Q</button>
+                        <button onclick="filterByLetter('R')" class="az-btn">R</button>
+                        <button onclick="filterByLetter('S')" class="az-btn">S</button>
+                        <button onclick="filterByLetter('T')" class="az-btn">T</button>
+                        <button onclick="filterByLetter('U')" class="az-btn">U</button>
+                        <button onclick="filterByLetter('V')" class="az-btn">V</button>
+                        <button onclick="filterByLetter('W')" class="az-btn">W</button>
+                        <button onclick="filterByLetter('X')" class="az-btn">X</button>
+                        <button onclick="filterByLetter('Y')" class="az-btn">Y</button>
+                        <button onclick="filterByLetter('Z')" class="az-btn">Z</button>
+                        <button onclick="filterByLetter('TH')" class="az-btn">ก-ฮ</button>
+                    </div>
+                </div>
+
+                <style>
+                    .no-scrollbar::-webkit-scrollbar {
+                        display: none;
+                    }
+
+                    .no-scrollbar {
+                        -ms-overflow-style: none;
+                        scrollbar-width: none;
+                    }
+
+                    .az-btn {
+                        padding: 0.5rem 1rem;
+                        border-radius: 0.75rem;
+                        background-color: #fff;
+                        border: 1px solid #f3f4f6;
+                        font-size: 0.875rem;
+                        font-weight: 700;
+                        color: #9ca3af;
+                        transition: all 0.2s;
+                        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+                        white-space: nowrap;
+                    }
+
+                    .az-btn:hover {
+                        background-color: #f9fafb;
+                        color: #f97316;
+                    }
+
+                    .az-btn.active {
+                        background-color: #f97316;
+                        border-color: #f97316;
+                        color: #fff;
+                        box-shadow: 0 4px 6px -1px rgba(249, 115, 22, 0.2);
+                    }
+                </style>
+
                 <!-- Global Loading state -->
                 <div id="loading-indicator" class="flex flex-col items-center justify-center py-32 text-gray-400">
                     <div class="relative w-16 h-16 flex items-center justify-center mb-4">
@@ -379,6 +450,9 @@
         let cart = [];
         let allProducts = [];
         let currentDisplayProducts = [];
+        let currentCategory = 'All';
+        let currentLetter = 'All';
+        let searchQuery = '';
 
         // Check Auth and Setup View
         auth.onAuthStateChanged(user => {
@@ -524,9 +598,12 @@
                         ${(item.unitPrices && item.unitPrices.length > 0) ? `
                         <div class="bg-gray-50/50 rounded-lg p-1.5 space-y-1 mb-3 border border-gray-50">
                             ${item.unitPrices.map(u => `
-                                <div class="flex justify-between items-center text-[10px]">
-                                    <span class="text-gray-500">${u.unit}</span>
-                                    <span class="font-bold text-gray-700">฿${u.price.toLocaleString()}</span>
+                                <div class="flex justify-between items-center text-[10px] gap-2">
+                                    <div class="flex items-center gap-1 min-w-0">
+                                        <span class="bg-gray-200 text-gray-600 px-1 rounded-[4px] font-bold text-[8px] uppercase shrink-0">${u.platform || 'ECOM'}</span>
+                                        <span class="text-gray-500 truncate">${u.unit}</span>
+                                    </div>
+                                    <span class="font-bold text-gray-700 shrink-0">฿${u.price.toLocaleString()}</span>
                                 </div>
                             `).join('')}
                         </div>` : ''}
@@ -702,30 +779,19 @@
             });
         }
 
-        // Live Search Handler
-        function handleFilter(term) {
-            const lowTerm = term.toLowerCase().trim();
-            if (!lowTerm) {
-                currentDisplayProducts = [...allProducts];
-            } else {
-                currentDisplayProducts = allProducts.filter(p =>
-                    p.name.toLowerCase().includes(lowTerm) ||
-                    p.company.toLowerCase().includes(lowTerm)
-                );
-            }
-            renderProductGrid(currentDisplayProducts);
-        }
-
-        ['searchInput', 'mobileSearchInput'].forEach(id => {
+        // Search listeners
+        ['global-search', 'searchInput', 'mobileSearchInput'].forEach(id => {
             const el = document.getElementById(id);
             if (el) {
-                el.addEventListener('input', (e) => handleFilter(e.target.value));
+                el.addEventListener('input', (e) => {
+                    searchQuery = e.target.value;
+                    applyFilters();
+                });
             }
         });
 
 
         // Category Filter Logic
-        let currentCategory = 'All';
         function filterCategory(cat) {
             currentCategory = cat;
             document.querySelectorAll('.cat-btn').forEach(btn => {
@@ -735,16 +801,58 @@
                     btn.className = "cat-btn w-full text-left py-2 px-3 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition";
                 }
             });
+            applyFilters();
+        }
 
+        function filterByLetter(letter) {
+            currentLetter = letter;
+            document.querySelectorAll('.az-btn').forEach(btn => {
+                if (btn.innerText === letter || (letter === 'TH' && btn.innerText === 'ก-ฮ')) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            applyFilters();
+        }
+
+        function applyFilters() {
             let filtered = allProducts;
-            if (cat !== 'All') {
-                filtered = allProducts.filter(p => p.category === cat);
+
+            // Category Filter
+            if (currentCategory !== 'All') {
+                filtered = filtered.filter(p => p.category === currentCategory);
             }
 
-            document.getElementById('current-category-title').innerHTML = `รายการยาทั้งหมด <span class="bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full font-bold" id="item-count">${filtered.length}</span>`;
+            // A-Z Filter
+            if (currentLetter !== 'All') {
+                if (currentLetter === 'TH') {
+                    // Filter Thai characters (Thai Unicode range: 0E00-0E7F)
+                    filtered = filtered.filter(p => {
+                        const firstChar = p.name.trim().charAt(0);
+                        return firstChar >= '\u0E00' && firstChar <= '\u0E7F';
+                    });
+                } else {
+                    filtered = filtered.filter(p => p.name.trim().toUpperCase().startsWith(currentLetter));
+                }
+            }
+
+            // Search Filter
+            if (searchQuery) {
+                const q = searchQuery.toLowerCase();
+                filtered = filtered.filter(p => p.name.toLowerCase().includes(q) || p.company.toLowerCase().includes(q));
+            }
+
+            document.getElementById('item-count').innerText = filtered.length;
             currentDisplayProducts = filtered;
             renderProductGrid(currentDisplayProducts);
         }
+
+        // Search Input listener
+        document.getElementById('global-search').addEventListener('input', (e) => {
+            searchQuery = e.target.value;
+            applyFilters();
+        });
 
         // Admin Product Modal Logic
         let currentEditImageBase64 = null;
@@ -765,7 +873,7 @@
             const list = document.getElementById('unit-prices-list');
             list.innerHTML = '';
             if (p.unitPrices && p.unitPrices.length > 0) {
-                p.unitPrices.forEach(u => addUnitPriceRow(u.unit, u.price));
+                p.unitPrices.forEach(u => addUnitPriceRow(u.unit, u.price, u.platform));
             }
 
             const preview = document.getElementById('edit-prod-img-preview');
@@ -790,13 +898,20 @@
             document.getElementById('product-edit-modal').classList.add('hidden');
         }
 
-        function addUnitPriceRow(unit = '', price = '') {
+        function addUnitPriceRow(unit = '', price = '', platform = 'ECOM') {
             const container = document.getElementById('unit-prices-list');
             const row = document.createElement('div');
             row.className = 'flex gap-3 items-center unit-price-row group animate-in slide-in-from-left duration-200';
             row.innerHTML = `
+                <select class="w-28 bg-white border border-gray-200 rounded-xl p-3 text-xs font-bold outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-100 transition-all">
+                    <option value="ECOM" ${platform === 'ECOM' ? 'selected' : ''}>ECOM</option>
+                    <option value="Retail" ${platform === 'Retail' ? 'selected' : ''}>หน้าร้าน</option>
+                    <option value="Grab" ${platform === 'Grab' ? 'selected' : ''}>Grab</option>
+                    <option value="Lineman" ${platform === 'Lineman' ? 'selected' : ''}>Lineman</option>
+                    <option value="Shopee" ${platform === 'Shopee' ? 'selected' : ''}>Shopee</option>
+                </select>
                 <input type="text" placeholder="หน่วย (เช่น แผง)" value="${unit}" class="flex-1 bg-white border border-gray-200 rounded-xl p-3 text-sm font-medium outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-100 transition-all">
-                <input type="number" placeholder="ราคา" value="${price}" class="w-32 bg-white border border-gray-200 rounded-xl p-3 text-sm font-bold outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-100 transition-all">
+                <input type="number" placeholder="ราคา" value="${price}" class="w-28 bg-white border border-gray-200 rounded-xl p-3 text-sm font-bold outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-100 transition-all">
                 <button onclick="this.parentElement.remove()" class="text-gray-300 hover:text-red-500 p-2 transition-colors"><i class="fas fa-trash-alt"></i></button>
             `;
             container.appendChild(row);
@@ -856,11 +971,13 @@
             // Collect unit prices
             const unitPrices = [];
             document.querySelectorAll('.unit-price-row').forEach(row => {
-                const inputs = row.querySelectorAll('input');
-                const u = inputs[0].value.trim();
-                const p = parseFloat(inputs[1].value);
+                const plat = row.querySelector('select').value;
+                const unitInput = row.querySelectorAll('input')[0];
+                const priceInput = row.querySelectorAll('input')[1];
+                const u = unitInput.value.trim();
+                const p = parseFloat(priceInput.value);
                 if (u && !isNaN(p)) {
-                    unitPrices.push({ unit: u, price: p });
+                    unitPrices.push({ unit: u, price: p, platform: plat });
                 }
             });
 
@@ -886,7 +1003,7 @@
                 closeProductModal();
                 // Refresh data to show updates instantly
                 fetchProductsFromMaster().then(() => {
-                    filterCategory(currentCategory);
+                    applyFilters();
                 });
             } catch (e) {
                 console.error(e);
