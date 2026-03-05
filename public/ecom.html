@@ -84,7 +84,7 @@
                     </button>
 
                     <!-- Admin Edit Toggle -->
-                    <button id="admin-toggle-btn"
+                    <button id="admin-toggle-btn" onclick="toggleAdminView()"
                         class="hidden text-gray-400 hover:text-indigo-600 p-2 transition-colors bg-indigo-50 rounded-xl"
                         title="โหมดจัดการสินค้า (Admin)">
                         <i class="fas fa-cog text-xl"></i>
@@ -470,6 +470,9 @@
                         document.getElementById('user-role').className = 'text-[10px] text-indigo-100 font-bold bg-indigo-600 px-2.5 py-0.5 rounded-full inline-block shadow-sm';
                         document.getElementById('admin-toggle-btn').classList.remove('hidden');
                         document.getElementById('admin-banner').classList.remove('hidden');
+
+                        // Re-render to show admin tools if data already loaded
+                        if (allProducts.length > 0) renderProductGrid(currentDisplayProducts);
                     } else {
                         document.getElementById('user-role').innerText = 'Verified Partner';
                         document.getElementById('user-role').className = 'text-[10px] text-emerald-100 font-bold bg-emerald-600 px-2.5 py-0.5 rounded-full inline-block shadow-sm';
@@ -480,6 +483,19 @@
             }
             fetchProductsFromMaster();
         });
+
+        function toggleAdminView() {
+            isAdmin = !isAdmin;
+            const btn = document.getElementById('admin-toggle-btn');
+            if (isAdmin) {
+                btn.classList.add('bg-indigo-600', 'text-white');
+                btn.classList.remove('bg-indigo-50', 'text-gray-400');
+            } else {
+                btn.classList.remove('bg-indigo-600', 'text-white');
+                btn.classList.add('bg-indigo-50', 'text-gray-400');
+            }
+            renderProductGrid(currentDisplayProducts);
+        }
 
         // Fetch from Master Products DB
         async function fetchProductsFromMaster() {
@@ -562,8 +578,8 @@
 
                 // Extra UI for Admins
                 const adminBadge = isAdmin ? `
-                    <button onclick="openProductModal('${item.id}')" class="absolute top-3 right-3 bg-white/90 backdrop-blur-sm text-indigo-600 w-8 h-8 rounded-full shadow-sm border hover:bg-indigo-50 border-indigo-100 z-10 hidden group-hover:flex items-center justify-center transition" title="ตั้งค่าสินค้า">
-                        <i class="fas fa-edit text-xs"></i>
+                    <button onclick="event.stopPropagation(); openProductModal('${item.id}')" class="absolute top-3 right-3 bg-white/95 backdrop-blur-sm text-indigo-600 w-9 h-9 rounded-full shadow-lg border hover:bg-indigo-50 border-indigo-100 z-50 flex items-center justify-center transition-all active:scale-90" title="ตั้งค่าสินค้า">
+                        <i class="fas fa-edit text-sm"></i>
                     </button>
                     ${item.stock < 10 ? '<span class="absolute top-3 left-3 bg-red-100 text-red-600 text-[9px] font-bold px-2 py-0.5 rounded-full z-10 border border-red-200">ใกล้หมด</span>' : ''}
                     ${item.visibility === 'hide' ? '<span class="absolute bottom-3 right-3 bg-gray-800 text-white text-[9px] font-bold px-2 py-0.5 rounded-full z-10 opacity-80">ซ่อน (Hidden)</span>' : ''}
@@ -898,8 +914,12 @@
         let currentEditImageBase64 = null;
 
         function openProductModal(id) {
+            console.log("Opening modal for ID:", id);
             const p = allProducts.find(x => x.id === id);
-            if (!p) return;
+            if (!p) {
+                console.warn("Product not found:", id);
+                return;
+            }
 
             document.getElementById('edit-prod-id').value = p.id;
             document.getElementById('edit-prod-name').value = p.name;
