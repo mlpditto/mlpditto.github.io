@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="th">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ECOM Admin Dashboard — Medlife</title>
+    <title>ECOM Admin Dashboard โ€” Medlife</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -115,31 +115,84 @@
         .sidebar-link {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 9px 14px;
-            border-radius: 10px;
-            font-size: 13px;
-            font-weight: 600;
+            gap: 12px;
+            padding: 11px 16px;
+            border-radius: 14px;
+            font-size: 13.5px;
+            font-weight: 700;
             color: #64748b;
-            transition: all .15s;
+            transition: all .25s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
+            margin-bottom: 2px;
+            border: 1px solid transparent;
         }
 
-        .sidebar-link:hover,
+        .sidebar-link:hover {
+            background: #f8fafc;
+            color: #4f46e5;
+            transform: translateX(2px);
+        }
+
         .sidebar-link.active {
             background: #eef2ff;
             color: #4f46e5;
+            box-shadow: 0 4px 6px -1px rgb(79 70 229 / 0.1);
+            border-color: #e0e7ff;
         }
 
         .sidebar-link .icon {
-            width: 18px;
+            width: 20px;
             text-align: center;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tab-btn {
+            padding: 8px 18px;
+            font-size: 13px;
+            font-weight: 800;
+            color: #94a3b8;
+            border-radius: 12px;
+            transition: all .3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            background: rgba(248, 250, 252, 0.5);
+            border: 1px solid #f1f5f9;
+        }
+
+        .tab-btn.active {
+            color: white;
+            background: #4f46e5;
+            box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
+            border-color: #4f46e5;
+        }
+
+        .input-card {
+            background: white;
+            border-radius: 24px;
+            padding: 24px;
+            border: 1px solid #f1f5f9;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            transition: all 0.3s;
+        }
+
+        .input-card:hover {
+            border-color: #e2e8f0;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.04);
+        }
+
+        .section-accent {
+            width: 4px;
+            height: 16px;
+            background: #4f46e5;
+            border-radius: 99px;
         }
 
         @keyframes fadeSlide {
             from {
                 opacity: 0;
-                transform: translateY(6px);
+                transform: translateY(10px);
             }
 
             to {
@@ -231,7 +284,7 @@
         <div class="flex items-center gap-3">
             <a href="ecom.html" target="_blank"
                 class="flex items-center gap-2 text-xs font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg transition">
-                <i class="fas fa-store"></i> หน้าร้าน
+                <i class="fas fa-store"></i> เธซเธเนเธฒเธฃเนเธฒเธ
             </a>
             <div class="flex items-center gap-2 bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100">
                 <div class="w-7 h-7 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-xs"
@@ -252,24 +305,30 @@
     <div class="flex flex-1 overflow-hidden" style="height: calc(100vh - 57px);">
 
         <!-- Sidebar -->
-        <aside class="w-52 shrink-0 bg-white border-r border-gray-100 p-3 flex flex-col gap-1 overflow-y-auto">
-            <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest px-2 mb-1 mt-2">จัดการ</p>
-            <div class="sidebar-link active" onclick="showSection('products')"><span class="icon"><i
-                        class="fas fa-boxes"></i></span> สินค้าทั้งหมด</div>
-            <div class="sidebar-link" onclick="showSection('categories')"><span class="icon"><i
-                        class="fas fa-layer-group"></i></span> หมวดหมู่</div>
-            <div class="sidebar-link" onclick="showSection('pricing')"><span class="icon"><i
-                        class="fas fa-tags"></i></span> ราคาและหน่วย</div>
+        <aside class="w-60 shrink-0 bg-white border-r border-gray-100 p-4 flex flex-col gap-1 overflow-y-auto">
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-3 mb-3 mt-2">เน€เธกเธเธนเธเธฑเธ”เธเธฒเธฃ</p>
+            <div class="sidebar-link active" onclick="showSection('products')">
+                <span class="icon"><i class="fas fa-boxes"></i></span> เธชเธดเธเธเนเธฒเธ—เธฑเนเธเธซเธกเธ”
+            </div>
+            <div class="sidebar-link" onclick="showSection('categories')">
+                <span class="icon"><i class="fas fa-layer-group"></i></span> เธซเธกเธงเธ”เธซเธกเธนเนเธชเธดเธเธเนเธฒ
+            </div>
+            <div class="sidebar-link" onclick="showSection('pricing')">
+                <span class="icon"><i class="fas fa-tags"></i></span> เธฃเธฒเธเธฒเนเธฅเธฐเธซเธเนเธงเธข
+            </div>
             <div class="sidebar-link" onclick="showSection('access-codes')">
                 <span class="icon"><i class="fas fa-key"></i></span> Access Codes
             </div>
-            <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest px-2 mb-1 mt-4">ภาพรวม</p>
-            <div class="sidebar-link" onclick="showSection('stats')"><span class="icon"><i
-                        class="fas fa-chart-bar"></i></span> สถิติ</div>
-            <div class="mt-auto pt-4 border-t border-gray-100">
+
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-3 mb-3 mt-6">เธกเธญเธเธดเน€เธ•เธญเธฃเน</p>
+            <div class="sidebar-link" onclick="showSection('stats')">
+                <span class="icon"><i class="fas fa-chart-pie"></i></span> เธชเธ–เธดเธ•เธดเธ เธฒเธเธฃเธงเธก
+            </div>
+
+            <div class="mt-auto pt-6 border-t border-slate-50">
                 <button onclick="fetchAllProducts()"
-                    class="w-full text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 py-2 rounded-lg transition flex items-center justify-center gap-2">
-                    <i class="fas fa-sync-alt"></i> รีเฟรชข้อมูล
+                    class="w-full text-[11px] font-black uppercase tracking-wider text-indigo-600 bg-indigo-50/80 hover:bg-indigo-100 py-3 rounded-2xl transition-all flex items-center justify-center gap-2 border border-indigo-100/50">
+                    <i class="fas fa-sync-alt"></i> เธฃเธตเน€เธเธฃเธเธเนเธญเธกเธนเธฅ
                 </button>
             </div>
         </aside>
@@ -281,12 +340,12 @@
             <section id="section-access-codes" class="fade-slide hidden">
                 <div class="flex items-center justify-between mb-6">
                     <div>
-                        <h2 class="text-xl font-black text-gray-800">จัดการรหัสเข้าใช้งาน (Access Codes)</h2>
-                        <p class="text-xs text-gray-400 font-bold">แชร์รหัสเหล่านี้ให้ USER เพื่อเข้าถึงหน้า ECOM</p>
+                        <h2 class="text-xl font-black text-gray-800">เธเธฑเธ”เธเธฒเธฃเธฃเธซเธฑเธชเน€เธเนเธฒเนเธเนเธเธฒเธ (Access Codes)</h2>
+                        <p class="text-xs text-gray-400 font-bold">เนเธเธฃเนเธฃเธซเธฑเธชเน€เธซเธฅเนเธฒเธเธตเนเนเธซเน USER เน€เธเธทเนเธญเน€เธเนเธฒเธ–เธถเธเธซเธเนเธฒ ECOM</p>
                     </div>
                     <button onclick="generateNewAccessCode()"
                         class="bg-indigo-600 text-white px-5 py-2.5 rounded-2xl font-black text-xs shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition flex items-center gap-2">
-                        <i class="fas fa-magic"></i> สร้างรหัสใหม่
+                        <i class="fas fa-magic"></i> เธชเธฃเนเธฒเธเธฃเธซเธฑเธชเนเธซเธกเน
                     </button>
                 </div>
 
@@ -311,21 +370,21 @@
             <!-- Stats Bar -->
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" id="stats-bar">
                 <div class="stat-card">
-                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">สินค้าทั้งหมด</p>
-                    <p class="text-3xl font-black text-indigo-600" id="st-total">—</p>
+                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">เธชเธดเธเธเนเธฒเธ—เธฑเนเธเธซเธกเธ”</p>
+                    <p class="text-3xl font-black text-indigo-600" id="st-total">โ€”</p>
                 </div>
                 <div class="stat-card">
-                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">ใกล้หมด (สต็อก&lt;10)
+                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">เนเธเธฅเนเธซเธกเธ” (เธชเธ•เนเธญเธ&lt;10)
                     </p>
-                    <p class="text-3xl font-black text-orange-500" id="st-low">—</p>
+                    <p class="text-3xl font-black text-orange-500" id="st-low">โ€”</p>
                 </div>
                 <div class="stat-card">
-                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">ซ่อนอยู่</p>
-                    <p class="text-3xl font-black text-red-500" id="st-hidden">—</p>
+                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">เธเนเธญเธเธญเธขเธนเน</p>
+                    <p class="text-3xl font-black text-red-500" id="st-hidden">โ€”</p>
                 </div>
                 <div class="stat-card">
-                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">หมวดหมู่</p>
-                    <p class="text-3xl font-black text-teal-500" id="st-cats">—</p>
+                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">เธซเธกเธงเธ”เธซเธกเธนเน</p>
+                    <p class="text-3xl font-black text-teal-500" id="st-cats">โ€”</p>
                 </div>
             </div>
 
@@ -333,7 +392,7 @@
             <section id="section-products" class="fade-slide">
                 <!-- Toolbar -->
                 <div class="flex flex-wrap items-center gap-3 mb-4">
-                    <h2 class="text-lg font-black text-gray-800 shrink-0">รายการสินค้าทั้งหมด</h2>
+                    <h2 class="text-lg font-black text-gray-800 shrink-0">เธฃเธฒเธขเธเธฒเธฃเธชเธดเธเธเนเธฒเธ—เธฑเนเธเธซเธกเธ”</h2>
 
                     <!-- Alpha Navbar -->
                     <div class="flex items-center gap-0.5 bg-gray-100/50 p-1 rounded-xl overflow-x-auto no-scrollbar mx-2"
@@ -345,27 +404,27 @@
                     <div class="relative">
                         <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
                         <input id="admin-search" oninput="applyAdminFilter()" type="text"
-                            placeholder="ค้นหาชื่อ, หมวดหมู่..."
+                            placeholder="เธเนเธเธซเธฒเธเธทเนเธญ, เธซเธกเธงเธ”เธซเธกเธนเน..."
                             class="pl-8 pr-4 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-400 w-56">
                     </div>
                     <select id="filter-cat" onchange="applyAdminFilter()"
                         class="border border-gray-200 rounded-xl text-sm py-2 px-3 outline-none focus:ring-2 focus:ring-indigo-400">
-                        <option value="">ทุกหมวด</option>
+                        <option value="">เธ—เธธเธเธซเธกเธงเธ”</option>
                     </select>
                     <select id="filter-vis" onchange="applyAdminFilter()"
                         class="border border-gray-200 rounded-xl text-sm py-2 px-3 outline-none focus:ring-2 focus:ring-indigo-400">
-                        <option value="">ทุกสถานะ (ไม่รวมลบ)</option>
-                        <option value="show">แสดง (Active)</option>
-                        <option value="hide">ซ่อน (Hidden)</option>
-                        <option value="deleted">ถังขยะ (Trash)</option>
+                        <option value="">เธ—เธธเธเธชเธ–เธฒเธเธฐ (เนเธกเนเธฃเธงเธกเธฅเธ)</option>
+                        <option value="show">เนเธชเธ”เธ (Active)</option>
+                        <option value="hide">เธเนเธญเธ (Hidden)</option>
+                        <option value="deleted">เธ–เธฑเธเธเธขเธฐ (Trash)</option>
                     </select>
                     <button onclick="openAddModal()"
                         class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-md shadow-indigo-200 flex items-center gap-2 transition">
-                        <i class="fas fa-plus"></i> เพิ่มสินค้า
+                        <i class="fas fa-plus"></i> เน€เธเธดเนเธกเธชเธดเธเธเนเธฒ
                     </button>
                 </div>
 
-                <p class="text-xs text-gray-400 mb-2"><span id="filter-count">0</span> รายการ</p>
+                <p class="text-xs text-gray-400 mb-2"><span id="filter-count">0</span> เธฃเธฒเธขเธเธฒเธฃ</p>
 
                 <!-- Table -->
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -379,13 +438,12 @@
                                             class="w-4 h-4 rounded border-gray-300">
                                     </th>
                                     <th class="px-3 py-3 text-left w-8 text-gray-400">#</th>
-                                    <th class="px-3 py-3 text-left w-12 text-gray-400">รูป</th>
-                                    <th class="px-3 py-3 text-left min-w-[200px]">ชื่อสินค้า</th>
-                                    <th class="px-3 py-3 text-left">หมวด</th>
-                                    <th class="px-3 py-3 text-right">ต้นทุน</th>
-                                    <th class="px-3 py-3 text-right">LINE MAN</th>
-                                    <th class="px-3 py-3 text-center">สต็อก</th>
-                                    <th class="px-3 py-3 text-center">สถานะ</th>
+                                    <th class="px-3 py-3 text-left w-12 text-gray-400">เธฃเธนเธ</th>
+                                    <th class="px-3 py-3 text-left min-w-[200px]">เธเธทเนเธญเธชเธดเธเธเนเธฒ</th>
+                                    <th class="px-3 py-3 text-left">เธซเธกเธงเธ”</th>
+                                    <th class="px-3 py-3 text-right">เธ•เนเธเธ—เธธเธ</th>
+                                    <th class="px-3 py-3 text-center">เธชเธ•เนเธญเธ</th>
+                                    <th class="px-3 py-3 text-center">เธชเธ–เธฒเธเธฐ</th>
                                     <th class="px-3 py-3 text-center w-10 text-gray-400">...</th>
                                 </tr>
                             </thead>
@@ -412,42 +470,42 @@
 
             <!-- === SECTION: CATEGORIES === -->
             <section id="section-categories" class="hidden fade-slide">
-                <h2 class="text-lg font-black text-gray-800 mb-4">จัดการหมวดหมู่</h2>
+                <h2 class="text-lg font-black text-gray-800 mb-4">เธเธฑเธ”เธเธฒเธฃเธซเธกเธงเธ”เธซเธกเธนเน</h2>
                 <div class="grid md:grid-cols-2 gap-6">
                     <div class="bg-white rounded-2xl shadow-sm border p-5">
                         <h3 class="font-bold text-gray-700 mb-3 flex items-center gap-2"><i
-                                class="fas fa-list text-indigo-500"></i> หมวดหมู่ที่มีอยู่</h3>
+                                class="fas fa-list text-indigo-500"></i> เธซเธกเธงเธ”เธซเธกเธนเนเธ—เธตเนเธกเธตเธญเธขเธนเน</h3>
                         <div id="cat-list-admin" class="space-y-2"></div>
                     </div>
                     <div class="bg-white rounded-2xl shadow-sm border p-5">
                         <h3 class="font-bold text-gray-700 mb-3 flex items-center gap-2"><i
-                                class="fas fa-plus-circle text-teal-500"></i> เพิ่มหมวดหมู่ใหม่</h3>
-                        <input id="new-cat-name" type="text" placeholder="ชื่อหมวดหมู่ใหม่"
+                                class="fas fa-plus-circle text-teal-500"></i> เน€เธเธดเนเธกเธซเธกเธงเธ”เธซเธกเธนเนเนเธซเธกเน</h3>
+                        <input id="new-cat-name" type="text" placeholder="เธเธทเนเธญเธซเธกเธงเธ”เธซเธกเธนเนเนเธซเธกเน"
                             class="w-full border rounded-xl p-3 text-sm mb-3 outline-none focus:ring-2 focus:ring-teal-400">
-                        <input id="new-cat-icon" type="text" placeholder="Emoji icon (เช่น 💊)"
+                        <input id="new-cat-icon" type="text" placeholder="Emoji icon (เน€เธเนเธ ๐’)"
                             class="w-full border rounded-xl p-3 text-sm mb-3 outline-none focus:ring-2 focus:ring-teal-400">
                         <button onclick="addCategory()"
-                            class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2.5 rounded-xl transition text-sm">เพิ่มหมวดหมู่</button>
-                        <p class="text-xs text-gray-400 mt-2">* หมวดหมู่ถูกดึงจากข้อมูลสินค้าอัตโนมัติ
-                            การเพิ่มหมวดใหม่จะ assign ให้สินค้าได้ในหน้า Edit</p>
+                            class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2.5 rounded-xl transition text-sm">เน€เธเธดเนเธกเธซเธกเธงเธ”เธซเธกเธนเน</button>
+                        <p class="text-xs text-gray-400 mt-2">* เธซเธกเธงเธ”เธซเธกเธนเนเธ–เธนเธเธ”เธถเธเธเธฒเธเธเนเธญเธกเธนเธฅเธชเธดเธเธเนเธฒเธญเธฑเธ•เนเธเธกเธฑเธ•เธด
+                            เธเธฒเธฃเน€เธเธดเนเธกเธซเธกเธงเธ”เนเธซเธกเนเธเธฐ assign เนเธซเนเธชเธดเธเธเนเธฒเนเธ”เนเนเธเธซเธเนเธฒ Edit</p>
                     </div>
                 </div>
             </section>
 
             <!-- === SECTION: PRICING === -->
             <section id="section-pricing" class="hidden fade-slide">
-                <h2 class="text-lg font-black text-gray-800 mb-4">ราคาและหน่วยสินค้า</h2>
+                <h2 class="text-lg font-black text-gray-800 mb-4">เธฃเธฒเธเธฒเนเธฅเธฐเธซเธเนเธงเธขเธชเธดเธเธเนเธฒ</h2>
                 <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm">
                             <thead>
                                 <tr
                                     class="bg-gray-50 border-b text-[10px] font-black text-gray-500 uppercase tracking-wider">
-                                    <th class="px-4 py-3 text-left">ชื่อสินค้า</th>
+                                    <th class="px-4 py-3 text-left">เธเธทเนเธญเธชเธดเธเธเนเธฒ</th>
                                     <th class="px-4 py-3 text-left">Platform</th>
-                                    <th class="px-4 py-3 text-left">หน่วย</th>
-                                    <th class="px-4 py-3 text-right">ราคา (฿)</th>
-                                    <th class="px-4 py-3 text-center">จัดการ</th>
+                                    <th class="px-4 py-3 text-left">เธซเธเนเธงเธข</th>
+                                    <th class="px-4 py-3 text-right">เธฃเธฒเธเธฒ (เธฟ)</th>
+                                    <th class="px-4 py-3 text-center">เธเธฑเธ”เธเธฒเธฃ</th>
                                 </tr>
                             </thead>
                             <tbody id="pricing-table-body">
@@ -465,18 +523,18 @@
 
             <!-- === SECTION: STATS === -->
             <section id="section-stats" class="hidden fade-slide">
-                <h2 class="text-lg font-black text-gray-800 mb-4">สถิติภาพรวม</h2>
+                <h2 class="text-lg font-black text-gray-800 mb-4">เธชเธ–เธดเธ•เธดเธ เธฒเธเธฃเธงเธก</h2>
                 <div class="grid md:grid-cols-3 gap-4">
                     <div class="bg-white rounded-2xl border p-5 shadow-sm">
-                        <h3 class="font-bold text-gray-600 mb-3 text-sm">สินค้าตามหมวดหมู่</h3>
+                        <h3 class="font-bold text-gray-600 mb-3 text-sm">เธชเธดเธเธเนเธฒเธ•เธฒเธกเธซเธกเธงเธ”เธซเธกเธนเน</h3>
                         <div id="stat-by-cat" class="space-y-2 text-sm"></div>
                     </div>
                     <div class="bg-white rounded-2xl border p-5 shadow-sm">
-                        <h3 class="font-bold text-gray-600 mb-3 text-sm">สต็อกต่ำ (น้อยกว่า 10)</h3>
+                        <h3 class="font-bold text-gray-600 mb-3 text-sm">เธชเธ•เนเธญเธเธ•เนเธณ (เธเนเธญเธขเธเธงเนเธฒ 10)</h3>
                         <div id="stat-low-stock" class="space-y-1.5 text-sm max-h-72 overflow-y-auto"></div>
                     </div>
                     <div class="bg-white rounded-2xl border p-5 shadow-sm">
-                        <h3 class="font-bold text-gray-600 mb-3 text-sm">สินค้าที่ซ่อนอยู่</h3>
+                        <h3 class="font-bold text-gray-600 mb-3 text-sm">เธชเธดเธเธเนเธฒเธ—เธตเนเธเนเธญเธเธญเธขเธนเน</h3>
                         <div id="stat-hidden" class="space-y-1.5 text-sm max-h-72 overflow-y-auto"></div>
                     </div>
                 </div>
@@ -489,666 +547,722 @@
 
     <!-- ===== EDIT MODAL ===== -->
     <div id="edit-modal" class="modal-overlay">
-        <div class="bg-white rounded-3xl w-full max-w-3xl shadow-2xl flex flex-col max-h-[95vh] overflow-hidden">
-            <div class="bg-indigo-600 p-5 text-white flex justify-between items-center shrink-0">
-                <div class="flex items-center gap-3">
-                    <i class="fas fa-edit text-xl"></i>
+        <div
+            class="bg-white rounded-[2.5rem] w-full max-w-4xl shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] flex flex-col max-h-[92vh] overflow-hidden border border-white">
+            <div
+                class="bg-gradient-to-r from-indigo-700 to-indigo-600 p-6 text-white flex justify-between items-center shrink-0">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
+                        <i class="fas fa-edit text-xl"></i>
+                    </div>
                     <div>
-                        <h2 id="modal-title-name" class="font-black text-lg leading-none">เพิ่ม/แก้ไขสินค้า</h2>
-                        <p id="modal-subtitle" class="text-[10px] text-indigo-200 font-bold uppercase mt-1">Product
-                            Configuration</p>
+                        <h2 id="modal-title-name" class="font-black text-xl leading-none">เน€เธเธดเนเธก/เนเธเนเนเธเธชเธดเธเธเนเธฒ</h2>
+                        <p id="modal-subtitle"
+                            class="text-[10px] text-indigo-100 font-black uppercase mt-1.5 tracking-widest opacity-80">
+                            Product Configuration & Assets</p>
                     </div>
                 </div>
                 <button onclick="closeEditModal()"
-                    class="hover:bg-white/20 w-8 h-8 rounded-full flex items-center justify-center transition"><i
+                    class="hover:bg-white/20 w-10 h-10 rounded-2xl flex items-center justify-center transition-all bg-white/10 backdrop-blur-sm shadow-inner"><i
                         class="fas fa-times"></i></button>
             </div>
 
             <!-- Tabs Nav -->
-            <div class="flex bg-white border-b px-4 shrink-0 overflow-x-auto">
-                <button class="tab-btn active" onclick="switchTab(this, 'tab-info')">ข้อมูลทั่วไป</button>
-                <button class="tab-btn" onclick="switchTab(this, 'tab-pricing')">ราคา & หน่วย</button>
-                <button class="tab-btn" onclick="switchTab(this, 'tab-inventory')">สต็อก & Lot</button>
+            <div class="bg-white border-b border-gray-100 p-4 shrink-0 overflow-x-auto">
+                <div class="flex gap-2 max-w-fit mx-auto bg-gray-50/80 p-1.5 rounded-[1.2rem] border border-gray-100">
+                    <button class="tab-btn active" onclick="switchTab(this, 'tab-info')">เธเนเธญเธกเธนเธฅเธ—เธฑเนเธงเนเธ</button>
+                    <button class="tab-btn" onclick="switchTab(this, 'tab-pricing')">เธฃเธฒเธเธฒ & เธซเธเนเธงเธข</button>
+                    <button class="tab-btn" onclick="switchTab(this, 'tab-inventory')">เธชเธ•เนเธญเธ & Lot</button>
+                </div>
             </div>
 
-            <div class="flex-1 overflow-y-auto p-6 bg-gray-50/50">
+            <div class="flex-1 overflow-y-auto p-8 bg-slate-50/40">
                 <input type="hidden" id="em-id">
 
                 <!-- Tab: Info -->
-                <div id="tab-info" class="tab-content active space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="space-y-4">
-                            <div>
-                                <label
-                                    class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">ชื่อสินค้า</label>
-                                <input id="em-name" type="text"
-                                    class="w-full border rounded-2xl p-3.5 font-bold text-gray-800 bg-white shadow-sm outline-none focus:ring-2 focus:ring-indigo-400 ring-offset-2"
-                                    placeholder="ระบุชื่อสินค้า (Doc ID)...">
-                            </div>
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label
-                                        class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">หมวดหมู่
-                                        (ECOM)</label>
-                                    <select id="em-category"
-                                        class="w-full border rounded-2xl p-3 text-sm font-bold bg-white shadow-sm outline-none focus:ring-2 focus:ring-indigo-400"
-                                        onchange="checkNewCatEM(this.value)">
-                                    </select>
-                                    <input id="em-category-new" type="text" placeholder="ระบุใหม่..."
-                                        class="hidden w-full mt-2 border border-indigo-100 rounded-xl p-2.5 text-sm bg-indigo-50 outline-none">
+                <div id="tab-info" class="tab-content active space-y-8">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div class="lg:col-span-2 space-y-6">
+                            <div class="input-card">
+                                <div class="flex items-center gap-2 mb-4">
+                                    <div class="section-accent"></div>
+                                    <span
+                                        class="text-[11px] font-black text-slate-400 uppercase tracking-widest">เธเนเธญเธกเธนเธฅเธซเธฅเธฑเธเธชเธดเธเธเนเธฒ</span>
                                 </div>
-                                <div>
-                                    <label
-                                        class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">การแสดงผล</label>
-                                    <select id="em-visibility"
-                                        class="w-full border rounded-2xl p-3 text-sm font-bold bg-white shadow-sm outline-none focus:ring-2 focus:ring-indigo-400">
-                                        <option value="show">✅ แสดงหน้าร้าน</option>
-                                        <option value="hide">🚫 ซ่อนชั่วคราว</option>
-                                    </select>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label
+                                            class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 ml-1">เธเธทเนเธญเธชเธดเธเธเนเธฒ
+                                            (Master Name)</label>
+                                        <input id="em-name" type="text"
+                                            class="w-full border-gray-100 rounded-2xl p-4 font-bold text-gray-800 bg-white shadow-sm border focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all outline-none"
+                                            placeholder="เธฃเธฐเธเธธเธเธทเนเธญเธชเธดเธเธเนเธฒ...">
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label
+                                                class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 ml-1">เธซเธกเธงเธ”เธซเธกเธนเน
+                                                (ECOM Category)</label>
+                                            <select id="em-category"
+                                                class="w-full border-gray-100 rounded-2xl p-3.5 text-sm font-bold bg-white shadow-sm border focus:ring-2 focus:ring-indigo-400 transition-all outline-none"
+                                                onchange="checkNewCatEM(this.value)">
+                                            </select>
+                                            <input id="em-category-new" type="text" placeholder="เธฃเธฐเธเธธเธซเธกเธงเธ”เนเธซเธกเน..."
+                                                class="hidden w-full mt-3 border border-indigo-100 rounded-xl p-3 text-sm bg-indigo-50/50 outline-none">
+                                        </div>
+                                        <div>
+                                            <label
+                                                class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 ml-1">เธชเธ–เธฒเธเธฐเธเธฒเธฃเนเธชเธ”เธเธเธฅ</label>
+                                            <div
+                                                class="flex items-center gap-2 h-[50px] px-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
+                                                <input type="checkbox" id="em-visibility-cb"
+                                                    class="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 transition-all cursor-pointer">
+                                                <label for="em-visibility-cb"
+                                                    class="text-sm font-bold text-gray-700 cursor-pointer select-none">เนเธชเธ”เธเธซเธเนเธฒเธเธฑเธ”เธเธฒเธฃ
+                                                    (Active)</label>
+                                            </div>
+                                            <input type="hidden" id="em-visibility" value="show">
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+
                         <div
-                            class="bg-white p-4 rounded-3xl border border-dashed border-gray-200 flex flex-col items-center justify-center text-center">
+                            class="input-card flex flex-col items-center justify-center group relative overflow-hidden bg-white">
+                            <div class="flex items-center gap-2 mb-6 w-full">
+                                <div class="section-accent"></div>
+                                <span
+                                    class="text-[11px] font-black text-slate-400 uppercase tracking-widest">เธฃเธนเธเธ เธฒเธเธชเธดเธเธเนเธฒ</span>
+                            </div>
                             <div id="em-img-container"
-                                class="w-32 h-32 bg-gray-50 rounded-2xl overflow-hidden flex items-center justify-center relative group mb-3">
-                                <img id="em-img-preview" src="" class="w-full h-full object-contain hidden">
-                                <i id="em-img-icon" class="fas fa-image text-gray-200 text-3xl"></i>
-                                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center cursor-pointer"
+                                class="w-48 h-48 bg-slate-50 rounded-[2.5rem] overflow-hidden flex items-center justify-center relative border-2 border-dashed border-slate-100 group-hover:border-indigo-200 transition-all mb-4">
+                                <img id="em-img-preview" src="" class="w-full h-full object-contain hidden z-10 p-4">
+                                <div id="em-img-icon" class="flex flex-col items-center gap-2 text-slate-300">
+                                    <i class="fas fa-cloud-upload-alt text-4xl"></i>
+                                    <span class="text-[10px] font-bold">เธขเธฑเธเนเธกเนเธกเธตเธฃเธนเธเธ เธฒเธ</span>
+                                </div>
+                                <div class="absolute inset-0 bg-indigo-900/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center cursor-pointer z-20 backdrop-blur-[2px]"
                                     onclick="document.getElementById('em-img-file').click()">
-                                    <i class="fas fa-camera text-white"></i>
+                                    <div
+                                        class="bg-white text-indigo-600 w-10 h-10 rounded-full flex items-center justify-center shadow-lg transform scale-75 group-hover:scale-100 transition-all duration-300">
+                                        <i class="fas fa-camera"></i>
+                                    </div>
                                 </div>
                             </div>
                             <input type="file" id="em-img-file" accept="image/*" onchange="previewEMImage(this)"
                                 class="hidden">
                             <button onclick="document.getElementById('em-img-file').click()"
-                                class="text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-wide">เปลี่ยนรูปภาพ</button>
+                                class="text-[11px] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-widest pt-2">เน€เธเธฅเธตเนเธขเธเธฃเธนเธเธ เธฒเธ</button>
                         </div>
                     </div>
 
                     <!-- Company Costs -->
-                    <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-xs font-black text-gray-700 uppercase flex items-center gap-2"><i
-                                    class="fas fa-building text-indigo-400"></i> บันทึกต้นทุนแยกตามบริษัท</h3>
+                    <div class="input-card">
+                        <div class="flex justify-between items-center mb-6">
+                            <div class="flex items-center gap-2">
+                                <div class="section-accent bg-teal-500"></div>
+                                <h3 class="text-xs font-black text-gray-700 uppercase tracking-wider">
+                                    เธเธฑเธเธ—เธถเธเธ•เนเธเธ—เธธเธเนเธขเธเธ•เธฒเธกเธเธฃเธดเธฉเธฑเธ— (Cost Tracking)</h3>
+                            </div>
                             <button onclick="addCompanyCostRow()"
-                                class="text-[10px] bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-xl font-black hover:bg-indigo-100 transition"><i
-                                    class="fas fa-plus mr-1"></i> เพิ่มบริษัท</button>
+                                class="text-[10px] bg-teal-50 text-teal-600 border border-teal-100 px-4 py-2 rounded-xl font-black hover:bg-teal-600 hover:text-white transition-all duration-300 shadow-sm shadow-teal-50/50"><i
+                                    class="fas fa-plus mr-1.5"></i> เน€เธเธดเนเธกเธเธฑเธเธ—เธถเธเธเธฃเธดเธฉเธฑเธ—</button>
                         </div>
-                        <div id="em-company-costs" class="space-y-2">
+                        <div id="em-company-costs" class="space-y-3">
                             <!-- Rows -->
                         </div>
                     </div>
                 </div>
 
                 <!-- Tab: Pricing -->
-                <div id="tab-pricing" class="tab-content space-y-6">
-                    <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-xs font-black text-gray-700 uppercase flex items-center gap-2"><i
-                                    class="fas fa-tags text-indigo-400"></i> ราคาขาย ECOM (ตาม Platform & หน่วย)</h3>
+                <div id="tab-pricing" class="tab-content space-y-8">
+                    <div class="input-card">
+                        <div class="flex justify-between items-center mb-6">
+                            <div class="flex items-center gap-2">
+                                <div class="section-accent bg-orange-500"></div>
+                                <h3 class="text-xs font-black text-gray-700 uppercase tracking-wider">เธฃเธฒเธเธฒเธเธฒเธข ECOM
+                                    (Mult-Unit Platforms)</h3>
+                            </div>
                             <button onclick="addEMPriceRow()"
-                                class="text-[10px] bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-xl font-black hover:bg-indigo-100 transition"><i
-                                    class="fas fa-plus mr-1"></i> เพิ่มแถวราคา</button>
+                                class="text-[10px] bg-orange-50 text-orange-600 border border-orange-100 px-4 py-2 rounded-xl font-black hover:bg-orange-500 hover:text-white transition-all duration-300 shadow-sm shadow-orange-50/50"><i
+                                    class="fas fa-plus mr-1.5"></i> เน€เธเธดเนเธกเธฃเธฒเธเธฒเธ—เธ”เนเธ—เธ</button>
                         </div>
-                        <div class="grid grid-cols-12 gap-2 mb-2 px-2 text-[10px] font-black text-gray-400 uppercase">
-                            <div class="col-span-3">Platform</div>
-                            <div class="col-span-2">หน่วย</div>
-                            <div class="col-span-3">ราคาอ้างอิง (สูง)</div>
-                            <div class="col-span-3">ราคาขายจริง</div>
+                        <div
+                            class="grid grid-cols-12 gap-3 mb-4 px-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                            <div class="col-span-3">เธเนเธญเธเธ—เธฒเธเธเธฒเธข</div>
+                            <div class="col-span-2">เธซเธเนเธงเธข</div>
+                            <div class="col-span-3">เธฃเธฒเธเธฒเธญเนเธฒเธเธญเธดเธ (Strike)</div>
+                            <div class="col-span-3">เธฃเธฒเธเธฒเธเธฒเธขเธเธฃเธดเธ</div>
                             <div class="col-span-1"></div>
                         </div>
-                        <div id="em-prices" class="space-y-2">
+                        <div id="em-prices" class="space-y-3">
                             <!-- Rows -->
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="bg-blue-50/50 p-5 rounded-3xl border border-blue-100">
-                            <h3 class="text-xs font-black text-blue-800 uppercase mb-3 ml-1">ราคา Master</h3>
-                            <div class="grid grid-cols-2 gap-3">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div class="input-card relative overflow-hidden">
+                            <div
+                                class="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-full -mr-16 -mt-16 opacity-40">
+                            </div>
+                            <div class="flex items-center gap-2 mb-6 relative">
+                                <div class="section-accent bg-indigo-500"></div>
+                                <h3 class="text-[11px] font-black text-indigo-600 uppercase tracking-widest">เธฃเธฒเธเธฒเธกเธฒเธ•เธฃเธเธฒเธ
+                                    (Master Prices)</h3>
+                            </div>
+                            <div class="grid grid-cols-2 gap-6 relative">
                                 <div>
-                                    <label class="text-[9px] font-black text-blue-500 uppercase block mb-1">LINE
-                                        MAN</label>
-                                    <input id="em-price-lineman" type="number" step="0.01"
-                                        class="w-full border rounded-xl p-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-400">
+                                    <label class="text-[10px] font-black text-slate-400 uppercase block mb-2 ml-1">เธฃเธฒเธเธฒ
+                                        LINE MAN</label>
+                                    <div class="relative">
+                                        <span
+                                            class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 font-bold text-sm">เธฟ</span>
+                                        <input id="em-price-lineman" type="number" step="0.01"
+                                            class="w-full border-gray-100 rounded-2xl pl-8 pr-4 py-3 font-bold text-indigo-600 bg-slate-50 shadow-inner outline-none focus:bg-white transition-all border">
+                                    </div>
                                 </div>
                                 <div>
                                     <label
-                                        class="text-[9px] font-black text-blue-500 uppercase block mb-1">หน่วยหลัก</label>
-                                    <input id="em-unit" type="text" placeholder="กล่อง"
-                                        class="w-full border rounded-xl p-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-400">
+                                        class="text-[10px] font-black text-slate-400 uppercase block mb-2 ml-1">เธซเธเนเธงเธขเธเธทเนเธเธเธฒเธ</label>
+                                    <input id="em-unit" type="text" placeholder="เธเธดเนเธ/เธเธฅเนเธญเธ"
+                                        class="w-full border-gray-100 rounded-2xl px-4 py-3 font-bold text-gray-700 bg-slate-50 shadow-inner outline-none focus:bg-white transition-all border">
                                 </div>
                                 <div>
-                                    <label class="text-[9px] font-black text-blue-500 uppercase block mb-1">ราคาปลีก
+                                    <label
+                                        class="text-[10px] font-black text-slate-400 uppercase block mb-2 ml-1">เธฃเธฒเธเธฒเธเธฅเธตเธ
                                         (Retail)</label>
-                                    <input id="em-price-retail" type="number" step="0.01"
-                                        class="w-full border rounded-xl p-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-400">
+                                    <div class="relative">
+                                        <span
+                                            class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 font-bold text-sm">เธฟ</span>
+                                        <input id="em-price-retail" type="number" step="0.01"
+                                            class="w-full border-gray-100 rounded-2xl pl-8 pr-4 py-3 font-bold text-rose-500 bg-slate-50 shadow-inner outline-none focus:bg-white transition-all border">
+                                    </div>
                                 </div>
                                 <div>
-                                    <label class="text-[9px] font-black text-blue-500 uppercase block mb-1">ราคาส่ง
+                                    <label
+                                        class="text-[10px] font-black text-slate-400 uppercase block mb-2 ml-1">เธฃเธฒเธเธฒเธชเนเธ
                                         (Wholesale)</label>
-                                    <input id="em-price-wholesale" type="number" step="0.01"
-                                        class="w-full border rounded-xl p-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-400">
+                                    <div class="relative">
+                                        <span
+                                            class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 font-bold text-sm">เธฟ</span>
+                                        <input id="em-price-wholesale" type="number" step="0.01"
+                                            class="w-full border-gray-100 rounded-2xl pl-8 pr-4 py-3 font-bold text-teal-600 bg-slate-50 shadow-inner outline-none focus:bg-white transition-all border">
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="bg-gray-100/50 p-5 rounded-3xl border border-gray-200">
-                            <h3 class="text-xs font-black text-gray-600 uppercase mb-3 ml-1">ข้อมูลอื่นๆ</h3>
-                            <div class="space-y-3">
+
+                        <div class="input-card">
+                            <div class="flex items-center gap-2 mb-6">
+                                <div class="section-accent bg-slate-400"></div>
+                                <h3 class="text-[11px] font-black text-slate-500 uppercase tracking-widest">
+                                    เธเนเธญเธกเธนเธฅเธเธฒเธฃเธเธถเนเธเธ—เธฐเน€เธเธตเธขเธ & เนเธซเธฅเนเธเธเธฅเธดเธ•</h3>
+                            </div>
+                            <div class="space-y-5">
                                 <div>
                                     <label
-                                        class="text-[9px] font-black text-gray-500 uppercase block mb-1">เลขทะเบียนตำรับยา
+                                        class="text-[10px] font-black text-slate-400 uppercase block mb-2 ml-1">เน€เธฅเธเธ—เธฐเน€เธเธตเธขเธเธ•เธณเธฃเธฑเธเธขเธฒ
                                         (Registration No.)</label>
                                     <input id="em-reg-no" type="text"
-                                        class="w-full border rounded-xl p-2.5 text-xs outline-none focus:ring-1 focus:ring-gray-400">
+                                        class="w-full border-gray-100 rounded-2xl p-3.5 text-sm outline-none focus:ring-2 focus:ring-slate-300 transition-all border bg-slate-50/30">
                                 </div>
-                                <div class="grid grid-cols-2 gap-3">
+                                <div class="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label class="text-[9px] font-black text-gray-500 uppercase block mb-1">ผู้ผลิต
+                                        <label
+                                            class="text-[10px] font-black text-slate-400 uppercase block mb-2 ml-1">เธเธนเนเธเธฅเธดเธ•
                                             (Manufacturer)</label>
                                         <input id="em-manufacturer" type="text"
-                                            class="w-full border rounded-xl p-2.5 text-xs outline-none focus:ring-1 focus:ring-gray-400">
+                                            class="w-full border-gray-100 rounded-2xl p-3.5 text-sm outline-none focus:ring-2 focus:ring-slate-300 transition-all border bg-slate-50/30">
                                     </div>
                                     <div>
                                         <label
-                                            class="text-[9px] font-black text-gray-500 uppercase block mb-1">ประเทศผู้ผลิต
-                                            (Country of Origin)</label>
+                                            class="text-[10px] font-black text-slate-400 uppercase block mb-2 ml-1">เธเธฃเธฐเน€เธ—เธจเน€เธเนเธฒเธเธญเธเนเธเธฃเธเธ”เน</label>
                                         <input id="em-country" type="text"
-                                            class="w-full border rounded-xl p-2.5 text-xs outline-none focus:ring-1 focus:ring-gray-400">
+                                            class="w-full border-gray-100 rounded-2xl p-3.5 text-sm outline-none focus:ring-2 focus:ring-slate-300 transition-all border bg-slate-50/30">
+                                    </div>
+                                    <div id="em-lots" class="space-y-3">
+                                        <!-- Rows -->
+                                    </div>
+
+                                    <div class="mt-8 pt-8 border-t border-slate-100">
+                                        <div
+                                            class="flex justify-between items-center bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100">
+                                            <div>
+                                                <p
+                                                    class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">
+                                                    เธฃเธงเธกเธชเธ•เนเธญเธเธเธฃเธดเธ (Actual Sum)</p>
+                                                <p id="em-total-stock-display"
+                                                    class="text-3xl font-black text-slate-800">0</p>
+                                            </div>
+                                            <div class="text-right">
+                                                <label
+                                                    class="text-[10px] font-black text-indigo-500 uppercase tracking-widest block mb-1.5 mr-1">เธชเธ•เนเธญเธ
+                                                    ECOM (Display Count)</label>
+                                                <div class="relative inline-block">
+                                                    <input id="em-stock" type="number"
+                                                        class="w-40 border-gray-200 border rounded-2xl p-3 text-2xl font-black text-center text-indigo-600 outline-none focus:ring-2 focus:ring-indigo-400 bg-white shadow-sm transition-all">
+                                                    <div
+                                                        class="absolute -top-2 -right-2 w-5 h-5 bg-indigo-600 rounded-full flex items-center justify-center text-white">
+                                                        <i class="fas fa-globe text-[8px]"></i>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+
+                        <div
+                            class="shrink-0 bg-white border-t border-gray-100 p-6 flex gap-4 justify-between items-center bg-white/80 backdrop-blur-md">
+                            <button id="btn-delete-product" onclick="deleteProduct()"
+                                class="px-5 py-3 text-red-500 hover:text-white hover:bg-red-500 font-black rounded-2xl transition-all text-[11px] uppercase tracking-widest flex items-center gap-2 border border-red-100/50 hover:border-red-500 active:scale-95">
+                                <i class="fas fa-trash-alt"></i> เธฅเธเธเนเธญเธกเธนเธฅเธเธตเน
+                            </button>
+                            <div class="flex gap-4">
+                                <button onclick="closeEditModal()"
+                                    class="px-8 py-3 bg-gray-50 text-gray-500 font-black rounded-2xl hover:bg-gray-100 transition-all text-[11px] uppercase tracking-widest border border-gray-100">เธขเธเน€เธฅเธดเธ</button>
+                                <button onclick="saveProduct()"
+                                    class="px-10 py-3 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 transition-all text-[11px] uppercase tracking-widest flex items-center gap-2 shadow-[0_10px_20px_-5px_rgba(79,70,229,0.3)] hover:translate-y-[-1px] active:scale-95">
+                                    <i class="fas fa-save"></i> เธเธฑเธเธ—เธถเธเธฃเธฒเธขเธเธฒเธฃ
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== MERGE MODAL ===== -->
+                <div id="merge-modal" class="modal-overlay">
+                    <div
+                        class="bg-white rounded-[2.5rem] w-full max-w-xl shadow-[0_32px_64px_-12px_rgba(0,0,0,0.18)] overflow-hidden flex flex-col max-h-[90vh] border border-white">
+                        <div
+                            class="bg-gradient-to-br from-indigo-900 via-indigo-800 to-slate-900 p-6 text-white flex justify-between items-center shrink-0">
+                            <div class="flex items-center gap-4">
+                                <div
+                                    class="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/10 shadow-inner">
+                                    <i class="fas fa-object-group text-xl"></i>
+                                </div>
                                 <div>
-                                    <label class="text-[9px] font-black text-gray-500 uppercase block mb-1">ชื่อเล่น /
-                                        Aliases (คั่นด้วย comma)</label>
-                                    <input id="em-aliases" type="text"
-                                        class="w-full border rounded-xl p-2.5 text-xs outline-none focus:ring-1 focus:ring-gray-400">
+                                    <h2 class="font-black text-lg leading-none">เธฃเธงเธกเธฃเธฒเธขเธเธฒเธฃเธชเธดเธเธเนเธฒ (Data Merge)</h2>
+                                    <p
+                                        class="text-[10px] text-indigo-300 font-black uppercase mt-1.5 tracking-widest opacity-80">
+                                        Consolidate multiple records</p>
                                 </div>
                             </div>
+                            <button onclick="closeMergeModal()"
+                                class="hover:bg-white/20 w-10 h-10 rounded-2xl flex items-center justify-center transition-all bg-white/5 border border-white/5 shadow-inner"><i
+                                    class="fas fa-times"></i></button>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Tab: Inventory -->
-                <div id="tab-inventory" class="tab-content space-y-6">
-                    <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm">
-                        <div class="flex justify-between items-center mb-4">
-                            <div class="flex flex-col">
-                                <h3 class="text-xs font-black text-gray-700 uppercase flex items-center gap-2">
-                                    <i class="fas fa-boxes text-orange-400"></i> จัดการ Stock & Lot
-                                </h3>
-                                <p class="text-[9px] text-gray-400 font-bold mt-0.5">ระบุหลาย Lot เพื่อติดตามการหมดอายุ
-                                </p>
-                            </div>
-                            <button onclick="addLotRow()"
-                                class="text-[10px] bg-orange-50 text-orange-600 px-3 py-1.5 rounded-xl font-black hover:bg-orange-100 transition"><i
-                                    class="fas fa-plus mr-1"></i> เพิ่ม Lot</button>
-                        </div>
-
-                        <div class="grid grid-cols-12 gap-2 mb-2 px-2 text-[10px] font-black text-gray-400 uppercase">
-                            <div class="col-span-4">Lot Number</div>
-                            <div class="col-span-4">วันหมดอายุ (EXP)</div>
-                            <div class="col-span-3">จำนวนคลัง (Stock)</div>
-                            <div class="col-span-1"></div>
-                        </div>
-                        <div id="em-lots" class="space-y-2">
-                            <!-- Rows -->
-                        </div>
-
-                        <div class="mt-6 pt-5 border-t border-gray-100">
-                            <div class="flex justify-between items-center bg-gray-50 p-4 rounded-2xl">
-                                <div>
-                                    <p class="text-[10px] font-black text-gray-400 uppercase mb-1">ยอดรวมสต็อกทั้งหมด
-                                    </p>
-                                    <p id="em-total-stock-display" class="text-2xl font-black text-gray-800">0</p>
+                        <div class="p-8 overflow-y-auto space-y-6 bg-slate-50/50">
+                            <div
+                                class="bg-amber-50/80 border border-amber-100 rounded-[1.5rem] p-6 flex gap-4 shadow-sm">
+                                <div
+                                    class="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center shrink-0">
+                                    <i class="fas fa-exclamation-triangle text-amber-600"></i>
                                 </div>
-                                <div class="text-right">
-                                    <label class="text-[10px] font-black text-indigo-500 uppercase block mb-1">สต็อก
-                                        ECOM (ตัวเลขที่โชว์ลูกค้า)</label>
-                                    <input id="em-stock" type="number"
-                                        class="w-32 border border-indigo-200 rounded-xl p-2 text-xl font-black text-center text-indigo-600 outline-none focus:ring-2 focus:ring-indigo-400">
+                                <div
+                                    class="text-[11px] text-amber-900 leading-relaxed font-bold uppercase tracking-wider">
+                                    เธเธณเนเธเนเธเน€เธ•เธทเธญเธ: เน€เธฅเธทเธญเธเธชเธดเธเธเนเธฒเธ—เธตเนเธเธฐเนเธเนเน€เธเนเธ <span
+                                        class="text-amber-600 font-black underline decoration-2 underline-offset-4">MASTER</span>
+                                    เธเนเธญเธกเธนเธฅเธฃเธฒเธเธฒเธเธฐเธญเนเธฒเธเธญเธดเธเธฃเธฒเธขเธฃเธฒเธขเธเธฒเธฃเธเธตเน เธชเธ•เนเธญเธเธเธฐเธ–เธนเธเธฃเธงเธกเน€เธเนเธฒเธ”เนเธงเธขเธเธฑเธ
+                                    เนเธฅเธฐเธเธฑเธเธเธตเธญเธทเนเธเธเธฐเธ–เธนเธเธฅเธเธ—เธดเนเธเธญเธขเนเธฒเธเธ–เธฒเธงเธฃ
                                 </div>
                             </div>
+                            <div id="merge-list-container" class="space-y-3">
+                                <!-- Merge items here -->
+                            </div>
+                        </div>
+                        <div class="p-6 border-t bg-white flex gap-4">
+                            <button onclick="closeMergeModal()"
+                                class="flex-1 py-4 bg-slate-50 border border-slate-100 font-black rounded-2xl text-slate-400 hover:bg-slate-100 transition-all text-[11px] uppercase tracking-widest">เธขเธเน€เธฅเธดเธ</button>
+                            <button onclick="confirmMergeProducts()"
+                                class="flex-1 py-4 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 transition-all text-[11px] uppercase tracking-widest shadow-[0_8px_16px_-4px_rgba(79,70,229,0.35)]">เธขเธทเธเธขเธฑเธเธเธฒเธฃเธฃเธงเธกเธเนเธญเธกเธนเธฅ</button>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="shrink-0 bg-white border-t p-5 flex gap-3 justify-between items-center">
-                <button id="btn-delete-product" onclick="deleteProduct()"
-                    class="px-4 py-2.5 text-red-500 hover:text-white hover:bg-red-500 font-bold rounded-2xl transition text-xs flex items-center gap-2">
-                    <i class="fas fa-trash-alt"></i> ลบสินค้านี้
-                </button>
-                <div class="flex gap-3">
-                    <button onclick="closeEditModal()"
-                        class="px-6 py-2.5 bg-gray-100 text-gray-600 font-bold rounded-2xl hover:bg-gray-200 transition text-sm">ยกเลิก</button>
-                    <button onclick="saveProduct()"
-                        class="px-8 py-2.5 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 transition text-sm flex items-center gap-2 shadow-lg shadow-indigo-100">
-                        <i class="fas fa-save"></i> บันทึกข้อมูล
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ===== MERGE MODAL ===== -->
-    <div id="merge-modal" class="modal-overlay">
-        <div class="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div class="bg-indigo-900 p-5 text-white flex justify-between items-center shrink-0">
-                <div class="flex items-center gap-3">
-                    <i class="fas fa-object-group text-xl"></i>
-                    <div>
-                        <h2 class="font-black text-lg leading-none">รวมรายการสินค้า (Merge)</h2>
-                        <p class="text-[10px] text-indigo-300 font-bold uppercase mt-1">Combine records into one</p>
+                <!-- Merge Action Bar -->
+                <div id="merge-action-bar"
+                    class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-indigo-900 text-white px-6 py-4 rounded-3xl shadow-2xl flex items-center gap-6 z-[60] scale-90 opacity-0 pointer-events-none transition-all duration-300">
+                    <div class="flex items-center gap-3 border-r border-indigo-700/50 pr-6">
+                        <span
+                            class="w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center text-sm font-black"
+                            id="selected-count">0</span>
+                        <span class="text-xs font-bold text-indigo-200">เธฃเธฒเธขเธเธฒเธฃเธ—เธตเนเน€เธฅเธทเธญเธ</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="clearSelection()"
+                            class="px-4 py-2 hover:bg-white/10 rounded-xl text-xs font-bold transition">เธฅเนเธฒเธเธเธฒเธฃเน€เธฅเธทเธญเธ</button>
+                        <button onclick="openMergeModal()"
+                            class="px-6 py-2 bg-indigo-500 hover:bg-indigo-400 text-white font-black rounded-xl text-xs transition flex items-center gap-2 shadow-lg shadow-indigo-500/30">
+                            <i class="fas fa-object-group"></i> เธฃเธงเธกเธชเธดเธเธเนเธฒ (Merge)
+                        </button>
                     </div>
                 </div>
-                <button onclick="closeMergeModal()"
-                    class="hover:bg-white/20 w-8 h-8 rounded-full flex items-center justify-center transition"><i
-                        class="fas fa-times"></i></button>
-            </div>
-            <div class="p-6 overflow-y-auto space-y-4">
-                <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex gap-3">
-                    <i class="fas fa-exclamation-triangle text-amber-500 mt-1"></i>
-                    <div class="text-xs text-amber-800 leading-relaxed font-bold">
-                        เลือกสินค้าที่จะใช้เป็น <span class="text-amber-600 font-black underline">MASTER</span>
-                        (ข้อมูลหน่วยและราคาจะยึดตามตัวนี้เป็นหลัก)
-                        ส่วนตัวอื่นๆ จะถูกลบทิ้งหลังจากย้ายสต็อกและชื่อไปเป็น Alias แล้ว
-                    </div>
-                </div>
-                <div id="merge-list-container" class="space-y-2">
-                    <!-- Merge items here -->
-                </div>
-            </div>
-            <div class="p-5 border-t bg-gray-50 flex gap-3">
-                <button onclick="closeMergeModal()"
-                    class="flex-1 py-3 bg-white border border-gray-200 font-black rounded-2xl text-gray-500 hover:bg-gray-100 transition text-sm text-center">ยกเลิก</button>
-                <button onclick="confirmMergeProducts()"
-                    class="flex-1 py-3 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 transition text-sm text-center shadow-lg shadow-indigo-200">ยืนยันการรวม</button>
-            </div>
-        </div>
-    </div>
 
-    <!-- Merge Action Bar -->
-    <div id="merge-action-bar"
-        class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-indigo-900 text-white px-6 py-4 rounded-3xl shadow-2xl flex items-center gap-6 z-[60] scale-90 opacity-0 pointer-events-none transition-all duration-300">
-        <div class="flex items-center gap-3 border-r border-indigo-700/50 pr-6">
-            <span class="w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center text-sm font-black"
-                id="selected-count">0</span>
-            <span class="text-xs font-bold text-indigo-200">รายการที่เลือก</span>
-        </div>
-        <div class="flex gap-2">
-            <button onclick="clearSelection()"
-                class="px-4 py-2 hover:bg-white/10 rounded-xl text-xs font-bold transition">ล้างการเลือก</button>
-            <button onclick="openMergeModal()"
-                class="px-6 py-2 bg-indigo-500 hover:bg-indigo-400 text-white font-black rounded-xl text-xs transition flex items-center gap-2 shadow-lg shadow-indigo-500/30">
-                <i class="fas fa-object-group"></i> รวมสินค้า (Merge)
-            </button>
-        </div>
-    </div>
+                <script>
+                    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+                    const db = firebase.firestore();
+                    const auth = firebase.auth();
 
-    <script>
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        const auth = firebase.auth();
+                    let allProducts = [];
+                    let filteredProducts = [];
+                    let selectedIds = new Set();
+                    let customCategories = new Set(['All', 'OTC', 'Supplies', 'Supplements', 'Dermocare']);
+                    let masterCompanies = new Set();
+                    let emImageBase64 = null;
+                    let activeAlpha = 'ALL';
 
-        let allProducts = [];
-        let filteredProducts = [];
-        let selectedIds = new Set();
-        let customCategories = new Set(['All', 'OTC', 'Supplies', 'Supplements', 'Dermocare']);
-        let masterCompanies = new Set();
-        let emImageBase64 = null;
-        let activeAlpha = 'ALL';
+                    // Pagination State
+                    let currentPage = 1;
+                    const itemsPerPage = 30;
 
-        // Pagination State
-        let currentPage = 1;
-        const itemsPerPage = 30;
-
-        // ===== AUTH =====
-        auth.onAuthStateChanged(async user => {
-            if (!user) { location.href = 'ecom.html'; return; }
-            const doc = await db.collection('users').doc(user.uid).get();
-            const data = doc.data() || {};
-            if (data.role !== 'admin' && user.email !== 'medlifeplus@gmail.com') {
-                location.href = 'ecom.html'; return;
-            }
-            document.getElementById('admin-name').innerText = data.displayName || user.email;
-            document.getElementById('admin-avatar').innerText = (data.displayName || user.email).charAt(0).toUpperCase();
-            document.getElementById('auth-guard').style.display = 'none';
-            fetchAllProducts();
-        });
-
-        // ===== DATA =====
-        async function fetchAllProducts() {
-            const snap = await db.collection('master_products').orderBy('name').get();
-            allProducts = [];
-            masterCompanies.clear();
-            snap.forEach(doc => {
-                const p = doc.data();
-                p.id = doc.id;
-                allProducts.push(p);
-                if (p.ecomCategory) customCategories.add(p.ecomCategory);
-
-                // Collect companies for suggestions
-                if (p.prices) {
-                    const stdPlatforms = ['LINEMAN', 'LINE_MAN', 'RETAIL', 'WHOLESALE', 'COST'];
-                    Object.keys(p.prices).forEach(k => {
-                        let comp = k.split('_')[0];
-                        if (!stdPlatforms.includes(comp.toUpperCase())) {
-                            // If it has underscore, it's typically Company_Unit
-                            masterCompanies.add(comp);
+                    // ===== AUTH =====
+                    auth.onAuthStateChanged(async user => {
+                        if (!user) { location.href = 'ecom.html'; return; }
+                        const doc = await db.collection('users').doc(user.uid).get();
+                        const data = doc.data() || {};
+                        if (data.role !== 'admin' && user.email !== 'medlifeplus@gmail.com') {
+                            location.href = 'ecom.html'; return;
                         }
+                        document.getElementById('admin-name').innerText = data.displayName || user.email;
+                        document.getElementById('admin-avatar').innerText = (data.displayName || user.email).charAt(0).toUpperCase();
+                        document.getElementById('auth-guard').style.display = 'none';
+                        fetchAllProducts();
                     });
-                }
-            });
 
-            updateCompanySuggestions();
-            // Update Stats Cards
-            const lowStockCount = allProducts.filter(p => (parseInt(p.ecomStock) || 0) < 10).length;
-            const hiddenCount = allProducts.filter(p => p.ecomVisibility === 'hide').length;
+                    // ===== DATA =====
+                    async function fetchAllProducts() {
+                        const snap = await db.collection('master_products').orderBy('name').get();
+                        allProducts = [];
+                        masterCompanies.clear();
+                        snap.forEach(doc => {
+                            const p = doc.data();
+                            p.id = doc.id;
+                            allProducts.push(p);
+                            if (p.ecomCategory) customCategories.add(p.ecomCategory);
 
-            document.getElementById('st-total').innerText = allProducts.length;
-            document.getElementById('st-low').innerText = lowStockCount;
-            document.getElementById('st-hidden').innerText = hiddenCount;
-            document.getElementById('st-cats').innerText = customCategories.size;
+                            // Collect companies for suggestions
+                            if (p.prices) {
+                                const stdPlatforms = ['LINEMAN', 'LINE_MAN', 'RETAIL', 'WHOLESALE', 'COST'];
+                                Object.keys(p.prices).forEach(k => {
+                                    let comp = k.split('_')[0];
+                                    if (!stdPlatforms.includes(comp.toUpperCase())) {
+                                        // If it has underscore, it's typically Company_Unit
+                                        masterCompanies.add(comp);
+                                    }
+                                });
+                            }
+                        });
 
-            applyAdminFilter();
-            populateCategoryFilter();
-            renderCategorySection();
-            renderPricingTable();
-            renderStatsSection();
-            renderAlphaBar();
-        }
+                        updateCompanySuggestions();
+                        // Update Stats Cards
+                        const lowStockCount = allProducts.filter(p => (parseInt(p.ecomStock) || 0) < 10).length;
+                        const hiddenCount = allProducts.filter(p => p.ecomVisibility === 'hide').length;
 
-        function renderAlphaBar() {
-            const bar = document.getElementById('alpha-bar');
-            const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-            const chars = ["ALL", ...letters, "#"];
+                        document.getElementById('st-total').innerText = allProducts.length;
+                        document.getElementById('st-low').innerText = lowStockCount;
+                        document.getElementById('st-hidden').innerText = hiddenCount;
+                        document.getElementById('st-cats').innerText = customCategories.size;
 
-            bar.innerHTML = chars.map(c => `
+                        applyAdminFilter();
+                        populateCategoryFilter();
+                        renderCategorySection();
+                        renderPricingTable();
+                        renderStatsSection();
+                        renderAlphaBar();
+                    }
+
+                    function renderAlphaBar() {
+                        const bar = document.getElementById('alpha-bar');
+                        const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+                        const chars = ["ALL", ...letters, "#"];
+
+                        bar.innerHTML = chars.map(c => `
                 <button onclick="setAlphaFilter('${c}')" id="alpha-${c}" 
                     class="alpha-btn ${activeAlpha === c ? 'active' : ''} flex-shrink-0">
                     ${c}
                 </button>
             `).join('');
-        }
-
-        function setAlphaFilter(c) {
-            activeAlpha = c;
-            renderAlphaBar();
-            // Reset search box if it was used
-            // document.getElementById('admin-search').value = ''; 
-            applyAdminFilter();
-        }
-
-        function updateCompanySuggestions() {
-            const dl = document.getElementById('company-suggestions');
-            if (dl) {
-                dl.innerHTML = Array.from(masterCompanies).sort().map(c => `<option value="${c}">`).join('');
-            }
-        }
-
-        function getDocId(name) {
-            if (!name) return "";
-            return name.trim().replace(/\//g, '_');
-        }
-
-        // ===== STATS =====
-        function getCostStats(p) {
-            const prices = p.prices || {};
-            const stdPlatforms = ['LINEMAN', 'LINE_MAN', 'RETAIL', 'WHOLESALE', 'COST'];
-            const companyCosts = [];
-
-            Object.keys(prices).forEach(k => {
-                const upKey = k.toUpperCase();
-                if (!stdPlatforms.includes(upKey)) {
-                    const price = parseFloat(prices[k]);
-                    if (!isNaN(price) && price > 0) companyCosts.push(price);
-                }
-            });
-
-            const baseCost = parseFloat(p.cost || prices['COST']);
-            if (!isNaN(baseCost) && baseCost > 0) companyCosts.push(baseCost);
-
-            if (companyCosts.length === 0) return null;
-
-            const min = Math.min(...companyCosts);
-            const max = Math.max(...companyCosts);
-            const avg = companyCosts.reduce((a, b) => a + b, 0) / companyCosts.length;
-
-            return { min, max, avg, count: companyCosts.length };
-        }
-
-        function updateStats() {
-            const visible = allProducts.filter(p => p.ecomVisibility !== 'hide');
-            const lowStock = allProducts.filter(p => p.ecomStock !== undefined && parseInt(p.ecomStock) < 10);
-            const hidden = allProducts.filter(p => p.ecomVisibility === 'hide');
-            const cats = new Set(allProducts.map(p => p.ecomCategory || 'All').filter(Boolean));
-            document.getElementById('st-total').innerText = allProducts.length;
-            document.getElementById('st-low').innerText = lowStock.length;
-            document.getElementById('st-hidden').innerText = hidden.length;
-            document.getElementById('st-cats').innerText = cats.size;
-        }
-
-        // ===== SECTION NAV =====
-        function showSection(name) {
-            ['products', 'categories', 'pricing', 'access-codes', 'stats'].forEach(s => {
-                const el = document.getElementById('section-' + s);
-                if (el) el.classList.add('hidden');
-            });
-            const target = document.getElementById('section-' + name);
-            if (target) target.classList.remove('hidden');
-            document.querySelectorAll('.sidebar-link').forEach(el => el.classList.remove('active'));
-            if (window.event && window.event.currentTarget) window.event.currentTarget.classList.add('active');
-
-            if (name === 'access-codes') fetchAccessCodes();
-            if (name === 'categories') renderCategorySection();
-            if (name === 'pricing') renderPricingTable();
-            if (name === 'stats') renderStatsSection();
-        }
-
-        // ===== FILTER =====
-        function populateCategoryFilter() {
-            const sel = document.getElementById('filter-cat');
-            const cats = [...new Set(allProducts.map(p => p.ecomCategory || 'All'))].sort();
-            sel.innerHTML = '<option value="">ทุกหมวด</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
-        }
-
-        function applyAdminFilter() {
-            const q = document.getElementById('admin-search').value.toLowerCase();
-            const cat = document.getElementById('filter-cat').value;
-            const vis = document.getElementById('filter-vis').value;
-            filteredProducts = allProducts.filter(p => {
-                const name = (p.name || p.id || '').toLowerCase();
-                const aliasesStr = (p.aliases || []).join(' ').toLowerCase();
-
-                // 1. Alpha Filter
-                if (activeAlpha !== 'ALL') {
-                    const firstChar = (p.name || p.id || '').charAt(0).toUpperCase();
-                    if (activeAlpha === '#') {
-                        // Include if NOT A-Z
-                        if (/[A-Z]/.test(firstChar)) return false;
-                    } else {
-                        // Include only if match
-                        if (firstChar !== activeAlpha) return false;
                     }
-                }
 
-                // 2. Search Query
-                if (q && !name.includes(q) && !(p.ecomCategory || '').toLowerCase().includes(q) && !aliasesStr.includes(q)) return false;
+                    function setAlphaFilter(c) {
+                        activeAlpha = c;
+                        renderAlphaBar();
+                        // Reset search box if it was used
+                        // document.getElementById('admin-search').value = ''; 
+                        applyAdminFilter();
+                    }
 
-                // 3. Category
-                if (cat && (p.ecomCategory || 'All') !== cat) return false;
+                    function updateCompanySuggestions() {
+                        const dl = document.getElementById('company-suggestions');
+                        if (dl) {
+                            dl.innerHTML = Array.from(masterCompanies).sort().map(c => `<option value="${c}">`).join('');
+                        }
+                    }
 
-                // 4. Visibility (Soft Delete)
-                const pVis = p.ecomVisibility || 'show';
-                if (vis) {
-                    if (pVis !== vis) return false;
-                } else {
-                    // Default view: exclude deleted
-                    if (pVis === 'deleted') return false;
-                }
-                return true;
-            });
-            document.getElementById('filter-count').innerText = filteredProducts.length;
-            currentPage = 1; // Reset to first page
-            renderProductTable();
-        }
+                    function getDocId(name) {
+                        if (!name) return "";
+                        return name.trim().replace(/\//g, '_');
+                    }
 
-        function renderProductTable() {
-            const tbody = document.getElementById('product-table-body');
-            if (filteredProducts.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="12" class="text-center py-16 text-gray-300"><i class="fas fa-box-open text-4xl mb-2 block"></i>ไม่พบสินค้า</td></tr>`;
-                document.getElementById('page-range').innerText = '0 - 0';
-                document.getElementById('total-filtered').innerText = '0';
-                document.getElementById('pagination-controls').innerHTML = '';
-                return;
-            }
+                    // ===== STATS =====
+                    function getCostStats(p) {
+                        const prices = p.prices || {};
+                        const stdPlatforms = ['LINEMAN', 'LINE_MAN', 'RETAIL', 'WHOLESALE', 'COST'];
+                        const companyCosts = [];
 
-            const total = filteredProducts.length;
-            const totalPages = Math.ceil(total / itemsPerPage);
-            if (currentPage > totalPages) currentPage = totalPages;
-            if (currentPage < 1) currentPage = 1;
+                        Object.keys(prices).forEach(k => {
+                            const upKey = k.toUpperCase();
+                            if (!stdPlatforms.includes(upKey)) {
+                                const price = parseFloat(prices[k]);
+                                if (!isNaN(price) && price > 0) companyCosts.push(price);
+                            }
+                        });
 
-            const startIdx = (currentPage - 1) * itemsPerPage;
-            const endIdx = Math.min(startIdx + itemsPerPage, total);
-            const pageItems = filteredProducts.slice(startIdx, endIdx);
+                        const baseCost = parseFloat(p.cost || prices['COST']);
+                        if (!isNaN(baseCost) && baseCost > 0) companyCosts.push(baseCost);
 
-            document.getElementById('page-range').innerText = `${startIdx + 1} - ${endIdx}`;
-            document.getElementById('total-filtered').innerText = total;
+                        if (companyCosts.length === 0) return null;
 
-            tbody.innerHTML = pageItems.map((p, i) => {
-                const globalIndex = startIdx + i + 1;
-                const vis = p.ecomVisibility || 'show';
-                const stock = p.ecomStock !== undefined ? parseInt(p.ecomStock) : '—';
-                const isLow = stock !== '—' && stock < 10;
-                const imgSrc = p.imageUrl || '';
-                const lmPrice = (p.prices && (p.prices['LINEMAN'] || p.prices['LINE_MAN'])) || '';
-                const isSelected = selectedIds.has(p.id);
+                        const min = Math.min(...companyCosts);
+                        const max = Math.max(...companyCosts);
+                        const avg = companyCosts.reduce((a, b) => a + b, 0) / companyCosts.length;
 
-                const stats = getCostStats(p);
-                let costHtml = '';
-                if (stats) {
-                    if (stats.min === stats.max) {
-                        costHtml = `฿${stats.min.toLocaleString()}`;
-                    } else {
-                        costHtml = `
+                        return { min, max, avg, count: companyCosts.length };
+                    }
+
+                    function updateStats() {
+                        const visible = allProducts.filter(p => p.ecomVisibility !== 'hide');
+                        const lowStock = allProducts.filter(p => p.ecomStock !== undefined && parseInt(p.ecomStock) < 10);
+                        const hidden = allProducts.filter(p => p.ecomVisibility === 'hide');
+                        const cats = new Set(allProducts.map(p => p.ecomCategory || 'All').filter(Boolean));
+                        document.getElementById('st-total').innerText = allProducts.length;
+                        document.getElementById('st-low').innerText = lowStock.length;
+                        document.getElementById('st-hidden').innerText = hidden.length;
+                        document.getElementById('st-cats').innerText = cats.size;
+                    }
+
+                    // ===== SECTION NAV =====
+                    function showSection(name) {
+                        ['products', 'categories', 'pricing', 'access-codes', 'stats'].forEach(s => {
+                            const el = document.getElementById('section-' + s);
+                            if (el) el.classList.add('hidden');
+                        });
+                        const target = document.getElementById('section-' + name);
+                        if (target) target.classList.remove('hidden');
+                        document.querySelectorAll('.sidebar-link').forEach(el => el.classList.remove('active'));
+                        if (window.event && window.event.currentTarget) window.event.currentTarget.classList.add('active');
+
+                        if (name === 'access-codes') fetchAccessCodes();
+                        if (name === 'categories') renderCategorySection();
+                        if (name === 'pricing') renderPricingTable();
+                        if (name === 'stats') renderStatsSection();
+                    }
+
+                    // ===== FILTER =====
+                    function populateCategoryFilter() {
+                        const sel = document.getElementById('filter-cat');
+                        const cats = [...new Set(allProducts.map(p => p.ecomCategory || 'All'))].sort();
+                        sel.innerHTML = '<option value="">เธ—เธธเธเธซเธกเธงเธ”</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+                    }
+
+                    function applyAdminFilter() {
+                        const q = document.getElementById('admin-search').value.toLowerCase();
+                        const cat = document.getElementById('filter-cat').value;
+                        const vis = document.getElementById('filter-vis').value;
+                        filteredProducts = allProducts.filter(p => {
+                            const name = (p.name || p.id || '').toLowerCase();
+                            const aliasesStr = (p.aliases || []).join(' ').toLowerCase();
+
+                            // 1. Alpha Filter
+                            if (activeAlpha !== 'ALL') {
+                                const firstChar = (p.name || p.id || '').charAt(0).toUpperCase();
+                                if (activeAlpha === '#') {
+                                    // Include if NOT A-Z
+                                    if (/[A-Z]/.test(firstChar)) return false;
+                                } else {
+                                    // Include only if match
+                                    if (firstChar !== activeAlpha) return false;
+                                }
+                            }
+
+                            // 2. Search Query
+                            if (q && !name.includes(q) && !(p.ecomCategory || '').toLowerCase().includes(q) && !aliasesStr.includes(q)) return false;
+
+                            // 3. Category
+                            if (cat && (p.ecomCategory || 'All') !== cat) return false;
+
+                            // 4. Visibility (Soft Delete)
+                            const pVis = p.ecomVisibility || 'show';
+                            if (vis) {
+                                if (pVis !== vis) return false;
+                            } else {
+                                // Default view: exclude deleted
+                                if (pVis === 'deleted') return false;
+                            }
+                            return true;
+                        });
+                        document.getElementById('filter-count').innerText = filteredProducts.length;
+                        currentPage = 1; // Reset to first page
+                        renderProductTable();
+                    }
+
+                    function renderProductTable() {
+                        const tbody = document.getElementById('product-table-body');
+                        if (filteredProducts.length === 0) {
+                            tbody.innerHTML = `<tr><td colspan="12" class="text-center py-16 text-gray-300"><i class="fas fa-box-open text-4xl mb-2 block"></i>เนเธกเนเธเธเธชเธดเธเธเนเธฒ</td></tr>`;
+                            document.getElementById('page-range').innerText = '0 - 0';
+                            document.getElementById('total-filtered').innerText = '0';
+                            document.getElementById('pagination-controls').innerHTML = '';
+                            return;
+                        }
+
+                        const total = filteredProducts.length;
+                        const totalPages = Math.ceil(total / itemsPerPage);
+                        if (currentPage > totalPages) currentPage = totalPages;
+                        if (currentPage < 1) currentPage = 1;
+
+                        const startIdx = (currentPage - 1) * itemsPerPage;
+                        const endIdx = Math.min(startIdx + itemsPerPage, total);
+                        const pageItems = filteredProducts.slice(startIdx, endIdx);
+
+                        document.getElementById('page-range').innerText = `${startIdx + 1} - ${endIdx}`;
+                        document.getElementById('total-filtered').innerText = total;
+
+                        tbody.innerHTML = pageItems.map((p, i) => {
+                            const globalIndex = startIdx + i + 1;
+                            const vis = p.ecomVisibility || 'show';
+                            const stock = p.ecomStock !== undefined ? parseInt(p.ecomStock) : 'โ€”';
+                            const isLow = stock !== 'โ€”' && stock < 10;
+                            const imgSrc = p.imageUrl || '';
+                            const lmPrice = (p.prices && (p.prices['LINEMAN'] || p.prices['LINE_MAN'])) || '';
+                            const isSelected = selectedIds.has(p.id);
+
+                            const stats = getCostStats(p);
+                            let costHtml = '';
+                            if (stats) {
+                                if (stats.min === stats.max) {
+                                    costHtml = `เธฟ${stats.min.toLocaleString()}`;
+                                } else {
+                                    costHtml = `
                             <div class="flex flex-col items-end leading-none gap-0.5">
-                                <span class="text-[8px] text-gray-400 font-bold uppercase">MIN ฿${stats.min.toLocaleString()}</span>
-                                <span class="text-[11px] font-black text-red-600">AVG ฿${Math.round(stats.avg).toLocaleString()}</span>
-                                <span class="text-[8px] text-gray-400 font-bold uppercase">MAX ฿${stats.max.toLocaleString()}</span>
+                                <span class="text-[8px] text-gray-400 font-bold uppercase">MIN เธฟ${stats.min.toLocaleString()}</span>
+                                <span class="text-[11px] font-black text-red-600">AVG เธฟ${Math.round(stats.avg).toLocaleString()}</span>
+                                <span class="text-[8px] text-gray-400 font-bold uppercase">MAX เธฟ${stats.max.toLocaleString()}</span>
                             </div>
                         `;
-                    }
-                } else {
-                    costHtml = '<span class="text-gray-300">฿0</span>';
-                }
-                // Escape characters that break HTML/JS (v2)
-                const safeId = p.id.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                                }
+                            } else {
+                                costHtml = '<span class="text-gray-300">เธฟ0</span>';
+                            }
+                            // Escape characters that break HTML/JS (v2)
+                            const safeId = p.id.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, "&quot;");
 
-                return `<tr class="product-row cursor-pointer ${isSelected ? 'bg-indigo-50/50' : ''}" onclick="openEditModal('${safeId}')">
+                            return `<tr class="product-row cursor-pointer ${isSelected ? 'bg-indigo-50/50' : ''}" onclick="openEditModal('${safeId}')">
                 <td class="px-3 py-2.5" onclick="event.stopPropagation()">
                     <input type="checkbox" onchange="toggleSelectProduct('${safeId}')" ${isSelected ? 'checked' : ''} class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
                 </td>
                 <td class="px-3 py-2.5 text-gray-400 text-xs font-bold">${globalIndex}</td>
                 <td class="px-3 py-2.5">${imgSrc
-                        ? `<img src="${imgSrc}" class="w-9 h-9 object-contain rounded-lg bg-gray-50 border">`
-                        : `<div class="w-9 h-9 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-300 font-black text-xs border border-indigo-100">${(p.name || '?').charAt(0)}</div>`
-                    }</td>
+                                    ? `<img src="${imgSrc}" class="w-9 h-9 object-contain rounded-lg bg-gray-50 border">`
+                                    : `<div class="w-9 h-9 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-300 font-black text-xs border border-indigo-100">${(p.name || '?').charAt(0)}</div>`
+                                }</td>
                 <td class="px-3 py-2.5">
                     <p class="font-bold text-gray-800 text-xs leading-snug">${p.name || p.id}</p>
                     ${p.aliases && p.aliases.length ? `<p class="text-[9px] text-gray-400 truncate max-w-[200px]">${p.aliases.join(', ')}</p>` : ''}
                 </td>
                 <td class="px-3 py-2.5 text-xs text-gray-600">${p.ecomCategory || 'All'}</td>
                 <td class="px-3 py-2.5 text-right font-bold">${costHtml}</td>
-                <td class="px-3 py-2.5 text-right text-xs font-bold text-green-700">฿${(parseFloat(lmPrice) || 0).toLocaleString()}</td>
                 <td class="px-3 py-2.5 text-center">
                     <span class="${isLow ? 'badge badge-low' : 'font-black text-xs text-gray-700'}">${stock}</span>
                 </td>
                 <td class="px-3 py-2.5 text-center">
                     <span class="badge ${vis === 'show' ? 'badge-show' : (vis === 'deleted' ? 'bg-gray-100 text-gray-500' : 'badge-hide')} cursor-pointer hover:brightness-95 transition-all shadow-sm active:scale-95" 
                       onclick="event.stopPropagation(); quickToggleVisibility('${safeId}', '${vis}')" 
-                      title="คลิกเพื่อสลับสถานะ แสดง/ซ่อน">
+                      title="เธเธฅเธดเธเน€เธเธทเนเธญเธชเธฅเธฑเธเธชเธ–เธฒเธเธฐ เนเธชเธ”เธ/เธเนเธญเธ">
                         ${vis === 'show' ? 'ACTIVE' : (vis === 'deleted' ? 'DELETED' : 'HIDDEN')}
                     </span>
                 </td>
                 <td class="px-3 py-2.5 text-center">
-                    <button onclick="event.stopPropagation(); quickDeleteProduct('${safeId}', '${(p.name || p.id).replace(/'/g, "\\'")}', '${vis}')" class="text-xs text-gray-300 hover:text-red-500 transition p-1" title="ลบสินค้านี้">
+                    <button onclick="event.stopPropagation(); quickDeleteProduct('${safeId}', '${(p.name || p.id).replace(/'/g, "\\'")}', '${vis}')" class="text-xs text-gray-300 hover:text-red-500 transition p-1" title="เธฅเธเธชเธดเธเธเนเธฒเธเธตเน">
                         <i class="fas fa-trash-alt"></i>
                     </button>
                 </td>
             </tr>`;
-            }).join('');
+                        }).join('');
 
-            renderPagination(totalPages);
-            updateSelectionUI();
-        }
+                        renderPagination(totalPages);
+                        updateSelectionUI();
+                    }
 
-        function renderPagination(total) {
-            const controls = document.getElementById('pagination-controls');
-            let html = '';
+                    function renderPagination(total) {
+                        const controls = document.getElementById('pagination-controls');
+                        let html = '';
 
-            // Prev Button
-            html += `<button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''} class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 transition disabled:opacity-30 disabled:hover:bg-transparent"><i class="fas fa-chevron-left text-[10px]"></i></button>`;
+                        // Prev Button
+                        html += `<button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''} class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 transition disabled:opacity-30 disabled:hover:bg-transparent"><i class="fas fa-chevron-left text-[10px]"></i></button>`;
 
-            // Simple pagination logic (show current and some around)
-            const range = 2;
-            for (let i = 1; i <= total; i++) {
-                if (i === 1 || i === total || (i >= currentPage - range && i <= currentPage + range)) {
-                    html += `<button onclick="changePage(${i})" class="w-8 h-8 rounded-lg text-[10px] font-bold transition ${currentPage === i ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100' : 'text-gray-500 hover:bg-gray-100 border border-transparent'}">${i}</button>`;
-                } else if (i === currentPage - range - 1 || i === currentPage + range + 1) {
-                    html += `<span class="w-8 h-8 flex items-center justify-center text-gray-300 text-[10px]">...</span>`;
-                }
-            }
+                        // Simple pagination logic (show current and some around)
+                        const range = 2;
+                        for (let i = 1; i <= total; i++) {
+                            if (i === 1 || i === total || (i >= currentPage - range && i <= currentPage + range)) {
+                                html += `<button onclick="changePage(${i})" class="w-8 h-8 rounded-lg text-[10px] font-bold transition ${currentPage === i ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100' : 'text-gray-500 hover:bg-gray-100 border border-transparent'}">${i}</button>`;
+                            } else if (i === currentPage - range - 1 || i === currentPage + range + 1) {
+                                html += `<span class="w-8 h-8 flex items-center justify-center text-gray-300 text-[10px]">...</span>`;
+                            }
+                        }
 
-            // Next Button
-            html += `<button onclick="changePage(${currentPage + 1})" ${currentPage === total ? 'disabled' : ''} class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 transition disabled:opacity-30 disabled:hover:bg-transparent"><i class="fas fa-chevron-right text-[10px]"></i></button>`;
+                        // Next Button
+                        html += `<button onclick="changePage(${currentPage + 1})" ${currentPage === total ? 'disabled' : ''} class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 transition disabled:opacity-30 disabled:hover:bg-transparent"><i class="fas fa-chevron-right text-[10px]"></i></button>`;
 
-            controls.innerHTML = html;
-        }
+                        controls.innerHTML = html;
+                    }
 
-        function changePage(p) {
-            currentPage = p;
-            renderProductTable();
-            document.querySelector('main').scrollTo({ top: 0, behavior: 'smooth' });
-        }
+                    function changePage(p) {
+                        currentPage = p;
+                        renderProductTable();
+                        document.querySelector('main').scrollTo({ top: 0, behavior: 'smooth' });
+                    }
 
-        // ===== SELECTION & MERGE =====
-        function toggleSelectProduct(id) {
-            if (selectedIds.has(id)) selectedIds.delete(id);
-            else selectedIds.add(id);
-            renderProductTable();
-        }
+                    // ===== SELECTION & MERGE =====
+                    function toggleSelectProduct(id) {
+                        if (selectedIds.has(id)) selectedIds.delete(id);
+                        else selectedIds.add(id);
+                        renderProductTable();
+                    }
 
-        function toggleSelectAll(cb) {
-            if (cb.checked) filteredProducts.forEach(p => selectedIds.add(p.id));
-            else filteredProducts.forEach(p => selectedIds.delete(p.id));
-            renderProductTable();
-        }
+                    function toggleSelectAll(cb) {
+                        if (cb.checked) filteredProducts.forEach(p => selectedIds.add(p.id));
+                        else filteredProducts.forEach(p => selectedIds.delete(p.id));
+                        renderProductTable();
+                    }
 
-        function clearSelection() {
-            selectedIds.clear();
-            document.getElementById('select-all-cb').checked = false;
-            renderProductTable();
-        }
+                    function clearSelection() {
+                        selectedIds.clear();
+                        document.getElementById('select-all-cb').checked = false;
+                        renderProductTable();
+                    }
 
-        function updateSelectionUI() {
-            const count = selectedIds.size;
-            const bar = document.getElementById('merge-action-bar');
-            const countEl = document.getElementById('selected-count');
-            if (count > 1) {
-                bar.classList.add('opacity-100', 'scale-100', 'pointer-events-auto');
-                bar.classList.remove('opacity-0', 'scale-90', 'pointer-events-none');
-                countEl.innerText = count;
-            } else {
-                bar.classList.add('opacity-0', 'scale-90', 'pointer-events-none');
-                bar.classList.remove('opacity-100', 'scale-100', 'pointer-events-auto');
-            }
-        }
+                    function updateSelectionUI() {
+                        const count = selectedIds.size;
+                        const bar = document.getElementById('merge-action-bar');
+                        const countEl = document.getElementById('selected-count');
+                        if (count > 1) {
+                            bar.classList.add('opacity-100', 'scale-100', 'pointer-events-auto');
+                            bar.classList.remove('opacity-0', 'scale-90', 'pointer-events-none');
+                            countEl.innerText = count;
+                        } else {
+                            bar.classList.add('opacity-0', 'scale-90', 'pointer-events-none');
+                            bar.classList.remove('opacity-100', 'scale-100', 'pointer-events-auto');
+                        }
+                    }
 
-        function openMergeModal() {
-            const container = document.getElementById('merge-list-container');
-            const items = allProducts.filter(p => selectedIds.has(p.id));
-            container.innerHTML = items.map((p, i) => `
+                    function openMergeModal() {
+                        const container = document.getElementById('merge-list-container');
+                        const items = allProducts.filter(p => selectedIds.has(p.id));
+                        container.innerHTML = items.map((p, i) => `
                 <div class="flex items-center gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all border-gray-100 bg-gray-50 hover:border-indigo-200" onclick="selectMasterForMerge('${p.id}')" id="merge-item-${p.id}">
                     <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 merge-radio border-gray-300">
                         <div class="w-2.5 h-2.5 bg-indigo-600 rounded-full opacity-0 transition-opacity"></div>
@@ -1160,228 +1274,228 @@
                     ${i === 0 ? '<span class="text-[9px] font-black bg-indigo-100 text-indigo-600 px-2 py-1 rounded-lg">RECOMMENDED</span>' : ''}
                 </div>
             `).join('');
-            document.getElementById('merge-modal').classList.add('open');
-            // Select first as default master
-            if (items.length) selectMasterForMerge(items[0].id);
-        }
-
-        let masterMergeId = null;
-        function selectMasterForMerge(id) {
-            masterMergeId = id;
-            document.querySelectorAll('[id^="merge-item-"]').forEach(el => {
-                el.classList.remove('border-indigo-600', 'bg-indigo-50/50');
-                el.classList.add('border-gray-100', 'bg-gray-50');
-                el.querySelector('.merge-radio').classList.remove('border-indigo-600');
-                el.querySelector('.merge-radio div').classList.add('opacity-0');
-            });
-            const selected = document.getElementById('merge-item-' + id);
-            selected.classList.add('border-indigo-600', 'bg-indigo-50/50');
-            selected.classList.remove('border-gray-100', 'bg-gray-50');
-            selected.querySelector('.merge-radio').classList.add('border-indigo-600');
-            selected.querySelector('.merge-radio div').classList.remove('opacity-0');
-        }
-
-        function closeMergeModal() { document.getElementById('merge-modal').classList.remove('open'); }
-
-        async function confirmMergeProducts() {
-            if (!masterMergeId) return;
-            const master = allProducts.find(p => p.id === masterMergeId);
-            const others = allProducts.filter(p => selectedIds.has(p.id) && p.id !== masterMergeId);
-
-            const res = await Swal.fire({
-                title: 'ยืนยันการรวมสินค้า?',
-                text: `จะรวม ${others.length} รายการเข้าสู่ "${master.name}" ข้อมูลส่วนเกินจะถูกลบทิ้ง`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#4f46e5',
-                confirmButtonText: 'รวมเลย!',
-                cancelButtonText: 'ยกเลิก'
-            });
-
-            if (!res.isConfirmed) return;
-
-            // Start Merge Logic
-            Swal.fire({ title: 'กำลังรวมข้อมูล...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
-            try {
-                const batch = db.batch();
-                let combinedStock = parseInt(master.ecomStock) || 0;
-                let combinedAliases = new Set(master.aliases || []);
-                let combinedLots = [...(master.inventorySlots || [])];
-                let combinedPrices = { ...(master.prices || {}) };
-
-                // If master has no slots but has single lot data, migrate it first
-                if (combinedLots.length === 0 && (master.lot || master.exp)) {
-                    combinedLots.push({ lot: master.lot || '', exp: master.exp || '', stock: parseInt(master.ecomStock) || 0 });
-                }
-
-                for (const other of others) {
-                    // 1. Stock
-                    combinedStock += (parseInt(other.ecomStock) || 0);
-
-                    // 2. Aliases (add the name and existing aliases of the merged item)
-                    combinedAliases.add(other.name || other.id);
-                    if (other.aliases) other.aliases.forEach(a => combinedAliases.add(a));
-
-                    // 3. Inventory Slots
-                    if (other.inventorySlots) {
-                        combinedLots = [...combinedLots, ...other.inventorySlots];
-                    } else if (other.lot || other.exp) {
-                        combinedLots.push({ lot: other.lot || '', exp: other.exp || '', stock: parseInt(other.ecomStock) || 0 });
+                        document.getElementById('merge-modal').classList.add('open');
+                        // Select first as default master
+                        if (items.length) selectMasterForMerge(items[0].id);
                     }
 
-                    // 4. Prices (Company Costs)
-                    if (other.prices) {
-                        Object.keys(other.prices).forEach(k => {
-                            // Only add if master doesnt have it or if we want to pick the latest/cheapest?
-                            // For now, let's keep master's value if conflict, or take other's if master is empty
-                            if (!combinedPrices[k]) combinedPrices[k] = other.prices[k];
+                    let masterMergeId = null;
+                    function selectMasterForMerge(id) {
+                        masterMergeId = id;
+                        document.querySelectorAll('[id^="merge-item-"]').forEach(el => {
+                            el.classList.remove('border-indigo-600', 'bg-indigo-50/50');
+                            el.classList.add('border-gray-100', 'bg-gray-50');
+                            el.querySelector('.merge-radio').classList.remove('border-indigo-600');
+                            el.querySelector('.merge-radio div').classList.add('opacity-0');
                         });
+                        const selected = document.getElementById('merge-item-' + id);
+                        selected.classList.add('border-indigo-600', 'bg-indigo-50/50');
+                        selected.classList.remove('border-gray-100', 'bg-gray-50');
+                        selected.querySelector('.merge-radio').classList.add('border-indigo-600');
+                        selected.querySelector('.merge-radio div').classList.remove('opacity-0');
                     }
 
-                    // 5. Delete the other
-                    batch.delete(db.collection('master_products').doc(other.id));
-                }
+                    function closeMergeModal() { document.getElementById('merge-modal').classList.remove('open'); }
 
-                // Update Master
-                batch.update(db.collection('master_products').doc(master.id), {
-                    ecomStock: combinedStock,
-                    aliases: Array.from(combinedAliases).filter(a => a !== master.name),
-                    inventorySlots: combinedLots,
-                    prices: combinedPrices,
-                    // If multiple slots, ensure the head lot/exp are updated for legacy compatibility
-                    lot: combinedLots.length ? combinedLots[0].lot : (master.lot || ''),
-                    exp: combinedLots.length ? combinedLots[0].exp : (master.exp || '')
-                });
+                    async function confirmMergeProducts() {
+                        if (!masterMergeId) return;
+                        const master = allProducts.find(p => p.id === masterMergeId);
+                        const others = allProducts.filter(p => selectedIds.has(p.id) && p.id !== masterMergeId);
 
-                await batch.commit();
-                Swal.fire({ icon: 'success', title: 'รวมสินค้าเรียบร้อยแล้ว', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
+                        const res = await Swal.fire({
+                            title: 'เธขเธทเธเธขเธฑเธเธเธฒเธฃเธฃเธงเธกเธชเธดเธเธเนเธฒ?',
+                            text: `เธเธฐเธฃเธงเธก ${others.length} เธฃเธฒเธขเธเธฒเธฃเน€เธเนเธฒเธชเธนเน "${master.name}" เธเนเธญเธกเธนเธฅเธชเนเธงเธเน€เธเธดเธเธเธฐเธ–เธนเธเธฅเธเธ—เธดเนเธ`,
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#4f46e5',
+                            confirmButtonText: 'เธฃเธงเธกเน€เธฅเธข!',
+                            cancelButtonText: 'เธขเธเน€เธฅเธดเธ'
+                        });
 
-                clearSelection();
-                closeMergeModal();
-                await fetchAllProducts();
-            } catch (e) {
-                console.error(e);
-                Swal.fire({ icon: 'error', title: 'Error', text: e.message });
-            }
-        }
+                        if (!res.isConfirmed) return;
 
-        async function quickToggleVisibility(id, currentVis) {
-            // Cannot toggle if deleted (must restore via modal)
-            if (currentVis === 'deleted') {
-                Swal.fire({
-                    title: 'กู้คืนสินค้า?',
-                    text: 'สินค้านี้ถูกลบอยู่ ต้องการกู้คืนกลับมาแสดงผลหรือไม่?',
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonText: 'กู้คืน',
-                    cancelButtonText: 'ยกเลิก'
-                }).then(async (res) => {
-                    if (res.isConfirmed) {
-                        await db.collection('master_products').doc(id).update({ ecomVisibility: 'show' });
-                        const p = allProducts.find(x => x.id === id);
-                        if (p) p.ecomVisibility = 'show';
-                        applyAdminFilter();
-                        Swal.fire({ icon: 'success', title: 'กู้คืนเรียบร้อย', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
+                        // Start Merge Logic
+                        Swal.fire({ title: 'เธเธณเธฅเธฑเธเธฃเธงเธกเธเนเธญเธกเธนเธฅ...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+                        try {
+                            const batch = db.batch();
+                            let combinedStock = parseInt(master.ecomStock) || 0;
+                            let combinedAliases = new Set(master.aliases || []);
+                            let combinedLots = [...(master.inventorySlots || [])];
+                            let combinedPrices = { ...(master.prices || {}) };
+
+                            // If master has no slots but has single lot data, migrate it first
+                            if (combinedLots.length === 0 && (master.lot || master.exp)) {
+                                combinedLots.push({ lot: master.lot || '', exp: master.exp || '', stock: parseInt(master.ecomStock) || 0 });
+                            }
+
+                            for (const other of others) {
+                                // 1. Stock
+                                combinedStock += (parseInt(other.ecomStock) || 0);
+
+                                // 2. Aliases (add the name and existing aliases of the merged item)
+                                combinedAliases.add(other.name || other.id);
+                                if (other.aliases) other.aliases.forEach(a => combinedAliases.add(a));
+
+                                // 3. Inventory Slots
+                                if (other.inventorySlots) {
+                                    combinedLots = [...combinedLots, ...other.inventorySlots];
+                                } else if (other.lot || other.exp) {
+                                    combinedLots.push({ lot: other.lot || '', exp: other.exp || '', stock: parseInt(other.ecomStock) || 0 });
+                                }
+
+                                // 4. Prices (Company Costs)
+                                if (other.prices) {
+                                    Object.keys(other.prices).forEach(k => {
+                                        // Only add if master doesnt have it or if we want to pick the latest/cheapest?
+                                        // For now, let's keep master's value if conflict, or take other's if master is empty
+                                        if (!combinedPrices[k]) combinedPrices[k] = other.prices[k];
+                                    });
+                                }
+
+                                // 5. Delete the other
+                                batch.delete(db.collection('master_products').doc(other.id));
+                            }
+
+                            // Update Master
+                            batch.update(db.collection('master_products').doc(master.id), {
+                                ecomStock: combinedStock,
+                                aliases: Array.from(combinedAliases).filter(a => a !== master.name),
+                                inventorySlots: combinedLots,
+                                prices: combinedPrices,
+                                // If multiple slots, ensure the head lot/exp are updated for legacy compatibility
+                                lot: combinedLots.length ? combinedLots[0].lot : (master.lot || ''),
+                                exp: combinedLots.length ? combinedLots[0].exp : (master.exp || '')
+                            });
+
+                            await batch.commit();
+                            Swal.fire({ icon: 'success', title: 'เธฃเธงเธกเธชเธดเธเธเนเธฒเน€เธฃเธตเธขเธเธฃเนเธญเธขเนเธฅเนเธง', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
+
+                            clearSelection();
+                            closeMergeModal();
+                            await fetchAllProducts();
+                        } catch (e) {
+                            console.error(e);
+                            Swal.fire({ icon: 'error', title: 'Error', text: e.message });
+                        }
                     }
-                });
-                return;
-            }
 
-            const newVis = currentVis === 'show' ? 'hide' : 'show';
-            try {
-                await db.collection('master_products').doc(id).update({ ecomVisibility: newVis });
-                const p = allProducts.find(x => x.id === id);
-                if (p) p.ecomVisibility = newVis;
-                updateStats();
-                applyAdminFilter();
+                    async function quickToggleVisibility(id, currentVis) {
+                        // Cannot toggle if deleted (must restore via modal)
+                        if (currentVis === 'deleted') {
+                            Swal.fire({
+                                title: 'เธเธนเนเธเธทเธเธชเธดเธเธเนเธฒ?',
+                                text: 'เธชเธดเธเธเนเธฒเธเธตเนเธ–เธนเธเธฅเธเธญเธขเธนเน เธ•เนเธญเธเธเธฒเธฃเธเธนเนเธเธทเธเธเธฅเธฑเธเธกเธฒเนเธชเธ”เธเธเธฅเธซเธฃเธทเธญเนเธกเน?',
+                                icon: 'question',
+                                showCancelButton: true,
+                                confirmButtonText: 'เธเธนเนเธเธทเธ',
+                                cancelButtonText: 'เธขเธเน€เธฅเธดเธ'
+                            }).then(async (res) => {
+                                if (res.isConfirmed) {
+                                    await db.collection('master_products').doc(id).update({ ecomVisibility: 'show' });
+                                    const p = allProducts.find(x => x.id === id);
+                                    if (p) p.ecomVisibility = 'show';
+                                    applyAdminFilter();
+                                    Swal.fire({ icon: 'success', title: 'เธเธนเนเธเธทเธเน€เธฃเธตเธขเธเธฃเนเธญเธข', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
+                                }
+                            });
+                            return;
+                        }
 
-                // Optional: show small toast for feedback
-                const msg = newVis === 'show' ? 'แสดงสินค้าแล้ว' : 'ซ่อนสินค้าแล้ว';
-                Swal.fire({ icon: 'success', title: msg, toast: true, position: 'top-end', showConfirmButton: false, timer: 1000 });
-            } catch (e) {
-                console.error("Toggle visibility error:", e);
-                alert("Error: " + e.message);
-            }
-        }
+                        const newVis = currentVis === 'show' ? 'hide' : 'show';
+                        try {
+                            await db.collection('master_products').doc(id).update({ ecomVisibility: newVis });
+                            const p = allProducts.find(x => x.id === id);
+                            if (p) p.ecomVisibility = newVis;
+                            updateStats();
+                            applyAdminFilter();
 
-        async function quickDeleteProduct(id, name, currentVis) {
-            await executeProductDeletion(id, name, currentVis);
-        }
+                            // Optional: show small toast for feedback
+                            const msg = newVis === 'show' ? 'เนเธชเธ”เธเธชเธดเธเธเนเธฒเนเธฅเนเธง' : 'เธเนเธญเธเธชเธดเธเธเนเธฒเนเธฅเนเธง';
+                            Swal.fire({ icon: 'success', title: msg, toast: true, position: 'top-end', showConfirmButton: false, timer: 1000 });
+                        } catch (e) {
+                            console.error("Toggle visibility error:", e);
+                            alert("Error: " + e.message);
+                        }
+                    }
 
-        async function executeProductDeletion(id, name, currentVis) {
-            if (currentVis === 'deleted') {
-                // Permanent Delete
-                const res = await Swal.fire({
-                    title: `ยืนยันลบถาวร?`,
-                    text: `ต้องการลบ "${name}" ออกจากถังขยะถาวรหรือไม่? การกระทำนี้ไม่สามารถย้อนคืนได้`,
-                    icon: 'error',
-                    showCancelButton: true,
-                    confirmButtonColor: '#dc2626',
-                    confirmButtonText: 'ลบถาวร',
-                    cancelButtonText: 'ยกเลิก'
-                });
-                if (res.isConfirmed) {
-                    try {
-                        await db.collection('master_products').doc(id).delete();
-                        Swal.fire({ icon: 'success', title: 'ลบถาวรเรียบร้อย', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
-                        if (document.getElementById('edit-modal').classList.contains('open')) closeEditModal();
-                        await fetchAllProducts();
-                    } catch (e) { alert('Error: ' + e.message); }
-                }
-                return;
-            }
+                    async function quickDeleteProduct(id, name, currentVis) {
+                        await executeProductDeletion(id, name, currentVis);
+                    }
 
-            const res = await Swal.fire({
-                title: `ย้ายไปถังขยะ?`,
-                text: `ต้องการย้าย "${name}" ไปที่ถังขยะหรือไม่? คุณสามารถกู้คืนได้ภายหลังจากฟิลเตอร์ "ถังขยะ"`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#f59e0b',
-                cancelButtonText: 'ยกเลิก',
-                confirmButtonText: 'ย้ายไปถังขยะ'
-            });
-            if (res.isConfirmed) {
-                try {
-                    await db.collection('master_products').doc(id).update({
-                        ecomVisibility: 'deleted',
-                        deletedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    const p = allProducts.find(x => x.id === id);
-                    if (p) p.ecomVisibility = 'deleted';
+                    async function executeProductDeletion(id, name, currentVis) {
+                        if (currentVis === 'deleted') {
+                            // Permanent Delete
+                            const res = await Swal.fire({
+                                title: `เธขเธทเธเธขเธฑเธเธฅเธเธ–เธฒเธงเธฃ?`,
+                                text: `เธ•เนเธญเธเธเธฒเธฃเธฅเธ "${name}" เธญเธญเธเธเธฒเธเธ–เธฑเธเธเธขเธฐเธ–เธฒเธงเธฃเธซเธฃเธทเธญเนเธกเน? เธเธฒเธฃเธเธฃเธฐเธ—เธณเธเธตเนเนเธกเนเธชเธฒเธกเธฒเธฃเธ–เธขเนเธญเธเธเธทเธเนเธ”เน`,
+                                icon: 'error',
+                                showCancelButton: true,
+                                confirmButtonColor: '#dc2626',
+                                confirmButtonText: 'เธฅเธเธ–เธฒเธงเธฃ',
+                                cancelButtonText: 'เธขเธเน€เธฅเธดเธ'
+                            });
+                            if (res.isConfirmed) {
+                                try {
+                                    await db.collection('master_products').doc(id).delete();
+                                    Swal.fire({ icon: 'success', title: 'เธฅเธเธ–เธฒเธงเธฃเน€เธฃเธตเธขเธเธฃเนเธญเธข', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
+                                    if (document.getElementById('edit-modal').classList.contains('open')) closeEditModal();
+                                    await fetchAllProducts();
+                                } catch (e) { alert('Error: ' + e.message); }
+                            }
+                            return;
+                        }
 
-                    Swal.fire({ icon: 'success', title: 'ย้ายไปถังขยะแล้ว', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
-                    if (document.getElementById('edit-modal').classList.contains('open')) closeEditModal();
-                    applyAdminFilter();
-                    updateStats();
-                } catch (e) {
-                    alert('Error: ' + e.message);
-                }
-            }
-        }
+                        const res = await Swal.fire({
+                            title: `เธขเนเธฒเธขเนเธเธ–เธฑเธเธเธขเธฐ?`,
+                            text: `เธ•เนเธญเธเธเธฒเธฃเธขเนเธฒเธข "${name}" เนเธเธ—เธตเนเธ–เธฑเธเธเธขเธฐเธซเธฃเธทเธญเนเธกเน? เธเธธเธ“เธชเธฒเธกเธฒเธฃเธ–เธเธนเนเธเธทเธเนเธ”เนเธ เธฒเธขเธซเธฅเธฑเธเธเธฒเธเธเธดเธฅเน€เธ•เธญเธฃเน "เธ–เธฑเธเธเธขเธฐ"`,
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#f59e0b',
+                            cancelButtonText: 'เธขเธเน€เธฅเธดเธ',
+                            confirmButtonText: 'เธขเนเธฒเธขเนเธเธ–เธฑเธเธเธขเธฐ'
+                        });
+                        if (res.isConfirmed) {
+                            try {
+                                await db.collection('master_products').doc(id).update({
+                                    ecomVisibility: 'deleted',
+                                    deletedAt: firebase.firestore.FieldValue.serverTimestamp()
+                                });
+                                const p = allProducts.find(x => x.id === id);
+                                if (p) p.ecomVisibility = 'deleted';
 
-        // ===== UI HELPERS =====
-        function switchTab(btn, tabId) {
-            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            btn.classList.add('active');
-            document.getElementById(tabId).classList.add('active');
-        }
+                                Swal.fire({ icon: 'success', title: 'เธขเนเธฒเธขเนเธเธ–เธฑเธเธเธขเธฐเนเธฅเนเธง', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
+                                if (document.getElementById('edit-modal').classList.contains('open')) closeEditModal();
+                                applyAdminFilter();
+                                updateStats();
+                            } catch (e) {
+                                alert('Error: ' + e.message);
+                            }
+                        }
+                    }
 
-        // ===== ACCESS CODES =====
-        async function fetchAccessCodes() {
-            const body = document.getElementById('access-codes-table-body');
-            body.innerHTML = '<tr><td colspan="4" class="text-center py-12 text-gray-300"><i class="fas fa-circle-notch fa-spin text-2xl"></i></td></tr>';
-            try {
-                const snap = await db.collection('ecom_access_codes').orderBy('createdAt', 'desc').get();
-                if (snap.empty) {
-                    body.innerHTML = '<tr><td colspan="4" class="text-center py-16 text-gray-400 font-bold"><i class="fas fa-key text-4xl mb-3 block opacity-20"></i>ยังไม่มีรหัสการเข้าถึง</td></tr>';
-                    return;
-                }
-                body.innerHTML = snap.docs.map(doc => {
-                    const d = doc.data();
-                    const date = d.createdAt ? d.createdAt.toDate().toLocaleString('th-TH') : '—';
-                    return `<tr class="border-b border-gray-50 hover:bg-gray-50/50 transition">
+                    // ===== UI HELPERS =====
+                    function switchTab(btn, tabId) {
+                        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+                        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+                        btn.classList.add('active');
+                        document.getElementById(tabId).classList.add('active');
+                    }
+
+                    // ===== ACCESS CODES =====
+                    async function fetchAccessCodes() {
+                        const body = document.getElementById('access-codes-table-body');
+                        body.innerHTML = '<tr><td colspan="4" class="text-center py-12 text-gray-300"><i class="fas fa-circle-notch fa-spin text-2xl"></i></td></tr>';
+                        try {
+                            const snap = await db.collection('ecom_access_codes').orderBy('createdAt', 'desc').get();
+                            if (snap.empty) {
+                                body.innerHTML = '<tr><td colspan="4" class="text-center py-16 text-gray-400 font-bold"><i class="fas fa-key text-4xl mb-3 block opacity-20"></i>เธขเธฑเธเนเธกเนเธกเธตเธฃเธซเธฑเธชเธเธฒเธฃเน€เธเนเธฒเธ–เธถเธ</td></tr>';
+                                return;
+                            }
+                            body.innerHTML = snap.docs.map(doc => {
+                                const d = doc.data();
+                                const date = d.createdAt ? d.createdAt.toDate().toLocaleString('th-TH') : 'โ€”';
+                                return `<tr class="border-b border-gray-50 hover:bg-gray-50/50 transition">
                         <td class="px-6 py-4">
                             <span class="badge ${d.active ? 'badge-show' : 'badge-hide'}">${d.active ? 'ACTIVE' : 'DISABLED'}</span>
                         </td>
@@ -1396,510 +1510,538 @@
                             </button>
                         </td>
                     </tr>`;
-                }).join('');
-            } catch (e) {
-                body.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-red-400">Error: ${e.message}</td></tr>`;
-            }
-        }
+                            }).join('');
+                        } catch (e) {
+                            body.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-red-400">Error: ${e.message}</td></tr>`;
+                        }
+                    }
 
-        async function generateNewAccessCode() {
-            // Simple random string
-            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Avoid ambiguous chars
-            let code = '';
-            for (let i = 0; i < 6; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+                    async function generateNewAccessCode() {
+                        // Simple random string
+                        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Avoid ambiguous chars
+                        let code = '';
+                        for (let i = 0; i < 6; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
 
-            try {
-                await db.collection('ecom_access_codes').add({
-                    code: code,
-                    active: true,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                Swal.fire({ icon: 'success', title: 'สร้างรหัสสำเร็จ', text: `รหัสคือ: ${code}`, confirmButtonColor: '#4f46e5' });
-                fetchAccessCodes();
-            } catch (e) { alert(e.message); }
-        }
+                        try {
+                            await db.collection('ecom_access_codes').add({
+                                code: code,
+                                active: true,
+                                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                            Swal.fire({ icon: 'success', title: 'เธชเธฃเนเธฒเธเธฃเธซเธฑเธชเธชเธณเน€เธฃเนเธ', text: `เธฃเธซเธฑเธชเธเธทเธญ: ${code}`, confirmButtonColor: '#4f46e5' });
+                            fetchAccessCodes();
+                        } catch (e) { alert(e.message); }
+                    }
 
-        async function toggleAccessCode(id, current) {
-            try {
-                await db.collection('ecom_access_codes').doc(id).update({ active: !current });
-                fetchAccessCodes();
-            } catch (e) { alert(e.message); }
-        }
+                    async function toggleAccessCode(id, current) {
+                        try {
+                            await db.collection('ecom_access_codes').doc(id).update({ active: !current });
+                            fetchAccessCodes();
+                        } catch (e) { alert(e.message); }
+                    }
 
-        async function deleteAccessCode(id) {
-            if (!confirm('ยืนยันลบรหัสนี้?')) return;
-            try {
-                await db.collection('ecom_access_codes').doc(id).delete();
-                fetchAccessCodes();
-            } catch (e) { alert(e.message); }
-        }
+                    async function deleteAccessCode(id) {
+                        if (!confirm('เธขเธทเธเธขเธฑเธเธฅเธเธฃเธซเธฑเธชเธเธตเน?')) return;
+                        try {
+                            await db.collection('ecom_access_codes').doc(id).delete();
+                            fetchAccessCodes();
+                        } catch (e) { alert(e.message); }
+                    }
 
 
 
-        // ===== EDIT MODAL (Consolidated Add/Edit) =====
-        async function openEditModal(id = null) {
-            const isAddMode = !id;
-            const p = isAddMode ? {
-                id: '', name: '', ecomStock: 0, ecomVisibility: 'show',
-                unit: '', aliases: [], prices: {}, unitPrices: [], inventorySlots: []
-            } : allProducts.find(x => x.id === id);
+                    // ===== EDIT MODAL (Consolidated Add/Edit) =====
+                    async function openEditModal(id = null) {
+                        const isAddMode = !id;
+                        const p = isAddMode ? {
+                            id: '', name: '', ecomStock: 0, ecomVisibility: 'show',
+                            unit: '', aliases: [], prices: {}, unitPrices: [], inventorySlots: []
+                        } : allProducts.find(x => x.id === id);
 
-            if (!isAddMode && !p) {
-                console.error("Product not found with ID:", id);
-                Swal.fire({ icon: 'error', title: 'ไม่พบข้อมูลสินค้า', text: 'กรุณารีโหลดหน้าเว็บแล้วลองใหม่' });
-                return;
-            }
+                        if (!isAddMode && !p) {
+                            console.error("Product not found with ID:", id);
+                            Swal.fire({ icon: 'error', title: 'เนเธกเนเธเธเธเนเธญเธกเธนเธฅเธชเธดเธเธเนเธฒ', text: 'เธเธฃเธธเธ“เธฒเธฃเธตเนเธซเธฅเธ”เธซเธเนเธฒเน€เธงเนเธเนเธฅเนเธงเธฅเธญเธเนเธซเธกเน' });
+                            return;
+                        }
 
-            emImageBase64 = null;
-            document.getElementById('em-id').value = p.id;
+                        emImageBase64 = null;
+                        document.getElementById('em-id').value = p.id;
 
-            // Name Field Control
-            const nameInput = document.getElementById('em-name');
-            nameInput.value = isAddMode ? '' : (p.name || p.id);
-            if (isAddMode) {
-                nameInput.readOnly = false;
-                nameInput.classList.remove('bg-gray-50', 'text-gray-500');
-                nameInput.classList.add('bg-white');
-                document.getElementById('modal-title-name').innerText = 'เพิ่มสินค้าใหม่';
-                document.getElementById('modal-subtitle').innerText = 'Create New Record';
-                document.getElementById('btn-delete-product').classList.add('hidden');
-            } else {
-                nameInput.readOnly = true;
-                nameInput.classList.add('bg-gray-50', 'text-gray-500');
-                nameInput.classList.remove('bg-white');
-                document.getElementById('modal-title-name').innerText = p.name || p.id;
-                document.getElementById('modal-subtitle').innerText = 'Product Configuration';
-                document.getElementById('btn-delete-product').classList.remove('hidden');
-            }
+                        // Name Field Control
+                        const nameInput = document.getElementById('em-name');
+                        nameInput.value = isAddMode ? '' : (p.name || p.id);
 
-            document.getElementById('em-stock').value = p.ecomStock || 0;
-            document.getElementById('em-visibility').value = p.ecomVisibility || 'show';
-            document.getElementById('em-unit').value = p.unit || '';
-            document.getElementById('em-aliases').value = (p.aliases || []).join(', ');
-            document.getElementById('em-reg-no').value = p.registrationNo || '';
-            document.getElementById('em-manufacturer').value = p.manufacturer || '';
-            document.getElementById('em-country').value = p.countryOfOrigin || '';
+                        // Always keep name editable, only the ID is fixed
+                        nameInput.readOnly = false;
+                        nameInput.classList.remove('bg-gray-50', 'text-gray-500');
+                        nameInput.classList.add('bg-white');
 
-            // Master prices
-            const prices = p.prices || {};
-            document.getElementById('em-price-lineman').value = prices['LINEMAN'] || prices['LINE_MAN'] || p.price || '';
-            document.getElementById('em-price-retail').value = p.retail || prices['RETAIL'] || '';
-            document.getElementById('em-price-wholesale').value = p.wholesale || prices['WHOLESALE'] || '';
+                        if (isAddMode) {
+                            document.getElementById('modal-title-name').innerText = 'เน€เธเธดเนเธกเธชเธดเธเธเนเธฒเนเธซเธกเน';
+                            document.getElementById('modal-subtitle').innerText = 'Create New Record';
+                            document.getElementById('btn-delete-product').classList.add('hidden');
+                        } else {
+                            document.getElementById('modal-title-name').innerText = p.name || p.id;
+                            document.getElementById('modal-subtitle').innerText = 'Product Configuration';
+                            document.getElementById('btn-delete-product').classList.remove('hidden');
+                        }
 
-            // Multi-Company Costs
-            const companyCostsContainer = document.getElementById('em-company-costs');
-            companyCostsContainer.innerHTML = '';
-            const stdPlatforms = ['LINEMAN', 'LINE_MAN', 'RETAIL', 'WHOLESALE', 'COST'];
-            let hasCompanyCosts = false;
-            Object.keys(prices).forEach(k => {
-                const upKey = k.toUpperCase();
-                if (stdPlatforms.includes(upKey)) return;
-                let label = k;
-                if (k.includes('_')) {
-                    const [c, u] = k.split('_');
-                    label = `${c}${u ? ` (${u})` : ''}`;
-                }
-                addCompanyCostRow(label, prices[k]);
-                hasCompanyCosts = true;
-            });
-            if (prices['COST'] !== undefined) {
-                addCompanyCostRow('ต้นทุนกลาง (COST)', prices['COST']);
-                hasCompanyCosts = true;
-            }
-            if (!hasCompanyCosts) companyCostsContainer.innerHTML = '<p class="text-[10px] text-gray-300 italic text-center py-2">ยังไม่มีบันทึกทุนแยกบริษัท</p>';
+                        document.getElementById('em-stock').value = p.ecomStock || 0;
+                        const visStatus = p.ecomVisibility || 'show';
+                        document.getElementById('em-visibility').value = visStatus;
+                        document.getElementById('em-visibility-cb').checked = (visStatus === 'show');
+                        document.getElementById('em-unit').value = p.unit || '';
+                        document.getElementById('em-aliases').value = (p.aliases || []).join(', ');
+                        document.getElementById('em-reg-no').value = p.registrationNo || '';
+                        document.getElementById('em-manufacturer').value = p.manufacturer || '';
+                        document.getElementById('em-country').value = p.countryOfOrigin || '';
 
-            // Category
-            const catSel = document.getElementById('em-category');
-            const allCats = [...customCategories].sort();
-            catSel.innerHTML = allCats.map(c => `<option value="${c}">${c}</option>`).join('') + `<option value="new" class="font-bold text-indigo-600">+ ระบุใหม่...</option>`;
-            catSel.value = p.ecomCategory || 'All';
-            document.getElementById('em-category-new').classList.add('hidden');
+                        // Master prices
+                        const prices = p.prices || {};
+                        const lmVal = parseFloat(prices['LINEMAN'] || prices['LINE_MAN'] || p.price || 0);
+                        const retailVal = parseFloat(p.retail || prices['RETAIL'] || 0);
+                        const wholesaleVal = parseFloat(p.wholesale || prices['WHOLESALE'] || 0);
 
-            // Image
-            const prev = document.getElementById('em-img-preview');
-            const icon = document.getElementById('em-img-icon');
-            if (p.imageUrl) { prev.src = p.imageUrl; prev.classList.remove('hidden'); icon.classList.add('hidden'); }
-            else { prev.classList.add('hidden'); icon.classList.remove('hidden'); }
-            document.getElementById('em-img-file').value = '';
+                        document.getElementById('em-price-lineman').value = lmVal > 0 ? lmVal.toFixed(2) : '';
+                        document.getElementById('em-price-retail').value = retailVal > 0 ? retailVal.toFixed(2) : '';
+                        document.getElementById('em-price-wholesale').value = wholesaleVal > 0 ? wholesaleVal.toFixed(2) : '';
 
-            // ECOM Unit Prices
-            const priceContainer = document.getElementById('em-prices');
-            priceContainer.innerHTML = '';
-            if (p.unitPrices && p.unitPrices.length > 0) {
-                p.unitPrices.forEach(u => addEMPriceRow(u.unit, u.price, u.platform, u.comparePrice));
-            } else {
-                priceContainer.innerHTML = `<p class="text-xs text-gray-400 text-center py-3">ยังไม่มีราคา ECOM — กด "+ เพิ่มแถว"</p>`;
-            }
+                        // Multi-Company Costs
+                        const companyCostsContainer = document.getElementById('em-company-costs');
+                        companyCostsContainer.innerHTML = '';
+                        const stdPlatforms = ['LINEMAN', 'LINE_MAN', 'RETAIL', 'WHOLESALE', 'COST'];
+                        let hasCompanyCosts = false;
+                        Object.keys(prices).forEach(k => {
+                            const upKey = k.toUpperCase();
+                            if (stdPlatforms.includes(upKey)) return;
+                            let label = k;
+                            if (k.includes('_')) {
+                                const [c, u] = k.split('_');
+                                label = `${c}${u ? ` (${u})` : ''}`;
+                            }
+                            const val = parseFloat(prices[k]) || 0;
+                            addCompanyCostRow(label, val.toFixed(2));
+                            hasCompanyCosts = true;
+                        });
+                        if (prices['COST'] !== undefined) {
+                            const cVal = parseFloat(prices['COST']) || 0;
+                            addCompanyCostRow('เธ•เนเธเธ—เธธเธเธเธฅเธฒเธ (COST)', cVal.toFixed(2));
+                            hasCompanyCosts = true;
+                        }
+                        if (!hasCompanyCosts) companyCostsContainer.innerHTML = '<p class="text-[10px] text-gray-300 italic text-center py-2">เธขเธฑเธเนเธกเนเธกเธตเธเธฑเธเธ—เธถเธเธ—เธธเธเนเธขเธเธเธฃเธดเธฉเธฑเธ—</p>';
 
-            // Multi-Lots
-            const lotContainer = document.getElementById('em-lots');
-            lotContainer.innerHTML = '';
-            if (p.inventorySlots && p.inventorySlots.length > 0) {
-                p.inventorySlots.forEach(slot => addLotRow(slot.lot, slot.exp, slot.stock));
-            } else if (p.lot || p.exp || p.ecomStock) {
-                addLotRow(p.lot, p.exp, p.ecomStock);
-            } else {
-                addLotRow('', '', 0); // Default empty row
-            }
-            updateTotalStockDisplay();
+                        // Category
+                        const catSel = document.getElementById('em-category');
+                        const allCats = [...customCategories].sort();
+                        catSel.innerHTML = allCats.map(c => `<option value="${c}">${c}</option>`).join('') + `<option value="new" class="font-bold text-indigo-600">+ เธฃเธฐเธเธธเนเธซเธกเน...</option>`;
+                        catSel.value = p.ecomCategory || 'All';
+                        document.getElementById('em-category-new').classList.add('hidden');
 
-            switchTab(document.querySelector('.tab-btn'), 'tab-info');
-            document.getElementById('edit-modal').classList.add('open');
-        }
+                        // Image
+                        const prev = document.getElementById('em-img-preview');
+                        const icon = document.getElementById('em-img-icon');
+                        if (p.imageUrl) { prev.src = p.imageUrl; prev.classList.remove('hidden'); icon.classList.add('hidden'); }
+                        else { prev.classList.add('hidden'); icon.classList.remove('hidden'); }
+                        document.getElementById('em-img-file').value = '';
 
-        function addCompanyCostRow(company = '', cost = '') {
-            const container = document.getElementById('em-company-costs');
-            const p = container.querySelector('p'); if (p) p.remove();
-            const div = document.createElement('div');
-            div.className = 'flex gap-2 items-center bg-gray-50 border border-gray-100 rounded-xl p-2 animate-in fade-in duration-200';
-            div.innerHTML = `
-                <input type="text" placeholder="บริษัท" value="${company}" list="company-suggestions" class="flex-1 border rounded-lg p-2 text-xs font-bold outline-none focus:ring-1 focus:ring-indigo-400">
-                <input type="number" step="0.01" placeholder="ทุน" value="${cost}" class="w-24 border rounded-lg p-2 text-xs font-black text-red-600 outline-none focus:ring-1 focus:ring-red-400">
+                        // ECOM Unit Prices - NEW: Smart Fallback for existing items
+                        const priceContainer = document.getElementById('em-prices');
+                        priceContainer.innerHTML = '';
+
+                        const existingUnits = p.unitPrices || [];
+
+                        if (existingUnits.length > 0) {
+                            existingUnits.forEach(u => addEMPriceRow(u.unit, u.price, u.platform, u.comparePrice));
+                        } else if (p.wholesale || p.retail || p.price) {
+                            // If no unit prices but has master prices, suggest as default unit row
+                            const defaultUnit = p.unit || 'เธเธดเนเธ';
+                            const defaultPrice = parseFloat(p.wholesale) || parseFloat(p.price) || 0;
+                            const defaultRef = parseFloat(p.retail) || (defaultPrice > 0 ? defaultPrice * 1.25 : 0);
+
+                            if (defaultPrice > 0) {
+                                addEMPriceRow(defaultUnit, defaultPrice, 'ECOM', defaultRef);
+                            } else {
+                                priceContainer.innerHTML = `<p class="text-xs text-gray-400 text-center py-3">เธขเธฑเธเนเธกเนเธกเธตเธฃเธฒเธเธฒ ECOM โ€” เธเธ” "+ เน€เธเธดเนเธกเนเธ–เธง"</p>`;
+                            }
+                        } else {
+                            priceContainer.innerHTML = `<p class="text-xs text-gray-400 text-center py-3">เธขเธฑเธเนเธกเนเธกเธตเธฃเธฒเธเธฒ ECOM โ€” เธเธ” "+ เน€เธเธดเนเธกเนเธ–เธง"</p>`;
+                        }
+
+                        // Multi-Lots
+                        const lotContainer = document.getElementById('em-lots');
+                        lotContainer.innerHTML = '';
+                        if (p.inventorySlots && p.inventorySlots.length > 0) {
+                            p.inventorySlots.forEach(slot => addLotRow(slot.lot, slot.exp, slot.stock));
+                        } else if (p.lot || p.exp || p.ecomStock) {
+                            addLotRow(p.lot, p.exp, p.ecomStock);
+                        } else {
+                            addLotRow('', '', 0); // Default empty row
+                        }
+                        updateTotalStockDisplay();
+
+                        switchTab(document.querySelector('.tab-btn'), 'tab-info');
+                        document.getElementById('edit-modal').classList.add('open');
+                    }
+
+                    function addCompanyCostRow(company = '', cost = '') {
+                        const container = document.getElementById('em-company-costs');
+                        const p = container.querySelector('p'); if (p) p.remove();
+                        const div = document.createElement('div');
+                        div.className = 'flex gap-2 items-center bg-gray-50 border border-gray-100 rounded-xl p-2 animate-in fade-in duration-200';
+
+                        // Ensure cost is formatted to 2 decimals if it's a number
+                        const formattedCost = (cost !== '' && !isNaN(cost)) ? parseFloat(cost).toFixed(2) : cost;
+
+                        div.innerHTML = `
+                <input type="text" placeholder="เธเธฃเธดเธฉเธฑเธ—" value="${company}" list="company-suggestions" class="flex-1 border rounded-lg p-2 text-xs font-bold outline-none focus:ring-1 focus:ring-indigo-400">
+                <input type="number" step="0.01" placeholder="เธ—เธธเธ" value="${formattedCost}" class="w-24 border rounded-lg p-2 text-xs font-black text-red-600 outline-none focus:ring-1 focus:ring-red-400">
                 <button onclick="this.parentElement.remove()" class="text-gray-300 hover:text-red-500 px-2 transition"><i class="fas fa-times"></i></button>
             `;
-            container.appendChild(div);
-        }
+                        container.appendChild(div);
+                    }
 
-        function addLotRow(lot = '', exp = '', stock = '') {
-            const container = document.getElementById('em-lots');
-            const p = container.querySelector('p'); if (p) p.remove();
-            const div = document.createElement('div');
-            div.className = 'grid grid-cols-12 gap-2 items-center bg-white border border-gray-100 rounded-xl p-2 shadow-sm animate-in zoom-in-95 duration-200';
-            div.innerHTML = `
+                    function addLotRow(lot = '', exp = '', stock = '') {
+                        const container = document.getElementById('em-lots');
+                        const p = container.querySelector('p'); if (p) p.remove();
+                        const div = document.createElement('div');
+                        div.className = 'grid grid-cols-12 gap-2 items-center bg-white border border-gray-100 rounded-xl p-2 shadow-sm animate-in zoom-in-95 duration-200';
+                        div.innerHTML = `
                 <div class="col-span-4"><input type="text" placeholder="Lot #" value="${lot}" class="w-full border rounded-lg p-2 text-xs outline-none"></div>
                 <div class="col-span-4"><input type="date" value="${exp}" class="w-full border rounded-lg p-2 text-xs outline-none"></div>
-                <div class="col-span-3"><input type="number" placeholder="จำนวน" value="${stock}" oninput="updateTotalStockDisplay()" class="w-full border rounded-lg p-2 text-xs font-black text-center outline-none"></div>
+                <div class="col-span-3"><input type="number" placeholder="เธเธณเธเธงเธ" value="${stock}" oninput="updateTotalStockDisplay()" class="w-full border rounded-lg p-2 text-xs font-black text-center outline-none"></div>
                 <div class="col-span-1 text-center"><button onclick="this.closest('.grid').remove(); updateTotalStockDisplay()" class="text-gray-300 hover:text-red-500 transition"><i class="fas fa-times"></i></button></div>
             `;
-            container.appendChild(div);
-            updateTotalStockDisplay();
-        }
+                        container.appendChild(div);
+                        updateTotalStockDisplay();
+                    }
 
-        function updateTotalStockDisplay() {
-            let total = 0;
-            document.querySelectorAll('#em-lots input[type="number"]').forEach(input => {
-                total += (parseInt(input.value) || 0);
-            });
-            document.getElementById('em-total-stock-display').innerText = total;
-            // Also sync to the main ecomStock field optionally
-            const emStockField = document.getElementById('em-stock');
-            if (!emStockField.dataset.manual) emStockField.value = total;
-        }
+                    function updateTotalStockDisplay() {
+                        let total = 0;
+                        document.querySelectorAll('#em-lots input[type="number"]').forEach(input => {
+                            total += (parseInt(input.value) || 0);
+                        });
+                        document.getElementById('em-total-stock-display').innerText = total;
+                        // Also sync to the main ecomStock field optionally
+                        const emStockField = document.getElementById('em-stock');
+                        if (!emStockField.dataset.manual) emStockField.value = total;
+                    }
 
-        // Add manual flag to ecom stock
-        document.getElementById('em-stock').oninput = (e) => { e.target.dataset.manual = "true"; };
+                    // Add manual flag to ecom stock
+                    document.getElementById('em-stock').oninput = (e) => { e.target.dataset.manual = "true"; };
 
-        function addEMPriceRow(unit = '', pr = '', plat = 'ECOM', comp = '') {
-            const c = document.getElementById('em-prices');
-            const p = c.querySelector('p'); if (p) p.remove();
-            const d = document.createElement('div');
-            d.className = 'grid grid-cols-12 gap-2 items-center bg-white border border-gray-100 rounded-2xl p-2 shadow-sm animate-in slide-in-from-right-2 duration-200';
+                    function addEMPriceRow(unit = '', pr = '', plat = 'ECOM', comp = '') {
+                        const c = document.getElementById('em-prices');
+                        const p = c.querySelector('p'); if (p) p.remove();
+                        const d = document.createElement('div');
+                        d.className = 'grid grid-cols-12 gap-2 items-center bg-white border border-gray-100 rounded-2xl p-2 shadow-sm animate-in slide-in-from-right-2 duration-200';
 
-            const calcSavings = (p, c) => {
-                if (!p || !c || c <= p) return '';
-                const pct = Math.round(((c - p) / c) * 100);
-                return `<span class="text-[9px] font-black text-green-500 ml-1">-${pct}%</span>`;
-            };
+                        const calcSavings = (p, c) => {
+                            if (!p || !c || c <= p) return '';
+                            const pct = Math.round(((c - p) / c) * 100);
+                            return `<span class="text-[9px] font-black text-green-500 ml-1">-${pct}%</span>`;
+                        };
 
-            d.innerHTML = `
+                        d.innerHTML = `
                 <div class="col-span-3">
                     <select class="w-full border border-gray-100 rounded-xl p-2 text-[10px] font-black outline-none bg-gray-50">
                         <option value="ECOM" ${plat === 'ECOM' ? 'selected' : ''}>ECOM</option>
-                        <option value="Retail" ${plat === 'Retail' ? 'selected' : ''}>หน้าร้าน</option>
+                        <option value="Retail" ${plat === 'Retail' ? 'selected' : ''}>เธซเธเนเธฒเธฃเนเธฒเธ</option>
                         <option value="Lineman" ${plat === 'Lineman' ? 'selected' : ''}>Lineman</option>
                         <option value="Grab" ${plat === 'Grab' ? 'selected' : ''}>Grab</option>
                     </select>
                 </div>
-                <div class="col-span-2"><input type="text" placeholder="หน่วย" value="${unit}" class="w-full border rounded-xl p-2 text-xs outline-none"></div>
-                <div class="col-span-3"><input type="number" placeholder="ราคาอ้างอิง" value="${comp}" oninput="recalcPriceSavings(this)" class="w-full border rounded-xl p-2 text-xs font-bold text-gray-400 text-right outline-none"></div>
+                <div class="col-span-2"><input type="text" placeholder="เธซเธเนเธงเธข" value="${unit}" class="w-full border rounded-xl p-2 text-xs outline-none"></div>
+                <div class="col-span-3"><input type="number" placeholder="เธฃเธฒเธเธฒเธญเนเธฒเธเธญเธดเธ" value="${comp}" oninput="recalcPriceSavings(this)" class="w-full border rounded-xl p-2 text-xs font-bold text-gray-400 text-right outline-none"></div>
                 <div class="col-span-3 relative">
-                    <input type="number" placeholder="ส่ง" value="${pr}" oninput="recalcPriceSavings(this)" class="w-full border rounded-xl p-2 text-xs font-black text-indigo-600 text-right outline-none pr-8">
+                    <input type="number" placeholder="เธชเนเธ" value="${pr}" oninput="recalcPriceSavings(this)" class="w-full border rounded-xl p-2 text-xs font-black text-indigo-600 text-right outline-none pr-8">
                     <div class="savings-badge absolute right-2 top-1/2 -translate-y-1/2">${calcSavings(pr, comp)}</div>
                 </div>
                 <div class="col-span-1 text-center"><button onclick="this.closest('.grid').remove()" class="text-gray-300 hover:text-red-500 transition"><i class="fas fa-times"></i></button></div>
             `;
-            c.appendChild(d);
-        }
-
-        function recalcPriceSavings(input) {
-            const row = input.closest('.grid');
-            const refPrice = parseFloat(row.querySelector('div:nth-child(3) input').value) || 0;
-            const salePrice = parseFloat(row.querySelector('div:nth-child(4) input').value) || 0;
-            const badge = row.querySelector('.savings-badge');
-            if (refPrice > salePrice && salePrice > 0) {
-                const pct = Math.round(((refPrice - salePrice) / refPrice) * 100);
-                badge.innerHTML = `<span class="text-[9px] font-black text-green-500">-${pct}%</span>`;
-            } else {
-                badge.innerHTML = '';
-            }
-        }
-
-        function closeEditModal() { document.getElementById('edit-modal').classList.remove('open'); }
-
-        function checkNewCatEM(val) {
-            const inp = document.getElementById('em-category-new');
-            val === 'new' ? inp.classList.remove('hidden') : inp.classList.add('hidden');
-        }
-
-        function previewEMImage(input) {
-            if (!input.files[0]) return;
-            if (input.files[0].size > 2 * 1024 * 1024) { alert('ไฟล์เกิน 2MB'); input.value = ''; return; }
-            const reader = new FileReader();
-            reader.onload = e => {
-                const img = new Image();
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    const MAX = 800;
-                    let w = img.width, h = img.height;
-                    if (w > h && w > MAX) { h = h * MAX / w; w = MAX; } else if (h > MAX) { w = w * MAX / h; h = MAX; }
-                    canvas.width = w; canvas.height = h;
-                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                    emImageBase64 = canvas.toDataURL('image/jpeg', 0.8);
-                    const prev = document.getElementById('em-img-preview');
-                    prev.src = emImageBase64; prev.classList.remove('hidden');
-                    document.getElementById('em-img-icon').classList.add('hidden');
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(input.files[0]);
-        }
-
-        async function saveProduct() {
-            const id = document.getElementById('em-id').value;
-            const name = document.getElementById('em-name').value.trim();
-            const isAddMode = !id;
-
-            if (!name) {
-                Swal.fire({ icon: 'warning', title: 'ข้อมูลไม่ครบ', text: 'กรุณาระบุชื่อสินค้า' });
-                return;
-            }
-
-            // Check duplicate if add mode
-            if (isAddMode) {
-                const targetId = getDocId(name);
-                const exist = allProducts.find(x => x.id.toLowerCase() === targetId.toLowerCase());
-                if (exist) {
-                    Swal.fire({ icon: 'error', title: 'ชื่อสินค้าซ้ำ', text: 'มีสินค้าชื่อนี้อยู่ในระบบแล้ว' });
-                    return;
-                }
-            }
-
-            try {
-                // Show Loading
-                Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
-                let cat = document.getElementById('em-category').value;
-                if (cat === 'new') {
-                    const newCat = document.getElementById('em-category-new').value.trim();
-                    if (!newCat) { alert('กรุณาระบุชื่อประเภทใหม่'); return; }
-                    cat = newCat;
-                    customCategories.add(cat);
-                }
-
-                // ECOM Prices
-                const ecomPrices = [];
-                document.querySelectorAll('#em-prices > .grid').forEach(row => {
-                    const inputs = row.querySelectorAll('input');
-                    const sel = row.querySelector('select');
-                    if (inputs.length < 3) return;
-                    const u = inputs[0].value.trim();
-                    const refPrice = parseFloat(inputs[1].value);
-                    const selPrice = parseFloat(inputs[2].value);
-                    if (u && !isNaN(selPrice)) {
-                        ecomPrices.push({
-                            platform: sel.value,
-                            unit: u,
-                            price: selPrice,
-                            comparePrice: isNaN(refPrice) ? null : refPrice
-                        });
+                        c.appendChild(d);
                     }
-                });
 
-                // Master Prices
-                let masterPrices = {};
-                if (!isAddMode) {
-                    const p = allProducts.find(x => x.id === id);
-                    masterPrices = { ...(p.prices || {}) };
-                }
-                const lmVal = parseFloat(document.getElementById('em-price-lineman').value);
-                const retailVal = parseFloat(document.getElementById('em-price-retail').value);
-                const wholesaleVal = parseFloat(document.getElementById('em-price-wholesale').value);
-
-                if (!isNaN(lmVal)) masterPrices['LINEMAN'] = lmVal;
-                if (!isNaN(retailVal)) masterPrices['RETAIL'] = retailVal;
-                if (!isNaN(wholesaleVal)) masterPrices['WHOLESALE'] = wholesaleVal;
-
-                // Sync Multi-Company Costs
-                const stdPlatforms = ['LINEMAN', 'LINE_MAN', 'RETAIL', 'WHOLESALE', 'COST'];
-                Object.keys(masterPrices).forEach(k => {
-                    if (!stdPlatforms.includes(k.toUpperCase())) delete masterPrices[k];
-                });
-
-                document.querySelectorAll('#em-company-costs > div').forEach(row => {
-                    const inputs = row.querySelectorAll('input');
-                    let comp = inputs[0].value.trim();
-                    const cst = parseFloat(inputs[1].value);
-                    if (comp && !isNaN(cst)) {
-                        if (comp.includes(' (') && comp.endsWith(')')) {
-                            comp = comp.replace(' (', '_').replace(')', '');
-                        } else if (comp === 'ต้นทุนกลาง (COST)') {
-                            comp = 'COST';
+                    function recalcPriceSavings(input) {
+                        const row = input.closest('.grid');
+                        const refPrice = parseFloat(row.querySelector('div:nth-child(3) input').value) || 0;
+                        const salePrice = parseFloat(row.querySelector('div:nth-child(4) input').value) || 0;
+                        const badge = row.querySelector('.savings-badge');
+                        if (refPrice > salePrice && salePrice > 0) {
+                            const pct = Math.round(((refPrice - salePrice) / refPrice) * 100);
+                            badge.innerHTML = `<span class="text-[9px] font-black text-green-500">-${pct}%</span>`;
+                        } else {
+                            badge.innerHTML = '';
                         }
-                        masterPrices[comp] = cst;
                     }
-                });
 
-                // Inventory Slots
-                const slots = [];
-                let totalActualStock = 0;
-                document.querySelectorAll('#em-lots > .grid').forEach(row => {
-                    const inputs = row.querySelectorAll('input');
-                    const lotNum = inputs[0].value.trim();
-                    const expDate = inputs[1].value;
-                    const st = parseInt(inputs[2].value) || 0;
-                    if (lotNum || expDate || st > 0) {
-                        slots.push({ lot: lotNum, exp: expDate, stock: st });
-                        totalActualStock += st;
+                    function closeEditModal() { document.getElementById('edit-modal').classList.remove('open'); }
+
+                    function checkNewCatEM(val) {
+                        const inp = document.getElementById('em-category-new');
+                        val === 'new' ? inp.classList.remove('hidden') : inp.classList.add('hidden');
                     }
-                });
 
-                const updates = {
-                    name: name,
-                    ecomCategory: cat,
-                    ecomVisibility: document.getElementById('em-visibility').value,
-                    ecomStock: parseInt(document.getElementById('em-stock').value) || totalActualStock,
-                    unitPrices: ecomPrices,
-                    unit: (document.getElementById('em-unit').value || '').trim(),
-                    registrationNo: (document.getElementById('em-reg-no').value || '').trim(),
-                    manufacturer: (document.getElementById('em-manufacturer').value || '').trim(),
-                    countryOfOrigin: (document.getElementById('em-country').value || '').trim(),
-                    price: !isNaN(lmVal) ? lmVal : 0,
-                    retail: !isNaN(retailVal) ? retailVal : 0,
-                    wholesale: !isNaN(wholesaleVal) ? wholesaleVal : 0,
-                    prices: masterPrices,
-                    inventorySlots: slots,
-                    aliases: (document.getElementById('em-aliases').value || '').split(',').map(a => a.trim()).filter(Boolean),
-                    lot: slots.length ? slots[0].lot : '',
-                    exp: slots.length ? slots[0].exp : '',
-                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                };
-                if (emImageBase64) updates.imageUrl = emImageBase64;
+                    function previewEMImage(input) {
+                        if (!input.files[0]) return;
+                        if (input.files[0].size > 2 * 1024 * 1024) { alert('เนเธเธฅเนเน€เธเธดเธ 2MB'); input.value = ''; return; }
+                        const reader = new FileReader();
+                        reader.onload = e => {
+                            const img = new Image();
+                            img.onload = () => {
+                                const canvas = document.createElement('canvas');
+                                const MAX = 800;
+                                let w = img.width, h = img.height;
+                                if (w > h && w > MAX) { h = h * MAX / w; w = MAX; } else if (h > MAX) { w = w * MAX / h; h = MAX; }
+                                canvas.width = w; canvas.height = h;
+                                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                                emImageBase64 = canvas.toDataURL('image/jpeg', 0.8);
+                                const prev = document.getElementById('em-img-preview');
+                                prev.src = emImageBase64; prev.classList.remove('hidden');
+                                document.getElementById('em-img-icon').classList.add('hidden');
+                            };
+                            img.src = e.target.result;
+                        };
+                        reader.readAsDataURL(input.files[0]);
+                    }
 
-                const targetDocId = isAddMode ? getDocId(name) : id;
-                await db.collection('master_products').doc(targetDocId).set(updates, { merge: true });
+                    async function saveProduct() {
+                        const id = document.getElementById('em-id').value;
+                        const name = document.getElementById('em-name').value.trim();
+                        const isAddMode = !id;
+
+                        if (!name) {
+                            Swal.fire({ icon: 'warning', title: 'เธเนเธญเธกเธนเธฅเนเธกเนเธเธฃเธ', text: 'เธเธฃเธธเธ“เธฒเธฃเธฐเธเธธเธเธทเนเธญเธชเธดเธเธเนเธฒ' });
+                            return;
+                        }
+
+                        // Check duplicate if add mode
+                        if (isAddMode) {
+                            const targetId = getDocId(name);
+                            const exist = allProducts.find(x => x.id.toLowerCase() === targetId.toLowerCase());
+                            if (exist) {
+                                Swal.fire({ icon: 'error', title: 'เธเธทเนเธญเธชเธดเธเธเนเธฒเธเนเธณ', text: 'เธกเธตเธชเธดเธเธเนเธฒเธเธทเนเธญเธเธตเนเธญเธขเธนเนเนเธเธฃเธฐเธเธเนเธฅเนเธง' });
+                                return;
+                            }
+                        }
+
+                        try {
+                            // Show Loading
+                            Swal.fire({ title: 'เธเธณเธฅเธฑเธเธเธฑเธเธ—เธถเธ...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+                            let cat = document.getElementById('em-category').value;
+                            if (cat === 'new') {
+                                const newCat = document.getElementById('em-category-new').value.trim();
+                                if (!newCat) { alert('เธเธฃเธธเธ“เธฒเธฃเธฐเธเธธเธเธทเนเธญเธเธฃเธฐเน€เธ เธ—เนเธซเธกเน'); return; }
+                                cat = newCat;
+                                customCategories.add(cat);
+                            }
+
+                            // ECOM Prices
+                            const ecomPrices = [];
+                            document.querySelectorAll('#em-prices > div.grid').forEach(row => {
+                                const inputs = row.querySelectorAll('input');
+                                const sel = row.querySelector('select');
+                                if (inputs.length < 3) return;
+
+                                const unitName = inputs[0].value.trim();
+                                const refPrice = parseFloat(inputs[1].value);
+                                const sellingPrice = parseFloat(inputs[2].value);
+
+                                if (unitName && !isNaN(sellingPrice)) {
+                                    ecomPrices.push({
+                                        platform: sel.value,
+                                        unit: unitName,
+                                        price: sellingPrice,
+                                        comparePrice: isNaN(refPrice) ? null : refPrice
+                                    });
+                                }
+                            });
+
+                            // Master Prices
+                            let masterPrices = {};
+                            if (!isAddMode) {
+                                const p = allProducts.find(x => x.id === id);
+                                masterPrices = { ...(p.prices || {}) };
+                            }
+                            const lmVal = parseFloat(document.getElementById('em-price-lineman').value);
+                            const retailVal = parseFloat(document.getElementById('em-price-retail').value);
+                            const wholesaleVal = parseFloat(document.getElementById('em-price-wholesale').value);
+
+                            if (!isNaN(lmVal)) masterPrices['LINEMAN'] = lmVal;
+                            if (!isNaN(retailVal)) masterPrices['RETAIL'] = retailVal;
+                            if (!isNaN(wholesaleVal)) masterPrices['WHOLESALE'] = wholesaleVal;
+
+                            // Sync Multi-Company Costs
+                            const stdPlatforms = ['LINEMAN', 'LINE_MAN', 'RETAIL', 'WHOLESALE', 'COST'];
+                            Object.keys(masterPrices).forEach(k => {
+                                if (!stdPlatforms.includes(k.toUpperCase())) delete masterPrices[k];
+                            });
+
+                            document.querySelectorAll('#em-company-costs > div').forEach(row => {
+                                const inputs = row.querySelectorAll('input');
+                                let comp = inputs[0].value.trim();
+                                const cst = parseFloat(inputs[1].value);
+                                if (comp && !isNaN(cst)) {
+                                    if (comp.includes(' (') && comp.endsWith(')')) {
+                                        comp = comp.replace(' (', '_').replace(')', '');
+                                    } else if (comp === 'เธ•เนเธเธ—เธธเธเธเธฅเธฒเธ (COST)') {
+                                        comp = 'COST';
+                                    }
+                                    masterPrices[comp] = cst;
+                                }
+                            });
+
+                            // Inventory Slots
+                            const slots = [];
+                            let totalActualStock = 0;
+                            document.querySelectorAll('#em-lots > .grid').forEach(row => {
+                                const inputs = row.querySelectorAll('input');
+                                const lotNum = inputs[0].value.trim();
+                                const expDate = inputs[1].value;
+                                const st = parseInt(inputs[2].value) || 0;
+                                if (lotNum || expDate || st > 0) {
+                                    slots.push({ lot: lotNum, exp: expDate, stock: st });
+                                    totalActualStock += st;
+                                }
+                            });
+
+                            const updates = {
+                                name: name,
+                                ecomCategory: cat,
+                                ecomVisibility: document.getElementById('em-visibility-cb').checked ? 'show' : 'hide',
+                                ecomStock: parseInt(document.getElementById('em-stock').value) || totalActualStock,
+                                unitPrices: ecomPrices,
+                                unit: (document.getElementById('em-unit').value || '').trim(),
+                                registrationNo: (document.getElementById('em-reg-no').value || '').trim(),
+                                manufacturer: (document.getElementById('em-manufacturer').value || '').trim(),
+                                countryOfOrigin: (document.getElementById('em-country').value || '').trim(),
+                                price: !isNaN(lmVal) ? lmVal : 0,
+                                retail: !isNaN(retailVal) ? retailVal : 0,
+                                wholesale: !isNaN(wholesaleVal) ? wholesaleVal : 0,
+                                prices: masterPrices,
+                                inventorySlots: slots,
+                                aliases: (document.getElementById('em-aliases').value || '').split(',').map(a => a.trim()).filter(Boolean),
+                                lot: slots.length ? slots[0].lot : '',
+                                exp: slots.length ? slots[0].exp : '',
+                                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                            };
+                            if (emImageBase64) updates.imageUrl = emImageBase64;
+
+                            const targetDocId = isAddMode ? getDocId(name) : getDocId(id);
+                            await db.collection('master_products').doc(targetDocId).set(updates, { merge: true });
 
 
-                Swal.fire({ icon: 'success', title: isAddMode ? 'เพิ่มสินค้าสำเร็จ' : 'บันทึกสำเร็จ', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
-                closeEditModal();
-                await fetchAllProducts();
-            } catch (err) {
-                console.error("Save error:", err);
-                Swal.fire({ icon: 'error', title: 'บันทึกไม่สำเร็จ', text: err.message || 'เกิดข้อผิดพลาดภายในระบบ' });
-            }
-        }
+                            Swal.fire({ icon: 'success', title: isAddMode ? 'เน€เธเธดเนเธกเธชเธดเธเธเนเธฒเธชเธณเน€เธฃเนเธ' : 'เธเธฑเธเธ—เธถเธเธชเธณเน€เธฃเนเธ', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
+                            closeEditModal();
+                            await fetchAllProducts();
+                        } catch (err) {
+                            console.error("Save error:", err);
+                            Swal.fire({ icon: 'error', title: 'เธเธฑเธเธ—เธถเธเนเธกเนเธชเธณเน€เธฃเนเธ', text: err.message || 'เน€เธเธดเธ”เธเนเธญเธเธดเธ”เธเธฅเธฒเธ”เธ เธฒเธขเนเธเธฃเธฐเธเธ' });
+                        }
+                    }
 
-        async function deleteProduct() {
-            const id = document.getElementById('em-id').value;
-            const name = document.getElementById('em-name').value;
-            const currentVis = document.getElementById('em-visibility').value;
-            await executeProductDeletion(id, name, currentVis);
-        }
+                    async function deleteProduct() {
+                        const id = document.getElementById('em-id').value;
+                        const name = document.getElementById('em-name').value;
+                        const currentVis = document.getElementById('em-visibility').value;
+                        await executeProductDeletion(id, name, currentVis);
+                    }
 
-        // ===== ADD PRODUCT =====
-        function openAddModal() { openEditModal(null); }
-        function closeAddModal() { closeEditModal(); }
+                    // ===== ADD PRODUCT =====
+                    function openAddModal() { openEditModal(null); }
+                    function closeAddModal() { closeEditModal(); }
 
-        // ===== CATEGORIES SECTION =====
-        function renderCategorySection() {
-            const cats = [...customCategories].sort();
-            const icons = { All: '💊', OTC: '📦', Supplies: '🩹', Supplements: '🧪', Dermocare: '🧴' };
-            document.getElementById('cat-list-admin').innerHTML = cats.map(c => {
-                const count = allProducts.filter(p => (p.ecomCategory || 'All') === c).length;
-                return `<div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100 mb-2">
+                    // ===== CATEGORIES SECTION =====
+                    function renderCategorySection() {
+                        const cats = [...customCategories].sort();
+                        const icons = { All: '๐’', OTC: '๐“ฆ', Supplies: '๐ฉน', Supplements: '๐งช', Dermocare: '๐งด' };
+                        document.getElementById('cat-list-admin').innerHTML = cats.map(c => {
+                            const count = allProducts.filter(p => (p.ecomCategory || 'All') === c).length;
+                            return `<div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100 mb-2">
                 <div class="flex items-center gap-3">
-                    <span class="text-xl bg-white w-10 h-10 flex items-center justify-center rounded-xl shadow-sm border border-gray-100">${icons[c] || '🏷️'}</span>
+                    <span class="text-xl bg-white w-10 h-10 flex items-center justify-center rounded-xl shadow-sm border border-gray-100">${icons[c] || '๐ท๏ธ'}</span>
                     <span class="font-bold text-gray-700 text-sm">${c}</span>
                 </div>
                 <div class="flex items-center gap-3">
-                    <span class="text-[11px] font-black text-gray-400 bg-white px-3 py-1.5 rounded-xl border border-gray-100 shadow-xs">${count} รายการ</span>
+                    <span class="text-[11px] font-black text-gray-400 bg-white px-3 py-1.5 rounded-xl border border-gray-100 shadow-xs">${count} เธฃเธฒเธขเธเธฒเธฃ</span>
                 </div>
             </div>`;
-            }).join('');
+                        }).join('');
 
-            // Update Stat card in header too
-            const statEl = document.getElementById('stat-cat-count');
-            if (statEl) statEl.innerText = customCategories.size;
-        }
+                        // Update Stat card in header too
+                        const statEl = document.getElementById('stat-cat-count');
+                        if (statEl) statEl.innerText = customCategories.size;
+                    }
 
-        function addCategory() {
-            const name = document.getElementById('new-cat-name').value.trim();
-            const icon = document.getElementById('new-cat-icon').value.trim() || '🏷️';
-            if (!name) return alert('ระบุชื่อหมวดหมู่');
-            customCategories.add(name);
-            document.getElementById('new-cat-name').value = '';
-            document.getElementById('new-cat-icon').value = '';
-            Swal.fire({ icon: 'success', title: `เพิ่มหมวด "${name}" แล้ว`, text: 'จะใช้ได้เมื่อ assign ให้สินค้าใน Edit Modal', toast: true, position: 'top-end', showConfirmButton: false, timer: 2500 });
-            renderCategorySection();
-        }
+                    function addCategory() {
+                        const name = document.getElementById('new-cat-name').value.trim();
+                        const icon = document.getElementById('new-cat-icon').value.trim() || '๐ท๏ธ';
+                        if (!name) return alert('เธฃเธฐเธเธธเธเธทเนเธญเธซเธกเธงเธ”เธซเธกเธนเน');
+                        customCategories.add(name);
+                        document.getElementById('new-cat-name').value = '';
+                        document.getElementById('new-cat-icon').value = '';
+                        Swal.fire({ icon: 'success', title: `เน€เธเธดเนเธกเธซเธกเธงเธ” "${name}" เนเธฅเนเธง`, text: 'เธเธฐเนเธเนเนเธ”เนเน€เธกเธทเนเธญ assign เนเธซเนเธชเธดเธเธเนเธฒเนเธ Edit Modal', toast: true, position: 'top-end', showConfirmButton: false, timer: 2500 });
+                        renderCategorySection();
+                    }
 
-        // ===== PRICING =====
-        function renderPricingTable() {
-            const rows = [];
-            allProducts.forEach(p => {
-                if (p.unitPrices && p.unitPrices.length > 0) {
-                    const safeId = p.id.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, "&quot;");
-                    p.unitPrices.forEach(u => {
-                        rows.push(`<tr class="product-row cursor-pointer" onclick="openEditModal('${safeId}')">
+                    // ===== PRICING =====
+                    function renderPricingTable() {
+                        const rows = [];
+                        allProducts.forEach(p => {
+                            if (p.unitPrices && p.unitPrices.length > 0) {
+                                const safeId = p.id.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                                p.unitPrices.forEach(u => {
+                                    rows.push(`<tr class="product-row cursor-pointer" onclick="openEditModal('${safeId}')">
                         <td class="px-4 py-3 font-bold text-sm text-gray-800">${p.name || p.id}</td>
                         <td class="px-4 py-3"><span class="badge bg-indigo-50 text-indigo-700">${u.platform || 'ECOM'}</span></td>
                         <td class="px-4 py-3 text-sm text-gray-600">${u.unit}</td>
-                        <td class="px-4 py-3 text-right font-black text-orange-600">฿${(u.price || 0).toLocaleString()}</td>
+                        <td class="px-4 py-3 text-right font-black text-orange-600">เธฟ${(u.price || 0).toLocaleString()}</td>
                         <td class="px-4 py-3 text-center"><button onclick="event.stopPropagation();openEditModal('${safeId}')" class="text-xs text-indigo-500 hover:text-indigo-700 font-bold"><i class="fas fa-edit"></i></button></td>
                     </tr>`);
-                    });
-                }
-            });
-            document.getElementById('pricing-table-body').innerHTML = rows.length ? rows.join('') :
-                `<tr><td colspan="5" class="text-center py-12 text-gray-300">ยังไม่มีข้อมูลราคาหน่วย</td></tr>`;
-        }
+                                });
+                            }
+                        });
+                        document.getElementById('pricing-table-body').innerHTML = rows.length ? rows.join('') :
+                            `<tr><td colspan="5" class="text-center py-12 text-gray-300">เธขเธฑเธเนเธกเนเธกเธตเธเนเธญเธกเธนเธฅเธฃเธฒเธเธฒเธซเธเนเธงเธข</td></tr>`;
+                    }
 
-        // ===== STATS SECTION =====
-        function renderStatsSection() {
-            const catCount = {};
-            allProducts.forEach(p => {
-                const c = p.ecomCategory || 'All';
-                catCount[c] = (catCount[c] || 0) + 1;
-            });
-            const sortedCats = Object.entries(catCount).sort((a, b) => b[1] - a[1]);
-            const maxCount = sortedCats[0]?.[1] || 1;
-            document.getElementById('stat-by-cat').innerHTML = sortedCats.map(([c, n]) => `
+                    // ===== STATS SECTION =====
+                    function renderStatsSection() {
+                        const catCount = {};
+                        allProducts.forEach(p => {
+                            const c = p.ecomCategory || 'All';
+                            catCount[c] = (catCount[c] || 0) + 1;
+                        });
+                        const sortedCats = Object.entries(catCount).sort((a, b) => b[1] - a[1]);
+                        const maxCount = sortedCats[0]?.[1] || 1;
+                        document.getElementById('stat-by-cat').innerHTML = sortedCats.map(([c, n]) => `
             <div class="flex items-center gap-2">
                 <span class="w-24 text-xs text-gray-600 truncate font-medium">${c}</span>
                 <div class="flex-1 bg-gray-100 rounded-full h-2"><div class="bg-indigo-500 h-2 rounded-full" style="width:${Math.round(n / maxCount * 100)}%"></div></div>
                 <span class="text-xs font-bold text-gray-500 w-6 text-right">${n}</span>
             </div>`).join('');
 
-            const lowStock = allProducts.filter(p => p.ecomStock !== undefined && parseInt(p.ecomStock) < 10).sort((a, b) => parseInt(a.ecomStock) - parseInt(b.ecomStock));
-            document.getElementById('stat-low-stock').innerHTML = lowStock.map(p => {
-                const safeId = p.id.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, "&quot;");
-                return `<div onclick="openEditModal('${safeId}');showSection('products')" class="flex justify-between items-center p-2 rounded-lg hover:bg-orange-50 cursor-pointer transition">
+                        const lowStock = allProducts.filter(p => p.ecomStock !== undefined && parseInt(p.ecomStock) < 10).sort((a, b) => parseInt(a.ecomStock) - parseInt(b.ecomStock));
+                        document.getElementById('stat-low-stock').innerHTML = lowStock.map(p => {
+                            const safeId = p.id.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                            return `<div onclick="openEditModal('${safeId}');showSection('products')" class="flex justify-between items-center p-2 rounded-lg hover:bg-orange-50 cursor-pointer transition">
                 <span class="text-xs text-gray-700 leading-tight pr-2">${p.name || p.id}</span>
                 <span class="text-xs font-black ${parseInt(p.ecomStock) === 0 ? 'text-red-500' : 'text-orange-500'} shrink-0">${p.ecomStock}</span>
             </div>`;
-            }).join('') || '<p class="text-xs text-gray-400 text-center py-4">ไม่มีสินค้าสต็อกต่ำ 🎉</p>';
+                        }).join('') || '<p class="text-xs text-gray-400 text-center py-4">เนเธกเนเธกเธตเธชเธดเธเธเนเธฒเธชเธ•เนเธญเธเธ•เนเธณ ๐</p>';
 
-            const hidden = allProducts.filter(p => p.ecomVisibility === 'hide');
-            document.getElementById('stat-hidden').innerHTML = hidden.map(p => {
-                const safeId = p.id.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, "&quot;");
-                return `<div onclick="openEditModal('${safeId}')" class="flex justify-between items-center p-2 rounded-lg hover:bg-red-50 cursor-pointer transition">
+                        const hidden = allProducts.filter(p => p.ecomVisibility === 'hide');
+                        document.getElementById('stat-hidden').innerHTML = hidden.map(p => {
+                            const safeId = p.id.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                            return `<div onclick="openEditModal('${safeId}')" class="flex justify-between items-center p-2 rounded-lg hover:bg-red-50 cursor-pointer transition">
                 <span class="text-xs text-gray-700 leading-tight">${p.name || p.id}</span>
-                <span class="text-[9px] font-bold text-red-400 bg-red-50 px-1.5 py-0.5 rounded border border-red-100">ซ่อน</span>
+                <span class="text-[9px] font-bold text-red-400 bg-red-50 px-1.5 py-0.5 rounded border border-red-100">เธเนเธญเธ</span>
             </div>`;
-            }).join('') || '<p class="text-xs text-gray-400 text-center py-4">ไม่มีสินค้าที่ซ่อน</p>';
-        }
+                        }).join('') || '<p class="text-xs text-gray-400 text-center py-4">เนเธกเนเธกเธตเธชเธดเธเธเนเธฒเธ—เธตเนเธเนเธญเธ</p>';
+                    }
 
-    </script>
-    <datalist id="company-suggestions"></datalist>
+                </script>
+                <datalist id="company-suggestions"></datalist>
 </body>
 
 </html>

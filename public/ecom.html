@@ -123,7 +123,7 @@
                         <li><button onclick="filterCategory('All')"
                                 class="cat-btn w-full text-left font-bold text-orange-600 py-2 px-3 bg-orange-50/80 rounded-xl transition"
                                 data-cat="All">💊
-                                ยาทั้งหมด (All)</button></li>
+                                ALL</button></li>
                         <li><button onclick="filterCategory('OTC')"
                                 class="cat-btn w-full text-left py-2 px-3 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition"
                                 data-cat="OTC">📦
@@ -163,7 +163,7 @@
                     <div>
                         <h2 class="text-lg md:text-xl font-bold text-gray-800 flex items-center gap-2"
                             id="current-category-title">
-                            รายการยาทั้งหมด
+                            รายการสินค้าทั้งหมด (ALL)
                             <span class="bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full font-bold"
                                 id="item-count">0</span>
                         </h2>
@@ -612,7 +612,7 @@
             try {
                 // To display an e-commerce catalog, we pull from master_products. 
                 // We'll filter products that have price.
-                const snapshot = await db.collection("master_products").limit(150).get();
+                const snapshot = await db.collection("master_products").orderBy('name').limit(2000).get();
 
                 if (snapshot.empty) {
                     showEmptyState();
@@ -620,27 +620,24 @@
                     allProducts = snapshot.docs.map(doc => {
                         const d = doc.data();
 
-                        // Sync with ECOM Admin logic
-                        let price = 0;
-                        let retailValue = 0;
-
-                        // 1. Try to find the primary ECOM price in unitPrices
+                        // 1. Stricter Price Logic
                         const unitPrices = d.unitPrices || [];
-                        const ecomPriceObj = unitPrices.find(u => u.platform === 'ECOM') || unitPrices[0];
+                        const ecomPriceObj = unitPrices.find(u => u.platform === 'ECOM') || (unitPrices.length > 0 ? unitPrices[0] : null);
 
                         if (ecomPriceObj) {
                             price = parseFloat(ecomPriceObj.price) || 0;
-                            retailValue = parseFloat(ecomPriceObj.comparePrice) || parseFloat(d.retail) || (price * 1.25);
+                            // Priority for Retail/Compare: 1. comparePrice from unit, 2. d.retail, 3. No fallback (just same as price)
+                            retailValue = parseFloat(ecomPriceObj.comparePrice) || parseFloat(d.retail) || price;
                         } else {
-                            // 2. Fallback to Master Prices
+                            // 2. Fallback to Master Prices if no unit prices defined
                             price = parseFloat(d.wholesale) || parseFloat(d.price) || 0;
-                            retailValue = parseFloat(d.retail) || (price > 0 ? price * 1.25 : 0);
+                            retailValue = parseFloat(d.retail) || price;
                         }
 
                         // Ensure values are numbers and valid
                         if (isNaN(price)) price = 0;
-                        if (isNaN(retailValue)) retailValue = 0;
-                        if (retailValue <= price && price > 0) retailValue = price * 1.25;
+                        if (isNaN(retailValue)) retailValue = price; // If still NaN or 0, match price
+                        if (retailValue < price && price > 0) retailValue = price; // No markup if not set
 
                         return {
                             id: doc.id,
@@ -703,42 +700,43 @@
                 // Store product id in map for safe access from onclick
                 window._ecomProductMap[idx] = item.id;
 
-                // Badges for admin info only (no edit button — use ecom-admin.html)
+                const cartItem = cart.find(i => i.id === item.id);
+                const quantity = cartItem ? cartItem.qty : 0;
+                const isInCart = quantity > 0;
+
+                // Badges for admin info only
                 const adminBadge = adminViewEnabled ? `
                     ${item.stock < 10 ? '<span class="absolute top-2 left-2 bg-red-100 text-red-600 text-[9px] font-bold px-2 py-0.5 rounded-full border border-red-200">ใกล้หมด</span>' : ''}
                     ${item.visibility === 'hide' ? '<span class="absolute bottom-2 left-2 bg-gray-800 text-white text-[9px] font-bold px-2 py-0.5 rounded-full opacity-80">ซ่อน</span>' : ''}
                 ` : '';
 
-                // Calculate Discount %
-                const discount = Math.round(((item.retailValue - item.price) / item.retailValue) * 100);
-                const discountTag = discount > 0 ? `<div class="absolute bottom-2 left-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded uppercase shadow-sm">ประหยัด ${discount}%</div>` : '';
+                const discount = (item.retailValue > item.price) ? Math.round(((item.retailValue - item.price) / item.retailValue) * 100) : 0;
+                const discountTag = (discount > 0 && discount < 100) ? `<div class="absolute bottom-2 left-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded uppercase shadow-sm">ประหยัด ${discount}%</div>` : '';
 
                 const card = document.createElement('div');
-                card.className = "product-card bg-white rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100/80 flex flex-col relative group";
+                card.id = `product-card-${item.id}`;
+                card.className = `product-card ${isInCart ? 'bg-orange-50/80 border-orange-200 ring-1 ring-orange-200/50' : 'bg-white border-gray-100/80'} rounded-2xl p-4 md:p-5 shadow-sm border flex flex-col relative group transition-all duration-300`;
 
                 card.innerHTML = `
                     ${adminBadge}
-                    <!-- Image Wrapper -->
                     <div class="bg-gray-50 rounded-xl relative max-h-36 h-36 overflow-hidden mb-4 flex items-center justify-center border border-gray-100/50">
                         <img src="${imgSrc}" class="object-contain h-full mix-blend-multiply ${item.imageUrl ? '' : 'opacity-70 p-4'} group-hover:scale-110 transition-transform duration-500 ease-out">
                         ${discountTag}
+                        ${isInCart ? `<div class="absolute top-2 right-2 bg-orange-600 text-white text-[10px] font-black px-2 py-1 rounded-full shadow-lg shadow-orange-200 animate-in zoom-in">${quantity}</div>` : ''}
                     </div>
                     
-                    <!-- Text Info -->
                     <div class="flex-1 flex flex-col">
                         <div class="flex items-center gap-1 mb-1.5">
                             <span class="text-[9px] font-bold text-gray-400 uppercase tracking-wider bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100 truncate max-w-[80%]">${item.company}</span>
                         </div>
                         <h4 class="text-sm font-bold text-gray-800 leading-snug mb-1.5 line-clamp-2 group-hover:text-orange-600 transition-colors">${item.name}</h4>
                         
-                        <!-- Stock & Info -->
                         <div class="flex flex-wrap gap-1 mb-2">
                             ${item.stock > 0 ? `<span class="text-[9px] bg-teal-50 text-teal-600 px-1.5 py-0.5 rounded-full font-bold border border-teal-100"><i class="fas fa-cubes"></i> คลัง: ${item.stock}</span>` : '<span class="text-[9px] bg-gray-50 text-gray-400 px-1.5 py-0.5 rounded-full font-bold border border-gray-100">OUT OF STOCK</span>'}
                             ${item.lot && item.lot !== '-' ? `<span class="text-[9px] bg-slate-50 text-slate-500 px-1.5 py-0.5 rounded-full border border-slate-100">L:${item.lot}</span>` : ''}
                             ${item.exp ? `<span class="text-[9px] bg-rose-50 text-rose-500 px-1.5 py-0.5 rounded-full border border-rose-100 font-medium">E:${item.exp}</span>` : ''}
                         </div>
 
-                        <!-- Unit Prices -->
                         ${(item.unitPrices && item.unitPrices.length > 0) ? `
                         <div class="bg-gray-50/50 rounded-lg p-1.5 space-y-1 mb-3 border border-gray-50">
                             ${item.unitPrices.map(u => `
@@ -752,18 +750,32 @@
                             `).join('')}
                         </div>` : ''}
                         
-                        <!-- Price Area -->
                         <div class="mt-auto pt-3 border-t border-gray-50 flex items-end justify-between">
                             <div class="flex flex-col">
-                                <span class="text-[10px] text-gray-400 font-medium mb-0.5"><span class="line-through">฿${item.retailValue.toFixed(2)}</span> / ชิ้น</span>
+                                <span class="text-[10px] text-gray-400 font-medium mb-0.5">
+                                    ${item.retailValue > item.price ? `<span class="line-through">฿${item.retailValue.toFixed(2)}</span> / ชิ้น` : '&nbsp;'}
+                                </span>
                                 <div class="flex items-baseline gap-1">
                                     <span class="font-black text-orange-600 text-lg leading-none">฿${item.price.toFixed(2)}</span>
                                 </div>
                             </div>
-                            <!-- Add Button -->
-                            <button onclick="addToCart('${item.id}')" class="bg-[#f8fafc] group-hover:bg-gradient-to-tr from-orange-500 to-orange-400 group-hover:text-white group-hover:shadow-md text-orange-500 w-10 h-10 rounded-xl border border-gray-100 group-hover:border-transparent flex justify-center items-center shrink-0 transition-all duration-300 active:scale-95">
-                                <i class="fas fa-plus"></i>
-                            </button>
+                            
+                            <!-- Quantity Controls -->
+                            ${isInCart ? `
+                                <div class="flex items-center bg-gray-100 rounded-xl p-0.5 border border-gray-200 shadow-inner">
+                                    <button onclick="updateCartQty('${item.id}', -1)" class="w-8 h-8 rounded-lg flex items-center justify-center text-gray-500 hover:bg-white hover:text-red-500 hover:shadow-sm transition-all active:scale-95">
+                                        <i class="fas fa-minus text-[10px]"></i>
+                                    </button>
+                                    <span class="w-8 text-center text-xs font-black text-gray-800">${quantity}</span>
+                                    <button onclick="updateCartQty('${item.id}', 1)" class="w-8 h-8 rounded-lg flex items-center justify-center text-gray-500 hover:bg-white hover:text-orange-600 hover:shadow-sm transition-all active:scale-95">
+                                        <i class="fas fa-plus text-[10px]"></i>
+                                    </button>
+                                </div>
+                            ` : `
+                                <button onclick="addToCart('${item.id}')" class="bg-[#f8fafc] hover:bg-orange-500 hover:text-white hover:shadow-md text-orange-500 w-10 h-10 rounded-xl border border-gray-100 hover:border-transparent flex justify-center items-center shrink-0 transition-all duration-300 active:scale-95">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            `}
                         </div>
                     </div>
                 `;
@@ -846,6 +858,9 @@
             // Summaries
             totalEl.innerText = '฿' + totalPrice.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
             totalQtyEl.innerText = totalItems + ' ชิ้น';
+
+            // IMPORTANT: Refresh Product Grid to reflect cart changes (Qty/BG color)
+            renderProductGrid(currentDisplayProducts);
 
             // Clear old DOM items
             Array.from(itemsContainer.children).forEach(child => {

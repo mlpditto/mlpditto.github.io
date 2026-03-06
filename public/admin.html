@@ -322,6 +322,34 @@
         const ALLOWED_ADMINS = ['medlifeplus@gmail.com'];
         let allTasksCache = {};
 
+        const PERMISSION_AREAS = [
+            { key: 'vci', label: 'VCI' },
+            { key: 'faq', label: 'FAQ' },
+            { key: 'history', label: 'History' },
+            { key: 'proorder', label: 'A.Order' },
+            { key: 'analytics', label: 'S.Analytics' },
+            { key: 'tmtp', label: 'TMTP' },
+            { key: 'return', label: 'RETURN' },
+            { key: 'lineman', label: 'LINE MAN' },
+            { key: 'ecom', label: 'ECOM' },
+            { key: 'archive', label: 'Archive' },
+            { key: 'users', label: 'Permissions Management' }
+        ];
+
+        const NAV_PERMISSIONS = {
+            'vci': 'nav-vci',
+            'faq': 'nav-faq',
+            'history': 'nav-history',
+            'proorder': 'nav-a-order',
+            'analytics': 'nav-sales-analytics',
+            'tmtp': 'nav-tmtp',
+            'return': 'nav-return',
+            'lineman': 'nav-lineman',
+            'ecom': 'nav-ecom',
+            'archive': 'btn-archive',
+            'users': 'btn-user-mgmt'
+        };
+
         auth.onAuthStateChanged(async (user) => {
             if (user && ALLOWED_ADMINS.includes(user.email)) {
                 setupDashboard(true); // Is Super Admin
@@ -339,9 +367,9 @@
                         // Allow if role is admin OR status is approved
                         if (userDoc.exists) {
                             if (userData.role === 'admin') {
-                                setupDashboard(true);
+                                setupDashboard(true, userData);
                             } else if (userData.status === 'approved') {
-                                setupDashboard(false);
+                                setupDashboard(false, userData);
                             } else {
                                 // User logged in but not approved/admin
                                 showAccessDenied(profile.displayName);
@@ -410,21 +438,27 @@
             }
         }
 
-        function setupDashboard(isAdmin) {
+        function setupDashboard(isAdmin, userData = {}) {
             document.getElementById('loading-section').classList.add('hidden');
             document.getElementById('login-section').classList.add('hidden');
             document.getElementById('dashboard-section').classList.remove('hidden');
 
-            // Toggle features based on role
-            if (!isAdmin) {
-                ['nav-faq', 'nav-a-order', 'nav-sales-analytics', 'nav-tmtp', 'nav-return', 'btn-archive', 'btn-user-mgmt'].forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el) el.classList.add('hidden-el');
-                });
-            }
+            const access = userData.access || {};
+
+            // Toggle features based on role and detailed permissions
+            Object.entries(NAV_PERMISSIONS).forEach(([key, id]) => {
+                const el = document.getElementById(id);
+                if (el) {
+                    if (isAdmin || userData.role === 'admin' || access[key]) {
+                        el.classList.remove('hidden-el');
+                    } else {
+                        el.classList.add('hidden-el');
+                    }
+                }
+            });
 
             initKanban();
-            if (isAdmin) monitorUsers(); // Only admins see user management updates
+            if (isAdmin || userData.role === 'admin') monitorUsers(); // Only true admins see user management updates
         }
 
         function showLogin() {
@@ -709,29 +743,55 @@
 
                     const isApproved = u.status === 'approved';
                     const statusColor = isApproved ? 'bg-green-100 text-green-700 border-green-200' : 'bg-yellow-100 text-yellow-700 border-yellow-200';
-                    const statusIcon = isApproved ? '<i class="fas fa-check-circle"></i>' : '<i class="fas fa-clock"></i>';
+                    const statusIcon = isApproved ? '<i class="fas fa-check-circle text-green-500"></i>' : '<i class="fas fa-clock text-yellow-500"></i>';
                     const displayStatus = u.status || 'Checking';
 
                     list.innerHTML += `
-                        <div class="bg-white p-3 rounded-xl border flex justify-between items-center shadow-sm hover:shadow-md transition">
-                            <div class="flex items-center gap-3">
-                                <div class="relative">
-                                    <img src="${u.pictureUrl || 'https://via.placeholder.com/40'}" class="w-10 h-10 rounded-full border border-gray-200 shadow-sm object-cover">
-                                    <div class="absolute -bottom-1 -right-1 text-[10px] bg-white rounded-full border p-0.5">${statusIcon}</div>
+                        <div class="bg-white p-4 rounded-2xl border shadow-sm hover:shadow-md transition">
+                            <div class="flex justify-between items-center mb-3">
+                                <div class="flex items-center gap-3">
+                                    <div class="relative">
+                                        <img src="${u.pictureUrl || 'https://via.placeholder.com/40'}" class="w-10 h-10 rounded-full border border-gray-200 shadow-sm object-cover">
+                                        <div class="absolute -bottom-1 -right-1 bg-white rounded-full border p-0.5">${statusIcon}</div>
+                                    </div>
+                                    <div>
+                                        <p class="font-black text-sm text-gray-800">${u.displayName}</p>
+                                        <span class="text-[9px] px-2 py-0.5 rounded-full uppercase font-black border ${statusColor}">${displayStatus}</span>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p class="font-bold text-sm text-gray-800">${u.displayName}</p>
-                                    <span class="text-[9px] px-2 py-0.5 rounded-full uppercase font-bold border ${statusColor}">${displayStatus}</span>
+                                <div class="flex gap-2">
+                                    ${!isApproved ? `<button onclick="approveUser('${doc.id}')" class="bg-blue-600 hover:bg-blue-700 text-white text-[10px] px-3 py-1.5 rounded-lg font-black shadow transition"><i class="fas fa-user-check mr-1"></i> อนุมัติ</button>` : ''}
+                                    <button onclick="deleteUser('${doc.id}')" class="text-gray-300 hover:text-red-500 p-2 transition"><i class="fas fa-trash-alt"></i></button>
                                 </div>
                             </div>
-                            <div class="flex gap-2">
-                                ${!isApproved ? `<button onclick="approveUser('${doc.id}')" class="bg-blue-600 hover:bg-blue-700 text-white text-[10px] px-3 py-1.5 rounded-lg font-bold shadow transition"><i class="fas fa-user-check mr-1"></i> อนุมัติ</button>` : ''}
-                                <button onclick="deleteUser('${doc.id}')" class="text-gray-300 hover:text-red-500 p-2 transition"><i class="fas fa-trash-alt"></i></button>
+                            
+                            <div class="mt-3 pt-3 border-t">
+                                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                    <i class="fas fa-shield-alt text-indigo-400"></i> หน้าที่จัดการได้ (Detailed Permissions)
+                                </p>
+                                <div class="grid grid-cols-2 gap-x-4 gap-y-2">
+                                    ${PERMISSION_AREAS.map(area => `
+                                        <label class="flex items-center gap-2 cursor-pointer group py-1">
+                                            <input type="checkbox" 
+                                                   onchange="updateUserAccess('${doc.id}', '${area.key}', this.checked)"
+                                                   ${(u.access && u.access[area.key]) ? 'checked' : ''}
+                                                   class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer">
+                                            <span class="text-[11px] font-bold text-gray-600 group-hover:text-blue-600 transition-colors uppercase tracking-tight">${area.label}</span>
+                                        </label>
+                                    `).join('')}
+                                </div>
                             </div>
                         </div>`;
                 });
                 notif.classList.toggle('hidden', pendingCount === 0);
             });
+        }
+
+        function updateUserAccess(userId, key, value) {
+            db.collection("users").doc(userId).set({
+                access: { [key]: value }
+            }, { merge: true })
+                .catch(e => alert("Update failed: " + e.message));
         }
 
         function approveUser(id) {
