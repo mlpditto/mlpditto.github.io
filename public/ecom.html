@@ -620,25 +620,41 @@
                     allProducts = snapshot.docs.map(doc => {
                         const d = doc.data();
 
-                        // Smart fallback for pricing / wholesale emulation
-                        let price = d.sp_wholesale ? parseFloat(d.sp_wholesale) : (d.sp_store ? parseFloat(d.sp_store) * 0.8 : 0);
-                        let retailValue = d.sp_suggested ? parseFloat(d.sp_suggested) : (d.sp_store ? parseFloat(d.sp_store) : price * 1.3);
-                        if (price === 0) price = Math.floor(Math.random() * 500) + 50; // Demo fallback if DB is dirty
-                        if (retailValue <= price) retailValue = price * 1.25;
+                        // Sync with ECOM Admin logic
+                        let price = 0;
+                        let retailValue = 0;
+
+                        // 1. Try to find the primary ECOM price in unitPrices
+                        const unitPrices = d.unitPrices || [];
+                        const ecomPriceObj = unitPrices.find(u => u.platform === 'ECOM') || unitPrices[0];
+
+                        if (ecomPriceObj) {
+                            price = parseFloat(ecomPriceObj.price) || 0;
+                            retailValue = parseFloat(ecomPriceObj.comparePrice) || parseFloat(d.retail) || (price * 1.25);
+                        } else {
+                            // 2. Fallback to Master Prices
+                            price = parseFloat(d.wholesale) || parseFloat(d.price) || 0;
+                            retailValue = parseFloat(d.retail) || (price > 0 ? price * 1.25 : 0);
+                        }
+
+                        // Ensure values are numbers and valid
+                        if (isNaN(price)) price = 0;
+                        if (isNaN(retailValue)) retailValue = 0;
+                        if (retailValue <= price && price > 0) retailValue = price * 1.25;
 
                         return {
                             id: doc.id,
                             name: d.name || doc.id,
-                            company: d.company || '-',
+                            company: d.manufacturer || d.company || '-',
                             price: price,
                             retailValue: retailValue,
-                            stock: d.ecomStock !== undefined ? parseInt(d.ecomStock) : Math.floor(Math.random() * 50) + 5,
+                            stock: d.ecomStock !== undefined ? parseInt(d.ecomStock) : 0,
                             lot: d.lot || '-',
                             exp: d.exp || '',
                             imageUrl: d.imageUrl || null,
                             category: d.ecomCategory || 'All',
                             visibility: d.ecomVisibility || 'show',
-                            unitPrices: d.unitPrices || []
+                            unitPrices: unitPrices
                         };
                     });
 
