@@ -392,9 +392,20 @@
                         <p class="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-3">ยอดรับโอน (Net
                             Paid)</p>
                         <div class="space-y-2">
-                            <div class="flex justify-between items-baseline">
+                            <div class="flex justify-between items-baseline mb-1">
                                 <span class="text-[10px] font-bold text-slate-400">เดือนนี้ (สุทธิ)</span>
                                 <span class="text-xl font-black text-blue-600" id="stat-net-month">฿0</span>
+                            </div>
+                            <!-- FEE / NO FEE Breakdown -->
+                            <div class="flex flex-col gap-0.5 pt-1 pb-2 border-t border-slate-50 dark:border-slate-800/50">
+                                <div class="flex justify-between items-center text-[9px] font-bold text-slate-400">
+                                    <span class="flex items-center gap-1"><i class="fas fa-percent text-[8px] opacity-70"></i> ยอดจาก FEE: <span class="text-slate-600 dark:text-slate-300" id="stat-net-fee">฿0</span></span>
+                                    <span id="stat-net-fee-percent" class="text-blue-500">0%</span>
+                                </div>
+                                <div class="flex justify-between items-center text-[9px] font-bold text-slate-400">
+                                    <span class="flex items-center gap-1"><i class="fas fa-bolt text-[8px] text-amber-500"></i> ยอดจาก NO FEE: <span class="text-slate-600 dark:text-slate-300" id="stat-net-nofee">฿0</span></span>
+                                    <span id="stat-net-nofee-percent" class="text-amber-500">0%</span>
+                                </div>
                             </div>
                             <div
                                 class="flex justify-between items-baseline border-t border-slate-50 dark:border-slate-800/50 pt-2">
@@ -2076,6 +2087,7 @@
                 // Stats Calculation
                 let countToday = 0, countMonth = 0, countYear = 0;
                 let netPaidMonth = 0, netPaidYear = 0;
+                let netPaidMonthFEE = 0, netPaidMonthNoFEE = 0;
                 let totalProfitMonth = 0;
                 let totalPerfMins = 0, perfCount = 0;
 
@@ -2086,10 +2098,15 @@
                     if (rDate.startsWith(termMonth)) {
                         countMonth++;
                         if (r.isPaid) {
-                            netPaidMonth += (r.net || 0);
+                            const netVal = (r.net || 0);
+                            netPaidMonth += netVal;
+                            
+                            if (r.isNoFee) netPaidMonthNoFEE += netVal;
+                            else netPaidMonthFEE += netVal;
+
                             // Only count profit if cost is entered (>0) to avoid showing 100% profit for incomplete records
                             if ((r.cost || 0) > 0) {
-                                totalProfitMonth += ((r.net || 0) - (r.cost || 0));
+                                totalProfitMonth += (netVal - (r.cost || 0));
                             }
                         }
                     }
@@ -2114,6 +2131,15 @@
                 safeSetText('stat-count-month', countMonth);
                 safeSetText('stat-count-year', countYear);
                 safeSetText('stat-net-month', `฿${netPaidMonth.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+                
+                // Update FEE / NO FEE breakdown
+                safeSetText('stat-net-fee', `฿${netPaidMonthFEE.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+                safeSetText('stat-net-nofee', `฿${netPaidMonthNoFEE.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+                const netFeePercent = netPaidMonth > 0 ? (netPaidMonthFEE / netPaidMonth * 100) : 0;
+                const netNoFeePercent = netPaidMonth > 0 ? (netPaidMonthNoFEE / netPaidMonth * 100) : 0;
+                safeSetText('stat-net-fee-percent', `${netFeePercent.toFixed(1)}%`);
+                safeSetText('stat-net-nofee-percent', `${netNoFeePercent.toFixed(1)}%`);
+
                 safeSetText('summary-profit', `฿${totalProfitMonth.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
 
                 const profitPercent = netPaidMonth > 0 ? (totalProfitMonth / netPaidMonth * 100) : 0;

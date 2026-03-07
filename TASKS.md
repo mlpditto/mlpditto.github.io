@@ -1,5 +1,14 @@
 # 📝 Task Log - FKB Front Kanban
 
+## 📅 7 มีนาคม 2026 (Sales Breakdown & UI Enhancement)
+
+### 🚀 ฟีเจอร์ใหม่ & การแก้ไข (Latest)
+*   **LINE MAN Sales Recorder (lineman-mgr.html):**
+    *   **เพิ่มระบบแจกแจง % (FEE vs NO FEE):** เพิ่มการแสดงผลยอดรับโอนสุทธิแยกตามประเภทออเดอร์ (FEE - มีค่า GP และ NO FEE - ไม่มีค่า GP) บนการ์ด Net Paid
+    *   **Real-time Breakdown Calculation:** ระบบคำนวณยอดเงินและเปอร์เซ็นต์ส่วนแบ่งรายได้จากออเดอร์ทั้งสองประเภทแบบอัตโนมัติตามเดือนที่เลือก
+    *   **UI Clarity:** ปรับปรุง Layout ของการ์ดสรุปยอดเงินให้แสดงรายละเอียดแยกสัดส่วนชัดเจน พร้อมไอคอนช่วยแยกประเภท (Percent/Bolt)
+
+
 ## 📅 5 มีนาคม 2026 (Stock Intelligence & Layout Refactor)
 
 ### 🐛 แก้ไขบัคสำคัญ — Admin Edit Button (ecom.html)
