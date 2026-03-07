@@ -2345,8 +2345,19 @@
                             // Remove the tag for cleaner Note
                             fullText = fullText.replace(/\[NHSO\]/gi, '').replace(/\[สปสช\]/gi, '').trim();
                         } else {
-                            let checkText = fullText.replace(/Total|Baht|THB|Net|Amount|Transfer/gi, '');
-                            if (/[a-zA-Z]/.test(checkText.replace(realTracking, ''))) { type = "telemed"; }
+                            // Logic: Default is telepharmacy. 
+                            // If has English text AND it's NOT a delivery keyword or bank name, it's telemed (Doctor service)
+                            const exclusionPattern = /Total|Baht|THB|Net|Amount|Transfer|LINEMAN|GRAB|LALAMOVE|LALA|ROBINHOOD|SHOPEE|FLASH|KERRY|J&T|BEST|SCB|KBANK|KBNK|BBL|KTB|BAY|TTB|UOB|SCD|COD/gi;
+                            let checkText = fullText.replace(exclusionPattern, '');
+
+                            // Remove tracking number from checkText to avoid false positives from LPM... etc
+                            if (realTracking) {
+                                checkText = checkText.replace(realTracking, '');
+                            }
+
+                            if (/[a-zA-Z]/.test(checkText)) {
+                                type = "telemed";
+                            }
                         }
 
                         globalData.push({ id: Math.random().toString(36).substr(2, 9), date: dateStr, time: timeStr, orderId, invoiceId, qty, base: totalAmount / 1.07, vat: totalAmount - (totalAmount / 1.07), total: totalAmount, tracking: realTracking, note: fullText, type, rawDate: parseDateForSort(dateStr), isHighlighted: false, isSelected: false });
