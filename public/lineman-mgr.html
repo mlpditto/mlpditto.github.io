@@ -616,12 +616,46 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <div>
+                                <label class="vibrant-label">วันที่และเวลารับสินค้า (Received)</label>
+                                <div class="flex gap-2">
+                                    <input type="date" id="receivedDate" class="minimal-input flex-[1.5]">
+                                    <div
+                                        class="flex items-center gap-1 minimal-input flex-1 px-3 border-l border-slate-100 dark:border-slate-800 bg-blue-50/10 rounded-lg">
+                                        <input type="number" id="receivedHH" min="0" max="23" placeholder="00"
+                                            class="w-full bg-transparent text-center font-bold outline-none"
+                                            oninput="limitValue(this, 23)">
+                                        <span class="font-bold">:</span>
+                                        <input type="number" id="receivedMM" min="0" max="59" placeholder="00"
+                                            class="w-full bg-transparent text-center font-bold outline-none"
+                                            oninput="limitValue(this, 59)">
+                                    </div>
+                                </div>
+                            </div>
+
                             <div>
                                 <label class="vibrant-label">เลขออเดอร์ (เต็ม)</label>
                                 <input type="text" id="orderIdFull"
-                                    class="minimal-input font-bold text-lineman max-w-[180px]" placeholder="LME-XXXXXX"
+                                    class="minimal-input font-bold text-lineman" placeholder="LME-XXXXXX"
                                     oninput="autoFillShortOrderId()">
                             </div>
+
+                            <div>
+                                <label class="vibrant-label">ชื่อลูกค้า</label>
+                                <input type="text" id="customerName" class="minimal-input" placeholder="ระบุชื่อลูกค้า">
+                            </div>
+
+                            <div>
+                                <label class="vibrant-label">REF 1: เลขที่บิลของ POS</label>
+                                <input type="text" id="ref1" class="minimal-input font-bold text-blue-600" placeholder="ระบุเลขที่บิล POS">
+                            </div>
+
+                            <div>
+                                <label class="vibrant-label">REF 2: ใบกำกับภาษี(เต็ม)</label>
+                                <input type="text" id="ref2" class="minimal-input font-bold text-indigo-600" placeholder="ระบุเลขที่ใบกำกับภาษี">
+                            </div>
+
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <label class="vibrant-label">4 หลักท้าย</label>
@@ -633,27 +667,6 @@
                                     <label class="vibrant-label">เบอร์โทร</label>
                                     <input type="tel" id="customerPhone" class="minimal-input"
                                         placeholder="0xx-xxx-xxxx">
-                                </div>
-                            </div>
-                            <div>
-                                <label class="vibrant-label">ชื่อลูกค้า</label>
-                                <input type="text" id="customerName" class="minimal-input" placeholder="ระบุชื่อลูกค้า">
-                            </div>
-                        </div>
-
-                        <div class="mt-6 pt-6 border-t border-slate-50 dark:border-slate-800">
-                            <label class="vibrant-label">วันที่และเวลารับสินค้า (Received)</label>
-                            <div class="flex gap-2">
-                                <input type="date" id="receivedDate" class="minimal-input flex-[1.5]">
-                                <div
-                                    class="flex items-center gap-1 minimal-input flex-1 px-3 border-l border-slate-100 dark:border-slate-800 bg-blue-50/10 rounded-lg">
-                                    <input type="number" id="receivedHH" min="0" max="23" placeholder="00"
-                                        class="w-full bg-transparent text-center font-bold outline-none"
-                                        oninput="limitValue(this, 23)">
-                                    <span class="font-bold">:</span>
-                                    <input type="number" id="receivedMM" min="0" max="59" placeholder="00"
-                                        class="w-full bg-transparent text-center font-bold outline-none"
-                                        oninput="limitValue(this, 59)">
                                 </div>
                             </div>
                         </div>
@@ -881,12 +894,47 @@
                                         </div>
                                     </div>
                                 </div>
+
+                                <div>
+                                    <label class="vibrant-label">วันที่และเวลารับสินค้า (Received)</label>
+                                    <div class="flex gap-2">
+                                        <input type="date" id="e-receivedDate" class="minimal-input flex-[1.5]">
+                                        <div
+                                            class="flex items-center gap-1 minimal-input flex-1 px-3 border-l border-slate-100 dark:border-slate-800 bg-blue-50/10 rounded-lg">
+                                            <input type="number" id="e-receivedHH" min="0" max="23" placeholder="00"
+                                                class="w-full bg-transparent text-center font-bold outline-none"
+                                                oninput="limitValue(this, 23)">
+                                            <span class="font-bold">:</span>
+                                            <input type="number" id="e-receivedMM" min="0" max="59" placeholder="00"
+                                                class="w-full bg-transparent text-center font-bold outline-none"
+                                                oninput="limitValue(this, 59)">
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div>
                                     <label class="vibrant-label">เลขออเดอร์ (เต็ม)</label>
                                     <input type="text" id="e-orderIdFull"
-                                        class="minimal-input font-bold text-blue-600 dark:text-blue-400 max-w-[180px]"
+                                        class="minimal-input font-bold text-blue-600 dark:text-blue-400"
                                         placeholder="LME-XXXXXX" oninput="autoFillShortOrderIdPopup()">
                                 </div>
+
+                                <div>
+                                    <label class="vibrant-label">ชื่อลูกค้า</label>
+                                    <input type="text" id="e-customerName" class="minimal-input"
+                                        placeholder="ระบุชื่อลูกค้า">
+                                </div>
+
+                                <div>
+                                    <label class="vibrant-label">REF 1: เลขที่บิลของ POS</label>
+                                    <input type="text" id="e-ref1" class="minimal-input font-bold text-blue-600" placeholder="ระบุเลขที่บิล POS">
+                                </div>
+
+                                <div>
+                                    <label class="vibrant-label">REF 2: ใบกำกับภาษี(เต็ม)</label>
+                                    <input type="text" id="e-ref2" class="minimal-input font-bold text-indigo-600" placeholder="ระบุเลขที่ใบกำกับภาษี">
+                                </div>
+
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
                                         <label class="vibrant-label">4 หลักท้าย</label>
@@ -899,30 +947,6 @@
                                             placeholder="0xx-xxx-xxxx">
                                     </div>
                                 </div>
-                                <div>
-                                    <label class="vibrant-label">ชื่อลูกค้า</label>
-                                    <input type="text" id="e-customerName" class="minimal-input"
-                                        placeholder="ระบุชื่อลูกค้า">
-                                </div>
-                            </div>
-
-                            <div class="mt-6 pt-6 border-t border-slate-50 dark:border-slate-800">
-                                <label class="vibrant-label">วันที่และเวลารับสินค้า (Received)</label>
-                                <div class="flex gap-2">
-                                    <input type="date" id="e-receivedDate" class="minimal-input flex-[1.5]">
-                                    <div
-                                        class="flex items-center gap-1 minimal-input flex-1 px-3 border-l border-slate-100 dark:border-slate-800 bg-blue-50/10 rounded-lg">
-                                        <input type="number" id="e-receivedHH" min="0" max="23" placeholder="00"
-                                            class="w-full bg-transparent text-center font-bold outline-none"
-                                            oninput="limitValue(this, 23)">
-                                        <span class="font-bold">:</span>
-                                        <input type="number" id="e-receivedMM" min="0" max="59" placeholder="00"
-                                            class="w-full bg-transparent text-center font-bold outline-none"
-                                            oninput="limitValue(this, 59)">
-                                    </div>
-                                </div>
-                                <p class="text-[9px] text-slate-400 font-bold uppercase mt-2 italic">*
-                                    ใช้เพื่อคำนวณเวลาการเตรียมและจัดส่ง</p>
                             </div>
                         </div>
                     </div>
@@ -2248,7 +2272,11 @@
                             <div class="inline-block bg-white dark:bg-slate-800 border-[1.5px] border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded-md font-black text-slate-800 dark:text-slate-100 shadow-sm text-[11px] mb-1 tracking-tight">
                                 ${record.orderId}
                             </div>
-                            ${record.orderIdFull ? `<div class="text-[8px] text-slate-300 truncate max-w-[80px]">${record.orderIdFull}</div>` : ''}
+                            <div class="space-y-0.5">
+                                ${record.orderIdFull ? `<div class="text-[8px] text-slate-300 truncate max-w-[80px]">${record.orderIdFull}</div>` : ''}
+                                ${record.ref1 ? `<div class="text-[8px] text-blue-500 font-bold max-w-[80px] truncate"><i class="fas fa-file-invoice mr-0.5"></i> ${record.ref1}</div>` : ''}
+                                ${record.ref2 ? `<div class="text-[8px] text-indigo-500 font-bold max-w-[80px] truncate"><i class="fas fa-file-signature mr-0.5"></i> ${record.ref2}</div>` : ''}
+                            </div>
                         </td>
                         <td class="p-4 align-top max-w-[200px]">
                             <div class="font-bold text-xs text-slate-800 dark:text-slate-100">${record.customerName || 'ลูกค้าทั่วไป'}</div>
@@ -2474,6 +2502,8 @@
                     paidDate: paidDate,
                     paidTime: isPaid ? `${tHH}:${tMM}` : '',
                     items: items,
+                    ref1: document.getElementById('ref1').value,
+                    ref2: document.getElementById('ref2').value,
                     notes: document.getElementById('notes').value,
                     recordedAt: new Date().getTime()
                 };
@@ -2603,6 +2633,8 @@
                     isPaid: isPaid,
                     paidDate: pDate,
                     paidTime: isPaid ? `${tHH}:${tMM}` : '',
+                    ref1: document.getElementById('e-ref1')?.value || '',
+                    ref2: document.getElementById('e-ref2')?.value || '',
                     items: items,
                     notes: document.getElementById('e-notes')?.value || ''
                 };
@@ -2667,7 +2699,7 @@
 
         // --- Autosave System ---
         function setupAutosave() {
-            const inputs = ['recordDate', 'orderId', 'customerName', 'customerPhone', 'grossAmount', 'notes'];
+            const inputs = ['recordDate', 'orderId', 'customerName', 'customerPhone', 'grossAmount', 'notes', 'ref1', 'ref2'];
             inputs.forEach(id => {
                 document.getElementById(id).addEventListener('input', saveDraft);
             });
@@ -2693,6 +2725,8 @@
                     price: row.querySelector('td:nth-child(3) input').value
                 })),
                 notes: document.getElementById('notes').value,
+                ref1: document.getElementById('ref1').value,
+                ref2: document.getElementById('ref2').value,
                 timestamp: new Date().getTime()
             };
             localStorage.setItem('lineman_draft', JSON.stringify(draft));
@@ -2735,6 +2769,8 @@
             toggleManualNet();
 
             if (draft.notes) document.getElementById('notes').value = draft.notes;
+            if (draft.ref1) document.getElementById('ref1').value = draft.ref1;
+            if (draft.ref2) document.getElementById('ref2').value = draft.ref2;
             calculateTotalFromItems();
         }
 
@@ -2785,6 +2821,8 @@
             document.getElementById('e-isNoFee').checked = record.isNoFee;
             document.getElementById('e-isManualNet').checked = record.isManualNet;
             document.getElementById('e-manualNet').value = record.net || record.gross;
+            document.getElementById('e-ref1').value = record.ref1 || '';
+            document.getElementById('e-ref2').value = record.ref2 || '';
             document.getElementById('e-notes').value = record.notes || '';
             document.getElementById('e-isPaid').checked = record.isPaid || false;
 
