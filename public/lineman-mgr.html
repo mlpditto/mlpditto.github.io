@@ -2406,7 +2406,13 @@
                     const isFocusMonth = targetMonthSelect === nowD.toISOString().slice(0, 7);
                     const dayToLabel = isFocusMonth ? Math.min(nowD.getDate(), lastD) : lastD;
                     const thMnShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-                    safeSetText('summary-period-label', `รายการ 1 - ${dayToLabel} ${thMnShort[tm - 1]}`);
+                    
+                    if (currentSelectedDate) {
+                        const [sy, sm, sd] = currentSelectedDate.split('-');
+                        safeSetText('summary-period-label', `รายการ ${parseInt(sd)} ${thMnShort[parseInt(sm) - 1]} ${sy.slice(-2)}`);
+                    } else {
+                        safeSetText('summary-period-label', `รายการ 1 - ${dayToLabel} ${thMnShort[tm - 1]}`);
+                    }
                 }
                 if (filtered.length === 0) {
                     tbody.innerHTML = `<tr><td colspan="5" class="p-20 text-center text-slate-300 font-bold uppercase tracking-widest">No Sales Found</td></tr>`;
