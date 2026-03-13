@@ -868,10 +868,33 @@
                                 id="e-uid-label">---</span></p>
                     </div>
                 </div>
-                <button onclick="closeEditModal()"
-                    class="w-10 h-10 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400 transition-colors">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
+                <div class="flex items-center">
+                    <div class="hidden sm:flex items-center gap-2 md:gap-4 px-3 py-2 bg-slate-50 dark:bg-slate-800/50 rounded-2xl mr-4 border border-slate-100 dark:border-slate-700">
+                        <div class="text-center px-1 md:px-2">
+                            <p class="text-[7px] md:text-[8px] font-black text-slate-400 uppercase leading-none mb-1">ยอดรวม</p>
+                            <p id="h-e-gross" class="text-[10px] md:text-sm font-black text-slate-600 dark:text-slate-300">฿0.00</p>
+                        </div>
+                        <div class="w-px h-6 bg-slate-200 dark:bg-slate-700"></div>
+                        <div class="text-center px-1 md:px-2">
+                            <p class="text-[7px] md:text-[8px] font-black text-blue-400 uppercase leading-none mb-1">สุทธิ</p>
+                            <p id="h-e-net" class="text-[10px] md:text-sm font-black text-blue-600">฿0.00</p>
+                        </div>
+                        <div class="w-px h-6 bg-slate-200 dark:bg-slate-700"></div>
+                        <div class="text-center px-1 md:px-2">
+                            <p class="text-[7px] md:text-[8px] font-black text-rose-400 uppercase leading-none mb-1">ต้นทุน</p>
+                            <p id="h-e-cost" class="text-[10px] md:text-sm font-black text-rose-500">฿0.00</p>
+                        </div>
+                        <div class="w-px h-6 bg-slate-200 dark:bg-slate-700"></div>
+                        <div class="text-center px-1 md:px-2">
+                            <p class="text-[7px] md:text-[8px] font-black text-emerald-400 uppercase leading-none mb-1">กำไร</p>
+                            <p id="h-e-profit" class="text-[10px] md:text-sm font-black text-emerald-600">฿0.00</p>
+                        </div>
+                    </div>
+                    <button onclick="closeEditModal()"
+                        class="w-10 h-10 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400 transition-colors">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
             </div>
 
             <!-- Modal Body (Scrollable) -->
@@ -1563,15 +1586,10 @@
 
             const profitEl = document.getElementById('calc-profit');
             if (profitEl) {
-                profitEl.innerText = `฿${profit.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${profitRate.toFixed(1)}%)`;
-                profitEl.className = profit < 0 ? "text-xl font-black text-rose-500 italic" : "text-xl font-black text-emerald-600 italic";
-            }
-
-            // Profit color logic
-            if (profit < 0) {
-                profitEl.className = "text-xl font-black text-rose-500 italic";
-            } else {
-                profitEl.className = "text-xl font-black text-emerald-600 italic";
+                const pColor = profit < 0 ? 'text-rose-500' : 'text-emerald-600';
+                const rColor = profit < 0 ? 'text-rose-500/70' : 'text-emerald-600/70';
+                profitEl.innerHTML = `<span class="${pColor}">฿${profit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span> <span class="${rColor}">(${profitRate.toFixed(1)}%)</span>`;
+                profitEl.className = "text-xl font-black italic";
             }
         }
 
@@ -2334,12 +2352,12 @@
                         </td>
                         <td class="p-4 text-right">
                             <div class="font-black text-lineman text-lg">฿${(record.net || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-                            ${(() => {
                             const netVal = record.net || 0;
                             const pft = netVal - (record.cost || 0);
                             const rate = netVal > 0 ? (pft / netVal) * 100 : 0;
                             const pColor = pft < 0 ? 'text-rose-500' : 'text-emerald-600';
-                            return `<div class="text-[10px] font-black ${pColor}">กำไร: ฿${pft.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${rate.toFixed(1)}%)</div>`;
+                            const pRateColor = pft < 0 ? 'text-rose-500/70' : 'text-emerald-600/70';
+                            return `<div class="text-[10px] font-black"><span class="${pColor}">กำไร: ฿${pft.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span> <span class="${pRateColor}">(${rate.toFixed(1)}%)</span></div>`;
                         })()}
                         </td>
                         <td class="p-4 text-center relative max-w-[120px]">
@@ -2897,17 +2915,24 @@
             const profitRate = net > 0 ? (profit / net) * 100 : 0;
 
             safeSetText('e-calc-net', `฿${net.toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
+            
+            // Update Header Summary
+            safeSetText('h-e-gross', `฿${gross.toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
+            safeSetText('h-e-net', `฿${net.toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
+            safeSetText('h-e-cost', `฿${cost.toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
+            safeSetText('h-e-profit', `฿${profit.toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
+            
+            const hProfitEl = document.getElementById('h-e-profit');
+            if (hProfitEl) {
+                hProfitEl.className = profit < 0 ? "text-[10px] md:text-sm font-black text-rose-500" : "text-[10px] md:text-sm font-black text-emerald-600";
+            }
 
             const profitEl = document.getElementById('e-calc-profit');
             if (profitEl) {
-                profitEl.innerText = `฿${profit.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${profitRate.toFixed(1)}%)`;
-                profitEl.className = profit < 0 ? "text-xl font-black text-rose-500 italic" : "text-xl font-black text-emerald-600 italic";
-            }
-
-            if (profit < 0) {
-                profitEl.className = "text-xl font-black text-rose-500 italic";
-            } else {
-                profitEl.className = "text-xl font-black text-emerald-600 italic";
+                const pColor = profit < 0 ? 'text-rose-500' : 'text-emerald-600';
+                const rColor = profit < 0 ? 'text-rose-500/70' : 'text-emerald-600/70';
+                profitEl.innerHTML = `<span class="${pColor}">฿${profit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span> <span class="${rColor}">(${profitRate.toFixed(1)}%)</span>`;
+                profitEl.className = "text-xl font-black italic";
             }
         }
 

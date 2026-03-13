@@ -105,11 +105,19 @@
         }
 
         .row-highlight {
-            background-color: #fef9c3 !important;
+            background-color: rgba(254, 249, 195, 0.8) !important;
         }
 
         .dark .row-highlight {
-            background-color: #422006 !important;
+            background-color: rgba(66, 32, 6, 0.6) !important;
+        }
+
+        .row-selected {
+            background-color: #dbeafe !important;
+        }
+
+        .dark .row-selected {
+            background-color: #1e3a8a !important;
         }
 
         .loader {
@@ -1786,7 +1794,7 @@
                             </tr></thead>
                             <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
                                 ${items.map((item, i) => `
-                                    <tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${item.isHighlighted ? 'row-highlight' : ''}">
+                                    <tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${item.isHighlighted ? 'row-highlight' : ''} ${item.isSelected ? 'row-selected' : ''}">
                                         <td class="p-2 text-center"><input type="checkbox" class="custom-checkbox" data-id="${item.id}" ${item.isSelected ? 'checked' : ''} onchange="toggleSelect('${item.id}')"></td>
                                         <td class="p-2 text-center text-slate-400 font-mono text-xs">${i + 1}</td>
                                         <td class="hidden"><input type="text" class="table-input" value="${item.date}" onchange="updateItemField('${item.id}', 'date', this.value)"></td>
@@ -2190,6 +2198,14 @@
             if (item) {
                 item.isSelected = (state !== null) ? state : !item.isSelected;
                 saveToLocal();
+
+                // Update UI visually without full re-render
+                const cb = document.querySelector(`input[data-id="${id}"]`);
+                if (cb) {
+                    const row = cb.closest('tr');
+                    if (item.isSelected) row.classList.add('row-selected');
+                    else row.classList.remove('row-selected');
+                }
             }
         }
 
