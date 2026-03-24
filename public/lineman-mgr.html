@@ -2352,13 +2352,14 @@
                         </td>
                         <td class="p-4 text-right">
                             <div class="font-black text-lineman text-lg">฿${(record.net || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-                            const netVal = record.net || 0;
-                            const pft = netVal - (record.cost || 0);
-                            const rate = netVal > 0 ? (pft / netVal) * 100 : 0;
-                            const pColor = pft < 0 ? 'text-rose-500' : 'text-emerald-600';
-                            const pRateColor = pft < 0 ? 'text-rose-500/70' : 'text-emerald-600/70';
-                            return `<div class="text-[10px] font-black"><span class="${pColor}">กำไร: ฿${pft.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span> <span class="${pRateColor}">(${rate.toFixed(1)}%)</span></div>`;
-                        })()}
+                            ${(() => {
+                                const netVal = record.net || 0;
+                                const pft = netVal - (record.cost || 0);
+                                const rate = netVal > 0 ? (pft / netVal) * 100 : 0;
+                                const pColor = pft < 0 ? 'text-rose-500' : 'text-emerald-600';
+                                const pRateColor = pft < 0 ? 'text-rose-500/70' : 'text-emerald-600/70';
+                                return `<div class="text-[10px] font-black"><span class="${pColor}">กำไร: ฿${pft.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span> <span class="${pRateColor}">(${rate.toFixed(1)}%)</span></div>`;
+                            })()}
                         </td>
                         <td class="p-4 text-center relative max-w-[120px]">
                             <div class="flex flex-col items-center gap-2">
@@ -2483,30 +2484,15 @@
                 const vDate = document.getElementById('recordDate').value;
                 const oId = document.getElementById('orderId').value;
                 const grossVal = document.getElementById('grossAmount').value;
-
-                if (!vDate || !oId || !grossVal || parseFloat(grossVal) <= 0) {
-                    Swal.fire('ข้อมูลไม่ครบ', 'กรุณาระบุวันที่, ออเดอร์ และรายการสินค้าให้ครบถ้วน', 'warning');
-                    return;
-                }
-
-                const gross = parseFloat(grossVal) || 0;
                 const isManual = document.getElementById('isManualNet').checked;
                 const manual = parseFloat(document.getElementById('manualNet').value) || 0;
-
                 const isNoFee = document.getElementById('isNoFee').checked;
-                let gp = isNoFee ? 0 : gross * GP_RATE;
-                let net = gross - gp;
 
-                if (isManual) {
-                    net = manual;
-                    gp = gross - net;
-                }
-
-                // Collect items - Fixed: Scope to items-container
+                // Collect items FIRST to check if anything exists
                 const items = [];
                 const masterUpdates = [];
                 const container = document.getElementById('items-container');
-                container.querySelectorAll('tr').forEach(row => { // Changed from .item-row to tr
+                container.querySelectorAll('tr').forEach(row => {
                     const nameInput = row.querySelector('td:nth-child(1) input');
                     const qtyInput = row.querySelector('td:nth-child(2) input');
                     const priceInput = row.querySelector('td:nth-child(3) input');
@@ -2518,6 +2504,20 @@
                     if (name) items.push({ name, qty, price });
                     if (name && price > 0) masterUpdates.push({ name, price });
                 });
+
+                if (!vDate || !oId || items.length === 0) {
+                    Swal.fire('ข้อมูลไม่ครบ', 'กรุณาระบุวันที่, ออเดอร์ และรายการสินค้าให้ครบถ้วน', 'warning');
+                    return;
+                }
+
+                const gross = parseFloat(grossVal) || 0;
+                let gp = isNoFee ? 0 : gross * GP_RATE;
+                let net = gross - gp;
+
+                if (isManual) {
+                    net = manual;
+                    gp = gross - net;
+                }
 
                 const hh = document.getElementById('orderHH')?.value?.toString()?.padStart(2, '0') || '00';
                 const mm = document.getElementById('orderMM')?.value?.toString()?.padStart(2, '0') || '00';
@@ -2615,7 +2615,23 @@
                 const oId = document.getElementById('e-orderId')?.value;
                 const grossVal = document.getElementById('e-grossAmount')?.value;
 
-                if (!vDate || !oId || !grossVal || parseFloat(grossVal) <= 0) {
+                // Collect items FIRST to validate and prepare for save
+                const items = [];
+                const masterUpdates = [];
+                const eContainer = document.getElementById('e-items-container');
+                if (eContainer) {
+                    eContainer.querySelectorAll('tr').forEach(row => {
+                        const n = row.querySelector('td:nth-child(1) input')?.value?.trim();
+                        const q = parseFloat(row.querySelector('td:nth-child(2) input')?.value) || 0;
+                        const p = parseFloat(row.querySelector('td:nth-child(3) input')?.value) || 0;
+                        if (n) {
+                            items.push({ name: n, qty: q, price: p });
+                            if (p > 0) masterUpdates.push({ name: n, price: p });
+                        }
+                    });
+                }
+
+                if (!vDate || !oId || items.length === 0) {
                     throw new Error("ข้อมูลไม่ครบถ้วน (วันที่, เลขออเดอร์ หรือรายการสินค้า)");
                 }
 
@@ -2633,22 +2649,6 @@
                 if (isManual) {
                     net = manual;
                     gp = gross - net;
-                }
-
-                // Collect items
-                const items = [];
-                const masterUpdates = [];
-                const eContainer = document.getElementById('e-items-container');
-                if (eContainer) {
-                    eContainer.querySelectorAll('tr').forEach(row => { // Changed from .item-row to tr
-                        const n = row.querySelector('td:nth-child(1) input')?.value?.trim();
-                        const q = parseFloat(row.querySelector('td:nth-child(2) input')?.value) || 0;
-                        const p = parseFloat(row.querySelector('td:nth-child(3) input')?.value) || 0;
-                        if (n) {
-                            items.push({ name: n, qty: q, price: p });
-                            if (p > 0) masterUpdates.push({ name: n, price: p });
-                        }
-                    });
                 }
 
                 const hh = document.getElementById('e-orderHH')?.value?.toString()?.padStart(2, '0') || '00';
