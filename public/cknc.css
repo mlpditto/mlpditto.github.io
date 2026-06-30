@@ -91,7 +91,7 @@ select {
 }
 
 .app-shell {
-  width: min(100% - 28px, 1880px);
+  width: min(100% - 28px, 2560px);
   margin: 0 auto;
   padding: 20px 0 28px;
 }
@@ -1699,7 +1699,7 @@ td {
 
 @media (max-width: 560px) {
   .app-shell {
-    width: min(100% - 20px, 1880px);
+    width: min(100% - 20px, 2560px);
     padding-top: 16px;
   }
 
