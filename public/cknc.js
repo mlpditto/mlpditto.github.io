@@ -1601,7 +1601,22 @@ function filteredBills() {
   return filtered.sort(sorters[sortBy] || sorters.profitAsc);
 }
 
+function updateAdvancedFilterState() {
+  const details = document.getElementById("advancedFilters");
+  if (!details) return;
+  const active = Boolean(
+    elements.dateFrom.value ||
+    elements.dateTo.value ||
+    elements.targetDate.value ||
+    toNumeric(elements.expectedBillingAmount?.value) ||
+    (elements.dateField.value && elements.dateField.value !== "clicknicDate")
+  );
+  const badge = details.querySelector(".advanced-badge");
+  if (badge) badge.hidden = !active;
+}
+
 function renderTable() {
+  updateAdvancedFilterState();
   const rows = filteredBills();
   elements.tableSummary.textContent = state.bills.length
     ? `แสดง ${number(rows.length)} จาก ${number(state.bills.length)} บิล`
