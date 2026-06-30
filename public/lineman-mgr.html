@@ -1179,6 +1179,10 @@
                         <label class="vibrant-label">ชื่อสินค้า</label>
                         <input type="text" id="m-name" class="minimal-input font-bold" placeholder="ชื่อสินค้า">
                     </div>
+                    <div>
+                        <label class="vibrant-label">ชื่อพ้อง / Alias สำหรับ CKNC</label>
+                        <textarea id="m-aliases" class="minimal-input" rows="3" placeholder="ใส่ชื่อที่สะกดต่างกัน คั่นด้วยบรรทัดใหม่หรือ comma"></textarea>
+                    </div>
                     <div class="grid grid-cols-2 gap-3 mb-2">
                         <div>
                             <label class="vibrant-label !text-rose-500">ราคาทุน (Cost)</label>
@@ -1359,9 +1363,38 @@
         async function syncMasterData() {
             try {
                 const snapshot = await window.db.collection('master_products').get();
-                masterProducts = snapshot.docs.map(doc => ({ name: doc.id, ...doc.data() }));
+                masterProducts = snapshot.docs.map(doc => ({ id: doc.id, name: doc.id, ...doc.data() }));
                 updateDatalist();
             } catch (err) { console.error("Master Sync Error", err); }
+        }
+
+        function normalizeMasterKey(value) {
+            return (value || '').toString().normalize('NFKC').toLowerCase().replace(/[(){}\[\],;|]+/g, ' ').replace(/\s+/g, ' ').trim();
+        }
+
+        function splitMasterAliases(value) {
+            if (Array.isArray(value)) return value.map(v => (v || '').toString().trim()).filter(Boolean);
+            return (value || '').toString().split(/[\n,|;]+/).map(v => v.trim()).filter(Boolean);
+        }
+
+        function masterSearchNames(product = {}) {
+            return [
+                product.id,
+                product.name,
+                product.canonicalName,
+                product.companyProductId,
+                product.mlpId,
+                ...splitMasterAliases(product.aliases),
+                ...splitMasterAliases(product.medicineAliases),
+                ...splitMasterAliases(product.ckncAliases),
+                ...splitMasterAliases(product.linemanAliases),
+            ].filter(Boolean);
+        }
+
+        function findMasterProductByName(name) {
+            const key = normalizeMasterKey(name);
+            if (!key) return null;
+            return masterProducts.find(product => masterSearchNames(product).some(alias => normalizeMasterKey(alias) === key)) || null;
         }
 
         function updateDatalist() {
@@ -1371,7 +1404,7 @@
                 dl.id = 'master-list';
                 document.body.appendChild(dl);
             }
-            dl.innerHTML = masterProducts.map(p => `<option value="${p.name}">`).join('');
+            dl.innerHTML = masterProducts.flatMap(p => masterSearchNames(p).map(name => `<option value="${name}">`)).join('');
         }
 
         function autoFillShortOrderId() {
@@ -1454,7 +1487,7 @@
         function handleItemChange(input, containerId = 'items-container') {
             try {
                 const name = input.value.trim();
-                const master = masterProducts.find(p => p.name === name);
+                const master = findMasterProductByName(name);
                 if (master) {
                     let price = 0;
                     if (master.prices) {
@@ -1490,7 +1523,7 @@
                 totalGross += (qty * price);
 
                 // Auto-calc cost from master if possible
-                const master = masterProducts.find(p => p.name === name);
+                const master = findMasterProductByName(name);
                 const masterCost = master ? (master.cost || (master.prices && master.prices['COST']) || 0) : 0;
                 if (masterCost > 0) {
                     totalCost += (qty * masterCost);
@@ -1546,7 +1579,7 @@
                         }
 
                         // Lookup Price
-                        const master = masterProducts.find(p => p.name === name);
+                        const master = findMasterProductByName(name);
                         let price = 0;
                         if (master && master.prices) {
                             price = master.prices['LINEMAN'] || master.prices[Object.keys(master.prices)[0]] || 0;
@@ -2562,10 +2595,12 @@
 
                 // Master Update Logic
                 for (const update of masterUpdates) {
-                    const docId = update.name.replace(/\//g, '_'); // Firestore doc ID cannot contain /
-                    const master = masterProducts.find(m => m.name === update.name);
+                    const master = findMasterProductByName(update.name);
+                    const docName = master?.name || update.name;
+                    const docId = docName.replace(/\//g, '_'); // Firestore doc ID cannot contain /
                     try {
                         await window.db.collection('master_products').doc(docId).set({
+                            name: docName,
                             prices: { ...(master?.prices || {}), 'LINEMAN': update.price }
                         }, { merge: true });
                     } catch (mErr) { console.warn("Master Update Failed for:", update.name, mErr); }
@@ -2691,10 +2726,12 @@
 
                 console.log("Saving Master Product Updates...");
                 for (const update of masterUpdates) {
-                    const docId = update.name.replace(/\//g, '_');
-                    const master = masterProducts.find(m => m.name === update.name);
+                    const master = findMasterProductByName(update.name);
+                    const docName = master?.name || update.name;
+                    const docId = docName.replace(/\//g, '_');
                     try {
                         await window.db.collection('master_products').doc(docId).set({
+                            name: docName,
                             prices: { ...(master?.prices || {}), 'LINEMAN': update.price }
                         }, { merge: true });
                     } catch (mErr) { console.warn("Master Update Failed for:", update.name, mErr); }
@@ -3247,7 +3284,7 @@
                             qty = parseInt(match[2]) || 1;
                         }
 
-                        const master = masterProducts.find(m => m.name === name);
+                        const master = findMasterProductByName(name);
                         const price = (master && master.prices) ? (master.prices['LINEMAN'] || master.prices[Object.keys(master.prices)[0]] || 0) : 0;
                         const masterCost = master ? (master.cost || (master.prices && master.prices['COST']) || 0) : 0;
                         let rowCost = masterCost ? (qty * masterCost) : 0;
@@ -3473,11 +3510,11 @@
             if (!name) return Swal.fire({ icon: 'info', title: 'ระบุชื่อสินค้า', text: 'กรุณากรอกชื่อสินค้าก่อนระบุข้อมูลหลัก', timer: 1500, showConfirmButton: false });
 
             document.getElementById('masterModal').classList.remove('hidden');
-            document.getElementById('m-name').value = name;
-            document.getElementById('m-originalName').value = name;
 
-            const m = masterProducts.find(x => x.name === name);
+            const m = findMasterProductByName(name);
             if (m) {
+                document.getElementById('m-name').value = m.name || name;
+                document.getElementById('m-originalName').value = m.name || name;
                 const prices = m.prices || {};
                 document.getElementById('m-price').value = prices['LINEMAN'] || 0;
                 document.getElementById('m-cost').value = prices['COST'] || '';
@@ -3486,7 +3523,10 @@
                 document.getElementById('m-unit').value = m.unit || '';
                 document.getElementById('m-companyCode').value = m.companyProductId || '';
                 document.getElementById('m-mlpCode').value = m.mlpId || '';
+                document.getElementById('m-aliases').value = splitMasterAliases(m.aliases).join('\n');
             } else {
+                document.getElementById('m-name').value = name;
+                document.getElementById('m-originalName').value = name;
                 document.getElementById('m-price').value = '';
                 document.getElementById('m-cost').value = '';
                 document.getElementById('m-retail').value = '';
@@ -3494,6 +3534,7 @@
                 document.getElementById('m-unit').value = '';
                 document.getElementById('m-companyCode').value = '';
                 document.getElementById('m-mlpCode').value = '';
+                document.getElementById('m-aliases').value = '';
             }
         }
 
@@ -3509,6 +3550,7 @@
             const unit = document.getElementById('m-unit').value.trim();
             const companyCode = document.getElementById('m-companyCode').value.trim();
             const mlpCode = document.getElementById('m-mlpCode').value.trim();
+            const aliases = splitMasterAliases(document.getElementById('m-aliases').value);
 
             const docId = name.replace(/\//g, '_');
 
@@ -3524,7 +3566,7 @@
                 if (wholesale > 0) prices['WHOLESALE'] = wholesale;
 
                 const updateData = {
-                    name, unit, companyProductId: companyCode, mlpId: mlpCode, prices
+                    name, aliases, unit, companyProductId: companyCode, mlpId: mlpCode, prices
                 };
 
 
