@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="./cknc.css?v=20260701120000" />
+    <link rel="stylesheet" href="./cknc.css?v=20260701140000" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -82,26 +82,32 @@
         </label>
       </section>
 
-      <section class="workflow-panel" aria-label="Workflow steps">
-        <div>
-          <strong><i class="fa-solid fa-diagram-project"></i> Workflow Step 1: CLICKNIC เป็นข้อมูลตั้งต้น</strong>
-          <p>ใช้เลขที่รายการยาและวันที่จาก Excel CLICKNIC เป็นแกนก่อน แล้วค่อย tag ประกัน / สปสช / ทั่วไป และ merge กับ MLP + Billing Note</p>
+      <section class="status-bar" aria-label="สถานะข้อมูล">
+        <div class="status-bar-main">
+          <span class="status-dot" aria-hidden="true"></span>
+          <div class="status-bar-text">
+            <strong id="statusText">รออัปโหลดไฟล์</strong>
+            <span id="autosaveStatus" class="autosave-status">Autosave: รอข้อมูล</span>
+          </div>
         </div>
+        <button class="ghost small workflow-help-btn" type="button" popovertarget="workflowHelp">
+          <i class="fa-solid fa-circle-info"></i> วิธีใช้งาน
+        </button>
+      </section>
+
+      <div id="workflowHelp" class="help-popover" popover>
+        <div class="help-popover-head">
+          <strong><i class="fa-solid fa-diagram-project"></i> วิธีใช้งาน: CLICKNIC เป็นข้อมูลตั้งต้น</strong>
+          <button class="icon-button" type="button" popovertarget="workflowHelp" popovertargetaction="hide" aria-label="ปิด">×</button>
+        </div>
+        <p>ใช้เลขที่รายการยาและวันที่จาก Excel CLICKNIC เป็นแกนก่อน แล้วค่อย tag ประกัน / สปสช / ทั่วไป และ merge กับ MLP + Billing Note</p>
         <ol>
           <li>CLICKNIC: เลขที่รายการยา + วันที่สั่งซื้อ + รายการยา</li>
           <li>MEDLIFE PLUS: บันทึกช่วยจำเชื่อมเลขที่รายการยา, เลขที่เชื่อม ORW</li>
           <li>BILLING NOTE: ORW / INV / AR เชื่อมยอดวางบิล</li>
         </ol>
-      </section>
-
-      <section class="status-panel">
-        <div>
-          <span class="status-label">สถานะข้อมูล</span>
-          <strong id="statusText">รออัปโหลดไฟล์</strong>
-          <p id="autosaveStatus" class="autosave-status">Autosave: รอข้อมูล</p>
-        </div>
-        <div class="hint">ระบบจะใช้เลขบิล 16 หลัก, ORW, INV และ AR เพื่อจับคู่ข้อมูลสามฝั่ง</div>
-      </section>
+        <p class="help-hint"><i class="fa-solid fa-lightbulb"></i> ระบบจะใช้เลขบิล 16 หลัก, ORW, INV และ AR เพื่อจับคู่ข้อมูลสามฝั่ง</p>
+      </div>
 
       <section id="mergeAssistant" class="merge-assistant" aria-label="Merge assistant"></section>
 
@@ -625,7 +631,7 @@
       </div>
     </aside>
 
-    <script src="./cknc.js?v=20260701120000"></script>
+    <script src="./cknc.js?v=20260701140000"></script>
     <script>
       (function () {
         const btn = document.getElementById("themeToggleBtn");
