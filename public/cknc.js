@@ -1212,7 +1212,12 @@ function calculateMetrics() {
   return { clickOrders, matched, mlpOnly, clickOnly, billingRows, mlpNoBilling, billingOnly, sale, cost, mlpCost, profit, caseInsurance, caseNhso, caseUnknown, billingInsurancePending, billingNhsoPending, billingReviewPending };
 }
 
+function updateEmptyState() {
+  document.body.classList.toggle("cknc-has-data", state.bills.length > 0);
+}
+
 function renderMetrics() {
+  updateEmptyState();
   const metrics = calculateMetrics();
   Object.entries(metricIds).forEach(([key, id]) => {
     $(id).textContent = ["sale", "cost", "mlpCost", "profit"].includes(key) ? money(metrics[key]) : number(metrics[key]);
@@ -3946,3 +3951,4 @@ renderRulePanel();
 renderQuickDateFilters();
 renderMergeAssistant();
 setSessionButtons();
+updateEmptyState();

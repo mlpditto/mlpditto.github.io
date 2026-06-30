@@ -96,6 +96,57 @@ select {
   padding: 20px 0 28px;
 }
 
+/* --- Empty state ----------------------------------------------------- */
+.empty-hero {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+  padding: 48px 24px;
+  margin-bottom: 12px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  background: var(--glass);
+  box-shadow: var(--shadow);
+}
+
+.empty-hero-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--mint);
+  color: var(--green-dark);
+  font-size: 26px;
+}
+
+.empty-hero h2 {
+  margin: 4px 0 0;
+  font-size: 18px;
+}
+
+.empty-hero p {
+  margin: 0;
+  max-width: 460px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+body.cknc-has-data .empty-hero {
+  display: none;
+}
+
+body:not(.cknc-has-data) #mergeAssistant,
+body:not(.cknc-has-data) .metrics-board,
+body:not(.cknc-has-data) .workspace-panel,
+body:not(.cknc-has-data) .insights-grid,
+body:not(.cknc-has-data) .audit-panel {
+  display: none;
+}
+
 .hub-strip {
   display: flex;
   align-items: center;
