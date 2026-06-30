@@ -61,6 +61,9 @@ const elements = {
   confirmClipboardImport: $("confirmClipboardImport"),
   statusText: $("statusText"),
   autosaveStatus: $("autosaveStatus"),
+  clicknicStatus: $("clicknicStatus"),
+  mlpStatus: $("mlpStatus"),
+  billingStatus: $("billingStatus"),
   exportCsvBtn: $("exportCsvBtn"),
   exportXlsxBtn: $("exportXlsxBtn"),
   exportPdfBtn: $("exportPdfBtn"),
@@ -168,6 +171,9 @@ const caseTypeOptions = [
   ["nhso", "สปสช"],
   ["general", "ทั่วไป/อื่นๆ"],
 ];
+
+// สปสช: ยอดขายเริ่มต้นต่อบิล (กำไรเริ่มที่ 10 ก่อนหักค่าใช้จ่าย MLP) ต้นทุนเริ่มต้น 0
+const NHSO_DEFAULT_SALE = 10;
 
 const billingStageOptions = [
   ["billed", "วางบิลแล้ว"],
@@ -650,6 +656,16 @@ function detectCaseType(...parts) {
   return { caseType: "unknown", caseTypeSource: "auto-no-match" };
 }
 
+// จุดสังเกตจากราคาหลังบวก%: สปสช มักเป็น 1, ประกัน/จ่ายจริง มักมากกว่า 1
+function priceCaseSignal(click) {
+  if (!click || !Array.isArray(click.medicines)) return null;
+  const priced = click.medicines.filter((row) => toNumeric(row.unitSale) > 0);
+  if (!priced.length) return null;
+  if (priced.some((row) => toNumeric(row.unitSale) > 1)) return "insurance";
+  if (priced.every((row) => toNumeric(row.unitSale) === 1)) return "nhso";
+  return null;
+}
+
 function normalizeHeader(header) {
   return clean(header).replace(/\s+/g, "");
 }
@@ -1114,12 +1130,32 @@ function buildBills() {
       uniqueBilling.map((row) => row.rawText).join(" "),
     ];
     const caseDetection = detectCaseType(...caseTextParts);
-    const billingStageDetection = deriveBillingStage(status, caseDetection.caseType, billedAmount, billingNo);
+    const priceSignal = priceCaseSignal(click);
+    let caseType = caseDetection.caseType;
+    let caseTypeSource = caseDetection.caseTypeSource;
+    if (caseType === "unknown" && priceSignal) {
+      caseType = priceSignal;
+      caseTypeSource = "auto-price";
+    }
+    // รอใบวางบิล: ส่วนใหญ่เป็นเคสประกัน → ตั้งเริ่มต้นเมื่อยังจับประเภทไม่ได้
+    if (caseType === "unknown" && status === "pending-billing") {
+      caseType = "insurance";
+      caseTypeSource = "auto-status";
+    }
+    // สปสช: CLICKNIC ส่งยาให้ MLP ฟรี → ต้นทุน 0 และตั้งยอดขายเริ่มต้น 10 (กำไรเริ่มที่ 10 ก่อนหักค่าใช้จ่าย MLP) แก้ไขได้
+    let billSale = sale;
+    let billCost = cost;
+    if (caseType === "nhso") {
+      billSale = NHSO_DEFAULT_SALE;
+      billCost = 0;
+    }
+    const billingStageDetection = deriveBillingStage(status, caseType, billedAmount, billingNo);
     const bill = applyBillOverride({
       billKey: billKeyForOrder(key),
       status,
-      caseType: caseDetection.caseType,
-      caseTypeSource: caseDetection.caseTypeSource,
+      caseType,
+      caseTypeSource,
+      priceSignal,
       billingStage: billingStageDetection.billingStage,
       billingStageSource: billingStageDetection.billingStageSource,
       caseText: caseTextParts.map(clean).filter(Boolean).join(" "),
@@ -1139,11 +1175,11 @@ function buildBills() {
       medicineRawText: click?.medicines.map((item) => item.medicineRaw).filter(Boolean).join(", ") || "",
       hasManualMedicines,
       auditIds: [...new Set(click?.medicines.map((item) => item.auditId).filter(Boolean) || [])].join(", "),
-      sale,
-      cost,
+      sale: billSale,
+      cost: billCost,
       mlpCost,
       billedAmount,
-      profit: sale - cost - mlpCost,
+      profit: billSale - billCost - mlpCost,
     });
     bill.validationIssues = validationRulesForBill(bill);
     return bill;
@@ -1216,6 +1252,20 @@ function updateEmptyState() {
   document.body.classList.toggle("cknc-has-data", state.bills.length > 0);
 }
 
+function setStepStatus(el, count) {
+  if (!el) return;
+  el.innerHTML = count
+    ? `<i class="fa-solid fa-circle-check"></i> โหลดแล้ว ${number(count)} รายการ`
+    : "ยังไม่ได้โหลด";
+  el.classList.toggle("loaded", count > 0);
+}
+
+function renderStepStatuses() {
+  setStepStatus(elements.clicknicStatus, state.clicknicRows.length + state.manualClicknicRows.length);
+  setStepStatus(elements.mlpStatus, state.mlpRows.length);
+  setStepStatus(elements.billingStatus, state.billingRows.length);
+}
+
 function renderMetrics() {
   updateEmptyState();
   const metrics = calculateMetrics();
@@ -1267,9 +1317,9 @@ function renderQuickDateFilters() {
   const activeTo = elements.dateTo.value;
   elements.quickDateFilters.innerHTML = [
     `<button class="date-chip ${!activeFrom && !activeTo ? "active" : ""}" type="button" data-clicknic-date="all">ทุกวัน CLICKNIC</button>`,
-    ...buckets.slice(0, 14).map((bucket) => `
+    ...buckets.map((bucket) => `
       <button class="date-chip ${activeFrom === bucket.date && activeTo === bucket.date ? "active" : ""}" type="button" data-clicknic-date="${bucket.date}">
-        ${formatDisplayDate(bucket.date)} <span>${number(bucket.orders.size)} บิล</span>
+        ${formatDisplayDate(bucket.date)} <span>(${number(bucket.orders.size)})</span>
       </button>
     `),
   ].join("");
@@ -1463,6 +1513,7 @@ function applyCardFilter(config) {
 function openCardDetail(cardKey) {
   const config = cardDetailConfigs[cardKey];
   if (!config || !elements.cardDetailModal) return;
+  state.currentCardKey = cardKey;
   const rows = config.rows();
   elements.cardDetailTitle.textContent = config.title;
   elements.cardDetailSummary.textContent = `${summarizeCardRows(rows)}${rows.length > 80 ? ` | แสดง 80 แถวแรก` : ""}`;
@@ -1471,11 +1522,16 @@ function openCardDetail(cardKey) {
     : `<tr><td colspan="13" class="empty">ไม่มีข้อมูลในกลุ่มนี้</td></tr>`;
   elements.cardDetailFilterBtn.hidden = !config.apply;
   elements.cardDetailFilterBtn.onclick = () => applyCardFilter(config);
-  elements.cardDetailModal.showModal();
+  if (!elements.cardDetailModal.open) elements.cardDetailModal.showModal();
+}
+
+function refreshCardDetail() {
+  if (elements.cardDetailModal?.open && state.currentCardKey) openCardDetail(state.currentCardKey);
 }
 
 function closeCardDetail() {
   elements.cardDetailModal?.close();
+  state.currentCardKey = "";
 }
 
 function statusCounts() {
@@ -1516,13 +1572,31 @@ function renderStatusSelect(bill) {
   `;
 }
 
+function priceHintHtml(bill) {
+  const signal = bill.priceSignal;
+  if (!signal) return "";
+  const caseType = bill.caseType || "unknown";
+  // เตือนเฉพาะ conflict จริงรอบ ๆ ราคา=1 ของสปสช (ทั่วไป/เงินสดมีราคา>1 ปกติ ไม่เตือน)
+  const conflict =
+    (signal === "nhso" && (caseType === "insurance" || caseType === "general")) ||
+    (signal === "insurance" && caseType === "nhso");
+  if (conflict) {
+    return `<span class="price-hint warn" title="ราคาหลังบวก% ไม่สอดคล้องกับประเภทที่จับได้ ควรตรวจสอบ">⚠ ราคาชี้: ${caseTypeLabel(signal)}</span>`;
+  }
+  if (bill.caseTypeSource === "auto-price") {
+    return `<span class="price-hint" title="จับประเภทจากราคาหลังบวก% (=1 สปสช / >1 ประกัน)">จากราคา</span>`;
+  }
+  return "";
+}
+
 function renderCaseTypeSelect(bill) {
   const value = bill.caseType || "unknown";
   return `
     <select class="case-type-select ${value}" data-case-key="${htmlEscape(bill.billKey)}" aria-label="ประเภทเคส">
       ${caseTypeOptions.map(([key, label]) => `<option value="${key}" ${key === value ? "selected" : ""}>${label}</option>`).join("")}
     </select>
-    <span class="case-source">${bill.caseTypeSource === "manual" ? "แก้มือ" : "auto"}</span>
+    <span class="case-source">${bill.caseTypeSource === "manual" ? "แก้มือ" : bill.caseTypeSource === "auto-price" ? "auto·ราคา" : bill.caseTypeSource === "auto-status" ? "auto·รอบิล" : "auto"}</span>
+    ${priceHintHtml(bill)}
   `;
 }
 
@@ -1634,6 +1708,10 @@ function renderTable() {
 
   elements.billTableBody.innerHTML = rows.map((bill) => `
     <tr>
+      <td class="action-cell">
+        <button class="row-action" type="button" data-detail-key="${bill.billKey}">รายละเอียด</button>
+        ${bill.status === "mlp-only" || bill.hasManualMedicines ? `<button class="row-action" type="button" data-manual-entry="${bill.orderId}">${bill.hasManualMedicines ? "แก้ยา" : "เพิ่มยา"}</button>` : ""}
+      </td>
       <td>${renderStatusSelect(bill)}</td>
       <td>${bill.orderId || "-"}</td>
       <td>${htmlEscape(bill.patient || "-")}</td>
@@ -1645,16 +1723,12 @@ function renderTable() {
       <td>${renderInlineDateInput(bill, "mlpDate", "วันที่ MLP")}</td>
       <td>${renderInlineDateInput(bill, "billingDueDate", "ครบกำหนดใบวางบิล")}</td>
       <td class="meds-cell">${bill.medicinesText || "-"}${bill.hasManualMedicines ? '<span class="source-note">เพิ่มจาก Screenshot</span>' : ""}${bill.hasOverride ? '<span class="source-note">แก้ไขแล้ว</span>' : ""}</td>
-      <td class="num">${money(bill.sale)}</td>
-      <td class="num">${money(bill.cost)}</td>
+      <td class="num">${renderInlineMoneyInput(bill, "sale", "ยอดขายยา")}</td>
+      <td class="num">${renderInlineMoneyInput(bill, "cost", "ต้นทุนยา")}</td>
       <td class="num">${renderInlineMoneyInput(bill, "mlpCost", "ค่าใช้จ่าย MLP")}</td>
       <td class="num">${renderInlineMoneyInput(bill, "billedAmount", "ยอดใบวางบิล")}</td>
       <td class="num ${bill.profit < 0 ? "profit-negative" : ""}">${money(bill.profit)}</td>
       <td><div class="validation-list">${(bill.validationIssues || []).length ? bill.validationIssues.map((issue) => `<span class="validation-chip ${issue.level}">${issue.text}</span>`).join("") : '<span class="validation-chip">ผ่าน</span>'}</div></td>
-      <td>
-        <button class="row-action" type="button" data-detail-key="${bill.billKey}">รายละเอียด</button>
-        ${bill.status === "mlp-only" || bill.hasManualMedicines ? `<button class="row-action" type="button" data-manual-entry="${bill.orderId}">${bill.hasManualMedicines ? "แก้ยา" : "เพิ่มยา"}</button>` : ""}
-      </td>
     </tr>
   `).join("");
 }
@@ -2076,6 +2150,7 @@ function saveManualEntry(event) {
 function renderAll() {
   rebuildBillsForCurrentMode();
   renderMetrics();
+  renderStepStatuses();
   renderTabs();
   renderTable();
   renderQuickDateFilters();
@@ -2100,6 +2175,7 @@ function renderAll() {
 
 function renderSnapshot() {
   renderMetrics();
+  renderStepStatuses();
   renderTabs();
   renderTable();
   renderQuickDateFilters();
@@ -3440,13 +3516,11 @@ function openDetailDrawer(billKey) {
     ? medicines.map((item) => `<div class="drawer-list-item"><strong>${item}</strong><span>${bill.hasManualMedicines ? " | จาก Screenshot/manual" : " | จาก Excel"}</span></div>`).join("")
     : `<div class="empty">ไม่มีรายการยา</div>`;
 
-  elements.detailDrawer.classList.add("open");
-  elements.detailDrawer.setAttribute("aria-hidden", "false");
+  if (!elements.detailDrawer.open) elements.detailDrawer.showModal();
 }
 
 function closeDetailDrawer() {
-  elements.detailDrawer.classList.remove("open");
-  elements.detailDrawer.setAttribute("aria-hidden", "true");
+  if (elements.detailDrawer.open) elements.detailDrawer.close();
   state.currentDetailKey = "";
 }
 
@@ -3576,6 +3650,8 @@ const inlineFieldLabels = {
   clicknicDate: "วันที่ CLICKNIC",
   mlpDate: "วันที่ MLP",
   billingDueDate: "ครบกำหนดใบวางบิล",
+  sale: "ยอดขายยา",
+  cost: "ต้นทุนยา",
   mlpCost: "ค่าใช้จ่าย MLP",
   billedAmount: "ยอดใบวางบิล",
 };
@@ -3698,6 +3774,7 @@ function saveBillOverride() {
   renderAuditTrail();
   scheduleAutosave("bill-override");
   openDetailDrawer(bill.billKey);
+  refreshCardDetail();
 }
 
 function resetBillOverride() {
@@ -3727,6 +3804,7 @@ function resetBillOverride() {
   renderAuditTrail();
   scheduleAutosave("reset-bill-override");
   closeDetailDrawer();
+  refreshCardDetail();
 }
 
 function setActiveStatus(status) {
@@ -3829,7 +3907,6 @@ elements.cardDetailModal?.addEventListener("click", (event) => {
   const editButton = event.target.closest("[data-card-edit-key]");
   if (!editButton) return;
   const key = editButton.dataset.cardEditKey;
-  closeCardDetail();
   openDetailDrawer(key);
 });
 elements.quickDateFilters?.addEventListener("click", (event) => {
@@ -3892,6 +3969,9 @@ elements.closeDetailDrawer.addEventListener("click", closeDetailDrawer);
 elements.detailDrawer.addEventListener("click", (event) => {
   if (event.target === elements.detailDrawer) closeDetailDrawer();
 });
+elements.detailDrawer.addEventListener("close", () => {
+  state.currentDetailKey = "";
+});
 elements.saveOverrideBtn.addEventListener("click", saveBillOverride);
 elements.resetOverrideBtn.addEventListener("click", resetBillOverride);
 elements.screenshotForm.addEventListener("submit", saveManualEntry);
@@ -3950,6 +4030,7 @@ renderMasterMappingStatus();
 renderRulePanel();
 renderQuickDateFilters();
 renderMergeAssistant();
+renderStepStatuses();
 setSessionButtons();
 updateEmptyState();
 

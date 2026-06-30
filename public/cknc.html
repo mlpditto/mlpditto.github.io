@@ -3,12 +3,12 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>CLICKNIC x MEDLIFE PLUS Analyzer</title>
+    <title>CLICKNIC x MEDLIFE PLUS</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="./cknc.css?v=20260701200000" />
+    <link rel="stylesheet" href="./cknc.css?v=20260702020000" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -38,16 +38,13 @@
       </div>
     </div>
     <main class="app-shell">
-      <nav class="hub-strip" aria-label="MLP HUB navigation">
-        <a href="admin.html" class="hub-link"><i class="fa-solid fa-house-medical"></i> MLP HUB</a>
-        <span><i class="fa-solid fa-scale-balanced"></i> CKNC Reconciliation</span>
-      </nav>
       <header class="topbar">
         <div>
           <p class="eyebrow">Medicine bill reconciliation</p>
-          <h1>CLICKNIC x MEDLIFE PLUS Analyzer</h1>
+          <h1>CLICKNIC x MEDLIFE PLUS</h1>
         </div>
         <div class="top-actions">
+          <a href="admin.html" class="ghost icon-toggle" aria-label="กลับไป MLP HUB" title="MLP HUB"><i class="fa-solid fa-house-medical"></i></a>
           <button id="themeToggleBtn" class="ghost icon-toggle" type="button" aria-label="สลับโหมดมืด"><i class="fa-solid fa-moon"></i></button>
           <button id="loadSampleBtn" class="ghost" type="button" hidden disabled><i class="fa-solid fa-flask"></i> ใช้ไฟล์ตัวอย่าง</button>
           <button id="saveSessionBtn" class="ghost" type="button" disabled><i class="fa-solid fa-floppy-disk"></i> Save Session</button>
@@ -55,6 +52,7 @@
           <button id="exportCsvBtn" class="primary" type="button" disabled><i class="fa-solid fa-file-csv"></i> Export CSV</button>
           <button id="exportXlsxBtn" class="primary" type="button" disabled><i class="fa-solid fa-file-excel"></i> Export XLSX</button>
           <button id="exportPdfBtn" class="ghost" type="button" disabled><i class="fa-solid fa-file-pdf"></i> Export PDF</button>
+          <button class="ghost workflow-help-btn" type="button" popovertarget="workflowHelp"><i class="fa-solid fa-circle-info"></i> วิธีใช้งาน</button>
         </div>
       </header>
 
@@ -65,6 +63,7 @@
           <span class="drop-copy">อัปโหลดได้หลายไฟล์ เช่น export-salee-order</span>
           <input id="clicknicFiles" type="file" accept=".xlsx,.xls" multiple />
           <button id="pasteClicknicBtn" class="ghost small paste-button" type="button">Paste Clipboard</button>
+          <span id="clicknicStatus" class="drop-status">ยังไม่ได้โหลด</span>
         </label>
         <label class="drop-zone">
           <span class="workflow-step muted">STEP 2</span>
@@ -72,6 +71,7 @@
           <span class="drop-copy">อัปโหลดไฟล์รายการ ORW / MLPCKNC</span>
           <input id="mlpFile" type="file" accept=".xlsx,.xls" />
           <button id="pasteMlpBtn" class="ghost small paste-button" type="button">Paste Clipboard</button>
+          <span id="mlpStatus" class="drop-status">ยังไม่ได้โหลด</span>
         </label>
         <label class="drop-zone">
           <span class="workflow-step muted">STEP 3</span>
@@ -79,6 +79,7 @@
           <span class="drop-copy">อัปโหลดใบวางบิลได้หลายไฟล์ เพื่อตรวจ ORW / INV / AR</span>
           <input id="billingFiles" type="file" accept=".xlsx,.xls" multiple />
           <button id="pasteBillingBtn" class="ghost small paste-button" type="button">Paste Clipboard</button>
+          <span id="billingStatus" class="drop-status">ยังไม่ได้โหลด</span>
         </label>
       </section>
 
@@ -90,9 +91,6 @@
             <span id="autosaveStatus" class="autosave-status">Autosave: รอข้อมูล</span>
           </div>
         </div>
-        <button class="ghost small workflow-help-btn" type="button" popovertarget="workflowHelp">
-          <i class="fa-solid fa-circle-info"></i> วิธีใช้งาน
-        </button>
       </section>
 
       <div id="workflowHelp" class="help-popover" popover>
@@ -367,6 +365,7 @@
           <table>
             <thead>
               <tr>
+                <th>จัดการ</th>
                 <th>สถานะ</th>
                 <th>เลขบิล</th>
                 <th>ผู้รับบริการ</th>
@@ -384,7 +383,6 @@
                 <th class="num">ยอดใบวางบิล</th>
                 <th class="num">กำไรหลัง MLP</th>
                 <th>ตรวจสอบ</th>
-                <th>จัดการ</th>
               </tr>
             </thead>
             <tbody id="billTableBody">
@@ -584,7 +582,7 @@
       </form>
     </dialog>
 
-    <aside id="detailDrawer" class="detail-drawer" aria-hidden="true">
+    <dialog id="detailDrawer" class="detail-drawer">
       <div class="drawer-card">
         <div class="drawer-head">
           <div>
@@ -659,9 +657,9 @@
           <button id="saveOverrideBtn" class="primary" type="button">บันทึกการแก้ไข</button>
         </div>
       </div>
-    </aside>
+    </dialog>
 
-    <script src="./cknc.js?v=20260701200000"></script>
+    <script src="./cknc.js?v=20260702020000"></script>
     <script>
       (function () {
         const btn = document.getElementById("themeToggleBtn");
