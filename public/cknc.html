@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="./cknc.css?v=20260630210000" />
+    <link rel="stylesheet" href="./cknc.css?v=20260701120000" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -105,75 +105,103 @@
 
       <section id="mergeAssistant" class="merge-assistant" aria-label="Merge assistant"></section>
 
-      <section class="metrics-grid" aria-label="Summary">
-        <article class="metric">
-          <span>บิล CLICKNIC</span>
-          <strong id="metricClickOrders">0</strong>
-        </article>
-        <article class="metric">
-          <span>ครบ 3 ฝั่ง</span>
-          <strong id="metricMatched">0</strong>
-        </article>
-        <article class="metric warning">
-          <span>MLP ไม่มีรายการยา</span>
-          <strong id="metricMlpOnly">0</strong>
-        </article>
-        <article class="metric warning">
-          <span>MLP รอใบวางบิล</span>
-          <strong id="metricMlpNoBilling">0</strong>
-        </article>
-        <article class="metric">
-          <span>ยอดขายยา</span>
-          <strong id="metricSale">0</strong>
-        </article>
-        <article class="metric">
-          <span>ต้นทุนยา</span>
-          <strong id="metricCost">0</strong>
-        </article>
-        <article class="metric">
-          <span>ค่าใช้จ่าย MLP</span>
-          <strong id="metricMlpCost">0</strong>
-        </article>
-        <article class="metric profit">
-          <span>กำไร matched หลัง MLP</span>
-          <strong id="metricProfit">0</strong>
-        </article>
-        <article class="metric danger compact-metric">
-          <span>รายการยาไม่มี MLP</span>
-          <strong id="metricClickOnly">0</strong>
-        </article>
-        <article class="metric compact-metric">
-          <span>ใบวางบิล</span>
-          <strong id="metricBillingRows">0</strong>
-        </article>
-        <article class="metric danger compact-metric">
-          <span>ใบวางบิลไม่เจอ MLP</span>
-          <strong id="metricBillingOnly">0</strong>
-        </article>
-        <article class="metric compact-metric">
-          <span>เคสประกัน</span>
-          <strong id="metricCaseInsurance">0</strong>
-        </article>
-        <article class="metric compact-metric">
-          <span>เคส สปสช</span>
-          <strong id="metricCaseNhso">0</strong>
-        </article>
-        <article class="metric warning compact-metric">
-          <span>ยังไม่ทราบประเภท</span>
-          <strong id="metricCaseUnknown">0</strong>
-        </article>
-        <article class="metric warning compact-metric">
-          <span>ประกันรอเอกสาร</span>
-          <strong id="metricBillingInsurancePending">0</strong>
-        </article>
-        <article class="metric warning compact-metric">
-          <span>สปสชรอวางบิล</span>
-          <strong id="metricBillingNhsoPending">0</strong>
-        </article>
-        <article class="metric warning compact-metric">
-          <span>รอตรวจสอบวางบิล</span>
-          <strong id="metricBillingReviewPending">0</strong>
-        </article>
+      <section class="metrics-board" aria-label="Summary">
+        <div class="kpi-row">
+          <article class="metric kpi profit">
+            <span>กำไร matched หลัง MLP</span>
+            <strong id="metricProfit">0</strong>
+          </article>
+          <article class="metric kpi">
+            <span>ยอดขายยา</span>
+            <strong id="metricSale">0</strong>
+          </article>
+          <article class="metric kpi">
+            <span>ครบ 3 ฝั่ง</span>
+            <strong id="metricMatched">0</strong>
+          </article>
+          <article class="metric kpi warning">
+            <span>MLP รอใบวางบิล</span>
+            <strong id="metricMlpNoBilling">0</strong>
+          </article>
+        </div>
+
+        <div class="metric-groups">
+          <div class="metric-group">
+            <h3><i class="fa-solid fa-coins"></i> การเงิน</h3>
+            <div class="metric-group-grid">
+              <article class="metric mini">
+                <span>ต้นทุนยา</span>
+                <strong id="metricCost">0</strong>
+              </article>
+              <article class="metric mini">
+                <span>ค่าใช้จ่าย MLP</span>
+                <strong id="metricMlpCost">0</strong>
+              </article>
+            </div>
+          </div>
+
+          <div class="metric-group">
+            <h3><i class="fa-solid fa-link"></i> การจับคู่ 3 ฝั่ง</h3>
+            <div class="metric-group-grid">
+              <article class="metric mini">
+                <span>บิล CLICKNIC</span>
+                <strong id="metricClickOrders">0</strong>
+              </article>
+              <article class="metric mini warning">
+                <span>MLP ไม่มีรายการยา</span>
+                <strong id="metricMlpOnly">0</strong>
+              </article>
+              <article class="metric mini danger">
+                <span>รายการยาไม่มี MLP</span>
+                <strong id="metricClickOnly">0</strong>
+              </article>
+            </div>
+          </div>
+
+          <div class="metric-group">
+            <h3><i class="fa-solid fa-receipt"></i> งานวางบิล</h3>
+            <div class="metric-group-grid">
+              <article class="metric mini">
+                <span>ใบวางบิล</span>
+                <strong id="metricBillingRows">0</strong>
+              </article>
+              <article class="metric mini danger">
+                <span>ใบวางบิลไม่เจอ MLP</span>
+                <strong id="metricBillingOnly">0</strong>
+              </article>
+              <article class="metric mini warning">
+                <span>ประกันรอเอกสาร</span>
+                <strong id="metricBillingInsurancePending">0</strong>
+              </article>
+              <article class="metric mini warning">
+                <span>สปสชรอวางบิล</span>
+                <strong id="metricBillingNhsoPending">0</strong>
+              </article>
+              <article class="metric mini warning">
+                <span>รอตรวจสอบวางบิล</span>
+                <strong id="metricBillingReviewPending">0</strong>
+              </article>
+            </div>
+          </div>
+
+          <div class="metric-group">
+            <h3><i class="fa-solid fa-tags"></i> ประเภทเคส</h3>
+            <div class="metric-group-grid">
+              <article class="metric mini">
+                <span>เคสประกัน</span>
+                <strong id="metricCaseInsurance">0</strong>
+              </article>
+              <article class="metric mini">
+                <span>เคส สปสช</span>
+                <strong id="metricCaseNhso">0</strong>
+              </article>
+              <article class="metric mini warning">
+                <span>ยังไม่ทราบประเภท</span>
+                <strong id="metricCaseUnknown">0</strong>
+              </article>
+            </div>
+          </div>
+        </div>
       </section>
 
       <dialog id="cardDetailModal" class="modal card-detail-modal">
@@ -597,7 +625,7 @@
       </div>
     </aside>
 
-    <script src="./cknc.js?v=20260630210000"></script>
+    <script src="./cknc.js?v=20260701120000"></script>
     <script>
       (function () {
         const btn = document.getElementById("themeToggleBtn");

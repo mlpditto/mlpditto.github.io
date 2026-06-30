@@ -340,7 +340,7 @@ button:not(:disabled):hover {
 
 .merge-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -1790,6 +1790,7 @@ body {
 .workflow-panel,
 .merge-assistant,
 .metric,
+.metric-group,
 .workspace-panel,
 .insight,
 .audit-panel,
@@ -1949,6 +1950,97 @@ button {
 
 .metric.profit {
   border-left-color: var(--blue);
+}
+
+/* --- Metrics board layout (KPIs + grouped tiles) --------------------- */
+.metrics-board {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.metric.kpi {
+  min-height: 98px;
+  padding: 16px 18px;
+}
+
+.metric.kpi span {
+  font-size: 13px;
+}
+
+.metric.kpi strong {
+  font-size: 30px;
+}
+
+.metric-groups {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+.metric-group {
+  padding: 12px;
+}
+
+.metric-group > h3 {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.metric-group > h3 i {
+  margin-right: 6px;
+  color: var(--green);
+}
+
+.metric-group-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.metric.mini {
+  min-height: 0;
+  padding: 9px 12px;
+  border-left-width: 4px;
+  border-radius: 10px;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.metric.mini:hover {
+  transform: translateY(-2px);
+}
+
+.metric.mini span {
+  margin-bottom: 5px;
+  font-size: 11px;
+}
+
+.metric.mini strong {
+  font-size: 19px;
+}
+
+@media (max-width: 1180px) {
+  .kpi-row,
+  .metric-groups {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .kpi-row,
+  .metric-groups {
+    grid-template-columns: 1fr;
+  }
 }
 
 .merge-grid > div {

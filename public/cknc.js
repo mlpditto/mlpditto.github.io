@@ -1292,7 +1292,7 @@ function renderMergeAssistant() {
     <div class="merge-head">
       <div>
         <h2>Merge Assistant</h2>
-        <p>ตัวช่วยจับคู่: CLICKNIC เลขที่รายการยา -> MLP บันทึกช่วยจำ, และ MLP เลขที่อ้างอิง -> Billing ORW/INV/AR</p>
+        <p>เส้นทางจับคู่ 3 ฝั่ง: CLICKNIC เลขที่รายการยา → MLP บันทึกช่วยจำ → Billing ORW/INV/AR</p>
       </div>
       <strong>${number(confidence)}%</strong>
     </div>
@@ -1300,9 +1300,6 @@ function renderMergeAssistant() {
       <div data-summary-card="mergeClicknicBase" role="button" tabindex="0"><span>1. CLICKNIC base</span><strong>${number(data.clickOrders)}</strong><p>ใช้วันที่จาก Excel เป็นแกนรายวัน</p></div>
       <div data-summary-card="mergeMlpMemo" role="button" tabindex="0"><span>2. MLP by memo</span><strong>${number(data.exactOrderMatch)}</strong><p>จับจากเลขที่รายการยาในบันทึกช่วยจำ</p></div>
       <div data-summary-card="mergeBillingRef" role="button" tabindex="0"><span>3. Billing by ref</span><strong>${number(data.refMatch)}</strong><p>จับจาก ORW / INV / AR</p></div>
-      <div data-summary-card="mergeNeedsMlp" role="button" tabindex="0" class="${data.needsMlp ? "warn" : ""}"><span>ยังไม่มี MLP</span><strong>${number(data.needsMlp)}</strong><p>ควรตรวจการลงข้อมูลสั่งซื้อ</p></div>
-      <div data-summary-card="mergeNeedsBilling" role="button" tabindex="0" class="${data.needsBilling ? "warn" : ""}"><span>รอวางบิล</span><strong>${number(data.needsBilling)}</strong><p>แยกตาม tag ประกัน/สปสช/ทั่วไป</p></div>
-      <div data-summary-card="mergeBillingOnly" role="button" tabindex="0" class="${data.billingOnly ? "danger" : ""}"><span>Billing ไม่เจอ MLP</span><strong>${number(data.billingOnly)}</strong><p>ตรวจเลขอ้างอิงหรือไฟล์รอบบิล</p></div>
     </div>
   `;
 }
