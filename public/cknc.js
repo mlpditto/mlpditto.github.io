@@ -3952,3 +3952,31 @@ renderQuickDateFilters();
 renderMergeAssistant();
 setSessionButtons();
 updateEmptyState();
+
+function setActiveView(view) {
+  const target = view === "tools" ? "tools" : "analyze";
+  document.querySelectorAll("[data-view]").forEach((btn) => {
+    const isActive = btn.dataset.view === target;
+    btn.classList.toggle("active", isActive);
+    btn.setAttribute("aria-selected", isActive ? "true" : "false");
+  });
+  document.querySelectorAll("[data-view-panel]").forEach((panel) => {
+    panel.hidden = panel.dataset.viewPanel !== target;
+  });
+  try {
+    localStorage.setItem("cknc_view", target);
+  } catch (error) {
+    /* ignore */
+  }
+}
+
+document.querySelectorAll("[data-view]").forEach((btn) => {
+  btn.addEventListener("click", () => setActiveView(btn.dataset.view));
+});
+
+try {
+  const savedView = localStorage.getItem("cknc_view");
+  if (savedView) setActiveView(savedView);
+} catch (error) {
+  /* ignore */
+}

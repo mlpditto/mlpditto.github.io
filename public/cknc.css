@@ -139,11 +139,46 @@ body.cknc-has-data .empty-hero {
   display: none;
 }
 
-body:not(.cknc-has-data) #mergeAssistant,
-body:not(.cknc-has-data) .metrics-board,
-body:not(.cknc-has-data) .workspace-panel,
-body:not(.cknc-has-data) .insights-grid,
-body:not(.cknc-has-data) .audit-panel {
+body:not(.cknc-has-data) .view-tabs,
+body:not(.cknc-has-data) .view-panel {
+  display: none;
+}
+
+/* --- Top-level view tabs --------------------------------------------- */
+.view-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.view-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--glass);
+  box-shadow: var(--shadow);
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.view-tab:hover {
+  transform: translateY(-1px);
+  border-color: var(--green);
+}
+
+.view-tab.active {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+
+.view-panel[hidden] {
   display: none;
 }
 
