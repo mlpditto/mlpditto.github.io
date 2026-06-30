@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CLICKNIC x MEDLIFE PLUS Analyzer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="./cknc.css?v=20260630210000" />
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script>
+      (function () {
+        try {
+          const saved = localStorage.getItem("cknc_theme");
+          const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          if (saved === "dark" || (!saved && prefersDark)) {
+            document.documentElement.classList.add("dark");
+          }
+        } catch (error) {
+          /* ignore */
+        }
+      })();
+    </script>
+  </head>
+  <body class="auth-pending">
+    <div id="authGate" class="auth-gate" role="status" aria-live="polite">
+      <div class="auth-card">
+        <strong id="authGateTitle">กำลังตรวจสอบสิทธิ์ CKNC</strong>
+        <p id="authGateMessage">กรุณารอสักครู่ ระบบกำลังตรวจสอบสิทธิ์จาก MLP HUB</p>
+        <a id="authGateAction" href="admin.html" class="auth-action" hidden>กลับไป MLP HUB</a>
+      </div>
+    </div>
+    <main class="app-shell">
+      <nav class="hub-strip" aria-label="MLP HUB navigation">
+        <a href="admin.html" class="hub-link"><i class="fa-solid fa-house-medical"></i> MLP HUB</a>
+        <span><i class="fa-solid fa-scale-balanced"></i> CKNC Reconciliation</span>
+      </nav>
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Medicine bill reconciliation</p>
+          <h1>CLICKNIC x MEDLIFE PLUS Analyzer</h1>
+        </div>
+        <div class="top-actions">
+          <button id="themeToggleBtn" class="ghost icon-toggle" type="button" aria-label="สลับโหมดมืด"><i class="fa-solid fa-moon"></i></button>
+          <button id="loadSampleBtn" class="ghost" type="button" hidden disabled><i class="fa-solid fa-flask"></i> ใช้ไฟล์ตัวอย่าง</button>
+          <button id="saveSessionBtn" class="ghost" type="button" disabled><i class="fa-solid fa-floppy-disk"></i> Save Session</button>
+          <button id="openSessionsBtn" class="ghost" type="button"><i class="fa-solid fa-folder-open"></i> Sessions</button>
+          <button id="exportCsvBtn" class="primary" type="button" disabled><i class="fa-solid fa-file-csv"></i> Export CSV</button>
+          <button id="exportXlsxBtn" class="primary" type="button" disabled><i class="fa-solid fa-file-excel"></i> Export XLSX</button>
+          <button id="exportPdfBtn" class="ghost" type="button" disabled><i class="fa-solid fa-file-pdf"></i> Export PDF</button>
+        </div>
+      </header>
+
+      <section class="upload-grid" aria-label="Upload Excel files">
+        <label class="drop-zone">
+          <span class="workflow-step">STEP 1</span>
+          <span class="drop-title"><i class="fa-solid fa-file-import"></i> CLICKNIC</span>
+          <span class="drop-copy">อัปโหลดได้หลายไฟล์ เช่น export-salee-order</span>
+          <input id="clicknicFiles" type="file" accept=".xlsx,.xls" multiple />
+          <button id="pasteClicknicBtn" class="ghost small paste-button" type="button">Paste Clipboard</button>
+        </label>
+        <label class="drop-zone">
+          <span class="workflow-step muted">STEP 2</span>
+          <span class="drop-title"><i class="fa-solid fa-notes-medical"></i> MEDLIFE PLUS</span>
+          <span class="drop-copy">อัปโหลดไฟล์รายการ ORW / MLPCKNC</span>
+          <input id="mlpFile" type="file" accept=".xlsx,.xls" />
+          <button id="pasteMlpBtn" class="ghost small paste-button" type="button">Paste Clipboard</button>
+        </label>
+        <label class="drop-zone">
+          <span class="workflow-step muted">STEP 3</span>
+          <span class="drop-title"><i class="fa-solid fa-receipt"></i> BILLING NOTE</span>
+          <span class="drop-copy">อัปโหลดใบวางบิลได้หลายไฟล์ เพื่อตรวจ ORW / INV / AR</span>
+          <input id="billingFiles" type="file" accept=".xlsx,.xls" multiple />
+          <button id="pasteBillingBtn" class="ghost small paste-button" type="button">Paste Clipboard</button>
+        </label>
+      </section>
+
+      <section class="workflow-panel" aria-label="Workflow steps">
+        <div>
+          <strong><i class="fa-solid fa-diagram-project"></i> Workflow Step 1: CLICKNIC เป็นข้อมูลตั้งต้น</strong>
+          <p>ใช้เลขที่รายการยาและวันที่จาก Excel CLICKNIC เป็นแกนก่อน แล้วค่อย tag ประกัน / สปสช / ทั่วไป และ merge กับ MLP + Billing Note</p>
+        </div>
+        <ol>
+          <li>CLICKNIC: เลขที่รายการยา + วันที่สั่งซื้อ + รายการยา</li>
+          <li>MEDLIFE PLUS: บันทึกช่วยจำเชื่อมเลขที่รายการยา, เลขที่เชื่อม ORW</li>
+          <li>BILLING NOTE: ORW / INV / AR เชื่อมยอดวางบิล</li>
+        </ol>
+      </section>
+
+      <section class="status-panel">
+        <div>
+          <span class="status-label">สถานะข้อมูล</span>
+          <strong id="statusText">รออัปโหลดไฟล์</strong>
+          <p id="autosaveStatus" class="autosave-status">Autosave: รอข้อมูล</p>
+        </div>
+        <div class="hint">ระบบจะใช้เลขบิล 16 หลัก, ORW, INV และ AR เพื่อจับคู่ข้อมูลสามฝั่ง</div>
+      </section>
+
+      <section id="mergeAssistant" class="merge-assistant" aria-label="Merge assistant"></section>
+
+      <section class="metrics-grid" aria-label="Summary">
+        <article class="metric">
+          <span>บิล CLICKNIC</span>
+          <strong id="metricClickOrders">0</strong>
+        </article>
+        <article class="metric">
+          <span>ครบ 3 ฝั่ง</span>
+          <strong id="metricMatched">0</strong>
+        </article>
+        <article class="metric warning">
+          <span>MLP ไม่มีรายการยา</span>
+          <strong id="metricMlpOnly">0</strong>
+        </article>
+        <article class="metric warning">
+          <span>MLP รอใบวางบิล</span>
+          <strong id="metricMlpNoBilling">0</strong>
+        </article>
+        <article class="metric">
+          <span>ยอดขายยา</span>
+          <strong id="metricSale">0</strong>
+        </article>
+        <article class="metric">
+          <span>ต้นทุนยา</span>
+          <strong id="metricCost">0</strong>
+        </article>
+        <article class="metric">
+          <span>ค่าใช้จ่าย MLP</span>
+          <strong id="metricMlpCost">0</strong>
+        </article>
+        <article class="metric profit">
+          <span>กำไร matched หลัง MLP</span>
+          <strong id="metricProfit">0</strong>
+        </article>
+        <article class="metric danger compact-metric">
+          <span>รายการยาไม่มี MLP</span>
+          <strong id="metricClickOnly">0</strong>
+        </article>
+        <article class="metric compact-metric">
+          <span>ใบวางบิล</span>
+          <strong id="metricBillingRows">0</strong>
+        </article>
+        <article class="metric danger compact-metric">
+          <span>ใบวางบิลไม่เจอ MLP</span>
+          <strong id="metricBillingOnly">0</strong>
+        </article>
+        <article class="metric compact-metric">
+          <span>เคสประกัน</span>
+          <strong id="metricCaseInsurance">0</strong>
+        </article>
+        <article class="metric compact-metric">
+          <span>เคส สปสช</span>
+          <strong id="metricCaseNhso">0</strong>
+        </article>
+        <article class="metric warning compact-metric">
+          <span>ยังไม่ทราบประเภท</span>
+          <strong id="metricCaseUnknown">0</strong>
+        </article>
+        <article class="metric warning compact-metric">
+          <span>ประกันรอเอกสาร</span>
+          <strong id="metricBillingInsurancePending">0</strong>
+        </article>
+        <article class="metric warning compact-metric">
+          <span>สปสชรอวางบิล</span>
+          <strong id="metricBillingNhsoPending">0</strong>
+        </article>
+        <article class="metric warning compact-metric">
+          <span>รอตรวจสอบวางบิล</span>
+          <strong id="metricBillingReviewPending">0</strong>
+        </article>
+      </section>
+
+      <dialog id="cardDetailModal" class="modal card-detail-modal">
+        <div class="modal-card card-detail-card">
+          <div class="modal-head">
+            <div>
+              <p class="eyebrow">Card detail</p>
+              <h2 id="cardDetailTitle">รายละเอียด</h2>
+              <p id="cardDetailSummary" class="card-detail-summary">-</p>
+            </div>
+            <button id="closeCardDetailModal" class="icon-button" type="button" aria-label="ปิด">×</button>
+          </div>
+          <div class="card-detail-actions">
+            <button id="cardDetailFilterBtn" class="primary small" type="button" hidden>กรองตารางตามนี้</button>
+          </div>
+          <div class="card-detail-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>สถานะ</th>
+                  <th>เลขบิล</th>
+                  <th>ผู้รับบริการ</th>
+                  <th>ORW</th>
+                  <th>ประเภทเคส</th>
+                  <th>งานวางบิล</th>
+                  <th>วันที่ CLICKNIC</th>
+                  <th>วันที่ MLP</th>
+                  <th class="num">ยอดขาย</th>
+                  <th class="num">MLP</th>
+                  <th class="num">วางบิล</th>
+                  <th>ตรวจสอบ</th>
+                  <th>จัดการ</th>
+                </tr>
+              </thead>
+              <tbody id="cardDetailBody">
+                <tr><td colspan="13" class="empty">ไม่มีข้อมูล</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </dialog>
+
+      <section class="workspace-panel">
+        <div class="tabs" role="tablist" aria-label="Bill status tabs">
+          <button class="tab-button active" type="button" data-status-tab="all">ทั้งหมด <span id="tabCountAll">0</span></button>
+          <button class="tab-button" type="button" data-status-tab="matched">จับคู่แล้ว <span id="tabCountMatched">0</span></button>
+          <button class="tab-button" type="button" data-status-tab="mlp-only">MLP ไม่มีรายการยา <span id="tabCountMlpOnly">0</span></button>
+          <button class="tab-button" type="button" data-status-tab="pending-billing">รอใบวางบิล <span id="tabCountPendingBilling">0</span></button>
+          <button class="tab-button" type="button" data-status-tab="clicknic-only">รายการยาไม่มี MLP <span id="tabCountClickOnly">0</span></button>
+          <button class="tab-button" type="button" data-status-tab="billing-only">ใบวางบิลไม่เจอ MLP <span id="tabCountBillingOnly">0</span></button>
+        </div>
+
+        <div class="toolbar" aria-label="Filters">
+          <label class="search-field">
+            <span>ค้นหา</span>
+            <input id="searchInput" type="search" placeholder="เลขบิล, ชื่อยา, ORW, INV, AR" />
+          </label>
+          <label>
+            <span>ประเภทเคส</span>
+            <select id="caseTypeFilter">
+              <option value="all">ทุกประเภท</option>
+              <option value="insurance">ประกัน</option>
+              <option value="nhso">สปสช</option>
+              <option value="general">ทั่วไป/อื่นๆ</option>
+              <option value="unknown">ไม่ทราบ</option>
+            </select>
+          </label>
+          <label>
+            <span>งานวางบิล</span>
+            <select id="billingStageFilter">
+              <option value="all">ทุกสถานะ</option>
+              <option value="billed">วางบิลแล้ว</option>
+              <option value="insurance-review">ประกันรอเอกสาร/อนุมัติ</option>
+              <option value="nhso-pending">สปสชรอวางบิล</option>
+              <option value="general-pending">ทั่วไปรอวางบิล</option>
+              <option value="pending-review">รอตรวจสอบ</option>
+              <option value="billing-only">ใบวางบิลไม่เจอ MLP</option>
+              <option value="no-mlp">ยังไม่มี MLP</option>
+            </select>
+          </label>
+          <label>
+            <span>วันที่</span>
+            <select id="dateField">
+              <option value="clicknicDate">วันที่ CLICKNIC (หลัก)</option>
+              <option value="any">ทุกชนิดวันที่</option>
+              <option value="mlpDate">วันที่ MLP</option>
+              <option value="billingDueDate">วันครบกำหนดใบวางบิล</option>
+            </select>
+          </label>
+          <label>
+            <span>จากวันที่</span>
+            <input id="dateFrom" type="date" />
+          </label>
+          <label>
+            <span>ถึงวันที่</span>
+            <input id="dateTo" type="date" />
+          </label>
+          <label>
+            <span>เรียงตาม</span>
+            <select id="sortBy">
+              <option value="profitAsc">กำไรต่ำสุด</option>
+              <option value="mlpCostDesc">ค่าใช้จ่าย MLP สูงสุด</option>
+              <option value="saleDesc">ยอดขายยาสูงสุด</option>
+              <option value="dateDesc">วันที่ล่าสุด</option>
+            </select>
+          </label>
+          <label>
+            <span>ค่าบริการที่คาดไว้</span>
+            <input id="expectedBillingAmount" type="number" min="0" step="0.01" placeholder="เช่น 10" />
+          </label>
+          <label>
+            <span>ดูทุกข้อมูลในวันที่</span>
+            <input id="targetDate" type="date" />
+          </label>
+          <div class="quick-actions">
+            <button class="primary small" id="showTargetDateBtn" type="button">ดูวันที่นี้</button>
+            <button class="ghost small" id="clearFiltersBtn" type="button">ล้างตัวกรอง</button>
+          </div>
+        </div>
+
+        <div id="quickDateFilters" class="date-chip-bar" aria-label="Quick CLICKNIC date filters"></div>
+
+        <div class="panel-head">
+          <div>
+            <h2><i class="fa-solid fa-table-list"></i> สรุปรายบิล</h2>
+            <p id="tableSummary">ยังไม่มีข้อมูล</p>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>สถานะ</th>
+                <th>เลขบิล</th>
+                <th>ผู้รับบริการ</th>
+                <th>ORW</th>
+                <th>ใบวางบิล</th>
+                <th>ประเภทเคส</th>
+                <th>งานวางบิล</th>
+                <th>วันที่ CLICKNIC</th>
+                <th>วันที่ MLP</th>
+                <th>ครบกำหนด</th>
+                <th>รายการยา</th>
+                <th class="num">ยอดขายยา</th>
+                <th class="num">ต้นทุนยา</th>
+                <th class="num">ค่าใช้จ่าย MLP</th>
+                <th class="num">ยอดใบวางบิล</th>
+                <th class="num">กำไรหลัง MLP</th>
+                <th>ตรวจสอบ</th>
+                <th>จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="billTableBody">
+              <tr><td colspan="18" class="empty">อัปโหลดไฟล์เพื่อเริ่มวิเคราะห์</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="insights-grid">
+        <article class="insight">
+          <h2><i class="fa-solid fa-pills"></i> ยาใช้บ่อย</h2>
+          <p id="masterMappingStatus" class="mapping-status">ยังไม่ได้โหลด master mapping จาก LINE MAN</p>
+          <div id="topMedicines" class="rank-list"></div>
+        </article>
+        <article class="insight rule-tuning-panel">
+          <div class="rule-head">
+            <div>
+              <h2><i class="fa-solid fa-sliders"></i> Rule tuning</h2>
+              <p id="ruleSummary" class="mapping-status">ยังไม่มีข้อมูลสำหรับปรับกฎ</p>
+            </div>
+            <div class="rule-actions">
+              <button id="applyRulesBtn" class="primary small" type="button">ใช้กฎนี้</button>
+              <button id="resetRulesBtn" class="ghost small" type="button">รีเซ็ต</button>
+            </div>
+          </div>
+          <div class="rule-grid">
+            <label>
+              ประกัน
+              <textarea id="ruleInsuranceWords" rows="4"></textarea>
+            </label>
+            <label>
+              สปสช
+              <textarea id="ruleNhsoWords" rows="4"></textarea>
+            </label>
+            <label>
+              ทั่วไป
+              <textarea id="ruleGeneralWords" rows="4"></textarea>
+            </label>
+          </div>
+          <div class="rule-thresholds">
+            <label>ส่วนต่างวางบิลที่ยอมรับได้ <input id="ruleBillingTolerance" type="number" min="0" step="0.01" /></label>
+            <label>กำไรติดลบเกิน <input id="ruleProfitTolerance" type="number" min="0" step="0.01" /></label>
+            <label>MLP cost เกินยอดขายยา <input id="ruleCostOverSaleBuffer" type="number" min="0" step="0.01" /></label>
+          </div>
+          <h3>คำแนะนำจากเคส unknown</h3>
+          <div id="ruleSuggestions" class="rule-suggestions"></div>
+        </article>
+      </section>
+
+      <section class="audit-panel">
+        <div class="audit-head">
+          <div>
+            <h2><i class="fa-solid fa-clock-rotate-left"></i> Audit trail</h2>
+            <p id="auditSummary">ยังไม่มีข้อมูลที่แก้ไข</p>
+          </div>
+          <button id="exportAuditBtn" class="ghost small" type="button" disabled>Export Audit CSV</button>
+        </div>
+        <div id="auditList" class="audit-list">
+          <div class="empty">เมื่อบันทึกการแก้ไข ประวัติจะมาแสดงที่นี่</div>
+        </div>
+      </section>
+    </main>
+
+    <dialog id="screenshotModal" class="modal">
+      <form id="screenshotForm" method="dialog" class="modal-card">
+        <div class="modal-head">
+          <div>
+            <p class="eyebrow">Screenshot medicine entry</p>
+            <h2>เพิ่มรายการยาจาก Screenshot</h2>
+          </div>
+          <button id="closeScreenshotModal" class="icon-button" type="button" aria-label="ปิด">×</button>
+        </div>
+
+        <div class="modal-grid">
+          <section class="image-panel">
+            <label class="screenshot-drop">
+              <span>อัปโหลดหรือวางรูป screenshot</span>
+              <input id="screenshotInput" type="file" accept="image/*" />
+            </label>
+            <div class="ocr-actions">
+              <button id="runOcrBtn" class="primary small" type="button" disabled>อ่านข้อมูลจากรูป</button>
+              <span id="ocrStatus">รอรูป screenshot</span>
+            </div>
+            <div id="screenshotPreview" class="screenshot-preview">
+              <span>Ctrl+V เพื่อวางรูปจาก clipboard ได้</span>
+            </div>
+          </section>
+
+          <section class="manual-panel">
+            <div class="form-grid">
+              <label>
+                เลขบิล
+                <input id="manualOrderId" type="text" placeholder="020..." required />
+              </label>
+              <label>
+                ORW
+                <input id="manualOrw" type="text" placeholder="ORW-..." />
+              </label>
+              <label>
+                INV
+                <input id="manualInv" type="text" placeholder="INV-..." />
+              </label>
+              <label>
+                วันที่ขาย
+                <input id="manualDate" type="date" />
+              </label>
+            </div>
+
+            <div class="manual-table-head">
+              <h3>รายการยา</h3>
+              <button id="addMedicineLineBtn" class="ghost small" type="button">เพิ่มแถว</button>
+            </div>
+
+            <div class="manual-lines-wrap">
+              <table class="manual-lines-table">
+                <thead>
+                  <tr>
+                    <th>ชื่อยา</th>
+                    <th class="num">จำนวน</th>
+                    <th class="num">ราคา</th>
+                    <th class="num">ต้นทุน</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="manualMedicineRows"></tbody>
+              </table>
+            </div>
+
+            <label>
+              หมายเหตุ
+              <textarea id="manualNote" rows="3" placeholder="เช่น เพิ่มจาก screenshot ORW..."></textarea>
+            </label>
+          </section>
+        </div>
+
+        <div class="modal-actions">
+          <span id="manualEntrySummary">ยังไม่มีรายการยา</span>
+          <div>
+            <button id="cancelScreenshotEntry" class="ghost" type="button">ยกเลิก</button>
+            <button id="saveScreenshotEntry" class="primary" type="submit">บันทึกเข้ารายการยา</button>
+          </div>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="clipboardModal" class="clipboard-modal">
+      <form method="dialog" class="clipboard-card">
+        <div class="modal-head">
+          <div>
+            <p class="eyebrow">Clipboard import</p>
+            <h2 id="clipboardTitle">Paste Clipboard</h2>
+          </div>
+          <button id="closeClipboardModal" class="icon-button" type="button" aria-label="Close">×</button>
+        </div>
+        <div class="clipboard-body">
+          <div class="clipboard-toolbar">
+            <button id="readClipboardBtn" class="ghost small" type="button">Read Clipboard</button>
+            <span id="clipboardStatus">Paste table data here, then import.</span>
+          </div>
+          <textarea id="clipboardPreview" rows="12" spellcheck="false" placeholder="Ctrl+V here if the browser blocks automatic clipboard reading."></textarea>
+          <div class="clipboard-preview-wrap">
+            <table class="clipboard-preview-table">
+              <thead id="clipboardPreviewHead"></thead>
+              <tbody id="clipboardPreviewBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <span id="clipboardSummary">No clipboard data yet</span>
+          <div>
+            <button id="cancelClipboardImport" class="ghost" type="button">Cancel</button>
+            <button id="confirmClipboardImport" class="primary" type="button" disabled>Import</button>
+          </div>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="sessionModal" class="session-modal">
+      <form method="dialog" class="session-card">
+        <div class="modal-head">
+          <div>
+            <p class="eyebrow">Saved sessions</p>
+            <h2>CKNC Sessions</h2>
+          </div>
+          <button id="closeSessionModal" class="icon-button" type="button" aria-label="ปิด">×</button>
+        </div>
+        <div class="session-toolbar">
+          <button id="refreshSessionsBtn" class="ghost small" type="button">Refresh</button>
+          <span id="sessionStatus">ยังไม่ได้โหลดรายการ</span>
+        </div>
+        <div id="sessionList" class="session-list"></div>
+      </form>
+    </dialog>
+
+    <aside id="detailDrawer" class="detail-drawer" aria-hidden="true">
+      <div class="drawer-card">
+        <div class="drawer-head">
+          <div>
+            <p class="eyebrow">Bill detail</p>
+            <h2 id="drawerTitle">รายละเอียดบิล</h2>
+          </div>
+          <button id="closeDetailDrawer" class="icon-button" type="button" aria-label="ปิด">×</button>
+        </div>
+
+        <div class="drawer-body">
+          <section class="drawer-section">
+            <h3>ข้อมูลสรุป</h3>
+            <div id="drawerSummary" class="drawer-summary"></div>
+          </section>
+
+          <section class="drawer-section">
+            <h3>แก้ไขข้อมูลแถวนี้</h3>
+            <div class="form-grid">
+              <label>
+                สถานะ
+                <select id="editStatus">
+                  <option value="matched">จับคู่แล้ว</option>
+                  <option value="mlp-only">MLP ไม่มีรายการยา</option>
+                  <option value="pending-billing">รอใบวางบิล</option>
+                  <option value="clicknic-only">รายการยาไม่มี MLP</option>
+                  <option value="billing-only">ใบวางบิลไม่เจอ MLP</option>
+                </select>
+              </label>
+              <label>
+                ORW
+                <input id="editOrw" type="text" />
+              </label>
+              <label>
+                INV
+                <input id="editInvoice" type="text" />
+              </label>
+              <label>
+                วันที่ CLICKNIC
+                <input id="editClicknicDate" type="text" inputmode="numeric" placeholder="วว/ดด/ปปปป" />
+              </label>
+              <label>
+                วันที่ MLP
+                <input id="editMlpDate" type="text" inputmode="numeric" placeholder="วว/ดด/ปปปป" />
+              </label>
+              <label>
+                ครบกำหนดใบวางบิล
+                <input id="editBillingDueDate" type="text" inputmode="numeric" placeholder="วว/ดด/ปปปป" />
+              </label>
+              <label>
+                ค่าใช้จ่าย MLP
+                <input id="editMlpCost" type="number" step="0.01" min="0" />
+              </label>
+              <label>
+                ยอดใบวางบิล
+                <input id="editBilledAmount" type="number" step="0.01" min="0" />
+              </label>
+            </div>
+            <label class="drawer-note">
+              หมายเหตุการแก้ไข
+              <textarea id="editOverrideNote" rows="3" placeholder="ระบุเหตุผลหรือแหล่งอ้างอิง"></textarea>
+            </label>
+          </section>
+
+          <section class="drawer-section">
+            <h3>รายการยา</h3>
+            <div id="drawerMedicines" class="drawer-list"></div>
+          </section>
+        </div>
+
+        <div class="drawer-actions">
+          <button id="resetOverrideBtn" class="ghost" type="button">ล้างค่าที่แก้</button>
+          <button id="saveOverrideBtn" class="primary" type="button">บันทึกการแก้ไข</button>
+        </div>
+      </div>
+    </aside>
+
+    <script src="./cknc.js?v=20260630210000"></script>
+    <script>
+      (function () {
+        const btn = document.getElementById("themeToggleBtn");
+        if (!btn) return;
+        const sync = () => {
+          const dark = document.documentElement.classList.contains("dark");
+          btn.innerHTML = dark ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>';
+          btn.setAttribute("aria-label", dark ? "สลับเป็นโหมดสว่าง" : "สลับเป็นโหมดมืด");
+          btn.setAttribute("title", dark ? "โหมดสว่าง" : "โหมดมืด");
+        };
+        btn.addEventListener("click", () => {
+          document.documentElement.classList.toggle("dark");
+          try {
+            localStorage.setItem("cknc_theme", document.documentElement.classList.contains("dark") ? "dark" : "light");
+          } catch (error) {
+            /* ignore */
+          }
+          sync();
+        });
+        sync();
+      })();
+    </script>
+  </body>
+</html>
