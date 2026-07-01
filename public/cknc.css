@@ -1027,6 +1027,20 @@ td {
   color: #8b2030;
 }
 
+.billing-stage-select.paid {
+  border-color: #6ec79f;
+  background: #d4f4e2;
+  color: #0f7a3b;
+  font-weight: 850;
+}
+
+.billing-stage-select.cancelled {
+  border-color: #cbd5e1;
+  background: #eef1f4;
+  color: #64748b;
+  text-decoration: line-through;
+}
+
 .case-source {
   display: block;
   margin-top: 4px;

@@ -177,12 +177,14 @@ const NHSO_DEFAULT_SALE = 10;
 
 const billingStageOptions = [
   ["billed", "วางบิลแล้ว"],
+  ["paid", "PAID"],
   ["insurance-review", "ประกันรอเอกสาร/อนุมัติ"],
   ["nhso-pending", "สปสชรอวางบิล"],
   ["general-pending", "ทั่วไปรอวางบิล"],
   ["pending-review", "รอตรวจสอบ"],
   ["billing-only", "ใบวางบิลไม่เจอ MLP"],
   ["no-mlp", "ยังไม่มี MLP"],
+  ["cancelled", "ยกเลิก"],
 ];
 
 const RULE_CONFIG_STORAGE_KEY = "cknc_rule_config_v1";

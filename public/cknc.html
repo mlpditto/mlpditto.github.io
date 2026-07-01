@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="./cknc.css?v=20260702020000" />
+    <link rel="stylesheet" href="./cknc.css?v=20260702030000" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -291,12 +291,14 @@
             <select id="billingStageFilter">
               <option value="all">ทุกสถานะ</option>
               <option value="billed">วางบิลแล้ว</option>
+              <option value="paid">PAID</option>
               <option value="insurance-review">ประกันรอเอกสาร/อนุมัติ</option>
               <option value="nhso-pending">สปสชรอวางบิล</option>
               <option value="general-pending">ทั่วไปรอวางบิล</option>
               <option value="pending-review">รอตรวจสอบ</option>
               <option value="billing-only">ใบวางบิลไม่เจอ MLP</option>
               <option value="no-mlp">ยังไม่มี MLP</option>
+              <option value="cancelled">ยกเลิก</option>
             </select>
           </label>
           <label>
@@ -659,7 +661,7 @@
       </div>
     </dialog>
 
-    <script src="./cknc.js?v=20260702020000"></script>
+    <script src="./cknc.js?v=20260702030000"></script>
     <script>
       (function () {
         const btn = document.getElementById("themeToggleBtn");
