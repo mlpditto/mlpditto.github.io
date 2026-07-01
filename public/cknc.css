@@ -1598,6 +1598,35 @@ td {
   font-weight: 800;
 }
 
+.drawer-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff6f6;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.drawer-checkbox input {
+  width: 16px;
+  height: 16px;
+}
+
+.row-excluded {
+  opacity: 0.55;
+}
+
+.row-action.exclude-active {
+  background: #fde2e2;
+  border-color: #e6a3a3;
+  color: #a33a3a;
+}
+
 .drawer-list {
   display: grid;
   gap: 8px;

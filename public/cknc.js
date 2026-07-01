@@ -129,6 +129,8 @@ const elements = {
   editBillingDueDate: $("editBillingDueDate"),
   editMlpCost: $("editMlpCost"),
   editBilledAmount: $("editBilledAmount"),
+  editExcluded: $("editExcluded"),
+  editExcludeReason: $("editExcludeReason"),
   editOverrideNote: $("editOverrideNote"),
   saveOverrideBtn: $("saveOverrideBtn"),
   resetOverrideBtn: $("resetOverrideBtn"),
@@ -155,6 +157,7 @@ const tabCountIds = {
   "pending-billing": "tabCountPendingBilling",
   "clicknic-only": "tabCountClickOnly",
   "billing-only": "tabCountBillingOnly",
+  excluded: "tabCountExcluded",
 };
 
 const statusOptions = [
@@ -1054,6 +1057,9 @@ function pushIssue(issues, level, code, text) {
 
 function validationRulesForBill(bill) {
   const issues = [];
+  if (bill.excluded) {
+    pushIssue(issues, "info", "EXCLUDED", `ไม่นับคำนวณ${bill.excludeReason ? `: ${bill.excludeReason}` : ""}`);
+  }
   if (bill.status === "mlp-only") {
     pushIssue(issues, "danger", "MLP_NO_MEDICINE", "MLP ไม่มีรายการยา");
   }
@@ -1177,6 +1183,8 @@ function buildBills() {
       medicineRawText: click?.medicines.map((item) => item.medicineRaw).filter(Boolean).join(", ") || "",
       hasManualMedicines,
       auditIds: [...new Set(click?.medicines.map((item) => item.auditId).filter(Boolean) || [])].join(", "),
+      excluded: false,
+      excludeReason: "",
       sale: billSale,
       cost: billCost,
       mlpCost,
@@ -1216,6 +1224,8 @@ function buildBills() {
       medicineRawText: "",
       hasManualMedicines: false,
       auditIds: "",
+      excluded: false,
+      excludeReason: "",
       sale: 0,
       cost: 0,
       mlpCost: 0,
@@ -1227,26 +1237,31 @@ function buildBills() {
   });
 }
 
+function activeBills() {
+  return state.bills.filter((bill) => !bill.excluded);
+}
+
 function calculateMetrics() {
+  const bills = activeBills();
   const clickOrders = new Set([...state.clicknicRows, ...state.manualClicknicRows].map((row) => row.orderId)).size;
-  const matched = state.bills.filter((bill) => bill.status === "matched").length;
-  const mlpOnly = state.bills.filter((bill) => bill.status === "mlp-only").length;
-  const clickOnly = state.bills.filter((bill) => bill.status === "clicknic-only").length;
+  const matched = bills.filter((bill) => bill.status === "matched").length;
+  const mlpOnly = bills.filter((bill) => bill.status === "mlp-only").length;
+  const clickOnly = bills.filter((bill) => bill.status === "clicknic-only").length;
   const billingRows = state.billingRows.length;
-  const mlpNoBilling = state.bills.filter((bill) => bill.status === "pending-billing").length;
-  const billingOnly = state.bills.filter((bill) => bill.status === "billing-only").length;
-  const sale = state.bills.reduce((sum, bill) => sum + bill.sale, 0);
-  const cost = state.bills.reduce((sum, bill) => sum + bill.cost, 0);
-  const mlpCost = state.bills.reduce((sum, bill) => sum + bill.mlpCost, 0);
-  const profit = state.bills
+  const mlpNoBilling = bills.filter((bill) => bill.status === "pending-billing").length;
+  const billingOnly = bills.filter((bill) => bill.status === "billing-only").length;
+  const sale = bills.reduce((sum, bill) => sum + bill.sale, 0);
+  const cost = bills.reduce((sum, bill) => sum + bill.cost, 0);
+  const mlpCost = bills.reduce((sum, bill) => sum + bill.mlpCost, 0);
+  const profit = bills
     .filter((bill) => bill.status === "matched" || bill.status === "pending-billing")
     .reduce((sum, bill) => sum + bill.profit, 0);
-  const caseInsurance = state.bills.filter((bill) => bill.caseType === "insurance").length;
-  const caseNhso = state.bills.filter((bill) => bill.caseType === "nhso").length;
-  const caseUnknown = state.bills.filter((bill) => !bill.caseType || bill.caseType === "unknown").length;
-  const billingInsurancePending = state.bills.filter((bill) => bill.billingStage === "insurance-review").length;
-  const billingNhsoPending = state.bills.filter((bill) => bill.billingStage === "nhso-pending").length;
-  const billingReviewPending = state.bills.filter((bill) => bill.billingStage === "pending-review").length;
+  const caseInsurance = bills.filter((bill) => bill.caseType === "insurance").length;
+  const caseNhso = bills.filter((bill) => bill.caseType === "nhso").length;
+  const caseUnknown = bills.filter((bill) => !bill.caseType || bill.caseType === "unknown").length;
+  const billingInsurancePending = bills.filter((bill) => bill.billingStage === "insurance-review").length;
+  const billingNhsoPending = bills.filter((bill) => bill.billingStage === "nhso-pending").length;
+  const billingReviewPending = bills.filter((bill) => bill.billingStage === "pending-review").length;
   return { clickOrders, matched, mlpOnly, clickOnly, billingRows, mlpNoBilling, billingOnly, sale, cost, mlpCost, profit, caseInsurance, caseNhso, caseUnknown, billingInsurancePending, billingNhsoPending, billingReviewPending };
 }
 
@@ -1350,16 +1365,17 @@ function renderQuickDateFilters() {
 }
 
 function mergeAssistantData() {
-  const total = state.bills.length;
-  const clickOrders = new Set([...state.clicknicRows, ...state.manualClicknicRows].map((row) => row.orderId).filter(Boolean)).size || state.bills.filter((bill) => bill.orderId).length;
-  const withMlp = state.bills.filter((bill) => bill.status !== "clicknic-only" && bill.status !== "billing-only").length;
-  const withBilling = state.bills.filter((bill) => clean(bill.billingNo) || toNumeric(bill.billedAmount) > 0).length;
-  const exactOrderMatch = state.bills.filter((bill) => bill.orderId && bill.status !== "clicknic-only" && bill.status !== "billing-only").length;
-  const refMatch = state.bills.filter((bill) => clean(bill.billingRefs)).length;
-  const needsMlp = state.bills.filter((bill) => bill.status === "clicknic-only").length;
-  const needsBilling = state.bills.filter((bill) => bill.status === "pending-billing").length;
-  const billingOnly = state.bills.filter((bill) => bill.status === "billing-only").length;
-  const confident = state.bills.filter((bill) => bill.orderId && bill.orw && (bill.billingNo || bill.status === "pending-billing")).length;
+  const bills = activeBills();
+  const total = bills.length;
+  const clickOrders = new Set([...state.clicknicRows, ...state.manualClicknicRows].map((row) => row.orderId).filter(Boolean)).size || bills.filter((bill) => bill.orderId).length;
+  const withMlp = bills.filter((bill) => bill.status !== "clicknic-only" && bill.status !== "billing-only").length;
+  const withBilling = bills.filter((bill) => clean(bill.billingNo) || toNumeric(bill.billedAmount) > 0).length;
+  const exactOrderMatch = bills.filter((bill) => bill.orderId && bill.status !== "clicknic-only" && bill.status !== "billing-only").length;
+  const refMatch = bills.filter((bill) => clean(bill.billingRefs)).length;
+  const needsMlp = bills.filter((bill) => bill.status === "clicknic-only").length;
+  const needsBilling = bills.filter((bill) => bill.status === "pending-billing").length;
+  const billingOnly = bills.filter((bill) => bill.status === "billing-only").length;
+  const confident = bills.filter((bill) => bill.orderId && bill.orw && (bill.billingNo || bill.status === "pending-billing")).length;
   return { total, clickOrders, withMlp, withBilling, exactOrderMatch, refMatch, needsMlp, needsBilling, billingOnly, confident };
 }
 
@@ -1386,109 +1402,109 @@ function renderMergeAssistant() {
 const cardDetailConfigs = {
   clickOrders: {
     title: "บิล CLICKNIC",
-    rows: () => state.bills.filter((bill) => bill.orderId && bill.status !== "billing-only"),
+    rows: () => activeBills().filter((bill) => bill.orderId && bill.status !== "billing-only"),
     apply: () => ({ status: "all" }),
   },
   matched: {
     title: "ครบ 3 ฝั่ง",
-    rows: () => state.bills.filter((bill) => bill.status === "matched"),
+    rows: () => activeBills().filter((bill) => bill.status === "matched"),
     apply: () => ({ status: "matched" }),
   },
   mlpOnly: {
     title: "MLP ไม่มีรายการยา",
-    rows: () => state.bills.filter((bill) => bill.status === "mlp-only"),
+    rows: () => activeBills().filter((bill) => bill.status === "mlp-only"),
     apply: () => ({ status: "mlp-only" }),
   },
   mlpNoBilling: {
     title: "MLP รอใบวางบิล",
-    rows: () => state.bills.filter((bill) => bill.status === "pending-billing"),
+    rows: () => activeBills().filter((bill) => bill.status === "pending-billing"),
     apply: () => ({ status: "pending-billing" }),
   },
   clickOnly: {
     title: "รายการยาไม่มี MLP",
-    rows: () => state.bills.filter((bill) => bill.status === "clicknic-only"),
+    rows: () => activeBills().filter((bill) => bill.status === "clicknic-only"),
     apply: () => ({ status: "clicknic-only" }),
   },
   billingRows: {
     title: "มีข้อมูลใบวางบิล",
-    rows: () => state.bills.filter((bill) => bill.billingNo || toNumeric(bill.billedAmount) > 0),
+    rows: () => activeBills().filter((bill) => bill.billingNo || toNumeric(bill.billedAmount) > 0),
   },
   billingOnly: {
     title: "ใบวางบิลไม่เจอ MLP",
-    rows: () => state.bills.filter((bill) => bill.status === "billing-only"),
+    rows: () => activeBills().filter((bill) => bill.status === "billing-only"),
     apply: () => ({ status: "billing-only" }),
   },
   caseInsurance: {
     title: "เคสประกัน",
-    rows: () => state.bills.filter((bill) => bill.caseType === "insurance"),
+    rows: () => activeBills().filter((bill) => bill.caseType === "insurance"),
     apply: () => ({ caseType: "insurance" }),
   },
   caseNhso: {
     title: "เคส สปสช",
-    rows: () => state.bills.filter((bill) => bill.caseType === "nhso"),
+    rows: () => activeBills().filter((bill) => bill.caseType === "nhso"),
     apply: () => ({ caseType: "nhso" }),
   },
   caseUnknown: {
     title: "ยังไม่ทราบประเภท",
-    rows: () => state.bills.filter((bill) => !bill.caseType || bill.caseType === "unknown"),
+    rows: () => activeBills().filter((bill) => !bill.caseType || bill.caseType === "unknown"),
     apply: () => ({ caseType: "unknown" }),
   },
   billingInsurancePending: {
     title: "ประกันรอเอกสาร",
-    rows: () => state.bills.filter((bill) => bill.billingStage === "insurance-review"),
+    rows: () => activeBills().filter((bill) => bill.billingStage === "insurance-review"),
     apply: () => ({ billingStage: "insurance-review" }),
   },
   billingNhsoPending: {
     title: "สปสชรอวางบิล",
-    rows: () => state.bills.filter((bill) => bill.billingStage === "nhso-pending"),
+    rows: () => activeBills().filter((bill) => bill.billingStage === "nhso-pending"),
     apply: () => ({ billingStage: "nhso-pending" }),
   },
   billingReviewPending: {
     title: "รอตรวจสอบวางบิล",
-    rows: () => state.bills.filter((bill) => bill.billingStage === "pending-review"),
+    rows: () => activeBills().filter((bill) => bill.billingStage === "pending-review"),
     apply: () => ({ billingStage: "pending-review" }),
   },
   sale: {
     title: "ยอดขายยา",
-    rows: () => state.bills.filter((bill) => toNumeric(bill.sale) > 0).sort((a, b) => b.sale - a.sale),
+    rows: () => activeBills().filter((bill) => toNumeric(bill.sale) > 0).sort((a, b) => b.sale - a.sale),
   },
   cost: {
     title: "ต้นทุนยา",
-    rows: () => state.bills.filter((bill) => toNumeric(bill.cost) > 0).sort((a, b) => b.cost - a.cost),
+    rows: () => activeBills().filter((bill) => toNumeric(bill.cost) > 0).sort((a, b) => b.cost - a.cost),
   },
   mlpCost: {
     title: "ค่าใช้จ่าย MLP",
-    rows: () => state.bills.filter((bill) => toNumeric(bill.mlpCost) > 0).sort((a, b) => b.mlpCost - a.mlpCost),
+    rows: () => activeBills().filter((bill) => toNumeric(bill.mlpCost) > 0).sort((a, b) => b.mlpCost - a.mlpCost),
   },
   profit: {
     title: "กำไร matched หลัง MLP",
-    rows: () => state.bills.filter((bill) => bill.status === "matched" || bill.status === "pending-billing").sort((a, b) => a.profit - b.profit),
+    rows: () => activeBills().filter((bill) => bill.status === "matched" || bill.status === "pending-billing").sort((a, b) => a.profit - b.profit),
   },
   mergeClicknicBase: {
     title: "Merge: CLICKNIC base",
-    rows: () => state.bills.filter((bill) => bill.orderId && bill.status !== "billing-only"),
+    rows: () => activeBills().filter((bill) => bill.orderId && bill.status !== "billing-only"),
   },
   mergeMlpMemo: {
     title: "Merge: MLP by memo",
-    rows: () => state.bills.filter((bill) => bill.orderId && bill.status !== "clicknic-only" && bill.status !== "billing-only"),
+    rows: () => activeBills().filter((bill) => bill.orderId && bill.status !== "clicknic-only" && bill.status !== "billing-only"),
   },
   mergeBillingRef: {
     title: "Merge: Billing by ORW/INV/AR",
-    rows: () => state.bills.filter((bill) => clean(bill.billingRefs)),
+    rows: () => activeBills().filter((bill) => clean(bill.billingRefs)),
   },
   mergeNeedsMlp: {
     title: "Merge: ยังไม่มี MLP",
-    rows: () => state.bills.filter((bill) => bill.status === "clicknic-only"),
+    rows: () => activeBills().filter((bill) => bill.status === "clicknic-only"),
     apply: () => ({ status: "clicknic-only" }),
   },
   mergeNeedsBilling: {
     title: "Merge: รอวางบิล",
-    rows: () => state.bills.filter((bill) => bill.status === "pending-billing"),
+    rows: () => activeBills().filter((bill) => bill.status === "pending-billing"),
     apply: () => ({ status: "pending-billing" }),
   },
   mergeBillingOnly: {
     title: "Merge: Billing ไม่เจอ MLP",
-    rows: () => state.bills.filter((bill) => bill.status === "billing-only"),
+    rows: () => activeBills().filter((bill) => bill.status === "billing-only"),
     apply: () => ({ status: "billing-only" }),
   },
 };
@@ -1562,6 +1578,7 @@ function statusCounts() {
   return state.bills.reduce((counts, bill) => {
     counts.all += 1;
     counts[bill.status] = (counts[bill.status] || 0) + 1;
+    if (bill.excluded) counts.excluded += 1;
     return counts;
   }, {
     all: 0,
@@ -1570,6 +1587,7 @@ function statusCounts() {
     "pending-billing": 0,
     "clicknic-only": 0,
     "billing-only": 0,
+    excluded: 0,
   });
 }
 
@@ -1675,7 +1693,7 @@ function filteredBills() {
   const sortBy = elements.sortBy.value;
 
   const filtered = state.bills.filter((bill) => {
-    const matchesStatus = status === "all" || bill.status === status;
+    const matchesStatus = status === "all" || (status === "excluded" ? bill.excluded : bill.status === status);
     const matchesCaseType = caseType === "all" || (bill.caseType || "unknown") === caseType;
     const matchesBillingStage = billingStage === "all" || (bill.billingStage || "pending-review") === billingStage;
     const haystack = [
@@ -1731,10 +1749,11 @@ function renderTable() {
   }
 
   elements.billTableBody.innerHTML = rows.map((bill) => `
-    <tr>
+    <tr class="${bill.excluded ? "row-excluded" : ""}">
       <td class="action-cell">
         <button class="row-action" type="button" data-detail-key="${bill.billKey}">รายละเอียด</button>
         ${bill.status === "mlp-only" || bill.hasManualMedicines ? `<button class="row-action" type="button" data-manual-entry="${bill.orderId}">${bill.hasManualMedicines ? "แก้ยา" : "เพิ่มยา"}</button>` : ""}
+        <button class="row-action ${bill.excluded ? "exclude-active" : ""}" type="button" data-toggle-exclude="${htmlEscape(bill.billKey)}">${bill.excluded ? "ยกเลิกไม่นับ" : "ไม่นับคำนวณ"}</button>
       </td>
       <td>${renderStatusSelect(bill)}</td>
       <td>${bill.orderId || "-"}</td>
@@ -1833,6 +1852,7 @@ function auditActionLabel(action) {
   if (action === "reset_bill_override") return "ล้างค่าที่แก้";
   if (action === "case_type_update") return "แก้ประเภทเคส";
   if (action === "billing_stage_update") return "แก้สถานะงานวางบิล";
+  if (action === "toggle_excluded") return "แก้ไขไม่นับคำนวณ";
   return action;
 }
 
@@ -2399,7 +2419,7 @@ async function loadSampleFiles() {
 }
 
 function exportCsv() {
-  const rows = filteredBills();
+  const rows = filteredBills().filter((bill) => state.activeStatus === "excluded" || !bill.excluded);
   const headers = [
     "status",
     "order_id",
@@ -2424,6 +2444,8 @@ function exportCsv() {
     "audit_ids",
     "has_override",
     "override_note",
+    "excluded",
+    "exclude_reason",
     "validation_issues",
     "drug_sale",
     "drug_cost",
@@ -2455,6 +2477,8 @@ function exportCsv() {
     bill.auditIds || "",
     bill.hasOverride ? "yes" : "",
     bill.overrideNote || "",
+    bill.excluded ? "yes" : "",
+    bill.excludeReason || "",
     (bill.validationIssues || []).map((issue) => issue.text).join("; "),
     bill.sale,
     bill.cost,
@@ -2497,6 +2521,8 @@ function billReportRow(bill) {
     audit_ids: bill.auditIds || "",
     has_override: bill.hasOverride ? "yes" : "",
     override_note: bill.overrideNote || "",
+    excluded: bill.excluded ? "yes" : "",
+    exclude_reason: bill.excludeReason || "",
     validation_issues: (bill.validationIssues || []).map((issue) => issue.text).join("; "),
     drug_sale: bill.sale,
     drug_cost: bill.cost,
@@ -2538,7 +2564,7 @@ function reportScopeLabel() {
     billingDueDate: "ครบกำหนดใบวางบิล",
   }[elements.dateField.value] || "ทุกชนิดวันที่";
   const parts = [
-    `สถานะ: ${state.activeStatus === "all" ? "ทั้งหมด" : statusLabel(state.activeStatus)}`,
+    `สถานะ: ${state.activeStatus === "all" ? "ทั้งหมด" : state.activeStatus === "excluded" ? "ไม่นับคำนวณ" : statusLabel(state.activeStatus)}`,
     `วันที่: ${dateFieldLabel}`,
   ];
   if (elements.dateFrom.value || elements.dateTo.value) {
@@ -2553,7 +2579,7 @@ function issueText(bill) {
 }
 
 function validationReportRows() {
-  return state.bills.flatMap((bill) => {
+  return activeBills().flatMap((bill) => {
     if (!(bill.validationIssues || []).length) return [];
     return bill.validationIssues.map((issue) => ({
       severity: issue.level || "info",
@@ -2608,7 +2634,7 @@ function agingBucket(days) {
 }
 
 function managementBaseRows() {
-  return state.bills.filter((bill) => bill.status !== "billing-only");
+  return activeBills().filter((bill) => bill.status !== "billing-only");
 }
 
 function managementActionPriority(bill) {
@@ -2698,7 +2724,7 @@ function managementDailyRows() {
 }
 
 function managementActionRows() {
-  return state.bills
+  return activeBills()
     .filter((bill) => bill.status !== "matched" || bill.billingStage !== "billed" || (bill.validationIssues || []).length)
     .map((bill) => ({
       priority: managementActionPriority(bill),
@@ -2786,7 +2812,8 @@ function exportXlsxReport() {
     ["CLICKNIC Raw Rows", state.clicknicImportSummary.rawRows],
     ["CLICKNIC Unique Rows", state.clicknicImportSummary.uniqueRows],
     ["CLICKNIC Duplicate Rows Removed", state.clicknicImportSummary.duplicateRows],
-    ["Bills", state.bills.length],
+    ["Bills", activeBills().length],
+    ["Excluded Bills", state.bills.length - activeBills().length],
     ["CLICKNIC Orders", metrics.clickOrders],
     ["Matched", metrics.matched],
     ["MLP No Medicine", metrics.mlpOnly],
@@ -2815,17 +2842,18 @@ function exportXlsxReport() {
   appendJsonSheet(workbook, "Mgmt Action List", managementActionRows(), [10, 34, 20, 16, 24, 12, 20, 20, 20, 18, 18, 18, 24, 16, 14, 14, 14, 46, 48]);
   appendAoaSheet(workbook, "Rule Config", ruleConfigReportRows(), [34, 80]);
 
-  const reportRows = state.bills.map(billReportRow);
+  const reportRows = activeBills().map(billReportRow);
   appendJsonSheet(workbook, "All Bills", reportRows, [18, 20, 20, 20, 18, 24, 18, 16, 16, 44, 14, 16, 18, 14, 18, 36, 12, 12, 12, 12, 12]);
-  appendJsonSheet(workbook, "Need Review", state.bills.filter((bill) => bill.status !== "matched" || (bill.validationIssues || []).length).map(billReportRow), [18, 20, 20, 20, 18, 24, 18, 16, 16, 44, 14, 16, 18, 14, 18, 36, 12, 12, 12, 12, 12]);
+  appendJsonSheet(workbook, "Need Review", activeBills().filter((bill) => bill.status !== "matched" || (bill.validationIssues || []).length).map(billReportRow), [18, 20, 20, 20, 18, 24, 18, 16, 16, 44, 14, 16, 18, 14, 18, 36, 12, 12, 12, 12, 12]);
   ["matched", "mlp-only", "pending-billing", "clicknic-only", "billing-only"].forEach((status) => {
     appendJsonSheet(
       workbook,
       statusSheetName(status),
-      state.bills.filter((bill) => bill.status === status).map(billReportRow),
+      activeBills().filter((bill) => bill.status === status).map(billReportRow),
       [18, 20, 20, 20, 18, 24, 18, 16, 16, 44, 14, 16, 18, 14, 18, 36, 12, 12, 12, 12, 12],
     );
   });
+  appendJsonSheet(workbook, "Excluded", state.bills.filter((bill) => bill.excluded).map(billReportRow), [18, 20, 20, 20, 18, 24, 18, 16, 16, 44, 14, 16, 18, 14, 18, 36, 12, 12, 12, 12, 12]);
   appendJsonSheet(workbook, "Validation", validationReportRows(), [12, 34, 38, 18, 20, 20, 20, 18, 16, 16, 18, 12, 12, 12, 12, 12, 44, 32]);
   appendJsonSheet(workbook, "Audit Trail", auditReportRows(), [20, 22, 20, 20, 20, 20, 14, 12, 12, 12, 22, 14, 46, 40]);
   appendJsonSheet(workbook, "Top Medicines", state.topMeds.map((item, index) => ({
@@ -2860,10 +2888,10 @@ function htmlEscape(value) {
 
 function exportPdfReport() {
   const metrics = calculateMetrics();
-  const issueRows = state.bills
+  const issueRows = activeBills()
     .filter((bill) => bill.status !== "matched")
     .slice(0, 80);
-  const matchedRows = state.bills
+  const matchedRows = activeBills()
     .filter((bill) => bill.status === "matched")
     .slice(0, 40);
   const style = `
@@ -2944,10 +2972,10 @@ function exportPdfReport() {
 
 function exportPdfReportV2() {
   const metrics = calculateMetrics();
-  const reviewRows = state.bills
+  const reviewRows = activeBills()
     .filter((bill) => bill.status !== "matched" || (bill.validationIssues || []).length)
     .slice(0, 120);
-  const matchedRows = state.bills.filter((bill) => bill.status === "matched").slice(0, 60);
+  const matchedRows = activeBills().filter((bill) => bill.status === "matched").slice(0, 60);
   const allValidationRows = validationReportRows();
   const validationRows = allValidationRows.slice(0, 120);
   const severityCounts = allValidationRows.reduce((counts, row) => {
@@ -3534,6 +3562,8 @@ function openDetailDrawer(billKey) {
   elements.editBillingDueDate.value = formatDisplayDate(bill.billingDueDate);
   elements.editMlpCost.value = bill.mlpCost || 0;
   elements.editBilledAmount.value = bill.billedAmount || 0;
+  elements.editExcluded.checked = Boolean(bill.excluded);
+  elements.editExcludeReason.value = bill.excludeReason || "";
   elements.editOverrideNote.value = bill.overrideNote || "";
 
   const medicines = bill.medicinesText
@@ -3588,6 +3618,44 @@ function quickUpdateStatus(billKey, status) {
   renderTable();
   renderAuditTrail();
   scheduleAutosave("status-update");
+}
+
+function quickToggleExcluded(billKey) {
+  const bill = state.bills.find((item) => item.billKey === billKey);
+  if (!bill) return;
+  const existing = state.billOverrides[bill.billKey] || {};
+  const nextExcluded = !bill.excluded;
+  state.billOverrides[bill.billKey] = {
+    ...existing,
+    values: {
+      ...(existing.values || {}),
+      excluded: nextExcluded,
+    },
+    note: existing.note || "แก้ไขจากตาราง",
+    updatedAt: new Date().toISOString(),
+  };
+  state.auditTrail.unshift({
+    id: makeAuditId(),
+    action: "toggle_excluded",
+    createdAt: new Date().toISOString(),
+    orderId: bill.orderId,
+    orw: bill.orw,
+    invoice: bill.invoice,
+    date: bill.clicknicDate || bill.mlpDate,
+    lineCount: 0,
+    totalSale: bill.sale,
+    totalCost: bill.cost,
+    screenshotName: "summary-table",
+    replacedLineCount: 0,
+    note: nextExcluded ? "ตั้งเป็นไม่นับคำนวณ" : "ยกเลิกไม่นับคำนวณ",
+    medicines: [],
+  });
+  rebuildBillsForCurrentMode();
+  renderMetrics();
+  renderTabs();
+  renderTable();
+  renderAuditTrail();
+  scheduleAutosave("toggle-excluded");
 }
 
 function quickUpdateCaseType(billKey, caseType) {
@@ -3766,6 +3834,8 @@ function saveBillOverride() {
     billingDueDate: dateKey(elements.editBillingDueDate.value),
     mlpCost: toNumeric(elements.editMlpCost.value),
     billedAmount: toNumeric(elements.editBilledAmount.value),
+    excluded: Boolean(elements.editExcluded.checked),
+    excludeReason: clean(elements.editExcludeReason.value),
   };
   if (values.billingStageSource !== "manual") {
     const stageDetection = deriveBillingStage(values.status, values.caseType, values.billedAmount, bill.billingNo);
@@ -3987,6 +4057,11 @@ elements.billTableBody.addEventListener("click", (event) => {
   const detailButton = event.target.closest("[data-detail-key]");
   if (detailButton) {
     openDetailDrawer(detailButton.dataset.detailKey);
+    return;
+  }
+  const excludeButton = event.target.closest("[data-toggle-exclude]");
+  if (excludeButton) {
+    quickToggleExcluded(excludeButton.dataset.toggleExclude);
     return;
   }
   const button = event.target.closest("[data-manual-entry]");

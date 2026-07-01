@@ -269,6 +269,7 @@
           <button class="tab-button" type="button" data-status-tab="pending-billing">รอใบวางบิล <span id="tabCountPendingBilling">0</span></button>
           <button class="tab-button" type="button" data-status-tab="clicknic-only">รายการยาไม่มี MLP <span id="tabCountClickOnly">0</span></button>
           <button class="tab-button" type="button" data-status-tab="billing-only">ใบวางบิลไม่เจอ MLP <span id="tabCountBillingOnly">0</span></button>
+          <button class="tab-button" type="button" data-status-tab="excluded">ไม่นับคำนวณ <span id="tabCountExcluded">0</span></button>
         </div>
 
         <div class="toolbar" aria-label="Filters">
@@ -642,6 +643,14 @@
                 <input id="editBilledAmount" type="number" step="0.01" min="0" />
               </label>
             </div>
+            <label class="drawer-checkbox">
+              <input id="editExcluded" type="checkbox" />
+              ไม่นับบิลนี้ในการคำนวณ (ตัดออกจากสรุปยอด/รายงาน export)
+            </label>
+            <label class="drawer-note">
+              เหตุผลที่ไม่นับคำนวณ
+              <textarea id="editExcludeReason" rows="2" placeholder="ระบุเหตุผล เช่น บิลซ้ำ, ยกเลิกออเดอร์"></textarea>
+            </label>
             <label class="drawer-note">
               หมายเหตุการแก้ไข
               <textarea id="editOverrideNote" rows="3" placeholder="ระบุเหตุผลหรือแหล่งอ้างอิง"></textarea>
