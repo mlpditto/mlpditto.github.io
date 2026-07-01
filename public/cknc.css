@@ -1510,9 +1510,12 @@ td {
   padding: 0;
   border: 0;
   z-index: 20;
-  display: flex;
   justify-content: flex-end;
   background: rgba(21, 34, 43, 0.34);
+}
+
+.detail-drawer[open] {
+  display: flex;
 }
 
 .detail-drawer::backdrop {
