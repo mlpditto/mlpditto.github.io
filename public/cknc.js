@@ -1268,6 +1268,28 @@ function renderStepStatuses() {
   setStepStatus(elements.billingStatus, state.billingRows.length);
 }
 
+function allStepsLoaded() {
+  return (state.clicknicRows.length + state.manualClicknicRows.length) > 0 && state.mlpRows.length > 0 && state.billingRows.length > 0;
+}
+
+// เมื่อข้อมูลครบทั้ง 3 step ครั้งแรก → บันทึกขึ้น cloud ทันที (ไม่รอ debounce)
+function maybeAutosaveOnComplete() {
+  if (state.snapshotMode) return;
+  if (!allStepsLoaded()) {
+    state.allStepsComplete = false;
+    return;
+  }
+  if (state.allStepsComplete) return;
+  state.allStepsComplete = true;
+  if (!canPersistSessions()) {
+    autosaveStatusText("Autosave: ครบ 3 ฝั่งแล้ว — รอ login เพื่อบันทึกขึ้น cloud");
+    return;
+  }
+  clearTimeout(state.autosaveTimer);
+  autosaveStatusText("Autosave: ครบ 3 ฝั่ง กำลังบันทึกขึ้น cloud...");
+  autosaveMonthlySession("all-steps-complete");
+}
+
 function renderMetrics() {
   updateEmptyState();
   const metrics = calculateMetrics();
@@ -2173,6 +2195,7 @@ function renderAll() {
   elements.statusText.textContent = state.bills.length
     ? `พร้อมวิเคราะห์: ครบ 3 ฝั่ง ${number(metrics.matched)} บิล, ต้องตรวจสอบ ${number(issueCount)} บิล${duplicateNote}`
     : "รออัปโหลดไฟล์";
+  maybeAutosaveOnComplete();
 }
 
 function renderSnapshot() {
@@ -2317,6 +2340,7 @@ async function handleFiles() {
     state.billingRows = [];
     state.activeSessionId = "";
     state.snapshotMode = false;
+    state.allStepsComplete = false;
 
     const clicknicImportedRows = [];
     for (const file of clickFiles) {
@@ -2353,6 +2377,7 @@ async function loadSampleFiles() {
     state.billingRows = [];
     state.activeSessionId = "";
     state.snapshotMode = false;
+    state.allStepsComplete = false;
     const clicknicImportedRows = [];
     for (const path of SAMPLE_FILES.clicknic) {
       const workbook = await readWorkbookFromPath(path);
