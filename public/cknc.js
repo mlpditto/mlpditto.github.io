@@ -899,11 +899,17 @@ function billingAmountFromCells(cells) {
   return fallbackCandidates.length ? fallbackCandidates[fallbackCandidates.length - 1] : 0;
 }
 
+function extractBarNo(value) {
+  const match = clean(value).toUpperCase().match(/BAR-\d{5}-\d{2}-\d+/);
+  return match ? match[0] : "";
+}
+
 function parseBillingRecord(cells, sourceName, sheetName, rowNumber) {
   const text = cells.map(clean).filter(Boolean).join(" ");
   const refs = extractRefs(text);
   if (!refs.orw.length && !refs.inv.length && !refs.ar.length) return null;
   return {
+    bar: extractBarNo(sourceName) || extractBarNo(text),
     ar: refs.ar[0] || "",
     orw: refs.orw[0] || "",
     inv: refs.inv[0] || "",
@@ -1148,7 +1154,9 @@ function buildBills() {
     const cost = click?.cost || 0;
     const mlpCost = mlp?.mlpCost || 0;
     const billedAmount = uniqueBilling.reduce((sum, row) => sum + row.amount, 0);
-    const billingNo = uniqueBilling.map((row) => row.ar).filter(Boolean).join(", ");
+    const barNos = [...new Set(uniqueBilling.map((row) => row.bar).filter(Boolean))];
+    const arNos = [...new Set(uniqueBilling.map((row) => row.ar).filter(Boolean))];
+    const billingNo = (barNos.length ? barNos : arNos).join(", ");
     let status = "matched";
     if (!click) status = "mlp-only";
     if (!mlp) status = "clicknic-only";
@@ -1192,7 +1200,7 @@ function buildBills() {
       orw: mlp?.orwList.filter(Boolean).join(", ") || "",
       invoice: mlp?.invoiceList.join(", ") || "",
       billingNo,
-      billingRefs: uniqueBilling.map((row) => [row.orw, row.inv].filter(Boolean).join(" / ")).join(", "),
+      billingRefs: uniqueBilling.map((row) => [row.ar, row.orw, row.inv].filter(Boolean).join(" / ")).join(", "),
       mlpReferenceNos: [...new Set(mlp?.referenceList || [])].filter(Boolean).join(", "),
       mlpMemoOrderIds: [...new Set(mlp?.memoOrderIds || [])].filter(Boolean).join(", "),
       clicknicDate: click?.clicknicDate || "",
@@ -1232,8 +1240,8 @@ function buildBills() {
       orderId: "",
       orw: row.orw,
       invoice: row.inv,
-      billingNo: row.ar,
-      billingRefs: [row.orw, row.inv].filter(Boolean).join(" / "),
+      billingNo: row.bar || row.ar,
+      billingRefs: [row.ar, row.orw, row.inv].filter(Boolean).join(" / "),
       mlpReferenceNos: "",
       mlpMemoOrderIds: "",
       clicknicDate: "",
@@ -1580,7 +1588,7 @@ const cardDetailColumns = [
     chipClass: (bill) => `case-${bill.caseType || "unknown"}`,
   },
   { label: "งานวางบิล", col: "col-stage", hideable: true, text: (bill) => billingStageLabel(bill.billingStage) },
-  { label: "วางบิล", col: "col-num", num: true, hideable: true, text: (bill) => money(bill.billedAmount) },
+  { label: "วางบิล", col: "col-num", num: true, text: (bill) => money(bill.billedAmount) },
   {
     label: "วันที่",
     col: "col-dates",
@@ -1600,8 +1608,20 @@ const cardDetailColumns = [
       return lines.join("") || "-";
     },
   },
-  { label: "ยอดขาย", col: "col-num", num: true, hideable: true, text: (bill) => money(bill.sale) },
-  { label: "MLP", col: "col-num", num: true, hideable: true, text: (bill) => money(bill.mlpCost) },
+  { label: "ยอดขาย", col: "col-num", num: true, text: (bill) => money(bill.sale) },
+  { label: "MLP", col: "col-num", num: true, text: (bill) => money(bill.mlpCost) },
+  {
+    label: "รายการยา",
+    col: "col-meds",
+    cellClass: "card-issue-cell",
+    hideable: true,
+    hideChipIfEmpty: true,
+    text: (bill) => clean(bill.medicinesText) || "-",
+    html: (bill) => {
+      const text = clean(bill.medicinesText) || "-";
+      return `<div class="card-issue-clamp" title="${htmlEscape(text)}">${htmlEscape(text)}</div>`;
+    },
+  },
   {
     label: "ตรวจสอบ",
     col: "col-issue",
@@ -1629,7 +1649,9 @@ function visibleCardColumns(rows) {
     if (!column.hideable || !column.text) return true;
     const first = column.text(rows[0]);
     if (rows.some((bill) => column.text(bill) !== first)) return true;
-    chips.push({ text: `${column.label}: ${first}`, className: column.chipClass ? column.chipClass(rows[0]) : "" });
+    if (!(column.hideChipIfEmpty && (!first || first === "-"))) {
+      chips.push({ text: `${column.label}: ${first}`, className: column.chipClass ? column.chipClass(rows[0]) : "" });
+    }
     return false;
   });
   return { columns, chips };
