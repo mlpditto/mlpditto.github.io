@@ -1563,7 +1563,13 @@ const cardDetailColumns = [
     },
   },
   { label: "ผู้รับบริการ", col: "col-patient", hideable: true, text: (bill) => bill.patient || "-" },
-  { label: "ประเภทเคส", col: "col-case", hideable: true, text: (bill) => caseTypeLabel(bill.caseType) },
+  {
+    label: "ประเภทเคส",
+    col: "col-case",
+    hideable: true,
+    text: (bill) => caseTypeLabel(bill.caseType),
+    html: (bill) => `<span class="badge case-${htmlEscape(bill.caseType || "unknown")}">${htmlEscape(caseTypeLabel(bill.caseType))}</span>`,
+  },
   { label: "งานวางบิล", col: "col-stage", hideable: true, text: (bill) => billingStageLabel(bill.billingStage) },
   { label: "วางบิล", col: "col-num", num: true, hideable: true, text: (bill) => money(bill.billedAmount) },
   {

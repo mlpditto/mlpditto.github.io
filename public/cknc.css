@@ -1006,6 +1006,26 @@ td {
   color: #334155;
 }
 
+.badge.case-insurance {
+  background: #eef3ff;
+  color: #264b93;
+}
+
+.badge.case-nhso {
+  background: var(--mint);
+  color: var(--green-dark);
+}
+
+.badge.case-general {
+  background: #f6f8fa;
+  color: #3b4854;
+}
+
+.badge.case-unknown {
+  background: var(--amber-soft);
+  color: #744508;
+}
+
 #editProfit[readonly] {
   background: #f1f5f9;
   border-style: dashed;
