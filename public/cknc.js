@@ -159,6 +159,8 @@ const tabCountIds = {
   all: "tabCountAll",
   matched: "tabCountMatched",
   paid: "tabCountPaid",
+  "case-insurance": "tabCountCaseInsurance",
+  "case-nhso": "tabCountCaseNhso",
   "mlp-only": "tabCountMlpOnly",
   "pending-billing": "tabCountPendingBilling",
   "clicknic-only": "tabCountClickOnly",
@@ -1696,12 +1698,16 @@ function statusCounts() {
     counts.all += 1;
     counts[bill.status] = (counts[bill.status] || 0) + 1;
     if ((bill.billingStage || "") === "paid") counts.paid += 1;
+    if ((bill.caseType || "unknown") === "insurance") counts["case-insurance"] += 1;
+    if ((bill.caseType || "unknown") === "nhso") counts["case-nhso"] += 1;
     if (bill.excluded) counts.excluded += 1;
     return counts;
   }, {
     all: 0,
     matched: 0,
     paid: 0,
+    "case-insurance": 0,
+    "case-nhso": 0,
     "mlp-only": 0,
     "pending-billing": 0,
     "clicknic-only": 0,
@@ -1819,7 +1825,9 @@ function filteredBills() {
     const matchesStatus = status === "all"
       || (status === "excluded" ? bill.excluded
         : status === "paid" ? (bill.billingStage || "") === "paid"
-          : bill.status === status);
+          : status === "case-insurance" ? (bill.caseType || "unknown") === "insurance"
+            : status === "case-nhso" ? (bill.caseType || "unknown") === "nhso"
+              : bill.status === status);
     const matchesCaseType = caseType === "all" || (bill.caseType || "unknown") === caseType;
     const matchesBillingStage = billingStage === "all" || (bill.billingStage || "pending-review") === billingStage;
     const haystack = [
@@ -2690,7 +2698,7 @@ function reportScopeLabel() {
     billingDueDate: "ครบกำหนดใบวางบิล",
   }[elements.dateField.value] || "ทุกชนิดวันที่";
   const parts = [
-    `สถานะ: ${state.activeStatus === "all" ? "ทั้งหมด" : state.activeStatus === "excluded" ? "Exclude" : state.activeStatus === "paid" ? "PAID" : statusLabel(state.activeStatus)}`,
+    `สถานะ: ${state.activeStatus === "all" ? "ทั้งหมด" : state.activeStatus === "excluded" ? "Exclude" : state.activeStatus === "paid" ? "PAID" : state.activeStatus === "case-insurance" ? "เคสประกัน" : state.activeStatus === "case-nhso" ? "เคส สปสช" : statusLabel(state.activeStatus)}`,
     `วันที่: ${dateFieldLabel}`,
   ];
   if (elements.dateFrom.value || elements.dateTo.value) {

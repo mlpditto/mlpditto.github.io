@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="./cknc.css?v=20260702220000" />
+    <link rel="stylesheet" href="./cknc.css?v=20260702233000" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -155,15 +155,15 @@
           <div class="metric-group">
             <h3><i class="fa-solid fa-link"></i> การจับคู่ 3 ฝั่ง</h3>
             <div class="metric-group-grid">
-              <article class="metric mini">
+              <article class="metric mini" title="บิลที่มีเลขที่รายการยาจาก CLICKNIC (STEP 1)">
                 <span>บิล CLICKNIC</span>
                 <strong id="metricClickOrders">0</strong>
               </article>
-              <article class="metric mini warning">
+              <article class="metric mini warning" title="รายการ MLP (STEP 2) ที่หาเลขรายการยาจาก CLICKNIC (STEP 1) ไม่เจอ">
                 <span>MLP ไม่มีรายการยา</span>
                 <strong id="metricMlpOnly">0</strong>
               </article>
-              <article class="metric mini danger">
+              <article class="metric mini danger" title="บิล CLICKNIC (STEP 1) ที่ยังไม่มีรายการ MLP (STEP 2) มาจับคู่">
                 <span>รายการยาไม่มี MLP</span>
                 <strong id="metricClickOnly">0</strong>
               </article>
@@ -260,6 +260,8 @@
           <button class="tab-button active" type="button" data-status-tab="all">ทั้งหมด <span id="tabCountAll">0</span></button>
           <button class="tab-button" type="button" data-status-tab="matched">จับคู่แล้ว <span id="tabCountMatched">0</span></button>
           <button class="tab-button" type="button" data-status-tab="paid">PAID <span id="tabCountPaid">0</span></button>
+          <button class="tab-button" type="button" data-status-tab="case-insurance">ประกัน <span id="tabCountCaseInsurance">0</span></button>
+          <button class="tab-button" type="button" data-status-tab="case-nhso">สปสช <span id="tabCountCaseNhso">0</span></button>
           <button class="tab-button" type="button" data-status-tab="mlp-only">MLP ไม่มีรายการยา <span id="tabCountMlpOnly">0</span></button>
           <button class="tab-button" type="button" data-status-tab="pending-billing">รอใบวางบิล <span id="tabCountPendingBilling">0</span></button>
           <button class="tab-button" type="button" data-status-tab="clicknic-only">รายการยาไม่มี MLP <span id="tabCountClickOnly">0</span></button>
@@ -685,7 +687,7 @@
       </div>
     </dialog>
 
-    <script src="./cknc.js?v=20260702220000"></script>
+    <script src="./cknc.js?v=20260702233000"></script>
     <script>
       (function () {
         const btn = document.getElementById("themeToggleBtn");
