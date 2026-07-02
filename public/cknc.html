@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="./cknc.css?v=20260702050000" />
+    <link rel="stylesheet" href="./cknc.css?v=20260702120000" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -234,27 +234,26 @@
           <div class="card-detail-actions">
             <button id="cardDetailFilterBtn" class="primary small" type="button" hidden>กรองตารางตามนี้</button>
           </div>
+          <div id="cardDetailChips" class="card-detail-chips" hidden></div>
           <div class="card-detail-table">
             <table>
               <thead>
-                <tr>
-                  <th>สถานะ</th>
-                  <th>เลขบิล</th>
-                  <th>ผู้รับบริการ</th>
-                  <th>ORW</th>
-                  <th>ประเภทเคส</th>
-                  <th>งานวางบิล</th>
-                  <th>วันที่ CLICKNIC</th>
-                  <th>วันที่ MLP</th>
-                  <th class="num">ยอดขาย</th>
-                  <th class="num">MLP</th>
-                  <th class="num">วางบิล</th>
-                  <th>ตรวจสอบ</th>
-                  <th>จัดการ</th>
+                <tr id="cardDetailHeadRow">
+                  <th class="col-action">จัดการ</th>
+                  <th class="col-ref">บิล / ORW</th>
+                  <th class="col-patient">ผู้รับบริการ</th>
+                  <th class="col-case">ประเภทเคส</th>
+                  <th class="col-stage">งานวางบิล</th>
+                  <th class="col-dates">วันที่</th>
+                  <th class="num col-num">ยอดขาย</th>
+                  <th class="num col-num">MLP</th>
+                  <th class="num col-num">วางบิล</th>
+                  <th class="col-issue">ตรวจสอบ</th>
+                  <th class="col-status">สถานะ</th>
                 </tr>
               </thead>
               <tbody id="cardDetailBody">
-                <tr><td colspan="13" class="empty">ไม่มีข้อมูล</td></tr>
+                <tr><td colspan="11" class="empty">ไม่มีข้อมูล</td></tr>
               </tbody>
             </table>
           </div>
@@ -508,11 +507,11 @@
               <table class="manual-lines-table">
                 <thead>
                   <tr>
+                    <th class="col-line-action">จัดการ</th>
                     <th>ชื่อยา</th>
                     <th class="num">จำนวน</th>
                     <th class="num">ราคา</th>
                     <th class="num">ต้นทุน</th>
-                    <th></th>
                   </tr>
                 </thead>
                 <tbody id="manualMedicineRows"></tbody>
@@ -670,7 +669,7 @@
       </div>
     </dialog>
 
-    <script src="./cknc.js?v=20260702050000"></script>
+    <script src="./cknc.js?v=20260702120000"></script>
     <script>
       (function () {
         const btn = document.getElementById("themeToggleBtn");

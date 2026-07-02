@@ -92,6 +92,8 @@ const elements = {
   cardDetailTitle: $("cardDetailTitle"),
   cardDetailSummary: $("cardDetailSummary"),
   cardDetailBody: $("cardDetailBody"),
+  cardDetailHeadRow: $("cardDetailHeadRow"),
+  cardDetailChips: $("cardDetailChips"),
   cardDetailFilterBtn: $("cardDetailFilterBtn"),
   closeCardDetailModal: $("closeCardDetailModal"),
   billTableBody: $("billTableBody"),
@@ -1518,24 +1520,100 @@ function summarizeCardRows(rows) {
   ].join(" | ");
 }
 
-function cardDetailRowHtml(bill) {
-  return `
-    <tr>
-      <td>${htmlEscape(statusLabel(bill.status))}</td>
-      <td>${htmlEscape(bill.orderId || "-")}</td>
-      <td>${htmlEscape(bill.patient || "-")}</td>
-      <td>${htmlEscape(bill.orw || "-")}</td>
-      <td>${htmlEscape(caseTypeLabel(bill.caseType))}</td>
-      <td>${htmlEscape(billingStageLabel(bill.billingStage))}</td>
-      <td>${htmlEscape(formatDisplayDate(bill.clicknicDate) || "-")}</td>
-      <td>${htmlEscape(formatDisplayDate(bill.mlpDate) || "-")}</td>
-      <td class="num">${money(bill.sale)}</td>
-      <td class="num">${money(bill.mlpCost)}</td>
-      <td class="num">${money(bill.billedAmount)}</td>
-      <td class="card-issue-cell">${htmlEscape(issueText(bill) || "-")}</td>
-      <td class="card-action-cell"><button class="row-action" type="button" data-card-edit-key="${htmlEscape(bill.billKey)}">แก้ไข</button></td>
-    </tr>
-  `;
+function shortDisplayDate(value) {
+  const full = formatDisplayDate(value);
+  return full ? `${full.slice(0, 6)}${full.slice(8)}` : "";
+}
+
+const cardDetailColumns = [
+  {
+    label: "จัดการ",
+    col: "col-action",
+    cellClass: "card-action-cell",
+    html: (bill) => `<button class="row-action" type="button" data-card-edit-key="${htmlEscape(bill.billKey)}" title="แก้ไข" aria-label="แก้ไข">✎</button>`,
+  },
+  {
+    label: "บิล / ORW",
+    col: "col-ref",
+    html: (bill) => {
+      const orw = clean(bill.orw);
+      const order = clean(bill.orderId);
+      const main = orw || order || "-";
+      const sub = orw && order ? order : "";
+      return `<span class="ref-main">${htmlEscape(main)}</span>${sub ? `<span class="ref-sub">${htmlEscape(sub)}</span>` : ""}`;
+    },
+  },
+  { label: "ผู้รับบริการ", col: "col-patient", hideable: true, text: (bill) => bill.patient || "-" },
+  { label: "ประเภทเคส", col: "col-case", hideable: true, text: (bill) => caseTypeLabel(bill.caseType) },
+  { label: "งานวางบิล", col: "col-stage", hideable: true, text: (bill) => billingStageLabel(bill.billingStage) },
+  {
+    label: "วันที่",
+    col: "col-dates",
+    hideable: true,
+    text: (bill) => {
+      const ck = shortDisplayDate(bill.clicknicDate);
+      const mlp = shortDisplayDate(bill.mlpDate);
+      return [ck && `CK ${ck}`, mlp && `MLP ${mlp}`].filter(Boolean).join(" ") || "-";
+    },
+    html: (bill) => {
+      const ck = shortDisplayDate(bill.clicknicDate);
+      const mlp = shortDisplayDate(bill.mlpDate);
+      const lines = [
+        ck ? `<span class="date-line"><em>CK</em>${htmlEscape(ck)}</span>` : "",
+        mlp ? `<span class="date-line"><em>MLP</em>${htmlEscape(mlp)}</span>` : "",
+      ].filter(Boolean);
+      return lines.join("") || "-";
+    },
+  },
+  { label: "ยอดขาย", col: "col-num", num: true, hideable: true, text: (bill) => money(bill.sale) },
+  { label: "MLP", col: "col-num", num: true, hideable: true, text: (bill) => money(bill.mlpCost) },
+  { label: "วางบิล", col: "col-num", num: true, hideable: true, text: (bill) => money(bill.billedAmount) },
+  {
+    label: "ตรวจสอบ",
+    col: "col-issue",
+    cellClass: "card-issue-cell",
+    hideable: true,
+    text: (bill) => issueText(bill) || "-",
+    html: (bill) => {
+      const text = issueText(bill) || "-";
+      return `<div class="card-issue-clamp" title="${htmlEscape(text)}">${htmlEscape(text)}</div>`;
+    },
+  },
+  {
+    label: "สถานะ",
+    col: "col-status",
+    hideable: true,
+    text: (bill) => statusLabel(bill.status),
+    html: (bill) => `<span class="badge ${htmlEscape(bill.status || "")}">${htmlEscape(statusLabel(bill.status))}</span>`,
+  },
+];
+
+function visibleCardColumns(rows) {
+  if (rows.length < 2) return { columns: cardDetailColumns, chips: [] };
+  const chips = [];
+  const columns = cardDetailColumns.filter((column) => {
+    if (!column.hideable || !column.text) return true;
+    const first = column.text(rows[0]);
+    if (rows.some((bill) => column.text(bill) !== first)) return true;
+    chips.push(`${column.label}: ${first}`);
+    return false;
+  });
+  return { columns, chips };
+}
+
+function cardColumnClass(column, isCell) {
+  const classes = [column.col];
+  if (column.num) classes.push("num");
+  if (isCell && column.cellClass) classes.push(column.cellClass);
+  return classes.join(" ");
+}
+
+function cardDetailRowHtml(bill, columns) {
+  const cells = columns.map((column) => {
+    const content = column.html ? column.html(bill) : htmlEscape(column.text(bill));
+    return `<td class="${cardColumnClass(column, true)}">${content}</td>`;
+  });
+  return `<tr>${cells.join("")}</tr>`;
 }
 
 function applyCardFilter(config) {
@@ -1555,11 +1633,20 @@ function openCardDetail(cardKey) {
   if (!config || !elements.cardDetailModal) return;
   state.currentCardKey = cardKey;
   const rows = config.rows();
+  const shownRows = rows.slice(0, 80);
+  const { columns, chips } = visibleCardColumns(shownRows);
   elements.cardDetailTitle.textContent = config.title;
   elements.cardDetailSummary.textContent = `${summarizeCardRows(rows)}${rows.length > 80 ? ` | แสดง 80 แถวแรก` : ""}`;
-  elements.cardDetailBody.innerHTML = rows.length
-    ? rows.slice(0, 80).map(cardDetailRowHtml).join("")
-    : `<tr><td colspan="13" class="empty">ไม่มีข้อมูลในกลุ่มนี้</td></tr>`;
+  elements.cardDetailHeadRow.innerHTML = columns
+    .map((column) => `<th class="${cardColumnClass(column, false)}">${htmlEscape(column.label)}</th>`)
+    .join("");
+  elements.cardDetailChips.hidden = !chips.length;
+  elements.cardDetailChips.innerHTML = chips.length
+    ? `<span class="chip-note">ค่าเดียวกันทั้งการ์ด:</span>${chips.map((chip) => `<span class="chip">${htmlEscape(chip)}</span>`).join("")}`
+    : "";
+  elements.cardDetailBody.innerHTML = shownRows.length
+    ? shownRows.map((bill) => cardDetailRowHtml(bill, columns)).join("")
+    : `<tr><td colspan="${columns.length}" class="empty">ไม่มีข้อมูลในกลุ่มนี้</td></tr>`;
   elements.cardDetailFilterBtn.hidden = !config.apply;
   elements.cardDetailFilterBtn.onclick = () => applyCardFilter(config);
   if (!elements.cardDetailModal.open) elements.cardDetailModal.showModal();
@@ -1879,11 +1966,11 @@ function setScreenshotPreview(file) {
 function medicineLineTemplate(line = {}) {
   return `
     <tr>
+      <td class="col-line-action"><button class="line-remove" type="button" title="ลบแถวนี้" aria-label="ลบแถวนี้">ลบ</button></td>
       <td><input class="manual-med-name" type="text" value="${clean(line.medicine)}" placeholder="ชื่อยา" required /></td>
       <td><input class="manual-med-qty" type="number" min="0" step="0.01" value="${line.qty ?? 1}" /></td>
       <td><input class="manual-med-sale" type="number" min="0" step="0.01" value="${line.sale ?? ""}" placeholder="0.00" /></td>
       <td><input class="manual-med-cost" type="number" min="0" step="0.01" value="${line.cost ?? ""}" placeholder="0.00" /></td>
-      <td><button class="line-remove" type="button">ลบ</button></td>
     </tr>
   `;
 }
@@ -3542,7 +3629,8 @@ function openDetailDrawer(billKey) {
   state.currentDetailKey = billKey;
   elements.drawerTitle.textContent = bill.orderId || bill.orw || bill.billingNo || "รายละเอียดบิล";
   elements.drawerSummary.innerHTML = [
-    ["สถานะ", statusLabel(bill.status)],
+    ["ORW", htmlEscape(bill.orw || "-")],
+    ["INV", htmlEscape(bill.invoice || "-")],
     ["วันที่ CLICKNIC", formatDisplayDate(bill.clicknicDate) || "-"],
     ["วันที่ MLP", formatDisplayDate(bill.mlpDate) || "-"],
     ["ยอดขายยา", money(bill.sale)],
@@ -3550,8 +3638,8 @@ function openDetailDrawer(billKey) {
     ["ค่าใช้จ่าย MLP", money(bill.mlpCost)],
     ["ยอดใบวางบิล", money(bill.billedAmount)],
     ["กำไรหลัง MLP", money(bill.profit)],
-    ["ORW", bill.orw || "-"],
-    ["INV", bill.invoice || "-"],
+    ["ตรวจสอบ", htmlEscape(issueText(bill) || "-")],
+    ["สถานะ", `<span class="badge ${htmlEscape(bill.status || "")}">${htmlEscape(statusLabel(bill.status))}</span>`],
   ].map(([label, value]) => `<div class="summary-tile"><span>${label}</span><strong>${value}</strong></div>`).join("");
 
   elements.editStatus.value = bill.status;
