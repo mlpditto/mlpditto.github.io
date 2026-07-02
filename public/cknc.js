@@ -129,6 +129,7 @@ const elements = {
   editClicknicDate: $("editClicknicDate"),
   editMlpDate: $("editMlpDate"),
   editBillingDueDate: $("editBillingDueDate"),
+  editBillingStage: $("editBillingStage"),
   editMlpCost: $("editMlpCost"),
   editSale: $("editSale"),
   editProfit: $("editProfit"),
@@ -3715,6 +3716,7 @@ function openDetailDrawer(billKey) {
     ["INV", htmlEscape(bill.invoice || "-")],
     ["วันที่ CLICKNIC", formatDisplayDate(bill.clicknicDate) || "-"],
     ["วันที่ MLP", formatDisplayDate(bill.mlpDate) || "-"],
+    ["งานวางบิล", htmlEscape(billingStageLabel(bill.billingStage))],
     ["ยอดขายยา", money(bill.sale)],
     ["ต้นทุนยา", money(bill.cost)],
     ["ค่าใช้จ่าย MLP", money(bill.mlpCost)],
@@ -3725,6 +3727,7 @@ function openDetailDrawer(billKey) {
   ].map(([label, value]) => `<div class="summary-tile"><span>${label}</span><strong>${value}</strong></div>`).join("");
 
   elements.editStatus.value = bill.status;
+  if (elements.editBillingStage) elements.editBillingStage.value = bill.billingStage || "pending-review";
   elements.editOrw.value = bill.orw || "";
   elements.editInvoice.value = bill.invoice || "";
   elements.editClicknicDate.value = formatDisplayDate(bill.clicknicDate);
@@ -3997,8 +4000,10 @@ function saveBillOverride() {
     status: elements.editStatus.value,
     caseType: bill.caseType || "unknown",
     caseTypeSource: bill.caseTypeSource || "",
-    billingStage: bill.billingStage || "pending-review",
-    billingStageSource: bill.billingStageSource || "",
+    billingStage: elements.editBillingStage?.value || bill.billingStage || "pending-review",
+    billingStageSource: elements.editBillingStage && elements.editBillingStage.value !== (bill.billingStage || "pending-review")
+      ? "manual"
+      : bill.billingStageSource || "",
     orw: clean(elements.editOrw.value),
     invoice: clean(elements.editInvoice.value),
     clicknicDate: dateKey(elements.editClicknicDate.value),
@@ -4271,6 +4276,11 @@ elements.detailDrawer.addEventListener("close", () => {
 elements.saveOverrideBtn.addEventListener("click", saveBillOverride);
 elements.editSale?.addEventListener("input", updateEditProfitPreview);
 elements.editMlpCost?.addEventListener("input", updateEditProfitPreview);
+if (elements.editBillingStage) {
+  elements.editBillingStage.innerHTML = billingStageOptions
+    .map(([value, label]) => `<option value="${value}">${label}</option>`)
+    .join("");
+}
 function syncYearEraButton() {
   if (!elements.yearEraToggleBtn) return;
   elements.yearEraToggleBtn.innerHTML = `<i class="fa-solid fa-calendar-day"></i> ${yearEra === "be" ? "พ.ศ." : "ค.ศ."}`;
