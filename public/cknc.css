@@ -622,7 +622,9 @@ button:not(:disabled):hover {
 }
 
 .card-detail-table .col-status { width: 108px; }
-.card-detail-table .col-ref { width: 132px; }
+.card-detail-table .col-ref { width: 152px; }
+.card-detail-table td.col-ref { padding-right: 14px; }
+.card-detail-table .col-patient { padding-left: 10px; }
 .card-detail-table .col-case { width: 84px; }
 .card-detail-table .col-stage { width: 100px; }
 .card-detail-table .col-dates { width: 92px; }
@@ -1664,6 +1666,40 @@ td {
 .summary-tile strong {
   display: block;
   margin-top: 4px;
+}
+
+.date-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.date-field input[type="text"] {
+  flex: 1;
+  min-width: 0;
+}
+
+.date-pick-btn {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding-inline: 11px;
+  border-color: #bdd5cc;
+  background: #f3faf7;
+  color: var(--green-dark);
+}
+
+.date-picker-hidden {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  min-height: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .drawer-note {
@@ -2714,6 +2750,12 @@ html.dark .icon-button {
 }
 
 html.dark .row-action {
+  background: rgba(0, 177, 79, 0.12);
+  border-color: #2f6b52;
+  color: #bbf7d0;
+}
+
+html.dark .date-pick-btn {
   background: rgba(0, 177, 79, 0.12);
   border-color: #2f6b52;
   color: #bbf7d0;

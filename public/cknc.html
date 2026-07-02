@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="./cknc.css?v=20260702120000" />
+    <link rel="stylesheet" href="./cknc.css?v=20260702140000" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -244,10 +244,10 @@
                   <th class="col-patient">ผู้รับบริการ</th>
                   <th class="col-case">ประเภทเคส</th>
                   <th class="col-stage">งานวางบิล</th>
+                  <th class="num col-num">วางบิล</th>
                   <th class="col-dates">วันที่</th>
                   <th class="num col-num">ยอดขาย</th>
                   <th class="num col-num">MLP</th>
-                  <th class="num col-num">วางบิล</th>
                   <th class="col-issue">ตรวจสอบ</th>
                   <th class="col-status">สถานะ</th>
                 </tr>
@@ -623,15 +623,27 @@
               </label>
               <label>
                 วันที่ CLICKNIC
-                <input id="editClicknicDate" type="text" inputmode="numeric" placeholder="วว/ดด/ปปปป" />
+                <span class="date-field">
+                  <input id="editClicknicDate" type="text" inputmode="numeric" placeholder="วว/ดด/ปปปป" />
+                  <button type="button" class="date-pick-btn" title="เลือกวันที่จากปฏิทิน" aria-label="เลือกวันที่จากปฏิทิน"><i class="fa-solid fa-calendar-days"></i></button>
+                  <input type="date" class="date-picker-hidden" tabindex="-1" aria-hidden="true" />
+                </span>
               </label>
               <label>
                 วันที่ MLP
-                <input id="editMlpDate" type="text" inputmode="numeric" placeholder="วว/ดด/ปปปป" />
+                <span class="date-field">
+                  <input id="editMlpDate" type="text" inputmode="numeric" placeholder="วว/ดด/ปปปป" />
+                  <button type="button" class="date-pick-btn" title="เลือกวันที่จากปฏิทิน" aria-label="เลือกวันที่จากปฏิทิน"><i class="fa-solid fa-calendar-days"></i></button>
+                  <input type="date" class="date-picker-hidden" tabindex="-1" aria-hidden="true" />
+                </span>
               </label>
               <label>
                 ครบกำหนดใบวางบิล
-                <input id="editBillingDueDate" type="text" inputmode="numeric" placeholder="วว/ดด/ปปปป" />
+                <span class="date-field">
+                  <input id="editBillingDueDate" type="text" inputmode="numeric" placeholder="วว/ดด/ปปปป" />
+                  <button type="button" class="date-pick-btn" title="เลือกวันที่จากปฏิทิน" aria-label="เลือกวันที่จากปฏิทิน"><i class="fa-solid fa-calendar-days"></i></button>
+                  <input type="date" class="date-picker-hidden" tabindex="-1" aria-hidden="true" />
+                </span>
               </label>
               <label>
                 ค่าใช้จ่าย MLP
@@ -669,7 +681,7 @@
       </div>
     </dialog>
 
-    <script src="./cknc.js?v=20260702120000"></script>
+    <script src="./cknc.js?v=20260702140000"></script>
     <script>
       (function () {
         const btn = document.getElementById("themeToggleBtn");

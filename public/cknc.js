@@ -1546,6 +1546,7 @@ const cardDetailColumns = [
   { label: "ผู้รับบริการ", col: "col-patient", hideable: true, text: (bill) => bill.patient || "-" },
   { label: "ประเภทเคส", col: "col-case", hideable: true, text: (bill) => caseTypeLabel(bill.caseType) },
   { label: "งานวางบิล", col: "col-stage", hideable: true, text: (bill) => billingStageLabel(bill.billingStage) },
+  { label: "วางบิล", col: "col-num", num: true, hideable: true, text: (bill) => money(bill.billedAmount) },
   {
     label: "วันที่",
     col: "col-dates",
@@ -1567,7 +1568,6 @@ const cardDetailColumns = [
   },
   { label: "ยอดขาย", col: "col-num", num: true, hideable: true, text: (bill) => money(bill.sale) },
   { label: "MLP", col: "col-num", num: true, hideable: true, text: (bill) => money(bill.mlpCost) },
-  { label: "วางบิล", col: "col-num", num: true, hideable: true, text: (bill) => money(bill.billedAmount) },
   {
     label: "ตรวจสอบ",
     col: "col-issue",
@@ -4093,6 +4093,26 @@ elements.cardDetailModal?.addEventListener("click", (event) => {
   if (!editButton) return;
   const key = editButton.dataset.cardEditKey;
   openDetailDrawer(key);
+});
+document.addEventListener("click", (event) => {
+  const button = event.target.closest(".date-pick-btn");
+  if (!button) return;
+  const field = button.closest(".date-field");
+  const textInput = field?.querySelector("input[type='text']");
+  const picker = field?.querySelector(".date-picker-hidden");
+  if (!textInput || !picker) return;
+  const parsed = parseDateValue(textInput.value);
+  picker.value = parsed ? parsed.toISOString().slice(0, 10) : "";
+  if (typeof picker.showPicker === "function") picker.showPicker();
+  else picker.click();
+});
+document.addEventListener("change", (event) => {
+  const picker = event.target.closest?.(".date-picker-hidden");
+  if (!picker || !picker.value) return;
+  const textInput = picker.closest(".date-field")?.querySelector("input[type='text']");
+  if (!textInput) return;
+  textInput.value = formatDisplayDate(picker.value);
+  textInput.dispatchEvent(new Event("input", { bubbles: true }));
 });
 elements.quickDateFilters?.addEventListener("click", (event) => {
   const button = event.target.closest("[data-clicknic-date]");
