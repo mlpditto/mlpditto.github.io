@@ -131,6 +131,7 @@ const elements = {
   editBillingDueDate: $("editBillingDueDate"),
   editPatient: $("editPatient"),
   editBillingStage: $("editBillingStage"),
+  editCost: $("editCost"),
   editMlpCost: $("editMlpCost"),
   editSale: $("editSale"),
   editProfit: $("editProfit"),
@@ -1902,36 +1903,58 @@ function renderTable() {
     : "ยังไม่มีข้อมูล";
 
   if (!rows.length) {
-    elements.billTableBody.innerHTML = `<tr><td colspan="18" class="empty">ไม่พบข้อมูลตามตัวกรอง</td></tr>`;
+    elements.billTableBody.innerHTML = `<tr><td colspan="7" class="empty">ไม่พบข้อมูลตามตัวกรอง</td></tr>`;
     return;
   }
 
-  elements.billTableBody.innerHTML = rows.map((bill) => `
+  elements.billTableBody.innerHTML = rows.map((bill) => {
+    const medsText = bill.medicinesText || "";
+    const needsMedsToggle = medsText.length > 90;
+    return `
     <tr class="${bill.excluded ? "row-excluded" : ""}">
       <td class="action-cell">
-        <button class="row-action" type="button" data-detail-key="${bill.billKey}">รายละเอียด</button>
-        ${bill.status === "mlp-only" || bill.hasManualMedicines ? `<button class="row-action" type="button" data-manual-entry="${bill.orderId}">${bill.hasManualMedicines ? "แก้ยา" : "เพิ่มยา"}</button>` : ""}
-        <button class="row-action ${bill.excluded ? "exclude-active" : ""}" type="button" data-toggle-exclude="${htmlEscape(bill.billKey)}">${bill.excluded ? "ยกเลิก Exclude" : "Exclude"}</button>
+        <button class="row-action icon-action" type="button" data-detail-key="${bill.billKey}" title="รายละเอียด / แก้ไข" aria-label="รายละเอียด / แก้ไข"><i class="fa-solid fa-pen-to-square"></i></button>
+        ${bill.status === "mlp-only" || bill.hasManualMedicines ? `<button class="row-action icon-action" type="button" data-manual-entry="${bill.orderId}" title="${bill.hasManualMedicines ? "แก้ยา" : "เพิ่มยา"}" aria-label="${bill.hasManualMedicines ? "แก้ยา" : "เพิ่มยา"}"><i class="fa-solid fa-pills"></i></button>` : ""}
+        <button class="row-action icon-action ${bill.excluded ? "exclude-active" : ""}" type="button" data-toggle-exclude="${htmlEscape(bill.billKey)}" title="${bill.excluded ? "ยกเลิก Exclude" : "Exclude"}" aria-label="${bill.excluded ? "ยกเลิก Exclude" : "Exclude"}"><i class="fa-solid fa-ban"></i></button>
       </td>
-      <td>${renderStatusSelect(bill)}</td>
-      <td>${bill.orderId || "-"}</td>
-      <td>${htmlEscape(bill.patient || "-")}</td>
-      <td>${bill.orw || "-"}</td>
-      <td>${bill.billingNo || "-"}</td>
-      <td>${renderCaseTypeSelect(bill)}</td>
-      <td>${renderBillingStageSelect(bill)}</td>
-      <td>${renderInlineDateInput(bill, "clicknicDate", "วันที่ CLICKNIC")}</td>
-      <td>${renderInlineDateInput(bill, "mlpDate", "วันที่ MLP")}</td>
-      <td>${renderInlineDateInput(bill, "billingDueDate", "ครบกำหนดใบวางบิล")}</td>
-      <td class="meds-cell">${bill.medicinesText || "-"}${bill.hasManualMedicines ? '<span class="source-note">เพิ่มจาก Screenshot</span>' : ""}${bill.hasOverride ? '<span class="source-note">แก้ไขแล้ว</span>' : ""}</td>
-      <td class="num">${renderInlineMoneyInput(bill, "sale", "ยอดขายยา")}</td>
-      <td class="num">${renderInlineMoneyInput(bill, "cost", "ต้นทุนยา")}</td>
-      <td class="num">${renderInlineMoneyInput(bill, "mlpCost", "ค่าใช้จ่าย MLP")}</td>
-      <td class="num">${renderInlineMoneyInput(bill, "billedAmount", "ยอดใบวางบิล")}</td>
-      <td class="num ${bill.profit < 0 ? "profit-negative" : ""}">${money(bill.profit)}</td>
-      <td><div class="validation-list">${(bill.validationIssues || []).length ? bill.validationIssues.map((issue) => `<span class="validation-chip ${issue.level}">${issue.text}</span>`).join("") : '<span class="validation-chip">ผ่าน</span>'}</div></td>
+      <td class="bill-cell">
+        <strong class="bill-patient">${htmlEscape(bill.patient || "-")}</strong>
+        <span class="bill-ref">${bill.orderId || "-"}</span>
+        <span class="bill-ref">ORW ${bill.orw || "-"} · ใบวางบิล ${bill.billingNo || "-"}</span>
+      </td>
+      <td class="stack-cell">
+        ${renderStatusSelect(bill)}
+        ${renderBillingStageSelect(bill)}
+        ${renderCaseTypeSelect(bill)}
+      </td>
+      <td class="dates-cell">
+        <span class="date-row"><span class="date-tag">CKNC</span>${renderInlineDateInput(bill, "clicknicDate", "วันที่ CLICKNIC")}</span>
+        <span class="date-row"><span class="date-tag">MLP</span>${renderInlineDateInput(bill, "mlpDate", "วันที่ MLP")}</span>
+        <span class="date-row"><span class="date-tag">ครบ</span>${renderInlineDateInput(bill, "billingDueDate", "ครบกำหนดใบวางบิล")}</span>
+      </td>
+      <td class="meds-cell">
+        <div class="meds-clamp">${medsText || "-"}</div>
+        ${needsMedsToggle ? '<button class="meds-toggle" type="button" data-meds-toggle>ดูทั้งหมด</button>' : ""}
+        ${bill.hasManualMedicines ? '<span class="source-note">เพิ่มจาก Screenshot</span>' : ""}
+        ${bill.hasOverride ? '<span class="source-note">แก้ไขแล้ว</span>' : ""}
+      </td>
+      <td class="num money-cell">
+        ${renderInlineMoneyInput(bill, "sale", "ยอดขายยา")}
+        <span class="profit-line ${bill.profit < 0 ? "profit-negative" : ""}" title="กำไรหลัง MLP = ยอดขายยา − ต้นทุนยา − ค่าใช้จ่าย MLP (แก้ต้นทุน/MLP/ยอดใบวางบิลได้ในหน้ารายละเอียด)">กำไร ${money(bill.profit)}</span>
+      </td>
+      <td class="check-cell">${renderCheckCell(bill)}</td>
     </tr>
-  `).join("");
+  `;
+  }).join("");
+}
+
+function renderCheckCell(bill) {
+  const issues = bill.validationIssues || [];
+  if (!issues.length) return '<span class="validation-chip" title="ผ่านการตรวจสอบ">ผ่าน</span>';
+  const rank = { danger: 3, warn: 2, info: 1 };
+  const worst = issues.reduce((acc, issue) => ((rank[issue.level] || 0) > (rank[acc] || 0) ? issue.level : acc), "info");
+  const titleText = issues.map((issue) => issue.text).join(" | ");
+  return `<span class="validation-chip ${worst}" title="${htmlEscape(titleText)}">${issues.length} จุด</span>`;
 }
 
 function renderTopMedicines() {
@@ -3723,7 +3746,7 @@ function currentDetailBill() {
 
 function updateEditProfitPreview() {
   if (!elements.editProfit) return;
-  const drugCost = toNumeric(currentDetailBill()?.cost);
+  const drugCost = elements.editCost ? toNumeric(elements.editCost.value) : toNumeric(currentDetailBill()?.cost);
   const profit = toNumeric(elements.editSale.value) - drugCost - toNumeric(elements.editMlpCost.value);
   elements.editProfit.value = money(profit);
   elements.editProfit.classList.toggle("profit-negative", profit < 0);
@@ -3758,6 +3781,7 @@ function openDetailDrawer(billKey) {
   elements.editClicknicDate.value = formatDisplayDate(bill.clicknicDate);
   elements.editMlpDate.value = formatDisplayDate(bill.mlpDate);
   elements.editBillingDueDate.value = formatDisplayDate(bill.billingDueDate);
+  if (elements.editCost) elements.editCost.value = bill.cost || 0;
   elements.editMlpCost.value = bill.mlpCost || 0;
   elements.editSale.value = bill.sale || 0;
   elements.editBilledAmount.value = bill.billedAmount || 0;
@@ -4035,6 +4059,7 @@ function saveBillOverride() {
     clicknicDate: dateKey(elements.editClicknicDate.value),
     mlpDate: dateKey(elements.editMlpDate.value),
     billingDueDate: dateKey(elements.editBillingDueDate.value),
+    cost: elements.editCost ? toNumeric(elements.editCost.value) : toNumeric(bill.cost),
     mlpCost: toNumeric(elements.editMlpCost.value),
     sale: toNumeric(elements.editSale.value),
     billedAmount: toNumeric(elements.editBilledAmount.value),
@@ -4279,6 +4304,15 @@ elements.billTableBody.addEventListener("change", (event) => {
   quickUpdateInlineField(input.dataset.inlineKey, input.dataset.inlineField, input.value, input.dataset.inlineType);
 });
 elements.billTableBody.addEventListener("click", (event) => {
+  const medsToggle = event.target.closest("[data-meds-toggle]");
+  if (medsToggle) {
+    const clampEl = medsToggle.closest("td")?.querySelector(".meds-clamp");
+    if (clampEl) {
+      const expanded = clampEl.classList.toggle("expanded");
+      medsToggle.textContent = expanded ? "ย่อ" : "ดูทั้งหมด";
+    }
+    return;
+  }
   const detailButton = event.target.closest("[data-detail-key]");
   if (detailButton) {
     openDetailDrawer(detailButton.dataset.detailKey);
@@ -4301,6 +4335,7 @@ elements.detailDrawer.addEventListener("close", () => {
 });
 elements.saveOverrideBtn.addEventListener("click", saveBillOverride);
 elements.editSale?.addEventListener("input", updateEditProfitPreview);
+elements.editCost?.addEventListener("input", updateEditProfitPreview);
 elements.editMlpCost?.addEventListener("input", updateEditProfitPreview);
 if (elements.editBillingStage) {
   elements.editBillingStage.innerHTML = billingStageOptions
