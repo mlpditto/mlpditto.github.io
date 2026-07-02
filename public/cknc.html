@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="./cknc.css?v=20260702160000" />
+    <link rel="stylesheet" href="./cknc.css?v=20260702170000" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -46,6 +46,7 @@
         <div class="top-actions">
           <a href="admin.html" class="ghost icon-toggle" aria-label="กลับไป MLP HUB" title="MLP HUB"><i class="fa-solid fa-house-medical"></i></a>
           <button id="themeToggleBtn" class="ghost icon-toggle" type="button" aria-label="สลับโหมดมืด"><i class="fa-solid fa-moon"></i></button>
+          <button id="yearEraToggleBtn" class="ghost" type="button" aria-label="สลับรูปแบบปี พ.ศ./ค.ศ." title="สลับรูปแบบปี พ.ศ./ค.ศ."><i class="fa-solid fa-calendar-day"></i> พ.ศ.</button>
           <button id="loadSampleBtn" class="ghost" type="button" hidden disabled><i class="fa-solid fa-flask"></i> ใช้ไฟล์ตัวอย่าง</button>
           <button id="saveSessionBtn" class="ghost" type="button" disabled><i class="fa-solid fa-floppy-disk"></i> Save Session</button>
           <button id="openSessionsBtn" class="ghost" type="button"><i class="fa-solid fa-folder-open"></i> Sessions</button>
@@ -689,7 +690,7 @@
       </div>
     </dialog>
 
-    <script src="./cknc.js?v=20260702160000"></script>
+    <script src="./cknc.js?v=20260702170000"></script>
     <script>
       (function () {
         const btn = document.getElementById("themeToggleBtn");

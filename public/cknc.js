@@ -138,6 +138,7 @@ const elements = {
   editOverrideNote: $("editOverrideNote"),
   saveOverrideBtn: $("saveOverrideBtn"),
   resetOverrideBtn: $("resetOverrideBtn"),
+  yearEraToggleBtn: $("yearEraToggleBtn"),
   authGateTitle: $("authGateTitle"),
   authGateMessage: $("authGateMessage"),
   authGateAction: $("authGateAction"),
@@ -584,12 +585,22 @@ function dateKey(value) {
   return date ? date.toISOString().slice(0, 10) : "";
 }
 
+const YEAR_ERA_STORAGE_KEY = "cknc_year_era";
+let yearEra = "be";
+try {
+  const savedYearEra = localStorage.getItem(YEAR_ERA_STORAGE_KEY);
+  if (savedYearEra === "ce" || savedYearEra === "be") yearEra = savedYearEra;
+} catch (error) {
+  /* ignore */
+}
+
 function formatDisplayDate(value) {
   const date = parseDateValue(value);
   if (!date) return "";
   const day = String(date.getUTCDate()).padStart(2, "0");
   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  return `${day}/${month}/${date.getUTCFullYear()}`;
+  const year = date.getUTCFullYear() + (yearEra === "be" ? 543 : 0);
+  return `${day}/${month}/${year}`;
 }
 
 function primaryBillDate(bill) {
@@ -4204,6 +4215,24 @@ elements.detailDrawer.addEventListener("close", () => {
 elements.saveOverrideBtn.addEventListener("click", saveBillOverride);
 elements.editSale?.addEventListener("input", updateEditProfitPreview);
 elements.editMlpCost?.addEventListener("input", updateEditProfitPreview);
+function syncYearEraButton() {
+  if (!elements.yearEraToggleBtn) return;
+  elements.yearEraToggleBtn.innerHTML = `<i class="fa-solid fa-calendar-day"></i> ${yearEra === "be" ? "พ.ศ." : "ค.ศ."}`;
+  elements.yearEraToggleBtn.title = yearEra === "be" ? "กำลังแสดงปี พ.ศ. — กดเพื่อสลับเป็น ค.ศ." : "กำลังแสดงปี ค.ศ. — กดเพื่อสลับเป็น พ.ศ.";
+}
+elements.yearEraToggleBtn?.addEventListener("click", () => {
+  yearEra = yearEra === "be" ? "ce" : "be";
+  try {
+    localStorage.setItem(YEAR_ERA_STORAGE_KEY, yearEra);
+  } catch (error) {
+    /* ignore */
+  }
+  syncYearEraButton();
+  renderAll();
+  refreshCardDetail();
+  if (elements.detailDrawer?.open && state.currentDetailKey) openDetailDrawer(state.currentDetailKey);
+});
+syncYearEraButton();
 elements.resetOverrideBtn.addEventListener("click", resetBillOverride);
 elements.screenshotForm.addEventListener("submit", saveManualEntry);
 elements.closeScreenshotModal.addEventListener("click", closeManualEntry);
