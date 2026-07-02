@@ -487,6 +487,7 @@ function unlockApp(message = "") {
   document.body.classList.remove("auth-pending");
   setSessionButtons();
   if (message) console.info(message);
+  restoreLatestSnapshotOnStartup();
 }
 
 function waitForFirebaseUser() {
@@ -3433,14 +3434,14 @@ function monthlyAutosavePayload(month, basePayload) {
 }
 
 function scheduleAutosave(reason = "update") {
-  if (state.snapshotMode || !state.bills.length) return;
+  if (!state.bills.length) return;
   clearTimeout(state.autosaveTimer);
   autosaveStatusText("Autosave: รอบันทึก...");
   state.autosaveTimer = setTimeout(() => autosaveMonthlySession(reason), 2000);
 }
 
 async function autosaveMonthlySession(reason = "update") {
-  if (!canPersistSessions() || !state.bills.length || state.snapshotMode) {
+  if (!canPersistSessions() || !state.bills.length) {
     autosaveStatusText(canPersistSessions() ? "Autosave: ยังไม่มีข้อมูล" : "Autosave: รอ login");
     return;
   }
@@ -3470,6 +3471,33 @@ async function autosaveMonthlySession(reason = "update") {
   } finally {
     state.autosaveInFlight = false;
     if (state.autosavePending) scheduleAutosave("pending-update");
+  }
+}
+
+async function restoreLatestSnapshotOnStartup() {
+  if (!canPersistSessions() || state.bills.length) return;
+  autosaveStatusText("Autosave: กำลังหา session ล่าสุด...");
+  try {
+    const [sessionSnap, autosaveSnap] = await Promise.all([
+      window.db.collection("cknc_sessions").orderBy("updatedAt", "desc").limit(1).get(),
+      window.db.collection("cknc_monthly_autosaves").orderBy("updatedAt", "desc").limit(1).get(),
+    ]);
+    const candidates = [];
+    sessionSnap.forEach((doc) => candidates.push({ id: doc.id, ...doc.data() }));
+    autosaveSnap.forEach((doc) => candidates.push({ id: doc.id, ...doc.data(), source: "autosave" }));
+    const latest = candidates
+      .filter((item) => item.updatedAt?.toMillis)
+      .sort((a, b) => b.updatedAt.toMillis() - a.updatedAt.toMillis())[0];
+    if (!latest || state.bills.length) {
+      setSessionButtons();
+      return;
+    }
+    applySessionSnapshot(latest);
+    elements.statusText.textContent = `กู้คืนอัตโนมัติหลังเปิดหน้า: ${latest.name || latest.id} (${number(state.bills.length)} บิล)`;
+    autosaveStatusText(`Autosave: กู้คืน${latest.source === "autosave" ? " autosave" : " session"} ล่าสุดให้แล้ว`);
+  } catch (error) {
+    console.error(error);
+    setSessionButtons();
   }
 }
 
