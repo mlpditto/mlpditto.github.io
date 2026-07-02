@@ -1209,6 +1209,12 @@ function buildBills() {
       billingDueDate: uniqueBilling.map((row) => row.dueDate).filter(Boolean)[0] || "",
       patient: mlp?.patient || "",
       medicineCount: click?.medicines.length || 0,
+      medicines: (click?.medicines || []).map((item) => ({
+        medicine: item.medicine || item.medicineRaw || "",
+        qty: toNumeric(item.qty),
+        sale: toNumeric(item.sale),
+        cost: toNumeric(item.cost),
+      })),
       medicinesText: click?.medicines.map((item) => `${item.medicine} x${number(item.qty)}`).join(", ") || "",
       medicineRawText: click?.medicines.map((item) => item.medicineRaw).filter(Boolean).join(", ") || "",
       hasManualMedicines,
@@ -1250,6 +1256,7 @@ function buildBills() {
       billingDueDate: row.dueDate,
       patient: "",
       medicineCount: 0,
+      medicines: [],
       medicinesText: "",
       medicineRawText: "",
       hasManualMedicines: false,
@@ -1908,8 +1915,6 @@ function renderTable() {
   }
 
   elements.billTableBody.innerHTML = rows.map((bill) => {
-    const medsText = bill.medicinesText || "";
-    const needsMedsToggle = medsText.length > 90;
     return `
     <tr class="${bill.excluded ? "row-excluded" : ""}">
       <td class="action-cell">
@@ -1933,19 +1938,116 @@ function renderTable() {
         <span class="date-row"><span class="date-tag">ครบ</span>${renderInlineDateInput(bill, "billingDueDate", "ครบกำหนดใบวางบิล")}</span>
       </td>
       <td class="meds-cell">
-        <div class="meds-clamp">${medsText || "-"}</div>
-        ${needsMedsToggle ? '<button class="meds-toggle" type="button" data-meds-toggle>ดูทั้งหมด</button>' : ""}
+        ${renderMedsCell(bill)}
         ${bill.hasManualMedicines ? '<span class="source-note">เพิ่มจาก Screenshot</span>' : ""}
         ${bill.hasOverride ? '<span class="source-note">แก้ไขแล้ว</span>' : ""}
       </td>
       <td class="num money-cell">
-        ${renderInlineMoneyInput(bill, "sale", "ยอดขายยา")}
-        <span class="profit-line ${bill.profit < 0 ? "profit-negative" : ""}" title="กำไรหลัง MLP = ยอดขายยา − ต้นทุนยา − ค่าใช้จ่าย MLP (แก้ต้นทุน/MLP/ยอดใบวางบิลได้ในหน้ารายละเอียด)">กำไร ${money(bill.profit)}</span>
+        <span class="money-row"><span class="money-tag">ขาย</span>${renderInlineMoneyInput(bill, "sale", "ยอดขายยา")}</span>
+        <span class="money-row"><span class="money-tag">ทุน</span>${renderInlineMoneyInput(bill, "cost", "ต้นทุนยา")}</span>
+        <span class="profit-line ${bill.profit < 0 ? "profit-negative" : ""}" title="กำไรหลัง MLP = ยอดขายยา − ต้นทุนยา − ค่าใช้จ่าย MLP (แก้ค่าใช้จ่าย MLP/ยอดใบวางบิลได้ในหน้ารายละเอียด)">กำไร ${money(bill.profit)}</span>
       </td>
       <td class="check-cell">${renderCheckCell(bill)}</td>
     </tr>
   `;
   }).join("");
+}
+
+function renderMedsCell(bill) {
+  const lines = bill.medicines || [];
+  if (!lines.length) {
+    const medsText = bill.medicinesText || "";
+    if (!medsText) return '<div class="meds-clamp" data-meds-body>-</div>';
+    const needsToggle = medsText.length > 90;
+    return `
+      <div class="meds-clamp" data-meds-body title="session เก่าไม่มีข้อมูลรายบรรทัด — อัปโหลดไฟล์ใหม่เพื่อแก้จำนวน/ราคาต่อหน่วย">${medsText}</div>
+      ${needsToggle ? '<button class="meds-toggle" type="button" data-meds-toggle data-label-full="ดูทั้งหมด">ดูทั้งหมด</button>' : ""}
+    `;
+  }
+  const rowsHtml = lines.map((line, index) => {
+    const qty = toNumeric(line.qty);
+    const sale = toNumeric(line.sale);
+    const unit = qty > 0 ? Math.round((sale / qty) * 100) / 100 : Math.round(sale * 100) / 100;
+    const name = htmlEscape(line.medicine || "-");
+    return `
+      <div class="med-line">
+        <span class="med-name" title="${name}">${name}</span>
+        <input class="inline-cell-input med-input" type="number" min="0" step="any" value="${qty}" data-med-key="${htmlEscape(bill.billKey)}" data-med-index="${index}" data-med-field="qty" aria-label="จำนวน ${name}" title="จำนวน" />
+        <span class="med-x">×</span>
+        <input class="inline-cell-input med-input med-price" type="number" min="0" step="any" value="${unit}" data-med-key="${htmlEscape(bill.billKey)}" data-med-index="${index}" data-med-field="unitPrice" aria-label="ราคาต่อหน่วย ${name}" title="ราคาต่อหน่วย" />
+        <span class="med-line-total" title="ยอดขายบรรทัดนี้">= ${money(sale)}</span>
+      </div>
+    `;
+  }).join("");
+  const collapsible = lines.length > 3;
+  const fullLabel = `ดูทั้งหมด (${number(lines.length)} รายการ)`;
+  return `
+    <div class="med-lines${collapsible ? " collapsible" : ""}" data-meds-body>${rowsHtml}</div>
+    ${collapsible ? `<button class="meds-toggle" type="button" data-meds-toggle data-label-full="${fullLabel}">${fullLabel}</button>` : ""}
+  `;
+}
+
+function quickUpdateMedicineLine(billKey, index, field, rawValue) {
+  const bill = state.bills.find((item) => item.billKey === billKey);
+  if (!bill || !bill.medicines || !bill.medicines[index]) return;
+  const round2 = (value) => Math.round(value * 100) / 100;
+  const lines = bill.medicines.map((line) => ({
+    medicine: line.medicine || "",
+    qty: toNumeric(line.qty),
+    sale: toNumeric(line.sale),
+    cost: toNumeric(line.cost),
+  }));
+  const line = lines[index];
+  const originalQty = line.qty;
+  const originalSale = line.sale;
+  const prevUnit = originalQty > 0 ? originalSale / originalQty : 0;
+  const value = Math.max(0, toNumeric(rawValue));
+  if (field === "qty") {
+    line.qty = value;
+    line.sale = round2(value * prevUnit);
+  } else if (field === "unitPrice") {
+    line.sale = round2((originalQty || 1) * value);
+  } else {
+    return;
+  }
+  if (line.qty === originalQty && line.sale === originalSale) return;
+  const newSale = round2(lines.reduce((sum, item) => sum + toNumeric(item.sale), 0));
+  const existing = state.billOverrides[bill.billKey] || {};
+  state.billOverrides[bill.billKey] = {
+    ...existing,
+    values: {
+      ...(existing.values || {}),
+      medicines: lines,
+      medicineCount: lines.length,
+      medicinesText: lines.map((item) => `${item.medicine} x${number(item.qty)}`).join(", "),
+      sale: newSale,
+    },
+    note: existing.note || "แก้รายการยาจากตาราง",
+    updatedAt: new Date().toISOString(),
+  };
+  const afterUnit = line.qty > 0 ? round2(line.sale / line.qty) : line.sale;
+  state.auditTrail.unshift({
+    id: makeAuditId(),
+    action: "edit_medicine_line",
+    createdAt: new Date().toISOString(),
+    orderId: bill.orderId,
+    orw: bill.orw,
+    invoice: bill.invoice,
+    date: bill.clicknicDate || bill.mlpDate,
+    lineCount: lines.length,
+    totalSale: newSale,
+    totalCost: bill.cost,
+    screenshotName: "summary-table",
+    replacedLineCount: 0,
+    note: `${line.medicine}: x${number(originalQty)} @${money(round2(prevUnit))} -> x${number(line.qty)} @${money(afterUnit)}`,
+    medicines: [{ medicine: line.medicine, qty: line.qty, sale: line.sale, cost: line.cost }],
+  });
+  rebuildBillsForCurrentMode();
+  renderMetrics();
+  renderTabs();
+  renderTable();
+  renderAuditTrail();
+  scheduleAutosave("medicine-line-update");
 }
 
 function renderCheckCell(bill) {
@@ -2034,6 +2136,7 @@ function auditActionLabel(action) {
   if (action === "case_type_update") return "แก้ประเภทเคส";
   if (action === "billing_stage_update") return "แก้สถานะงานวางบิล";
   if (action === "toggle_excluded") return "แก้ไขไม่นับคำนวณ";
+  if (action === "edit_medicine_line") return "แก้จำนวน/ราคายา";
   return action;
 }
 
@@ -4284,6 +4387,11 @@ elements.ruleSuggestions?.addEventListener("click", (event) => {
   addRuleWord(button.dataset.ruleType, button.dataset.addRuleWord);
 });
 elements.billTableBody.addEventListener("change", (event) => {
+  const medInput = event.target.closest("[data-med-key][data-med-field]");
+  if (medInput) {
+    quickUpdateMedicineLine(medInput.dataset.medKey, Number(medInput.dataset.medIndex), medInput.dataset.medField, medInput.value);
+    return;
+  }
   const select = event.target.closest("[data-status-key]");
   if (select) {
     quickUpdateStatus(select.dataset.statusKey, select.value);
@@ -4306,10 +4414,10 @@ elements.billTableBody.addEventListener("change", (event) => {
 elements.billTableBody.addEventListener("click", (event) => {
   const medsToggle = event.target.closest("[data-meds-toggle]");
   if (medsToggle) {
-    const clampEl = medsToggle.closest("td")?.querySelector(".meds-clamp");
-    if (clampEl) {
-      const expanded = clampEl.classList.toggle("expanded");
-      medsToggle.textContent = expanded ? "ย่อ" : "ดูทั้งหมด";
+    const bodyEl = medsToggle.closest("td")?.querySelector("[data-meds-body]");
+    if (bodyEl) {
+      const expanded = bodyEl.classList.toggle("expanded");
+      medsToggle.textContent = expanded ? "ย่อ" : (medsToggle.dataset.labelFull || "ดูทั้งหมด");
     }
     return;
   }

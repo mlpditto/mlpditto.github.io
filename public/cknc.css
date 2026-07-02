@@ -928,7 +928,7 @@ table {
 }
 
 .table-wrap table {
-  min-width: 1150px;
+  min-width: 1220px;
 }
 
 th,
@@ -1200,7 +1200,7 @@ td {
 }
 
 .meds-cell {
-  min-width: 200px;
+  min-width: 300px;
   white-space: normal;
   line-height: 1.42;
 }
@@ -1380,11 +1380,79 @@ td {
 }
 
 .money-cell {
-  min-width: 104px;
+  min-width: 128px;
 }
 
 .money-cell .money-input {
   width: 96px;
+}
+
+.money-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.money-row + .money-row {
+  margin-top: 4px;
+}
+
+.money-tag {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.med-lines {
+  display: grid;
+  gap: 4px;
+}
+
+.med-lines.collapsible:not(.expanded) .med-line:nth-child(n + 4) {
+  display: none;
+}
+
+.med-line {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.med-name {
+  flex: 1 1 auto;
+  min-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+}
+
+.med-input {
+  flex: 0 0 auto;
+  width: 52px;
+  min-height: 26px;
+  padding: 2px 5px;
+  text-align: right;
+  font-size: 11.5px;
+}
+
+.med-input.med-price {
+  width: 74px;
+}
+
+.med-x {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.med-line-total {
+  flex: 0 0 auto;
+  min-width: 72px;
+  text-align: right;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--green-dark);
 }
 
 .profit-line {
