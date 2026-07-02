@@ -1326,11 +1326,11 @@ function maybeAutosaveOnComplete() {
   if (state.allStepsComplete) return;
   state.allStepsComplete = true;
   if (!canPersistSessions()) {
-    autosaveStatusText("Autosave: ครบ 3 ฝั่งแล้ว — รอ login เพื่อบันทึกขึ้น cloud");
+    autosaveStatusText("Autosave: ครบ CKNC+MLP+BARแล้ว — รอ login เพื่อบันทึกขึ้น cloud");
     return;
   }
   clearTimeout(state.autosaveTimer);
-  autosaveStatusText("Autosave: ครบ 3 ฝั่ง กำลังบันทึกขึ้น cloud...");
+  autosaveStatusText("Autosave: ครบ CKNC+MLP+BAR กำลังบันทึกขึ้น cloud...");
   autosaveMonthlySession("all-steps-complete");
 }
 
@@ -1437,7 +1437,7 @@ const cardDetailConfigs = {
     apply: () => ({ status: "all" }),
   },
   matched: {
-    title: "ครบ 3 ฝั่ง",
+    title: "ครบ CKNC+MLP+BAR",
     rows: () => activeBills().filter((bill) => bill.status === "matched"),
     apply: () => ({ status: "matched" }),
   },
@@ -2371,7 +2371,7 @@ function renderAll() {
     ? `, ตัด CLICKNIC ซ้ำ ${number(state.clicknicImportSummary.duplicateRows)} แถว`
     : "";
   elements.statusText.textContent = state.bills.length
-    ? `พร้อมวิเคราะห์: ครบ 3 ฝั่ง ${number(metrics.matched)} บิล, ต้องตรวจสอบ ${number(issueCount)} บิล${duplicateNote}`
+    ? `พร้อมวิเคราะห์: ครบ CKNC+MLP+BAR ${number(metrics.matched)} บิล, ต้องตรวจสอบ ${number(issueCount)} บิล${duplicateNote}`
     : "รออัปโหลดไฟล์";
   maybeAutosaveOnComplete();
 }
@@ -3070,7 +3070,7 @@ function exportPdfReport() {
     </style>
   `;
   const metricHtml = [
-    ["ครบ 3 ฝั่ง", metrics.matched],
+    ["ครบ CKNC+MLP+BAR", metrics.matched],
     ["MLP ไม่มีรายการยา", metrics.mlpOnly],
     ["รอใบวางบิล", metrics.mlpNoBilling],
     ["กำไร matched หลัง MLP", money(metrics.profit)],
@@ -3182,7 +3182,7 @@ function exportPdfReportV2() {
     </style>
   `;
   const metricHtml = [
-    ["ครบ 3 ฝั่ง", metrics.matched],
+    ["ครบ CKNC+MLP+BAR", metrics.matched],
     ["MLP ไม่มีรายการยา", metrics.mlpOnly],
     ["รอใบวางบิล", metrics.mlpNoBilling],
     ["Critical/Danger", severityCounts.danger || 0],
