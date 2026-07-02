@@ -1333,6 +1333,7 @@ function renderMetrics() {
       card.tabIndex = 0;
       card.setAttribute("role", "button");
       card.setAttribute("aria-label", `ดูรายละเอียด ${card.querySelector("span")?.textContent || key}`);
+      if (card.classList.contains("mini")) card.classList.toggle("is-zero", !toNumeric(metrics[key]));
     }
   });
 }
@@ -1400,18 +1401,19 @@ function renderMergeAssistant() {
   if (!elements.mergeAssistant) return;
   const data = mergeAssistantData();
   const confidence = data.total ? Math.round((data.confident / data.total) * 100) : 0;
+  const steps = [
+    { key: "mergeClicknicBase", label: "CLICKNIC", value: data.clickOrders, hint: "1. CLICKNIC base: ใช้วันที่จาก Excel เป็นแกนรายวัน" },
+    { key: "mergeMlpMemo", label: "MLP memo", value: data.exactOrderMatch, hint: "2. MLP by memo: จับจากเลขที่รายการยาในบันทึกช่วยจำ" },
+    { key: "mergeBillingRef", label: "Billing ref", value: data.refMatch, hint: "3. Billing by ref: จับจาก ORW / INV / AR" },
+  ];
   elements.mergeAssistant.innerHTML = `
-    <div class="merge-head">
-      <div>
-        <h2>Merge Assistant</h2>
-        <p>เส้นทางจับคู่ 3 ฝั่ง: CLICKNIC เลขที่รายการยา → MLP บันทึกช่วยจำ → Billing ORW/INV/AR</p>
-      </div>
-      <strong>${number(confidence)}%</strong>
-    </div>
-    <div class="merge-grid">
-      <div data-summary-card="mergeClicknicBase" role="button" tabindex="0"><span>1. CLICKNIC base</span><strong>${number(data.clickOrders)}</strong><p>ใช้วันที่จาก Excel เป็นแกนรายวัน</p></div>
-      <div data-summary-card="mergeMlpMemo" role="button" tabindex="0"><span>2. MLP by memo</span><strong>${number(data.exactOrderMatch)}</strong><p>จับจากเลขที่รายการยาในบันทึกช่วยจำ</p></div>
-      <div data-summary-card="mergeBillingRef" role="button" tabindex="0"><span>3. Billing by ref</span><strong>${number(data.refMatch)}</strong><p>จับจาก ORW / INV / AR</p></div>
+    <div class="merge-line">
+      <span class="merge-line-title" title="เส้นทางจับคู่ 3 ฝั่ง: CLICKNIC เลขที่รายการยา → MLP บันทึกช่วยจำ → Billing ORW/INV/AR">Merge 3 ฝั่ง</span>
+      ${steps.map((step, index) => `
+        ${index ? '<i class="fa-solid fa-arrow-right merge-step-arrow" aria-hidden="true"></i>' : ""}
+        <span class="merge-step" data-summary-card="${step.key}" role="button" tabindex="0" title="${htmlEscape(step.hint)}">${step.label} <strong>${number(step.value)}</strong></span>
+      `).join("")}
+      <strong class="merge-confidence" title="ความมั่นใจการจับคู่ 3 ฝั่ง">${number(confidence)}%</strong>
     </div>
   `;
 }

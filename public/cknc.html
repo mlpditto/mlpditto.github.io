@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="./cknc.css?v=20260702200000" />
+    <link rel="stylesheet" href="./cknc.css?v=20260702210000" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -141,23 +141,17 @@
             <span>MLP รอใบวางบิล</span>
             <strong id="metricMlpNoBilling">0</strong>
           </article>
+          <article class="metric kpi">
+            <span>ต้นทุนยา</span>
+            <strong id="metricCost">0</strong>
+          </article>
+          <article class="metric kpi">
+            <span>ค่าใช้จ่าย MLP</span>
+            <strong id="metricMlpCost">0</strong>
+          </article>
         </div>
 
         <div class="metric-groups">
-          <div class="metric-group">
-            <h3><i class="fa-solid fa-coins"></i> การเงิน</h3>
-            <div class="metric-group-grid">
-              <article class="metric mini">
-                <span>ต้นทุนยา</span>
-                <strong id="metricCost">0</strong>
-              </article>
-              <article class="metric mini">
-                <span>ค่าใช้จ่าย MLP</span>
-                <strong id="metricMlpCost">0</strong>
-              </article>
-            </div>
-          </div>
-
           <div class="metric-group">
             <h3><i class="fa-solid fa-link"></i> การจับคู่ 3 ฝั่ง</h3>
             <div class="metric-group-grid">
@@ -691,7 +685,7 @@
       </div>
     </dialog>
 
-    <script src="./cknc.js?v=20260702200000"></script>
+    <script src="./cknc.js?v=20260702210000"></script>
     <script>
       (function () {
         const btn = document.getElementById("themeToggleBtn");
