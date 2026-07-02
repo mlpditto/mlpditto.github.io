@@ -158,6 +158,7 @@ const elements = {
 const tabCountIds = {
   all: "tabCountAll",
   matched: "tabCountMatched",
+  paid: "tabCountPaid",
   "mlp-only": "tabCountMlpOnly",
   "pending-billing": "tabCountPendingBilling",
   "clicknic-only": "tabCountClickOnly",
@@ -1541,7 +1542,7 @@ function shortDisplayDate(value) {
 
 function statusBadgesHtml(bill) {
   const badges = [`<span class="badge ${htmlEscape(bill.status || "")}">${htmlEscape(statusLabel(bill.status))}</span>`];
-  if (bill.excluded) badges.push(`<span class="badge excluded">ไม่นับคำนวณ</span>`);
+  if (bill.excluded) badges.push(`<span class="badge excluded">Exclude</span>`);
   return badges.join(" ");
 }
 
@@ -1609,7 +1610,7 @@ const cardDetailColumns = [
     label: "สถานะ",
     col: "col-status",
     hideable: true,
-    text: (bill) => `${statusLabel(bill.status)}${bill.excluded ? " | ไม่นับคำนวณ" : ""}`,
+    text: (bill) => `${statusLabel(bill.status)}${bill.excluded ? " | Exclude" : ""}`,
     html: (bill) => statusBadgesHtml(bill),
   },
 ];
@@ -1691,11 +1692,13 @@ function statusCounts() {
   return state.bills.reduce((counts, bill) => {
     counts.all += 1;
     counts[bill.status] = (counts[bill.status] || 0) + 1;
+    if ((bill.billingStage || "") === "paid") counts.paid += 1;
     if (bill.excluded) counts.excluded += 1;
     return counts;
   }, {
     all: 0,
     matched: 0,
+    paid: 0,
     "mlp-only": 0,
     "pending-billing": 0,
     "clicknic-only": 0,
@@ -1806,7 +1809,10 @@ function filteredBills() {
   const sortBy = elements.sortBy.value;
 
   const filtered = state.bills.filter((bill) => {
-    const matchesStatus = status === "all" || (status === "excluded" ? bill.excluded : bill.status === status);
+    const matchesStatus = status === "all"
+      || (status === "excluded" ? bill.excluded
+        : status === "paid" ? (bill.billingStage || "") === "paid"
+          : bill.status === status);
     const matchesCaseType = caseType === "all" || (bill.caseType || "unknown") === caseType;
     const matchesBillingStage = billingStage === "all" || (bill.billingStage || "pending-review") === billingStage;
     const haystack = [
@@ -1866,7 +1872,7 @@ function renderTable() {
       <td class="action-cell">
         <button class="row-action" type="button" data-detail-key="${bill.billKey}">รายละเอียด</button>
         ${bill.status === "mlp-only" || bill.hasManualMedicines ? `<button class="row-action" type="button" data-manual-entry="${bill.orderId}">${bill.hasManualMedicines ? "แก้ยา" : "เพิ่มยา"}</button>` : ""}
-        <button class="row-action ${bill.excluded ? "exclude-active" : ""}" type="button" data-toggle-exclude="${htmlEscape(bill.billKey)}">${bill.excluded ? "ยกเลิกไม่นับ" : "ไม่นับคำนวณ"}</button>
+        <button class="row-action ${bill.excluded ? "exclude-active" : ""}" type="button" data-toggle-exclude="${htmlEscape(bill.billKey)}">${bill.excluded ? "ยกเลิก Exclude" : "Exclude"}</button>
       </td>
       <td>${renderStatusSelect(bill)}</td>
       <td>${bill.orderId || "-"}</td>
@@ -2677,7 +2683,7 @@ function reportScopeLabel() {
     billingDueDate: "ครบกำหนดใบวางบิล",
   }[elements.dateField.value] || "ทุกชนิดวันที่";
   const parts = [
-    `สถานะ: ${state.activeStatus === "all" ? "ทั้งหมด" : state.activeStatus === "excluded" ? "ไม่นับคำนวณ" : statusLabel(state.activeStatus)}`,
+    `สถานะ: ${state.activeStatus === "all" ? "ทั้งหมด" : state.activeStatus === "excluded" ? "Exclude" : state.activeStatus === "paid" ? "PAID" : statusLabel(state.activeStatus)}`,
     `วันที่: ${dateFieldLabel}`,
   ];
   if (elements.dateFrom.value || elements.dateTo.value) {
