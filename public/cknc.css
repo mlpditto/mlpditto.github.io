@@ -552,6 +552,26 @@ button:not(:disabled):hover {
   font-weight: 800;
 }
 
+.card-detail-chips .chip.case-insurance {
+  background: #eef3ff;
+  color: #264b93;
+}
+
+.card-detail-chips .chip.case-nhso {
+  background: var(--mint);
+  color: var(--green-dark);
+}
+
+.card-detail-chips .chip.case-general {
+  background: #f6f8fa;
+  color: #3b4854;
+}
+
+.card-detail-chips .chip.case-unknown {
+  background: var(--amber-soft);
+  color: #744508;
+}
+
 .card-detail-table {
   overflow: auto;
   margin: 0 18px 18px;
@@ -1706,6 +1726,17 @@ td {
   pointer-events: none;
 }
 
+.table-date-field {
+  gap: 4px;
+}
+
+.table-date-field .date-pick-btn {
+  min-height: 28px;
+  min-width: 28px;
+  padding-inline: 6px;
+  font-size: 11px;
+}
+
 .drawer-note {
   display: grid;
   gap: 6px;
@@ -2313,7 +2344,9 @@ button {
 }
 
 .metric.kpi strong {
-  font-size: 21px;
+  font-size: 24px;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
 }
 
 .metric-groups {

@@ -1573,6 +1573,7 @@ const cardDetailColumns = [
     hideable: true,
     text: (bill) => caseTypeLabel(bill.caseType),
     html: (bill) => `<span class="badge case-${htmlEscape(bill.caseType || "unknown")}">${htmlEscape(caseTypeLabel(bill.caseType))}</span>`,
+    chipClass: (bill) => `case-${bill.caseType || "unknown"}`,
   },
   { label: "งานวางบิล", col: "col-stage", hideable: true, text: (bill) => billingStageLabel(bill.billingStage) },
   { label: "วางบิล", col: "col-num", num: true, hideable: true, text: (bill) => money(bill.billedAmount) },
@@ -1624,7 +1625,7 @@ function visibleCardColumns(rows) {
     if (!column.hideable || !column.text) return true;
     const first = column.text(rows[0]);
     if (rows.some((bill) => column.text(bill) !== first)) return true;
-    chips.push(`${column.label}: ${first}`);
+    chips.push({ text: `${column.label}: ${first}`, className: column.chipClass ? column.chipClass(rows[0]) : "" });
     return false;
   });
   return { columns, chips };
@@ -1671,7 +1672,7 @@ function openCardDetail(cardKey) {
     .join("");
   elements.cardDetailChips.hidden = !chips.length;
   elements.cardDetailChips.innerHTML = chips.length
-    ? `<span class="chip-note">ค่าเดียวกันทั้งการ์ด:</span>${chips.map((chip) => `<span class="chip">${htmlEscape(chip)}</span>`).join("")}`
+    ? `<span class="chip-note">ค่าเดียวกันทั้งการ์ด:</span>${chips.map((chip) => `<span class="chip ${htmlEscape(chip.className)}">${htmlEscape(chip.text)}</span>`).join("")}`
     : "";
   elements.cardDetailBody.innerHTML = shownRows.length
     ? shownRows.map((bill) => cardDetailRowHtml(bill, columns)).join("")
@@ -1772,17 +1773,21 @@ function renderBillingStageSelect(bill) {
 
 function renderInlineDateInput(bill, field, label) {
   return `
-    <input
-      class="inline-cell-input date-input"
-      type="text"
-      inputmode="numeric"
-      placeholder="วว/ดด/ปปปป"
-      value="${htmlEscape(formatDisplayDate(bill[field]))}"
-      data-inline-key="${htmlEscape(bill.billKey)}"
-      data-inline-field="${field}"
-      data-inline-type="date"
-      aria-label="${htmlEscape(label)}"
-    />
+    <span class="date-field table-date-field">
+      <input
+        class="inline-cell-input date-input"
+        type="text"
+        inputmode="numeric"
+        placeholder="วว/ดด/ปปปป"
+        value="${htmlEscape(formatDisplayDate(bill[field]))}"
+        data-inline-key="${htmlEscape(bill.billKey)}"
+        data-inline-field="${field}"
+        data-inline-type="date"
+        aria-label="${htmlEscape(label)}"
+      />
+      <button type="button" class="date-pick-btn" title="เลือกวันที่จากปฏิทิน" aria-label="เลือกวันที่จากปฏิทิน"><i class="fa-solid fa-calendar-days"></i></button>
+      <input type="date" class="date-picker-hidden" tabindex="-1" aria-hidden="true" />
+    </span>
   `;
 }
 
@@ -4185,6 +4190,7 @@ document.addEventListener("change", (event) => {
   if (!textInput) return;
   textInput.value = formatDisplayDate(picker.value);
   textInput.dispatchEvent(new Event("input", { bubbles: true }));
+  textInput.dispatchEvent(new Event("change", { bubbles: true }));
 });
 elements.quickDateFilters?.addEventListener("click", (event) => {
   const button = event.target.closest("[data-clicknic-date]");
