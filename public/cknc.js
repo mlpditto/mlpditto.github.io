@@ -129,6 +129,7 @@ const elements = {
   editClicknicDate: $("editClicknicDate"),
   editMlpDate: $("editMlpDate"),
   editBillingDueDate: $("editBillingDueDate"),
+  editPatient: $("editPatient"),
   editBillingStage: $("editBillingStage"),
   editMlpCost: $("editMlpCost"),
   editSale: $("editSale"),
@@ -3712,6 +3713,7 @@ function openDetailDrawer(billKey) {
   state.currentDetailKey = billKey;
   elements.drawerTitle.textContent = bill.orderId || bill.orw || bill.billingNo || "รายละเอียดบิล";
   elements.drawerSummary.innerHTML = [
+    ["ผู้รับบริการ", htmlEscape(bill.patient || "-")],
     ["ORW", htmlEscape(bill.orw || "-")],
     ["INV", htmlEscape(bill.invoice || "-")],
     ["วันที่ CLICKNIC", formatDisplayDate(bill.clicknicDate) || "-"],
@@ -3728,6 +3730,7 @@ function openDetailDrawer(billKey) {
 
   elements.editStatus.value = bill.status;
   if (elements.editBillingStage) elements.editBillingStage.value = bill.billingStage || "pending-review";
+  if (elements.editPatient) elements.editPatient.value = bill.patient || "";
   elements.editOrw.value = bill.orw || "";
   elements.editInvoice.value = bill.invoice || "";
   elements.editClicknicDate.value = formatDisplayDate(bill.clicknicDate);
@@ -4004,6 +4007,7 @@ function saveBillOverride() {
     billingStageSource: elements.editBillingStage && elements.editBillingStage.value !== (bill.billingStage || "pending-review")
       ? "manual"
       : bill.billingStageSource || "",
+    patient: clean(elements.editPatient?.value),
     orw: clean(elements.editOrw.value),
     invoice: clean(elements.editInvoice.value),
     clicknicDate: dateKey(elements.editClicknicDate.value),
