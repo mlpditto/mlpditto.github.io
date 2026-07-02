@@ -1001,6 +1001,17 @@ td {
   color: #63338a;
 }
 
+.badge.excluded {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+#editProfit[readonly] {
+  background: #f1f5f9;
+  border-style: dashed;
+  font-weight: 850;
+}
+
 .status-select {
   width: 150px;
   min-height: 32px;
@@ -2753,6 +2764,15 @@ html.dark .row-action {
   background: rgba(0, 177, 79, 0.12);
   border-color: #2f6b52;
   color: #bbf7d0;
+}
+
+html.dark .badge.excluded {
+  background: #334155;
+  color: #cbd5e1;
+}
+
+html.dark #editProfit[readonly] {
+  background: #0f172a;
 }
 
 html.dark .date-pick-btn {

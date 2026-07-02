@@ -130,6 +130,8 @@ const elements = {
   editMlpDate: $("editMlpDate"),
   editBillingDueDate: $("editBillingDueDate"),
   editMlpCost: $("editMlpCost"),
+  editSale: $("editSale"),
+  editProfit: $("editProfit"),
   editBilledAmount: $("editBilledAmount"),
   editExcluded: $("editExcluded"),
   editExcludeReason: $("editExcludeReason"),
@@ -1525,6 +1527,12 @@ function shortDisplayDate(value) {
   return full ? `${full.slice(0, 6)}${full.slice(8)}` : "";
 }
 
+function statusBadgesHtml(bill) {
+  const badges = [`<span class="badge ${htmlEscape(bill.status || "")}">${htmlEscape(statusLabel(bill.status))}</span>`];
+  if (bill.excluded) badges.push(`<span class="badge excluded">ไม่นับคำนวณ</span>`);
+  return badges.join(" ");
+}
+
 const cardDetailColumns = [
   {
     label: "จัดการ",
@@ -1583,8 +1591,8 @@ const cardDetailColumns = [
     label: "สถานะ",
     col: "col-status",
     hideable: true,
-    text: (bill) => statusLabel(bill.status),
-    html: (bill) => `<span class="badge ${htmlEscape(bill.status || "")}">${htmlEscape(statusLabel(bill.status))}</span>`,
+    text: (bill) => `${statusLabel(bill.status)}${bill.excluded ? " | ไม่นับคำนวณ" : ""}`,
+    html: (bill) => statusBadgesHtml(bill),
   },
 ];
 
@@ -3623,6 +3631,14 @@ function currentDetailBill() {
   return state.bills.find((bill) => bill.billKey === state.currentDetailKey);
 }
 
+function updateEditProfitPreview() {
+  if (!elements.editProfit) return;
+  const drugCost = toNumeric(currentDetailBill()?.cost);
+  const profit = toNumeric(elements.editSale.value) - drugCost - toNumeric(elements.editMlpCost.value);
+  elements.editProfit.value = money(profit);
+  elements.editProfit.classList.toggle("profit-negative", profit < 0);
+}
+
 function openDetailDrawer(billKey) {
   const bill = state.bills.find((item) => item.billKey === billKey);
   if (!bill) return;
@@ -3639,7 +3655,7 @@ function openDetailDrawer(billKey) {
     ["ยอดใบวางบิล", money(bill.billedAmount)],
     ["กำไรหลัง MLP", money(bill.profit)],
     ["ตรวจสอบ", htmlEscape(issueText(bill) || "-")],
-    ["สถานะ", `<span class="badge ${htmlEscape(bill.status || "")}">${htmlEscape(statusLabel(bill.status))}</span>`],
+    ["สถานะ", statusBadgesHtml(bill)],
   ].map(([label, value]) => `<div class="summary-tile"><span>${label}</span><strong>${value}</strong></div>`).join("");
 
   elements.editStatus.value = bill.status;
@@ -3649,7 +3665,9 @@ function openDetailDrawer(billKey) {
   elements.editMlpDate.value = formatDisplayDate(bill.mlpDate);
   elements.editBillingDueDate.value = formatDisplayDate(bill.billingDueDate);
   elements.editMlpCost.value = bill.mlpCost || 0;
+  elements.editSale.value = bill.sale || 0;
   elements.editBilledAmount.value = bill.billedAmount || 0;
+  updateEditProfitPreview();
   elements.editExcluded.checked = Boolean(bill.excluded);
   elements.editExcludeReason.value = bill.excludeReason || "";
   elements.editOverrideNote.value = bill.overrideNote || "";
@@ -3921,6 +3939,7 @@ function saveBillOverride() {
     mlpDate: dateKey(elements.editMlpDate.value),
     billingDueDate: dateKey(elements.editBillingDueDate.value),
     mlpCost: toNumeric(elements.editMlpCost.value),
+    sale: toNumeric(elements.editSale.value),
     billedAmount: toNumeric(elements.editBilledAmount.value),
     excluded: Boolean(elements.editExcluded.checked),
     excludeReason: clean(elements.editExcludeReason.value),
@@ -3958,7 +3977,7 @@ function saveBillOverride() {
   renderTable();
   renderAuditTrail();
   scheduleAutosave("bill-override");
-  openDetailDrawer(bill.billKey);
+  closeDetailDrawer();
   refreshCardDetail();
 }
 
@@ -4183,6 +4202,8 @@ elements.detailDrawer.addEventListener("close", () => {
   state.currentDetailKey = "";
 });
 elements.saveOverrideBtn.addEventListener("click", saveBillOverride);
+elements.editSale?.addEventListener("input", updateEditProfitPreview);
+elements.editMlpCost?.addEventListener("input", updateEditProfitPreview);
 elements.resetOverrideBtn.addEventListener("click", resetBillOverride);
 elements.screenshotForm.addEventListener("submit", saveManualEntry);
 elements.closeScreenshotModal.addEventListener("click", closeManualEntry);
