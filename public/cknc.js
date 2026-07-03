@@ -5827,9 +5827,15 @@ elements.bulkCaseType?.addEventListener("change", () => {
   }, `ประเภทเคส → ${caseTypeLabel(value)}`);
   elements.bulkCaseType.value = "";
 });
-elements.bulkApplyBarNo?.addEventListener("click", () => {
+function applyBulkBarNo() {
   const barValue = clean(elements.bulkBarNo.value);
-  if (!barValue) return;
+  if (!barValue) {
+    // ช่องว่างแล้วกดปุ่ม: บอกให้รู้แทนการเงียบเฉย ๆ (ดูเหมือนปุ่มพัง)
+    elements.statusText.textContent = "พิมพ์เลขใบวางบิล (BAR-...) ในช่องก่อน แล้วกด ใส่ BAR";
+    elements.bulkBarNo.focus();
+    return;
+  }
+  const count = state.selectedBillKeys.size;
   applyBulkOverride((bill, existing) => {
     const values = { barNo: barValue };
     if ((existing.values?.billingStageSource || bill.billingStageSource) !== "manual") {
@@ -5840,6 +5846,14 @@ elements.bulkApplyBarNo?.addEventListener("click", () => {
     return values;
   }, `ใส่ใบวางบิล ${barValue}`);
   elements.bulkBarNo.value = "";
+  elements.statusText.textContent = `ใส่ใบวางบิล ${barValue} ให้ ${number(count)} บิลแล้ว`;
+}
+elements.bulkApplyBarNo?.addEventListener("click", applyBulkBarNo);
+// กด Enter ในช่อง BAR = กดปุ่ม ใส่ BAR
+elements.bulkBarNo?.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  applyBulkBarNo();
 });
 elements.bulkMergeBills?.addEventListener("click", mergeSelectedBills);
 elements.bulkDeleteBills?.addEventListener("click", deleteSelectedBills);
