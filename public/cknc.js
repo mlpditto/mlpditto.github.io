@@ -690,8 +690,10 @@ function findOrderId(value) {
 
 function extractRefs(value) {
   const text = clean(value);
+  // ตัดเลข BAR ออกก่อนหา AR — "BAR-00003-26-xxxx" มี "AR-..." ซ้อนอยู่ข้างใน จะได้ไม่กลายเป็นเลขเครดิตผี
+  const arSource = text.replace(/BAR-\d{5}-\d{2}-\d+/gi, " ");
   return {
-    ar: text.match(/AR-\d{5}-\d{2}-\d{4,}/g) || [],
+    ar: arSource.match(/AR-\d{5}-\d{2}-\d{4,}/g) || [],
     orw: text.match(/ORW-\d{5}-\d{2}-\d{4,}/g) || [],
     inv: text.match(/INV-\d{5}-\d{2}-\d{4,}/g) || [],
   };
@@ -984,12 +986,12 @@ function extractBarNo(value) {
   return match ? match[0] : "";
 }
 
-function parseBillingRecord(cells, sourceName, sheetName, rowNumber) {
+function parseBillingRecord(cells, sourceName, sheetName, rowNumber, contextBar = "") {
   const text = cells.map(clean).filter(Boolean).join(" ");
   const refs = extractRefs(text);
   if (!refs.orw.length && !refs.inv.length && !refs.ar.length) return null;
   return {
-    bar: extractBarNo(sourceName) || extractBarNo(text),
+    bar: extractBarNo(sourceName) || extractBarNo(text) || contextBar,
     ar: refs.ar[0] || "",
     orw: refs.orw[0] || "",
     inv: refs.inv[0] || "",
@@ -1011,9 +1013,12 @@ function parseBillingWorkbook(workbook, sourceName) {
       raw: false,
     });
     let pendingRecord = null;
+    // เลข BAR ที่เจอล่าสุดในชีต (เช่นหัวกระดาษหน้าใบวางบิลลูกหนี้ที่ copy ทั้งหน้ามาวาง)
+    // → ผูกให้รายการเครดิต (AR) ทุกแถวถัดไปที่ไม่มี BAR ของตัวเอง
+    let contextBar = "";
     const flushPendingRecord = () => {
       if (!pendingRecord) return;
-      const record = parseBillingRecord(pendingRecord.cells, sourceName, sheetName, pendingRecord.rowNumber);
+      const record = parseBillingRecord(pendingRecord.cells, sourceName, sheetName, pendingRecord.rowNumber, pendingRecord.contextBar);
       if (record) parsed.push(record);
       pendingRecord = null;
     };
@@ -1024,14 +1029,17 @@ function parseBillingWorkbook(workbook, sourceName) {
       const refs = extractRefs(text);
       if (!cells.length) return;
 
+      const barInRow = extractBarNo(text);
+      if (barInRow) contextBar = barInRow;
+
       if (refs.ar.length) {
         flushPendingRecord();
-        pendingRecord = { cells: [...cells], rowNumber: index + 1 };
+        pendingRecord = { cells: [...cells], rowNumber: index + 1, contextBar };
         return;
       }
 
-      // แถวสรุป "รวม" ท้ายตาราง: ปิด record ก่อนหน้า กันยอดรวมไปทับยอดรายการ
-      if (!refs.orw.length && !refs.inv.length && /(^|\s)(รวม|ยอดรวม|total)/i.test(text)) {
+      // แถวสรุป "รวม"/ส่วนการชำระเงินท้ายหน้า: ปิด record ก่อนหน้า กันยอดรวม/ยอดชำระไปทับยอดรายการ
+      if (!refs.orw.length && !refs.inv.length && /(^|\s)(รวม|ยอดรวม|total|การชำระเงิน|ยอดเงินสุทธิ|ค้างชำระ)/i.test(text)) {
         flushPendingRecord();
         return;
       }
@@ -1041,7 +1049,7 @@ function parseBillingWorkbook(workbook, sourceName) {
         return;
       }
 
-      const record = parseBillingRecord(cells, sourceName, sheetName, index + 1);
+      const record = parseBillingRecord(cells, sourceName, sheetName, index + 1, contextBar);
       if (record) parsed.push(record);
     });
     flushPendingRecord();
@@ -2902,6 +2910,10 @@ async function readClipboardIntoModal() {
 async function openClipboardImport(kind) {
   state.activeClipboardKind = kind;
   elements.clipboardTitle.textContent = `Paste ${clipboardKindLabel(kind)} Clipboard`;
+  // BILLING NOTE รับข้อความทั้งหน้าใบวางบิลลูกหนี้ได้ (Ctrl+A ที่หน้า BAR แล้ว copy มาวาง)
+  elements.clipboardPreview.placeholder = kind === "billing"
+    ? "Ctrl+V — วางได้ทั้งตารางจาก Excel และทั้งหน้าใบวางบิลลูกหนี้ (Ctrl+A ที่หน้า BAR แล้ว copy) ระบบจะผูกเลข BAR ให้ทุกรายการเครดิตในหน้านั้นอัตโนมัติ"
+    : "Ctrl+V here if the browser blocks automatic clipboard reading.";
   elements.clipboardPreview.value = "";
   elements.clipboardStatus.textContent = "Reading clipboard...";
   elements.clipboardSummary.textContent = "No clipboard data yet";
