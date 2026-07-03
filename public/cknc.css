@@ -1615,6 +1615,15 @@ td {
   display: grid;
   gap: 6px;
   align-content: start;
+  min-width: 0;
+}
+
+/* กัน min-content ของ input/date-field ดันคอลัมน์จนล้นแนวนอน */
+.form-grid > label > input,
+.form-grid > label > select,
+.form-grid > label > .date-field {
+  width: 100%;
+  min-width: 0;
 }
 
 .manual-panel label {
@@ -1901,6 +1910,23 @@ td {
   gap: 10px;
 }
 
+/* กันเนื้อหา intrinsic กว้าง (ชื่อยายาว, input) ดัน drawer จนเกิด horizontal scroll */
+.drawer-body .drawer-section,
+.drawer-body .edit-group,
+.drawer-body .drawer-list,
+.drawer-body .drawer-list-item {
+  min-width: 0;
+}
+
+.drawer-list-item .med-name {
+  min-width: 0;
+}
+
+.drawer-note textarea {
+  width: 100%;
+  min-width: 0;
+}
+
 .drawer-section h3 {
   margin: 0;
   font-size: 16px;
@@ -1961,6 +1987,8 @@ td {
 }
 
 .money-profit input#editProfit[readonly] {
+  width: 100%;
+  min-width: 0;
   padding: 0;
   border: 0;
   background: transparent;
