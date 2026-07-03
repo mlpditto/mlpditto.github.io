@@ -1185,6 +1185,19 @@ function buildBills() {
   const { byOrder: clicknicByOrder, topMeds } = aggregateClicknic(allClicknicRows);
   const mlpByOrder = aggregateMlp(state.mlpRows);
   const billingByRef = aggregateBilling(state.billingRows);
+  // ยา manual ที่คีย์เป็น ORW (บิล MLP ไม่มีเลขที่ออเดอร์): ย้ายกลุ่มไปคีย์ของแถว MLP ที่ ORW ตรงกัน
+  [...clicknicByOrder.keys()].forEach((key) => {
+    if (!/^ORW-/i.test(key) || mlpByOrder.has(key)) return;
+    for (const [mlpKey, mlpGroup] of mlpByOrder) {
+      if (clicknicByOrder.has(mlpKey)) continue;
+      const orwMatch = (mlpGroup.orwList || []).some((orw) => clean(orw).toUpperCase() === key.toUpperCase());
+      if (orwMatch) {
+        clicknicByOrder.set(mlpKey, clicknicByOrder.get(key));
+        clicknicByOrder.delete(key);
+        break;
+      }
+    }
+  });
   const keys = new Set([...clicknicByOrder.keys(), ...mlpByOrder.keys()]);
   const usedBillingRows = new Set();
 
@@ -1987,7 +2000,7 @@ function renderTable() {
     <tr class="${bill.excluded ? "row-excluded" : (bill.billingStage || "") === "paid" ? "row-paid" : ""}">
       <td class="action-cell">
         <button class="row-action icon-action" type="button" data-detail-key="${bill.billKey}" title="รายละเอียด / แก้ไข" aria-label="รายละเอียด / แก้ไข"><i class="fa-solid fa-pen-to-square"></i></button>
-        ${bill.status === "mlp-only" || bill.hasManualMedicines ? `<button class="row-action icon-action" type="button" data-manual-entry="${bill.orderId}" title="${bill.hasManualMedicines ? "แก้ยา" : "เพิ่มยา"}" aria-label="${bill.hasManualMedicines ? "แก้ยา" : "เพิ่มยา"}"><i class="fa-solid fa-pills"></i></button>` : ""}
+        ${bill.status === "mlp-only" || bill.hasManualMedicines ? `<button class="row-action icon-action" type="button" data-manual-entry="${htmlEscape(bill.orderId || bill.billKey)}" title="${bill.hasManualMedicines ? "แก้ยา" : "เพิ่มยา"}" aria-label="${bill.hasManualMedicines ? "แก้ยา" : "เพิ่มยา"}"><i class="fa-solid fa-pills"></i></button>` : ""}
         <button class="row-action icon-action ${bill.excluded ? "exclude-active" : ""}" type="button" data-toggle-exclude="${htmlEscape(bill.billKey)}" title="${bill.excluded ? "ยกเลิก Exclude" : "Exclude"}" aria-label="${bill.excluded ? "ยกเลิก Exclude" : "Exclude"}"><i class="fa-solid fa-ban"></i></button>
       </td>
       <td class="bill-cell">
@@ -2444,10 +2457,12 @@ async function runScreenshotOcr() {
   }
 }
 
-function openManualEntry(orderId) {
-  const bill = state.bills.find((item) => item.orderId === orderId);
+function openManualEntry(refId) {
+  const bill = state.bills.find((item) => (item.orderId && item.orderId === refId) || item.billKey === refId);
   if (!bill) return;
-  const existingManualRows = state.manualClicknicRows.filter((row) => row.orderId === orderId);
+  // บิลไม่มีเลขที่ออเดอร์ (memo ไม่มีเลข 16 หลัก): ผูกยา manual ด้วย ORW แทน
+  const manualKey = bill.orderId || clean(bill.orw.split(",")[0]) || "";
+  const existingManualRows = state.manualClicknicRows.filter((row) => row.orderId === manualKey);
   state.currentManualBill = bill;
   resetScreenshotPreview();
   elements.screenshotForm.reset();
@@ -2482,7 +2497,7 @@ function makeAuditId() {
 }
 
 function collectManualRows(auditId) {
-  const orderId = findOrderId(elements.manualOrderId.value) || clean(elements.manualOrderId.value);
+  const orderId = findOrderId(elements.manualOrderId.value) || clean(elements.manualOrderId.value) || clean(elements.manualOrw.value);
   const dateText = elements.manualDate.value;
   const note = clean(elements.manualNote.value);
   const rows = [...elements.manualMedicineRows.querySelectorAll("tr")].map((row) => {
@@ -2513,11 +2528,12 @@ function collectManualRows(auditId) {
 
 function saveManualEntry(event) {
   event.preventDefault();
-  const orderId = findOrderId(elements.manualOrderId.value) || clean(elements.manualOrderId.value);
+  // ไม่มีเลขที่ออเดอร์: ใช้ ORW เป็นคีย์ผูกยาแทน (buildBills จะย้ายกลุ่มไปรวมกับแถว MLP ที่ ORW ตรงกัน)
+  const orderId = findOrderId(elements.manualOrderId.value) || clean(elements.manualOrderId.value) || clean(elements.manualOrw.value);
   const auditId = makeAuditId();
   const rows = collectManualRows(auditId);
   if (!orderId || !rows.length) {
-    elements.manualEntrySummary.textContent = "กรุณาใส่เลขที่ออเดอร์และรายการยาอย่างน้อย 1 รายการ";
+    elements.manualEntrySummary.textContent = "กรุณาใส่เลขที่ออเดอร์ (หรือ ORW) และรายการยาอย่างน้อย 1 รายการ";
     return;
   }
   const replacedRows = state.manualClicknicRows.filter((row) => row.orderId === orderId);
