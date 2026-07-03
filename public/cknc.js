@@ -1481,12 +1481,12 @@ function renderMergeAssistant() {
   const confidence = data.total ? Math.round((data.confident / data.total) * 100) : 0;
   const steps = [
     { key: "mergeClicknicBase", label: "CLICKNIC", value: data.clickOrders, hint: "1. CLICKNIC base: ใช้วันที่จาก Excel เป็นแกนรายวัน" },
-    { key: "mergeMlpMemo", label: "MLP memo", value: data.exactOrderMatch, hint: "2. MLP by memo: จับจากเลขที่รายการยาในบันทึกช่วยจำ" },
+    { key: "mergeMlpMemo", label: "MLP memo", value: data.exactOrderMatch, hint: "2. MLP by memo: จับจากเลขที่ออเดอร์ในบันทึกช่วยจำ" },
     { key: "mergeBillingRef", label: "Billing ref", value: data.refMatch, hint: "3. Billing by ref: จับจาก ORW / INV / AR" },
   ];
   elements.mergeAssistant.innerHTML = `
     <div class="merge-line">
-      <span class="merge-line-title" title="เส้นทางจับคู่ 3 ฝั่ง: CLICKNIC เลขที่รายการยา → MLP บันทึกช่วยจำ → Billing ORW/INV/AR">Merge 3 ฝั่ง</span>
+      <span class="merge-line-title" title="เส้นทางจับคู่ 3 ฝั่ง: CLICKNIC เลขที่ออเดอร์ → MLP บันทึกช่วยจำ → Billing ORW/INV/AR">Merge 3 ฝั่ง</span>
       ${steps.map((step, index) => `
         ${index ? '<i class="fa-solid fa-arrow-right merge-step-arrow" aria-hidden="true"></i>' : ""}
         <span class="merge-step" data-summary-card="${step.key}" role="button" tabindex="0" title="${htmlEscape(step.hint)}">${step.label} <strong>${number(step.value)}</strong></span>
@@ -2509,7 +2509,7 @@ function saveManualEntry(event) {
   const auditId = makeAuditId();
   const rows = collectManualRows(auditId);
   if (!orderId || !rows.length) {
-    elements.manualEntrySummary.textContent = "กรุณาใส่เลขบิลและรายการยาอย่างน้อย 1 รายการ";
+    elements.manualEntrySummary.textContent = "กรุณาใส่เลขที่ออเดอร์และรายการยาอย่างน้อย 1 รายการ";
     return;
   }
   const replacedRows = state.manualClicknicRows.filter((row) => row.orderId === orderId);
@@ -3319,12 +3319,12 @@ function exportPdfReport() {
         <section class="grid">${metricHtml}</section>
         <h2>รายการที่ต้องตรวจสอบ</h2>
         <table>
-          <thead><tr><th>สถานะ</th><th>เลขบิล</th><th>ORW</th><th>ใบวางบิล</th><th>วันที่</th><th>รายการยา</th><th>ขาย</th><th>ต้นทุน</th><th>วางบิล</th><th>กำไร</th><th>ตรวจสอบ</th></tr></thead>
+          <thead><tr><th>สถานะ</th><th>เลขที่ออเดอร์</th><th>ORW</th><th>ใบวางบิล</th><th>วันที่</th><th>รายการยา</th><th>ขาย</th><th>ต้นทุน</th><th>วางบิล</th><th>กำไร</th><th>ตรวจสอบ</th></tr></thead>
           <tbody>${tableHtml(issueRows)}</tbody>
         </table>
         <h2>ตัวอย่างรายการที่จับคู่แล้ว</h2>
         <table>
-          <thead><tr><th>สถานะ</th><th>เลขบิล</th><th>ORW</th><th>ใบวางบิล</th><th>วันที่</th><th>รายการยา</th><th>ขาย</th><th>ต้นทุน</th><th>วางบิล</th><th>กำไร</th><th>ตรวจสอบ</th></tr></thead>
+          <thead><tr><th>สถานะ</th><th>เลขที่ออเดอร์</th><th>ORW</th><th>ใบวางบิล</th><th>วันที่</th><th>รายการยา</th><th>ขาย</th><th>ต้นทุน</th><th>วางบิล</th><th>กำไร</th><th>ตรวจสอบ</th></tr></thead>
           <tbody>${tableHtml(matchedRows)}</tbody>
         </table>
       </body>
@@ -3513,22 +3513,22 @@ function exportPdfReportV2() {
         <h2>รายการที่ต้องตรวจสอบ</h2>
         <p class="note">แสดงสูงสุด 120 รายการแรกจากกลุ่มที่ยังไม่จับคู่ครบ หรือมี validation issue</p>
         <table>
-          <thead><tr><th>สถานะ</th><th>เลขบิล</th><th>ORW</th><th>ใบวางบิล</th><th>วันที่</th><th>รายการยา</th><th>ขาย</th><th>ต้นทุน</th><th>วางบิล</th><th>กำไร</th><th>ตรวจสอบ</th></tr></thead>
+          <thead><tr><th>สถานะ</th><th>เลขที่ออเดอร์</th><th>ORW</th><th>ใบวางบิล</th><th>วันที่</th><th>รายการยา</th><th>ขาย</th><th>ต้นทุน</th><th>วางบิล</th><th>กำไร</th><th>ตรวจสอบ</th></tr></thead>
           <tbody>${tableHtml(reviewRows) || '<tr><td colspan="11">ไม่มีรายการที่ต้องตรวจสอบ</td></tr>'}</tbody>
         </table>
         <h2>Validation Issues</h2>
         <table>
-          <thead><tr><th>Severity</th><th>Code</th><th>Issue</th><th>สถานะ</th><th>เลขบิล</th><th>ORW</th><th>วันที่</th><th>ต้นทุน</th><th>วางบิล</th><th>กำไร</th></tr></thead>
+          <thead><tr><th>Severity</th><th>Code</th><th>Issue</th><th>สถานะ</th><th>เลขที่ออเดอร์</th><th>ORW</th><th>วันที่</th><th>ต้นทุน</th><th>วางบิล</th><th>กำไร</th></tr></thead>
           <tbody>${validationHtml || '<tr><td colspan="10">ไม่มี validation issue</td></tr>'}</tbody>
         </table>
         <h2>ตัวอย่างรายการที่จับคู่แล้ว</h2>
         <table>
-          <thead><tr><th>สถานะ</th><th>เลขบิล</th><th>ORW</th><th>ใบวางบิล</th><th>วันที่</th><th>รายการยา</th><th>ขาย</th><th>ต้นทุน</th><th>วางบิล</th><th>กำไร</th><th>ตรวจสอบ</th></tr></thead>
+          <thead><tr><th>สถานะ</th><th>เลขที่ออเดอร์</th><th>ORW</th><th>ใบวางบิล</th><th>วันที่</th><th>รายการยา</th><th>ขาย</th><th>ต้นทุน</th><th>วางบิล</th><th>กำไร</th><th>ตรวจสอบ</th></tr></thead>
           <tbody>${tableHtml(matchedRows) || '<tr><td colspan="11">ไม่มีรายการจับคู่แล้ว</td></tr>'}</tbody>
         </table>
         <h2>Audit ล่าสุด</h2>
         <table>
-          <thead><tr><th>เวลา</th><th>Action</th><th>เลขบิล</th><th>ORW</th><th>หมายเหตุ</th></tr></thead>
+          <thead><tr><th>เวลา</th><th>Action</th><th>เลขที่ออเดอร์</th><th>ORW</th><th>หมายเหตุ</th></tr></thead>
           <tbody>${auditHtml || '<tr><td colspan="5">ยังไม่มี audit trail</td></tr>'}</tbody>
         </table>
         <div class="footer">Export from MLP HUB CKNC module. For full raw data, use Export XLSX.</div>
@@ -4161,7 +4161,7 @@ function pasteFieldCurrentDisplay(bill, def) {
 function renderPasteAnalyzeWarnings(bill, parsed) {
   const chips = [];
   if (parsed.orderId && bill.orderId && parsed.orderId !== bill.orderId) {
-    chips.push(`<span class="validation-chip danger">เลขบิลในข้อความ (${htmlEscape(parsed.orderId)}) ไม่ตรงกับแถวนี้ (${htmlEscape(bill.orderId)})</span>`);
+    chips.push(`<span class="validation-chip danger">เลขที่ออเดอร์ในข้อความ (${htmlEscape(parsed.orderId)}) ไม่ตรงกับแถวนี้ (${htmlEscape(bill.orderId)})</span>`);
     const target = state.bills.find((item) => item.orderId === parsed.orderId);
     if (target) {
       chips.push(`<button class="ghost small" type="button" data-paste-switch="${htmlEscape(target.billKey)}">สลับไปใช้กับบิล ${htmlEscape(target.patient || target.orderId)}</button>`);
@@ -4169,7 +4169,7 @@ function renderPasteAnalyzeWarnings(bill, parsed) {
   }
   const embeddedDate = orderIdEmbeddedDate(parsed.orderId || bill.orderId);
   if (embeddedDate && parsed.clicknicDate && embeddedDate !== parsed.clicknicDate) {
-    chips.push(`<span class="validation-chip warn">วันที่ในข้อความ (${formatDisplayDate(parsed.clicknicDate)}) ไม่ตรงกับวันที่ในเลขบิล (${formatDisplayDate(embeddedDate)})</span>`);
+    chips.push(`<span class="validation-chip warn">วันที่ในข้อความ (${formatDisplayDate(parsed.clicknicDate)}) ไม่ตรงกับวันที่ในเลขที่ออเดอร์ (${formatDisplayDate(embeddedDate)})</span>`);
   }
   elements.pasteAnalyzeWarnings.innerHTML = chips.join("");
 }

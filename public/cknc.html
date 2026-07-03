@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="./cknc.css?v=20260703210000" />
+    <link rel="stylesheet" href="./cknc.css?v=20260703220000" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -103,13 +103,13 @@
           <strong><i class="fa-solid fa-diagram-project"></i> วิธีใช้งาน: CLICKNIC เป็นข้อมูลตั้งต้น</strong>
           <button class="icon-button" type="button" popovertarget="workflowHelp" popovertargetaction="hide" aria-label="ปิด">×</button>
         </div>
-        <p>ใช้เลขที่รายการยาและวันที่จาก Excel CLICKNIC เป็นแกนก่อน แล้วค่อย tag ประกัน / สปสช / ทั่วไป และ merge กับ MLP + Billing Note</p>
+        <p>ใช้เลขที่ออเดอร์และวันที่จาก Excel CLICKNIC เป็นแกนก่อน แล้วค่อย tag ประกัน / สปสช / ทั่วไป และ merge กับ MLP + Billing Note</p>
         <ol>
-          <li>CLICKNIC: เลขที่รายการยา + วันที่สั่งซื้อ + รายการยา</li>
-          <li>MEDLIFE PLUS: บันทึกช่วยจำเชื่อมเลขที่รายการยา, เลขที่เชื่อม ORW</li>
+          <li>CLICKNIC: เลขที่ออเดอร์ + วันที่สั่งซื้อ + รายการยา</li>
+          <li>MEDLIFE PLUS: บันทึกช่วยจำเชื่อมเลขที่ออเดอร์, เลขที่เชื่อม ORW</li>
           <li>BILLING NOTE: ORW / INV / AR เชื่อมยอดวางบิล</li>
         </ol>
-        <p class="help-hint"><i class="fa-solid fa-lightbulb"></i> ระบบจะใช้เลขบิล 16 หลัก, ORW, INV และ AR เพื่อจับคู่ข้อมูลสามฝั่ง</p>
+        <p class="help-hint"><i class="fa-solid fa-lightbulb"></i> ระบบจะใช้เลขที่ออเดอร์ 16 หลัก, ORW, INV และ AR เพื่อจับคู่ข้อมูลสามฝั่ง</p>
       </div>
 
       <section class="empty-hero" aria-label="เริ่มต้นใช้งาน">
@@ -150,11 +150,11 @@
           <div class="metric-group">
             <h3><i class="fa-solid fa-link"></i> การจับคู่ 3 ฝั่ง</h3>
             <div class="metric-group-grid">
-              <article class="metric mini" title="บิลที่มีเลขที่รายการยาจาก CLICKNIC (STEP 1)">
+              <article class="metric mini" title="บิลที่มีเลขที่ออเดอร์จาก CLICKNIC (STEP 1)">
                 <span>บิล CLICKNIC</span>
                 <strong id="metricClickOrders">0</strong>
               </article>
-              <article class="metric mini warning" title="รายการ MLP (STEP 2) ที่หาเลขรายการยาจาก CLICKNIC (STEP 1) ไม่เจอ">
+              <article class="metric mini warning" title="รายการ MLP (STEP 2) ที่หาเลขที่ออเดอร์จาก CLICKNIC (STEP 1) ไม่เจอ">
                 <span>ไม่พบรายการยา</span>
                 <strong id="metricMlpOnly">0</strong>
               </article>
@@ -267,7 +267,7 @@
         <div class="toolbar" aria-label="Filters">
           <label class="search-field">
             <span>ค้นหา</span>
-            <input id="searchInput" type="search" placeholder="เลขบิล, ชื่อยา, ORW, INV, AR" />
+            <input id="searchInput" type="search" placeholder="เลขที่ออเดอร์, ชื่อยา, ORW, INV, AR" />
           </label>
           <label>
             <span>ประเภทเคส</span>
@@ -463,7 +463,7 @@
           <section class="manual-panel">
             <div class="form-grid">
               <label>
-                เลขบิล
+                เลขที่ออเดอร์
                 <input id="manualOrderId" type="text" placeholder="020..." required />
               </label>
               <label>
@@ -758,7 +758,7 @@
       </div>
     </dialog>
 
-    <script src="./cknc.js?v=20260703210000"></script>
+    <script src="./cknc.js?v=20260703220000"></script>
     <script>
       (function () {
         const btn = document.getElementById("themeToggleBtn");
