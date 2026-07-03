@@ -144,24 +144,26 @@ body:not(.cknc-has-data) .view-panel {
   display: none;
 }
 
-/* --- Top-level view tabs --------------------------------------------- */
+/* --- Top-level view tabs (อยู่ในแถบบนสุดร่วมกับปุ่มอื่น) --------------- */
 .view-tabs {
   display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 6px;
+  margin-right: 6px;
+  padding-right: 10px;
+  border-right: 1px solid var(--line);
 }
 
 .view-tab {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 18px;
+  gap: 7px;
+  padding: 8px 14px;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--glass);
   box-shadow: var(--shadow);
   color: var(--muted);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 800;
   cursor: pointer;
   transition: transform 0.15s ease, border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
@@ -1998,6 +2000,13 @@ td {
   background: #fde2e2;
   border-color: #e6a3a3;
   color: #a33a3a;
+}
+
+.drawer-checks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
 }
 
 .drawer-list {

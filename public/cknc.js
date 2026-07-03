@@ -122,7 +122,7 @@ const elements = {
   detailDrawer: $("detailDrawer"),
   closeDetailDrawer: $("closeDetailDrawer"),
   drawerTitle: $("drawerTitle"),
-  drawerSummary: $("drawerSummary"),
+  drawerChecks: $("drawerChecks"),
   drawerMedicines: $("drawerMedicines"),
   editStatus: $("editStatus"),
   editOrw: $("editOrw"),
@@ -3869,21 +3869,13 @@ function openDetailDrawer(billKey) {
   if (!bill) return;
   state.currentDetailKey = billKey;
   elements.drawerTitle.textContent = bill.orderId || bill.orw || bill.billingNo || "รายละเอียดบิล";
-  elements.drawerSummary.innerHTML = [
-    ["ผู้รับบริการ", htmlEscape(bill.patient || "-")],
-    ["ORW", htmlEscape(bill.orw || "-")],
-    ["INV", htmlEscape(bill.invoice || "-")],
-    ["วันที่ CLICKNIC", formatDisplayDate(bill.clicknicDate) || "-"],
-    ["วันที่ MLP", formatDisplayDate(bill.mlpDate) || "-"],
-    ["งานวางบิล", htmlEscape(billingStageLabel(bill.billingStage))],
-    ["ยอดขายยา", money(bill.sale)],
-    ["ต้นทุนยา", money(bill.cost)],
-    ["ค่าใช้จ่าย MLP", money(bill.mlpCost)],
-    ["ยอดใบวางบิล", money(bill.billedAmount)],
-    ["กำไรหลัง MLP", money(bill.profit)],
-    ["ตรวจสอบ", htmlEscape(issueText(bill) || "-")],
-    ["สถานะ", statusBadgesHtml(bill)],
-  ].map(([label, value]) => `<div class="summary-tile"><span>${label}</span><strong>${value}</strong></div>`).join("");
+  const drawerIssues = bill.validationIssues || [];
+  elements.drawerChecks.innerHTML = `
+    ${statusBadgesHtml(bill)}
+    ${drawerIssues.length
+      ? drawerIssues.map((issue) => `<span class="validation-chip ${issue.level}">${htmlEscape(issue.text)}</span>`).join("")
+      : '<span class="validation-chip">ตรวจสอบ: ผ่าน</span>'}
+  `;
 
   elements.editStatus.value = bill.status;
   if (elements.editBillingStage) elements.editBillingStage.value = bill.billingStage || "pending-review";

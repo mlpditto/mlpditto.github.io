@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="./cknc.css?v=20260703080000" />
+    <link rel="stylesheet" href="./cknc.css?v=20260703100000" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -44,6 +44,10 @@
           <h1>CLICKNIC x MEDLIFE PLUS</h1>
         </div>
         <div class="top-actions">
+          <nav class="view-tabs" role="tablist" aria-label="มุมมองหลัก">
+            <button class="view-tab active" type="button" data-view="analyze" role="tab" aria-selected="true"><i class="fa-solid fa-chart-column"></i> วิเคราะห์</button>
+            <button class="view-tab" type="button" data-view="tools" role="tab" aria-selected="false"><i class="fa-solid fa-screwdriver-wrench"></i> เครื่องมือ</button>
+          </nav>
           <a href="admin.html" class="ghost icon-toggle" aria-label="กลับไป MLP HUB" title="MLP HUB"><i class="fa-solid fa-house-medical"></i></a>
           <button id="themeToggleBtn" class="ghost icon-toggle" type="button" aria-label="สลับโหมดมืด"><i class="fa-solid fa-moon"></i></button>
           <button id="yearEraToggleBtn" class="ghost" type="button" aria-label="สลับรูปแบบปี พ.ศ./ค.ศ." title="สลับรูปแบบปี พ.ศ./ค.ศ."><i class="fa-solid fa-calendar-day"></i> พ.ศ.</button>
@@ -114,11 +118,6 @@
         <p>อัปโหลด CLICKNIC ด้านบน (พร้อม MEDLIFE PLUS / Billing Note ถ้ามี) แล้วระบบจะวิเคราะห์ จับคู่ข้อมูล 3 ฝั่ง และสรุปผลให้อัตโนมัติ</p>
         <button class="ghost small" type="button" popovertarget="workflowHelp"><i class="fa-solid fa-circle-info"></i> ดูวิธีใช้งาน</button>
       </section>
-
-      <nav class="view-tabs" role="tablist" aria-label="มุมมองหลัก">
-        <button class="view-tab active" type="button" data-view="analyze" role="tab" aria-selected="true"><i class="fa-solid fa-chart-column"></i> วิเคราะห์</button>
-        <button class="view-tab" type="button" data-view="tools" role="tab" aria-selected="false"><i class="fa-solid fa-screwdriver-wrench"></i> เครื่องมือ</button>
-      </nav>
 
       <div id="viewAnalyze" class="view-panel" data-view-panel="analyze">
       <section id="mergeAssistant" class="merge-assistant" aria-label="Merge assistant"></section>
@@ -584,8 +583,7 @@
 
         <div class="drawer-body">
           <section class="drawer-section">
-            <h3>ข้อมูลสรุป</h3>
-            <div id="drawerSummary" class="drawer-summary"></div>
+            <div id="drawerChecks" class="drawer-checks"></div>
           </section>
 
           <section class="drawer-section">
@@ -689,7 +687,7 @@
       </div>
     </dialog>
 
-    <script src="./cknc.js?v=20260703080000"></script>
+    <script src="./cknc.js?v=20260703100000"></script>
     <script>
       (function () {
         const btn = document.getElementById("themeToggleBtn");
