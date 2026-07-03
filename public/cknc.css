@@ -2135,6 +2135,19 @@ td {
   opacity: 0.55;
 }
 
+/* บิล PAID แล้ว: ย้อมเขียวอ่อนทั้งแถว + เส้นคาดเขียวขอบซ้าย */
+#billTableBody tr.row-paid td {
+  background: #f2faf5;
+}
+
+#billTableBody tr.row-paid td:first-child {
+  box-shadow: inset 3px 0 0 var(--green);
+}
+
+html.dark #billTableBody tr.row-paid td {
+  background: rgba(0, 177, 79, 0.09);
+}
+
 .row-action.exclude-active {
   background: #fde2e2;
   border-color: #e6a3a3;
