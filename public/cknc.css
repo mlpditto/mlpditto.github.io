@@ -793,6 +793,24 @@ button:not(:disabled):hover {
   border-bottom: 1px solid var(--line);
 }
 
+/* แถวปี/เดือน/วัน ใน quick date filters — แต่ละชั้นขึ้นบรรทัดของตัวเอง */
+.date-chip-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex-basis: 100%;
+}
+
+.date-chip.month-chip,
+.date-chip.year-chip {
+  background: #eef7f2;
+}
+
+.date-chip.month-chip.active,
+.date-chip.year-chip.active {
+  background: var(--green);
+}
+
 .date-chip,
 .date-chip-note {
   min-height: 32px;

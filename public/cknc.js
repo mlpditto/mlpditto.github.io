@@ -1502,6 +1502,30 @@ function clicknicDateBuckets() {
   return [...buckets.values()].sort((a, b) => b.date.localeCompare(a.date));
 }
 
+// สรุปจำนวนออเดอร์รายเดือนจาก buckets รายวัน — คีย์ YYYY-MM เรียงใหม่ → เก่า
+function clicknicMonthBuckets(dayBuckets) {
+  const months = new Map();
+  dayBuckets.forEach((bucket) => {
+    const key = bucket.date.slice(0, 7);
+    const month = months.get(key) || { month: key, orders: 0 };
+    month.orders += bucket.orders.size;
+    months.set(key, month);
+  });
+  return [...months.values()].sort((a, b) => b.month.localeCompare(a.month));
+}
+
+function monthChipLabel(monthKey) {
+  const [year, month] = monthKey.split("-").map(Number);
+  const name = new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString("th-TH", { month: "short", timeZone: "UTC" });
+  return `${name} ${year + (yearEra === "be" ? 543 : 0)}`;
+}
+
+function monthRangeOf(monthKey) {
+  const [year, month] = monthKey.split("-").map(Number);
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return { from: `${monthKey}-01`, to: `${monthKey}-${String(lastDay).padStart(2, "0")}` };
+}
+
 function renderQuickDateFilters() {
   if (!elements.quickDateFilters) return;
   const buckets = clicknicDateBuckets();
@@ -1511,14 +1535,52 @@ function renderQuickDateFilters() {
   }
   const activeFrom = elements.dateFrom.value;
   const activeTo = elements.dateTo.value;
-  elements.quickDateFilters.innerHTML = [
-    `<button class="date-chip ${!activeFrom && !activeTo ? "active" : ""}" type="button" data-clicknic-date="all">ทุกวัน CLICKNIC</button>`,
-    ...buckets.map((bucket) => `
-      <button class="date-chip ${activeFrom === bucket.date && activeTo === bucket.date ? "active" : ""}" type="button" data-clicknic-date="${bucket.date}">
-        ${formatDisplayDate(bucket.date)} <span>(${number(bucket.orders.size)})</span>
-      </button>
-    `),
-  ].join("");
+  // เดือน/ปีที่กำลังกรอง: ช่วงจาก-ถึงตกอยู่ในเดือน/ปีเดียวกัน (เลือกทั้งเดือนหรือเจาะรายวันก็นับ)
+  const activeYear = activeFrom && activeTo && activeFrom.slice(0, 4) === activeTo.slice(0, 4) ? activeFrom.slice(0, 4) : "";
+  const activeMonth = activeFrom && activeTo && activeFrom.slice(0, 7) === activeTo.slice(0, 7) ? activeFrom.slice(0, 7) : "";
+  const allMonths = clicknicMonthBuckets(buckets);
+  const years = [...new Set(allMonths.map((item) => item.month.slice(0, 4)))];
+
+  // แถวปี: โชว์เฉพาะเมื่อข้อมูลคร่อมหลายปี
+  const yearRow = years.length > 1 ? `
+    <div class="date-chip-row">
+      <button class="date-chip year-chip ${!activeFrom && !activeTo ? "active" : ""}" type="button" data-clicknic-year="all">ทุกปี</button>
+      ${years.map((year) => `
+        <button class="date-chip year-chip ${activeYear === year ? "active" : ""}" type="button" data-clicknic-year="${year}">
+          ${Number(year) + (yearEra === "be" ? 543 : 0)}
+        </button>
+      `).join("")}
+    </div>` : "";
+
+  // แถวเดือน: เลือกปีแล้วเหลือเฉพาะเดือนของปีนั้น (โชว์เมื่อมีมากกว่า 1 เดือน)
+  const months = activeYear ? allMonths.filter((item) => item.month.startsWith(activeYear)) : allMonths;
+  const monthRow = allMonths.length > 1 ? `
+    <div class="date-chip-row">
+      <button class="date-chip month-chip ${!activeFrom && !activeTo ? "active" : ""}" type="button" data-clicknic-month="all">ทุกเดือน</button>
+      ${months.map((item) => `
+        <button class="date-chip month-chip ${activeMonth === item.month ? "active" : ""}" type="button" data-clicknic-month="${item.month}">
+          ${monthChipLabel(item.month)} <span>(${number(item.orders)})</span>
+        </button>
+      `).join("")}
+    </div>` : "";
+
+  // แถววัน: เลือกเดือน/ปีแล้วเหลือเฉพาะวันในช่วงนั้น
+  const days = buckets.filter((bucket) => {
+    if (activeMonth) return bucket.date.startsWith(activeMonth);
+    if (activeYear) return bucket.date.startsWith(activeYear);
+    return true;
+  });
+  const dayRow = `
+    <div class="date-chip-row">
+      <button class="date-chip ${!activeFrom && !activeTo ? "active" : ""}" type="button" data-clicknic-date="all">ทุกวัน CLICKNIC</button>
+      ${days.map((bucket) => `
+        <button class="date-chip ${activeFrom === bucket.date && activeTo === bucket.date ? "active" : ""}" type="button" data-clicknic-date="${bucket.date}">
+          ${formatDisplayDate(bucket.date)} <span>(${number(bucket.orders.size)})</span>
+        </button>
+      `).join("")}
+    </div>`;
+
+  elements.quickDateFilters.innerHTML = yearRow + monthRow + dayRow;
 }
 
 function mergeAssistantData() {
@@ -5493,19 +5555,28 @@ document.addEventListener("change", (event) => {
   textInput.dispatchEvent(new Event("change", { bubbles: true }));
 });
 elements.quickDateFilters?.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-clicknic-date]");
+  const button = event.target.closest("[data-clicknic-date], [data-clicknic-month], [data-clicknic-year]");
   if (!button) return;
-  const date = button.dataset.clicknicDate;
+  const { clicknicDate: date, clicknicMonth: month, clicknicYear: year } = button.dataset;
   elements.searchInput.value = "";
   elements.dateField.value = "clicknicDate";
-  if (date === "all") {
+  if (date === "all" || month === "all" || year === "all") {
     elements.dateFrom.value = "";
     elements.dateTo.value = "";
     elements.targetDate.value = "";
-  } else {
+  } else if (date) {
     elements.dateFrom.value = date;
     elements.dateTo.value = date;
     elements.targetDate.value = date;
+  } else if (month) {
+    const range = monthRangeOf(month);
+    elements.dateFrom.value = range.from;
+    elements.dateTo.value = range.to;
+    elements.targetDate.value = "";
+  } else if (year) {
+    elements.dateFrom.value = `${year}-01-01`;
+    elements.dateTo.value = `${year}-12-31`;
+    elements.targetDate.value = "";
   }
   state.activeStatus = "all";
   renderTabs();
