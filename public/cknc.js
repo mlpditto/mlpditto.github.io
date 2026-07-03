@@ -3881,7 +3881,7 @@ async function restoreLatestSnapshotOnStartup() {
       setSessionButtons();
       return;
     }
-    applySessionSnapshot(latest);
+    await applySessionSnapshot(latest);
     elements.statusText.textContent = `กู้คืนอัตโนมัติหลังเปิดหน้า: ${latest.name || latest.id} (${number(state.bills.length)} บิล)`;
     autosaveStatusText(`Autosave: กู้คืน${latest.source === "autosave" ? " autosave" : " session"} ล่าสุดให้แล้ว`);
   } catch (error) {
@@ -3890,8 +3890,33 @@ async function restoreLatestSnapshotOnStartup() {
   }
 }
 
-function applySessionSnapshot(session) {
+async function applySessionSnapshot(session) {
   const payload = session.payload || {};
+  let mode = "replace";
+  if (state.bills.length) {
+    mode = await askImportMode(`ข้อมูลบนจอมี ${number(state.bills.length)} บิล — session "${session.name || session.id}" มี ${number((payload.bills || []).length)} บิล (โหมดเพิ่ม: บิลเลขซ้ำใช้ของบนจอ ค่าที่แก้ไว้คงอยู่)`);
+    if (!mode) return false;
+  }
+  if (mode === "append") {
+    // รวมบิลจาก session เข้ากับงานบนจอ: คีย์ซ้ำใช้ของบนจอ, override/audit รวมกันโดยของบนจอชนะ
+    const currentKeys = new Set(state.bills.map((bill) => bill.billKey));
+    const loadedBills = (payload.bills || [])
+      .filter((bill) => !currentKeys.has(bill.billKey))
+      .map((bill) => ({
+        ...bill,
+        medicines: (bill.medicines && bill.medicines.length) ? bill.medicines : parseMedicinesTextLines(bill.medicinesText),
+        validationIssues: validationRulesForBill(bill),
+      }));
+    state.bills = [...state.bills, ...loadedBills];
+    state.billOverrides = { ...(payload.billOverrides || {}), ...state.billOverrides };
+    const auditIds = new Set(state.auditTrail.map((entry) => entry.id));
+    state.auditTrail = [...state.auditTrail, ...(payload.auditTrail || []).filter((entry) => !auditIds.has(entry.id))];
+    state.snapshotMode = true;
+    state.activeSessionId = "";
+    renderSnapshot();
+    elements.statusText.textContent = `รวม session: ${session.name || session.id} → รวมเป็น ${number(state.bills.length)} บิล`;
+    return true;
+  }
   state.ruleConfig = mergeRuleConfig(session.ruleConfig || payload.ruleConfig || state.ruleConfig || DEFAULT_RULE_CONFIG);
   populateRuleEditor();
   saveRuleConfigToStorage();
@@ -3921,6 +3946,7 @@ function applySessionSnapshot(session) {
   state.activeSessionId = session.source === "autosave" ? "" : (session.id || "");
   renderSnapshot();
   elements.statusText.textContent = `โหลด session: ${session.name || session.id || "CKNC session"} (${number(state.bills.length)} บิล)`;
+  return true;
 }
 
 async function saveCurrentSession() {
@@ -4028,7 +4054,11 @@ async function loadSavedSession(sessionId) {
     elements.sessionStatus.textContent = "กำลังโหลด session...";
     const doc = await window.db.collection("cknc_sessions").doc(sessionId).get();
     if (!doc.exists) throw new Error("ไม่พบ session");
-    applySessionSnapshot({ id: doc.id, ...doc.data() });
+    const applied = await applySessionSnapshot({ id: doc.id, ...doc.data() });
+    if (!applied) {
+      elements.sessionStatus.textContent = "ยกเลิกการโหลด — ข้อมูลเดิมคงอยู่";
+      return;
+    }
     closeSessionsModal();
   } catch (error) {
     console.error(error);
@@ -4041,7 +4071,11 @@ async function loadAutosavedMonth(month) {
     elements.sessionStatus.textContent = "กำลังโหลด autosave...";
     const doc = await window.db.collection("cknc_monthly_autosaves").doc(month).get();
     if (!doc.exists) throw new Error("ไม่พบ autosave เดือนนี้");
-    applySessionSnapshot({ id: doc.id, ...doc.data(), source: "autosave" });
+    const applied = await applySessionSnapshot({ id: doc.id, ...doc.data(), source: "autosave" });
+    if (!applied) {
+      elements.sessionStatus.textContent = "ยกเลิกการโหลด — ข้อมูลเดิมคงอยู่";
+      return;
+    }
     autosaveStatusText(`Autosave: โหลดเดือน ${month}`);
     closeSessionsModal();
   } catch (error) {
