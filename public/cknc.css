@@ -2016,6 +2016,21 @@ td {
   color: var(--muted);
 }
 
+.drawer-list-item.med-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.drawer-list-item .med-name {
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.drawer-list-item .med-line-total {
+  color: var(--green-dark);
+}
+
 .insights-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
