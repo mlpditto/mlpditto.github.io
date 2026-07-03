@@ -1940,6 +1940,50 @@ button.ghost.danger:hover {
   font-size: 13px;
 }
 
+/* งานวางบิลใน drawer เป็น chips กดเลือกได้ทันที */
+.stage-chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.stage-chip {
+  min-height: 30px;
+  padding: 0 12px;
+  border: 1px solid #d5e1dc;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--green-dark);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.stage-chip.active {
+  border-color: var(--green);
+  background: var(--green);
+  color: #fff;
+}
+
+html.dark .stage-chip {
+  background: #0f172a;
+  border-color: #334155;
+  color: var(--ink);
+}
+
+html.dark .stage-chip.active {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+
+/* ตัวเลขกำไรติดลบใน Card Detail */
+.profit-negative-text {
+  color: #dc2637;
+  font-weight: 800;
+}
+
 /* แผงแนะนำคู่บิลที่น่าจะรวมกัน (โทนเหลืองอ่อนให้ต่างจาก bulk bar) */
 .merge-suggest-bar {
   display: flex;

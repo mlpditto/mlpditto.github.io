@@ -132,6 +132,7 @@ const elements = {
   drawerChecks: $("drawerChecks"),
   drawerMedicines: $("drawerMedicines"),
   drawerAddMedicineBtn: $("drawerAddMedicineBtn"),
+  editBillingStageChips: $("editBillingStageChips"),
   editStatus: $("editStatus"),
   editOrw: $("editOrw"),
   editInvoice: $("editInvoice"),
@@ -1158,6 +1159,8 @@ function applyBillOverride(bill) {
   const override = state.billOverrides[bill.billKey];
   if (!override) return bill;
   const merged = { ...bill, ...override.values, hasOverride: true, overrideNote: override.note || "" };
+  // เพิ่มรายการยาเองใน drawer แล้ว: สถานะ "ไม่พบรายการยา" ไม่เป็นจริงอีกต่อไป → ถือว่าจับคู่ได้
+  if (merged.status === "mlp-only" && merged.medicines?.length) merged.status = "matched";
   merged.profit = (merged.sale || 0) - (merged.cost || 0) - (merged.mlpCost || 0);
   return merged;
 }
@@ -1184,7 +1187,7 @@ function validationRulesForBill(bill) {
   if (bill.excluded) {
     pushIssue(issues, "info", "EXCLUDED", `ไม่นับคำนวณ${bill.excludeReason ? `: ${bill.excludeReason}` : ""}`);
   }
-  if (bill.status === "mlp-only") {
+  if (bill.status === "mlp-only" && !(bill.medicines && bill.medicines.length)) {
     pushIssue(issues, "danger", "MLP_NO_MEDICINE", "ไม่พบรายการยา");
   }
   if (bill.status === "pending-billing") {
@@ -1783,7 +1786,8 @@ const cardDetailColumns = [
     col: "col-case",
     hideable: true,
     text: (bill) => caseTypeLabel(bill.caseType),
-    html: (bill) => `<span class="badge case-${htmlEscape(bill.caseType || "unknown")}">${htmlEscape(caseTypeLabel(bill.caseType))}</span>`,
+    // เปลี่ยนประเภทเคสได้จากในการ์ดเลย ไม่ต้องเข้าหน้าแก้ไข
+    html: (bill) => `<select class="case-type-select ${htmlEscape(bill.caseType || "unknown")}" data-card-case-key="${htmlEscape(bill.billKey)}" aria-label="ประเภทเคส">${caseTypeOptions.map(([key, label]) => `<option value="${key}" ${key === (bill.caseType || "unknown") ? "selected" : ""}>${label}</option>`).join("")}</select>`,
     chipClass: (bill) => `case-${bill.caseType || "unknown"}`,
   },
   { label: "งานวางบิล", col: "col-stage", hideable: true, text: (bill) => billingStageLabel(bill.billingStage) },
@@ -1809,6 +1813,13 @@ const cardDetailColumns = [
   },
   { label: "ยอดขาย", col: "col-num", num: true, text: (bill) => money(bill.sale) },
   { label: "ต้นทุน", col: "col-num", num: true, text: (bill) => money(toNumeric(bill.cost) + toNumeric(bill.mlpCost)) },
+  {
+    label: "กำไร",
+    col: "col-num",
+    num: true,
+    text: (bill) => money(bill.profit),
+    html: (bill) => `<span class="${toNumeric(bill.profit) < 0 ? "profit-negative-text" : ""}">${money(bill.profit)}</span>`,
+  },
   {
     label: "รายการยา",
     col: "col-meds",
@@ -4915,6 +4926,7 @@ function openDetailDrawer(billKey) {
 
   elements.editStatus.value = bill.status;
   if (elements.editBillingStage) elements.editBillingStage.value = bill.billingStage || "pending-review";
+  renderEditBillingStageChips();
   if (elements.editPatient) elements.editPatient.value = bill.patient || "";
   if (elements.editRefId) elements.editRefId.value = bill.refId || "";
   if (elements.editPhone) elements.editPhone.value = bill.phone || "";
@@ -5721,6 +5733,13 @@ document.addEventListener("keydown", (event) => {
   event.preventDefault();
   openCardDetail(card.dataset.summaryCard);
 });
+// เปลี่ยนประเภทเคสจากตารางใน Card Detail ได้เลย
+elements.cardDetailModal?.addEventListener("change", (event) => {
+  const select = event.target.closest("[data-card-case-key]");
+  if (!select) return;
+  quickUpdateCaseType(select.dataset.cardCaseKey, select.value);
+  refreshCardDetail();
+});
 elements.closeCardDetailModal?.addEventListener("click", closeCardDetail);
 elements.cardDetailModal?.addEventListener("click", (event) => {
   if (event.target === elements.cardDetailModal) closeCardDetail();
@@ -5928,6 +5947,21 @@ elements.drawerMedicines.addEventListener("click", (event) => {
   }
   renderDrawerMedicines(currentDetailBill());
   updateEditProfitPreview();
+});
+// งานวางบิลใน drawer เป็น chips กดเลือกได้ทันที — ค่าจริงยังเก็บใน select เดิม (ซ่อนไว้)
+function renderEditBillingStageChips() {
+  if (!elements.editBillingStageChips || !elements.editBillingStage) return;
+  const active = elements.editBillingStage.value || "pending-review";
+  elements.editBillingStageChips.innerHTML = billingStageOptions
+    .map(([value, label]) => `<button type="button" class="stage-chip ${value === active ? "active" : ""}" data-stage-chip="${value}">${label}</button>`)
+    .join("");
+}
+elements.editBillingStageChips?.addEventListener("click", (event) => {
+  const chip = event.target.closest("[data-stage-chip]");
+  if (!chip) return;
+  event.preventDefault();
+  elements.editBillingStage.value = chip.dataset.stageChip;
+  renderEditBillingStageChips();
 });
 elements.closeDetailDrawer.addEventListener("click", closeDetailDrawer);
 elements.detailDrawer.addEventListener("click", (event) => {
