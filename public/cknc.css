@@ -1036,6 +1036,11 @@ td {
   text-align: right;
 }
 
+/* หัวตารางสรุปรายบิล: คอลัมน์ข้อมูล (สถานะ/วันที่/รายการยา/การเงิน/ตรวจ) จัดกึ่งกลาง */
+th.th-center {
+  text-align: center;
+}
+
 .empty {
   color: var(--muted);
   text-align: center;
