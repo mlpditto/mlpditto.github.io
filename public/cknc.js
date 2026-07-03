@@ -1952,9 +1952,8 @@ function renderInlineMoneyInput(bill, field, label) {
   return `
     <input
       class="inline-cell-input money-input"
-      type="number"
-      min="0"
-      step="0.01"
+      type="text"
+      inputmode="decimal"
       value="${Number.isFinite(value) ? value : 0}"
       data-inline-key="${htmlEscape(bill.billKey)}"
       data-inline-field="${field}"
@@ -2176,9 +2175,9 @@ function renderMedsCell(bill) {
     return `
       <div class="med-line">
         <span class="med-name" title="${name}">${name}</span>
-        <input class="inline-cell-input med-input" type="number" min="0" step="any" value="${qty}" data-med-key="${htmlEscape(bill.billKey)}" data-med-index="${index}" data-med-field="qty" aria-label="จำนวน ${name}" title="จำนวน" />
+        <input class="inline-cell-input med-input" type="text" inputmode="decimal" value="${qty}" data-med-key="${htmlEscape(bill.billKey)}" data-med-index="${index}" data-med-field="qty" aria-label="จำนวน ${name}" title="จำนวน" />
         <span class="med-x">×</span>
-        <input class="inline-cell-input med-input med-price" type="number" min="0" step="any" value="${unit > 0 ? unit : ""}" placeholder="ราคา" data-med-key="${htmlEscape(bill.billKey)}" data-med-index="${index}" data-med-field="unitPrice" aria-label="ราคาต่อหน่วย ${name}" title="ราคาต่อหน่วย" />
+        <input class="inline-cell-input med-input med-price" type="text" inputmode="decimal" value="${unit > 0 ? unit : ""}" placeholder="ราคา" data-med-key="${htmlEscape(bill.billKey)}" data-med-index="${index}" data-med-field="unitPrice" aria-label="ราคาต่อหน่วย ${name}" title="ราคาต่อหน่วย" />
         <span class="med-line-total" title="ยอดขายบรรทัดนี้">${sale > 0 ? `= ${money(sale)}` : "= —"}</span>
       </div>
     `;
@@ -4644,9 +4643,9 @@ function renderDrawerMedicines(bill) {
     return `
     <div class="drawer-list-item med-line" title="${source}">
       <span class="med-name" title="${name}">${name}</span>
-      <input class="inline-cell-input med-input" type="number" min="0" step="any" value="${qty}" data-drawer-med-index="${index}" data-drawer-med-field="qty" aria-label="จำนวน ${name}" title="จำนวน" />
+      <input class="inline-cell-input med-input" type="text" inputmode="decimal" value="${qty}" data-drawer-med-index="${index}" data-drawer-med-field="qty" aria-label="จำนวน ${name}" title="จำนวน" />
       <span class="med-x">×</span>
-      <input class="inline-cell-input med-input med-price" type="number" min="0" step="any" value="${unit > 0 ? unit : ""}" placeholder="ราคา" data-drawer-med-index="${index}" data-drawer-med-field="unitPrice" aria-label="ราคาต่อหน่วย ${name}" title="ราคาต่อหน่วย" />
+      <input class="inline-cell-input med-input med-price" type="text" inputmode="decimal" value="${unit > 0 ? unit : ""}" placeholder="ราคา" data-drawer-med-index="${index}" data-drawer-med-field="unitPrice" aria-label="ราคาต่อหน่วย ${name}" title="ราคาต่อหน่วย" />
       <span class="med-line-total" title="ยอดขายบรรทัดนี้">${sale > 0 ? `= ${money(sale)}` : "= —"}</span>
     </div>`;
   }).join("");
@@ -5475,6 +5474,24 @@ elements.billTableBody.addEventListener("change", (event) => {
   const input = event.target.closest("[data-inline-key][data-inline-field]");
   if (!input) return;
   quickUpdateInlineField(input.dataset.inlineKey, input.dataset.inlineField, input.value, input.dataset.inlineType);
+});
+// พิมพ์ขาย/ทุนแล้วเห็นกำไรขยับทันที — คำนวณสดเฉพาะบนจอ ค่าจริงบันทึกเมื่อออกจากช่อง (change)
+elements.billTableBody.addEventListener("input", (event) => {
+  const input = event.target.closest("[data-inline-key][data-inline-type='number']");
+  if (!input) return;
+  const field = input.dataset.inlineField;
+  if (field !== "sale" && field !== "totalCost") return;
+  const bill = state.bills.find((item) => item.billKey === input.dataset.inlineKey);
+  if (!bill) return;
+  const value = toNumeric(input.value);
+  const sale = field === "sale" ? value : toNumeric(bill.sale);
+  const totalCost = field === "totalCost" ? value : toNumeric(bill.cost) + toNumeric(bill.mlpCost);
+  const profit = sale - totalCost;
+  const line = input.closest("tr")?.querySelector(".profit-line");
+  if (!line) return;
+  line.textContent = `กำไร ${money(profit)}`;
+  line.classList.toggle("profit-negative", profit < 0);
+  line.classList.toggle("profit-nhso", Math.abs(profit - 10) < 0.005);
 });
 elements.billTableBody.addEventListener("click", (event) => {
   const copyBtn = event.target.closest("[data-copy-text]");
