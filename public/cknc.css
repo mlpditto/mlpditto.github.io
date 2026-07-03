@@ -1827,6 +1827,11 @@ td {
   background: rgba(14, 28, 36, 0.38);
 }
 
+#importModeModal,
+#mergeResultModal {
+  width: min(520px, calc(100vw - 28px));
+}
+
 .import-mode-card {
   max-width: 520px;
 }
