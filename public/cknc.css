@@ -1984,6 +1984,79 @@ html.dark .stage-chip.active {
   font-weight: 800;
 }
 
+/* ป้ายผลตรวจสอบแบบย่อใน Card Detail — โค้ดสั้น + สีตามชนิดปัญหา (hover เห็นข้อความเต็ม) */
+.issue-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.issue-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.issue-chip b {
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+
+.issue-chip.tone-red {
+  background: #fde5e7;
+  color: #b3261e;
+}
+
+.issue-chip.tone-orange {
+  background: #ffe9d6;
+  color: #b45309;
+}
+
+.issue-chip.tone-amber {
+  background: var(--amber-soft);
+  color: #744508;
+}
+
+.issue-chip.tone-gray {
+  background: #eef1f4;
+  color: #55606b;
+}
+
+.issue-chip.tone-blue {
+  background: #e8f0fb;
+  color: #1a4f9c;
+}
+
+html.dark .issue-chip.tone-red {
+  background: rgba(220, 38, 55, 0.18);
+  color: #f87171;
+}
+
+html.dark .issue-chip.tone-orange {
+  background: rgba(234, 124, 30, 0.18);
+  color: #fdba74;
+}
+
+html.dark .issue-chip.tone-amber {
+  background: rgba(245, 158, 11, 0.16);
+  color: #fbbf24;
+}
+
+html.dark .issue-chip.tone-gray {
+  background: rgba(148, 163, 184, 0.16);
+  color: #94a3b8;
+}
+
+html.dark .issue-chip.tone-blue {
+  background: rgba(59, 130, 246, 0.18);
+  color: #93c5fd;
+}
+
 /* แผงแนะนำคู่บิลที่น่าจะรวมกัน (โทนเหลืองอ่อนให้ต่างจาก bulk bar) */
 .merge-suggest-bar {
   display: flex;

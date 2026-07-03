@@ -1837,10 +1837,11 @@ const cardDetailColumns = [
     col: "col-issue",
     cellClass: "card-issue-cell",
     hideable: true,
-    text: (bill) => issueText(bill) || "-",
+    text: (bill) => (bill.validationIssues || []).map(issueChipShortText).join(", ") || "-",
     html: (bill) => {
-      const text = issueText(bill) || "-";
-      return `<div class="card-issue-clamp" title="${htmlEscape(text)}">${htmlEscape(text)}</div>`;
+      const issues = bill.validationIssues || [];
+      if (!issues.length) return "-";
+      return `<div class="issue-chip-list">${issues.map(issueChipHtml).join("")}</div>`;
     },
   },
   {
@@ -3651,6 +3652,37 @@ function reportScopeLabel() {
   }
   if (clean(elements.searchInput.value)) parts.push(`ค้นหา: ${clean(elements.searchInput.value)}`);
   return parts.join(" | ");
+}
+
+// ป้ายย่อผลตรวจสอบ: โค้ดสั้น + ข้อความกระชับ + โทนสี (ตกลงกับผู้ใช้: NGP แดง, NMR ส้มอ่อน, DMM เทา)
+const issueChipDefs = {
+  NEGATIVE_PROFIT: { code: "NGP", label: "กำไรติดลบ", tone: "red" },
+  MLP_NO_MEDICINE: { code: "NMR", label: "ขาดรายการยา", tone: "orange" },
+  DATE_MISMATCH: { code: "DMM", label: "วันที่ไม่ตรงกัน", tone: "gray" },
+  CLICKNIC_NOT_IN_MLP: { code: "CNM", label: "ยาไม่มี MLP", tone: "red" },
+  BILLING_NOT_IN_MLP: { code: "BNM", label: "บิลไม่เจอ MLP", tone: "red" },
+  MLP_COST_OVER_SALE: { code: "COS", label: "ทุนเกินยอดขาย", tone: "red" },
+  PENDING_BILLING: { code: "PDB", label: "รอใบวางบิล", tone: "blue" },
+  MISSING_MLP_COST: { code: "NCO", label: "ไม่มีต้นทุน", tone: "amber" },
+  MISSING_BILLED_AMOUNT: { code: "NBA", label: "ไม่มียอดวางบิล", tone: "amber" },
+  MISSING_AR: { code: "NAR", label: "ไม่มีเลข AR", tone: "amber" },
+  BILLED_AMOUNT_EXPECTED_MISMATCH: { code: "BEM", label: "ยอดวางบิลไม่ตรงคาด", tone: "gray" },
+  BILLED_AMOUNT_MLP_COST_MISMATCH: { code: "BCM", label: "ยอดไม่ตรง MLP", tone: "gray" },
+  EXPECTED_CLAIM_MISMATCH: { code: "ECM", label: "ไม่ตรง CKNC-P", tone: "gray" },
+  EXCLUDED: { code: "EXC", label: "ไม่นับคำนวณ", tone: "gray" },
+};
+
+function issueChipShortText(issue) {
+  const def = issueChipDefs[issue.code];
+  return def ? `${def.code} ${def.label}` : issue.text;
+}
+
+// chip ป้ายผลตรวจสอบ — hover เห็นข้อความเต็มเสมอ
+function issueChipHtml(issue) {
+  const def = issueChipDefs[issue.code];
+  const tone = def?.tone || "gray";
+  const content = def ? `<b>${def.code}</b> ${def.label}` : htmlEscape(issue.text);
+  return `<span class="issue-chip tone-${tone}" title="${htmlEscape(issue.text)}">${content}</span>`;
 }
 
 function issueText(bill) {
