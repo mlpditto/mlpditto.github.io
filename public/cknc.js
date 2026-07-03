@@ -30,6 +30,7 @@ const state = {
   authUser: null,
   activeSessionId: "",
   snapshotMode: false,
+  showMergedAutosaves: false,
   activeClipboardKind: "",
   autosaveTimer: null,
   autosaveInFlight: false,
@@ -154,6 +155,7 @@ const elements = {
   mergeResultModal: $("mergeResultModal"),
   mergeResultBody: $("mergeResultBody"),
   mergeResultOk: $("mergeResultOk"),
+  mergeResultCancel: $("mergeResultCancel"),
   mergeResultClose: $("mergeResultClose"),
   importModeModal: $("importModeModal"),
   importModeSummary: $("importModeSummary"),
@@ -3905,6 +3907,9 @@ async function autosaveMonthlySession(reason = "update") {
       months,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       createdBy: state.authUser || basePayload.createdBy || null,
+      // เดือนนี้มีข้อมูลใหม่หลังถูกรวม → เอาป้าย "รวมแล้ว" ออก ให้กลับมาแสดงในรายการ
+      mergedInto: firebase.firestore.FieldValue.delete(),
+      mergedAt: firebase.firestore.FieldValue.delete(),
     }, { merge: true })));
     state.lastAutosaveAt = new Date().toISOString();
     autosaveStatusText(`Autosave: บันทึกแล้ว ${months.join(", ")} เวลา ${new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })}`);
@@ -4072,9 +4077,12 @@ async function loadSessionList() {
       window.db.collection("cknc_monthly_autosaves").orderBy("updatedAt", "desc").limit(18).get(),
     ]);
     const sessions = manualSnapshot.docs.map((doc) => ({ id: doc.id, kind: "manual", ...doc.data() }));
-    const autosaves = autosaveSnapshot.docs.map((doc) => ({ id: doc.id, kind: "autosave", ...doc.data() }));
+    const autosavesAll = autosaveSnapshot.docs.map((doc) => ({ id: doc.id, kind: "autosave", ...doc.data() }));
+    // autosave ที่ถูกรวมเป็น session เดียวไปแล้ว: ซ่อนไว้ (กดดูย้อนได้ และจะโผล่กลับเองเมื่อเดือนนั้นมีข้อมูลใหม่)
+    const hiddenMergedCount = autosavesAll.filter((item) => item.mergedInto).length;
+    const autosaves = state.showMergedAutosaves ? autosavesAll : autosavesAll.filter((item) => !item.mergedInto);
     const rows = [...autosaves, ...sessions];
-    elements.sessionStatus.textContent = `${number(sessions.length)} sessions | ${number(autosaves.length)} autosaves`;
+    elements.sessionStatus.textContent = `${number(sessions.length)} sessions | ${number(autosavesAll.length)} autosaves${!state.showMergedAutosaves && hiddenMergedCount ? ` (ซ่อนที่รวมแล้ว ${number(hiddenMergedCount)})` : ""}`;
     elements.sessionList.innerHTML = rows.length
       ? rows.map((session) => `
         <article class="session-item">
@@ -4082,7 +4090,7 @@ async function loadSessionList() {
             <input type="checkbox" class="session-merge-pick" data-kind="${session.kind}" data-id="${htmlEscape(session.id)}" aria-label="เลือก ${htmlEscape(session.name || session.id)} เพื่อรวม" />
           </label>
           <div>
-            <h3>${htmlEscape(session.name || session.id)}${session.kind === "autosave" ? ' <span class="session-badge">Autosave</span>' : ""}</h3>
+            <h3>${htmlEscape(session.name || session.id)}${session.kind === "autosave" ? ' <span class="session-badge">Autosave</span>' : ""}${session.mergedInto ? ` <span class="session-badge merged" title="รวมเข้า ${htmlEscape(session.mergedInto)} แล้ว">รวมแล้ว</span>` : ""}</h3>
             <div class="session-meta">
               <span>${htmlEscape(formatSessionDate(session.updatedAt, session.updatedAtIso))}</span>
               ${session.month ? `<span>เดือน ${htmlEscape(session.month)}</span>` : ""}
@@ -4098,6 +4106,11 @@ async function loadSessionList() {
         </article>
       `).join("")
       : `<div class="empty">ยังไม่มี session ที่บันทึกไว้</div>`;
+    if (hiddenMergedCount && !state.showMergedAutosaves) {
+      elements.sessionList.innerHTML += `<button class="ghost small show-merged-toggle" type="button" data-toggle-merged="show">แสดง autosave ที่รวมแล้ว (${number(hiddenMergedCount)})</button>`;
+    } else if (hiddenMergedCount && state.showMergedAutosaves) {
+      elements.sessionList.innerHTML += `<button class="ghost small show-merged-toggle" type="button" data-toggle-merged="hide">ซ่อน autosave ที่รวมแล้ว</button>`;
+    }
     updateMergeSessionsButton();
   } catch (error) {
     console.error(error);
@@ -4120,35 +4133,59 @@ function updateMergeSessionsButton() {
   }
 }
 
-// สรุปผลก่อน/หลังการรวม session ให้ผู้ใช้เห็นชัดว่าได้อะไรมา
-function showMergeResult(sessions, savedName) {
-  if (!elements.mergeResultModal) return;
-  const rawCount = sessions.reduce((sum, session) => sum + ((session.payload?.bills || []).length), 0);
-  const mergedDuplicates = rawCount - state.bills.length;
-  const beforeList = sessions
-    .map((session) => `<li>${htmlEscape(session.name || session.id)} — ${number((session.payload?.bills || []).length)} บิล</li>`)
-    .join("");
-  elements.mergeResultBody.innerHTML = `
-    <p><strong>ก่อนรวม</strong> — ${number(sessions.length)} sessions (รวมดิบ ${number(rawCount)} บิล)</p>
-    <ul>${beforeList}</ul>
-    <p><strong>หลังรวม</strong> — <strong>${number(state.bills.length)} บิล</strong>${mergedDuplicates > 0
-      ? ` (บิลเลขซ้ำถูกรวมข้อมูลเข้าด้วยกัน ${number(mergedDuplicates)} ใบ แบบเก็บข้อมูลมากที่สุด)`
-      : " (ไม่มีบิลเลขซ้ำ)"}</p>
-    <p>ค่าที่แก้มือ ${number(Object.keys(state.billOverrides).length)} รายการ · ประวัติ audit ${number(state.auditTrail.length)} รายการ</p>
-    <p>${savedName
-      ? `บันทึกเป็น session ใหม่: <strong>${htmlEscape(savedName)}</strong> (ต้นฉบับไม่ถูกลบ)`
-      : "ยังไม่ได้บันทึกเป็น session — ข้อมูลรวมอยู่บนจอ กด Save Session ได้ภายหลัง"}</p>
-  `;
-  elements.mergeResultModal.showModal();
+// แสดงผลก่อน/หลังให้ตรวจ "ก่อน" ยืนยันรวม — คืน true เมื่อกดตกลง
+function confirmMergePreview(sessions, mergedBills, mergedOverrides, mergedAudit) {
+  return new Promise((resolve) => {
+    if (!elements.mergeResultModal) {
+      resolve(true);
+      return;
+    }
+    const rawCount = sessions.reduce((sum, session) => sum + ((session.payload?.bills || []).length), 0);
+    const mergedDuplicates = rawCount - mergedBills.length;
+    const beforeList = sessions
+      .map((session) => `<li>${htmlEscape(session.name || session.id)} — ${number((session.payload?.bills || []).length)} บิล</li>`)
+      .join("");
+    elements.mergeResultBody.innerHTML = `
+      <p><strong>ก่อนรวม</strong> — ${number(sessions.length)} sessions (รวมดิบ ${number(rawCount)} บิล)</p>
+      <ul>${beforeList}</ul>
+      <p><strong>หลังรวม</strong> — <strong>${number(mergedBills.length)} บิล</strong>${mergedDuplicates > 0
+        ? ` (บิลเลขซ้ำถูกรวมข้อมูลเข้าด้วยกัน ${number(mergedDuplicates)} ใบ แบบเก็บข้อมูลมากที่สุด)`
+        : " (ไม่มีบิลเลขซ้ำ)"}</p>
+      <p>ค่าที่แก้มือ ${number(Object.keys(mergedOverrides).length)} รายการ · ประวัติ audit ${number(mergedAudit.length)} รายการ</p>
+      <p class="merge-warning">${state.bills.length
+        ? `กดตกลงแล้วผลรวมจะแทนที่ข้อมูลบนจอ (${number(state.bills.length)} บิล) และให้ตั้งชื่อบันทึกเป็น session ใหม่ (ต้นฉบับไม่ถูกลบ)`
+        : "กดตกลงแล้วให้ตั้งชื่อเพื่อบันทึกเป็น session ใหม่ (ต้นฉบับไม่ถูกลบ)"}</p>
+    `;
+    let settled = false;
+    const finish = (ok) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      if (elements.mergeResultModal.open) elements.mergeResultModal.close();
+      resolve(ok);
+    };
+    const onOk = () => finish(true);
+    const onCancel = () => finish(false);
+    function cleanup() {
+      elements.mergeResultOk.removeEventListener("click", onOk);
+      elements.mergeResultCancel.removeEventListener("click", onCancel);
+      elements.mergeResultClose.removeEventListener("click", onCancel);
+      elements.mergeResultModal.removeEventListener("close", onCancel);
+    }
+    elements.mergeResultOk.addEventListener("click", onOk);
+    elements.mergeResultCancel.addEventListener("click", onCancel);
+    elements.mergeResultClose.addEventListener("click", onCancel);
+    elements.mergeResultModal.addEventListener("close", onCancel);
+    elements.mergeResultModal.showModal();
+  });
 }
 
 async function mergeSelectedSessions() {
   const picks = [...elements.sessionList.querySelectorAll(".session-merge-pick:checked")]
     .map((checkbox) => ({ kind: checkbox.dataset.kind, id: checkbox.dataset.id }));
   if (picks.length < 2) return;
-  if (state.bills.length && !confirm(`ผลรวมจะแทนที่ข้อมูลบนจอ (${number(state.bills.length)} บิล) แล้วบันทึกเป็น session ใหม่ — ดำเนินการต่อหรือไม่?`)) return;
   try {
-    elements.sessionStatus.textContent = "กำลังรวม session...";
+    elements.sessionStatus.textContent = "กำลังเตรียมผลรวม...";
     const docs = await Promise.all(picks.map((pick) => (
       pick.kind === "autosave" ? window.db.collection("cknc_monthly_autosaves") : window.db.collection("cknc_sessions")
     ).doc(pick.id).get()));
@@ -4172,11 +4209,20 @@ async function mergeSelectedSessions() {
         audit.push(entry);
       });
     });
-    state.bills = [...billMap.values()].map((bill) => ({
+    const mergedBills = [...billMap.values()].map((bill) => ({
       ...bill,
       medicines: (bill.medicines && bill.medicines.length) ? bill.medicines : parseMedicinesTextLines(bill.medicinesText),
       validationIssues: validationRulesForBill(bill),
     }));
+
+    // แสดงผลก่อน/หลังให้ตรวจ ก่อนลงมือจริง
+    const confirmed = await confirmMergePreview(sessions, mergedBills, overrides, audit);
+    if (!confirmed) {
+      elements.sessionStatus.textContent = "ยกเลิกการรวม — ไม่มีอะไรเปลี่ยน";
+      return;
+    }
+
+    state.bills = mergedBills;
     state.billOverrides = overrides;
     state.auditTrail = audit;
     state.topMeds = [];
@@ -4205,10 +4251,15 @@ async function mergeSelectedSessions() {
         await ref.set(doc);
         state.activeSessionId = ref.id;
         setSessionButtons();
+        // ทำเครื่องหมาย autosave ที่รวมแล้ว → ซ่อนจากรายการ (จะโผล่กลับเองเมื่อเดือนนั้นมีข้อมูลใหม่)
+        await Promise.all(picks.filter((pick) => pick.kind === "autosave").map((pick) =>
+          window.db.collection("cknc_monthly_autosaves").doc(pick.id).set({
+            mergedInto: name,
+            mergedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          }, { merge: true })));
       }
     }
     elements.statusText.textContent = `รวม ${number(sessions.length)} sessions → ${number(state.bills.length)} บิล${name ? ` (บันทึก "${name}")` : ""}`;
-    showMergeResult(sessions, name);
     await loadSessionList();
   } catch (error) {
     console.error(error);
@@ -5337,8 +5388,6 @@ elements.openSessionsBtn.addEventListener("click", openSessionsModal);
 elements.closeSessionModal.addEventListener("click", closeSessionsModal);
 elements.refreshSessionsBtn.addEventListener("click", loadSessionList);
 elements.mergeSessionsBtn?.addEventListener("click", mergeSelectedSessions);
-elements.mergeResultOk?.addEventListener("click", () => elements.mergeResultModal.close());
-elements.mergeResultClose?.addEventListener("click", () => elements.mergeResultModal.close());
 elements.selectAllSessions?.addEventListener("change", () => {
   const checked = elements.selectAllSessions.checked;
   elements.sessionList.querySelectorAll(".session-merge-pick").forEach((pick) => {
@@ -5350,6 +5399,12 @@ elements.sessionList.addEventListener("change", (event) => {
   if (event.target.closest(".session-merge-pick")) updateMergeSessionsButton();
 });
 elements.sessionList.addEventListener("click", (event) => {
+  const mergedToggle = event.target.closest("[data-toggle-merged]");
+  if (mergedToggle) {
+    state.showMergedAutosaves = mergedToggle.dataset.toggleMerged === "show";
+    loadSessionList();
+    return;
+  }
   const loadButton = event.target.closest("[data-load-session]");
   if (loadButton) {
     loadSavedSession(loadButton.dataset.loadSession);

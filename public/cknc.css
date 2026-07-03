@@ -1824,6 +1824,20 @@ td {
   color: var(--muted);
 }
 
+.merge-result-body .merge-warning {
+  color: #744508;
+  font-weight: 700;
+}
+
+.session-badge.merged {
+  background: var(--amber-soft);
+  color: #744508;
+}
+
+.show-merged-toggle {
+  justify-self: start;
+}
+
 .session-card {
   max-height: calc(100vh - 28px);
   display: flex;
