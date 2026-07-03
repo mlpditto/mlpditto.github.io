@@ -1880,7 +1880,8 @@ function cardDetailRowHtml(bill, columns) {
     const content = column.html ? column.html(bill) : htmlEscape(column.text(bill));
     return `<td class="${cardColumnClass(column, true)}">${content}</td>`;
   });
-  return `<tr>${cells.join("")}</tr>`;
+  const rowClass = `${(bill.billingStage || "") === "paid" ? "row-paid" : ""}${bill.excluded ? " row-excluded" : ""}`.trim();
+  return `<tr${rowClass ? ` class="${rowClass}"` : ""}>${cells.join("")}</tr>`;
 }
 
 function applyCardFilter(config) {

@@ -2561,15 +2561,18 @@ html.dark .bulk-bar input {
 }
 
 /* บิล PAID แล้ว: ย้อมเขียวอ่อนทั้งแถว + เส้นคาดเขียวขอบซ้าย */
-#billTableBody tr.row-paid td {
+#billTableBody tr.row-paid td,
+#cardDetailBody tr.row-paid td {
   background: #f2faf5;
 }
 
-#billTableBody tr.row-paid td:first-child {
+#billTableBody tr.row-paid td:first-child,
+#cardDetailBody tr.row-paid td:first-child {
   box-shadow: inset 3px 0 0 var(--green);
 }
 
-html.dark #billTableBody tr.row-paid td {
+html.dark #billTableBody tr.row-paid td,
+html.dark #cardDetailBody tr.row-paid td {
   background: rgba(0, 177, 79, 0.09);
 }
 
