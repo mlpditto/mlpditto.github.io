@@ -1796,6 +1796,17 @@ td {
   background: rgba(14, 28, 36, 0.38);
 }
 
+.import-mode-card {
+  max-width: 520px;
+}
+
+.import-mode-summary {
+  margin: 0;
+  padding: 0 16px 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .session-card {
   max-height: calc(100vh - 28px);
   display: flex;

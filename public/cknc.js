@@ -149,6 +149,12 @@ const elements = {
   saveOverrideBtn: $("saveOverrideBtn"),
   resetOverrideBtn: $("resetOverrideBtn"),
   drawerPasteAnalyzeBtn: $("drawerPasteAnalyzeBtn"),
+  importModeModal: $("importModeModal"),
+  importModeSummary: $("importModeSummary"),
+  importModeAppend: $("importModeAppend"),
+  importModeReplace: $("importModeReplace"),
+  importModeCancel: $("importModeCancel"),
+  importModeClose: $("importModeClose"),
   pasteAnalyzeModal: $("pasteAnalyzeModal"),
   closePasteAnalyze: $("closePasteAnalyze"),
   cancelPasteAnalyze: $("cancelPasteAnalyze"),
@@ -887,6 +893,16 @@ function dedupeMlpRows(rows) {
   const seen = new Set();
   return rows.filter((row) => {
     const key = [row.referenceNo, row.invoice, Number(row.mlpCost || 0).toFixed(4), row.detail].join("|");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function dedupeBillingRows(rows) {
+  const seen = new Set();
+  return rows.filter((row) => {
+    const key = [row.bar, row.ar, row.orw, row.inv, Number(row.amount || 0).toFixed(2), row.dueDate].join("|");
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -2656,23 +2672,41 @@ function previewClipboardText(text) {
   return rows;
 }
 
-function importClipboardText(kind, text) {
+async function importClipboardText(kind, text) {
   const workbook = workbookFromClipboardText(text, `Clipboard ${kind}`);
   const sourceName = `clipboard-${kind}`;
+  const parsed = kind === "clicknic" ? parseClicknicWorkbook(workbook, sourceName)
+    : kind === "mlp" ? parseMlpWorkbook(workbook, sourceName)
+      : parseBillingWorkbook(workbook, sourceName);
 
-  state.activeSessionId = "";
-  state.snapshotMode = false;
-  if (kind === "clicknic") {
-    state.clicknicRows = dedupeClicknicRows(parseClicknicWorkbook(workbook, sourceName));
-  } else if (kind === "mlp") {
-    state.mlpRows = parseMlpWorkbook(workbook, sourceName);
-  } else if (kind === "billing") {
-    state.billingRows = parseBillingWorkbook(workbook, sourceName);
+  let mode = "replace";
+  if (state.bills.length) {
+    mode = await askImportMode(`ข้อมูลบนจอมี ${number(state.bills.length)} บิล — clipboard (${clipboardKindLabel(kind)}) มี ${number(parsed.length)} แถวข้อมูล (โหมดเพิ่ม: แถวซ้ำถูกตัดอัตโนมัติ และค่าที่แก้มือไว้คงอยู่)`);
+    if (!mode) return false;
+  }
+
+  if (mode === "append") {
+    mergeImportedIntoState({
+      clicknicRows: kind === "clicknic" ? parsed : [],
+      mlpRows: kind === "mlp" ? parsed : [],
+      billingRows: kind === "billing" ? parsed : [],
+    });
+  } else {
+    state.activeSessionId = "";
+    state.snapshotMode = false;
+    if (kind === "clicknic") {
+      state.clicknicRows = dedupeClicknicRows(parsed);
+    } else if (kind === "mlp") {
+      state.mlpRows = dedupeMlpRows(parsed);
+    } else if (kind === "billing") {
+      state.billingRows = parsed;
+    }
   }
 
   renderAll();
   scheduleAutosave(`clipboard-${kind}`);
   elements.statusText.textContent = `Imported ${clipboardKindLabel(kind)} from clipboard`;
+  return true;
 }
 
 async function readClipboardIntoModal() {
@@ -2713,17 +2747,75 @@ function closeClipboardImport() {
   state.activeClipboardKind = "";
 }
 
-function confirmClipboardImport() {
+async function confirmClipboardImport() {
   try {
     const text = elements.clipboardPreview.value;
     const rows = previewClipboardText(text);
     if (!rows.length) throw new Error("Clipboard is empty");
-    importClipboardText(state.activeClipboardKind, text);
+    const imported = await importClipboardText(state.activeClipboardKind, text);
+    // ผู้ใช้ยกเลิกตอนเลือกโหมด: คง modal เดิมไว้ ไม่ทิ้งข้อความที่วางมา
+    if (imported === false) return;
     closeClipboardImport();
   } catch (error) {
     console.error(error);
     elements.clipboardStatus.textContent = error.message || "Clipboard import failed";
   }
+}
+
+// ถามผู้ใช้ว่าจะ "เพิ่มเข้าข้อมูลเดิม" หรือ "เริ่มใหม่ทั้งหมด" — คืน null เมื่อยกเลิก
+function askImportMode(summaryText) {
+  return new Promise((resolve) => {
+    if (!elements.importModeModal) {
+      resolve("replace");
+      return;
+    }
+    elements.importModeSummary.textContent = summaryText;
+    let settled = false;
+    const finish = (mode) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      if (elements.importModeModal.open) elements.importModeModal.close();
+      resolve(mode);
+    };
+    const onAppend = () => finish("append");
+    const onReplace = () => finish("replace");
+    const onCancel = () => finish(null);
+    const onClose = () => finish(null);
+    function cleanup() {
+      elements.importModeAppend.removeEventListener("click", onAppend);
+      elements.importModeReplace.removeEventListener("click", onReplace);
+      elements.importModeCancel.removeEventListener("click", onCancel);
+      elements.importModeClose.removeEventListener("click", onCancel);
+      elements.importModeModal.removeEventListener("close", onClose);
+    }
+    elements.importModeAppend.addEventListener("click", onAppend);
+    elements.importModeReplace.addEventListener("click", onReplace);
+    elements.importModeCancel.addEventListener("click", onCancel);
+    elements.importModeClose.addEventListener("click", onCancel);
+    elements.importModeModal.addEventListener("close", onClose);
+    elements.importModeModal.showModal();
+  });
+}
+
+// โหมดเพิ่มข้อมูล: รวม rows ใหม่กับของเดิม + ตัดแถวซ้ำ โดยคง override/audit/รายการยา manual ไว้ทั้งหมด
+function mergeImportedIntoState(imported) {
+  if (state.snapshotMode) {
+    // ข้อมูลบนจอมาจาก session ที่กู้คืน (ไม่มี source rows): สร้างบิลจากข้อมูลใหม่ แล้วรวมกับบิลเดิม (คีย์ซ้ำใช้ของใหม่)
+    const previousBills = state.bills;
+    state.clicknicRows = dedupeClicknicRows(imported.clicknicRows);
+    state.mlpRows = dedupeMlpRows(imported.mlpRows);
+    state.billingRows = dedupeBillingRows(imported.billingRows);
+    state.snapshotMode = false;
+    buildBills();
+    const importedKeys = new Set(state.bills.map((bill) => bill.billKey));
+    state.bills = [...state.bills, ...previousBills.filter((bill) => !importedKeys.has(bill.billKey))];
+    state.snapshotMode = true;
+    return;
+  }
+  state.clicknicRows = dedupeClicknicRows([...state.clicknicRows, ...imported.clicknicRows]);
+  state.mlpRows = dedupeMlpRows([...state.mlpRows, ...imported.mlpRows]);
+  state.billingRows = dedupeBillingRows([...state.billingRows, ...imported.billingRows]);
 }
 
 async function handleFiles() {
@@ -2750,15 +2842,33 @@ async function handleFiles() {
       billingImportedRows.push(...parseBillingWorkbook(workbook, file.name));
     }
 
-    state.clicknicRows = dedupeClicknicRows(clicknicImportedRows);
-    state.manualClicknicRows = [];
-    state.auditTrail = [];
-    state.billOverrides = {};
-    state.mlpRows = dedupeMlpRows(mlpImportedRows);
-    state.billingRows = billingImportedRows;
-    state.activeSessionId = "";
-    state.snapshotMode = false;
-    state.allStepsComplete = false;
+    let mode = "replace";
+    if (state.bills.length) {
+      const importedCount = clicknicImportedRows.length + mlpImportedRows.length + billingImportedRows.length;
+      mode = await askImportMode(`ข้อมูลบนจอมี ${number(state.bills.length)} บิล — ไฟล์ที่เลือกมี ${number(importedCount)} แถวข้อมูล (โหมดเพิ่ม: แถวซ้ำถูกตัดอัตโนมัติ และค่าที่แก้มือไว้คงอยู่)`);
+      if (!mode) {
+        elements.statusText.textContent = "ยกเลิกการนำเข้า — ข้อมูลเดิมคงอยู่";
+        return;
+      }
+    }
+
+    if (mode === "append") {
+      mergeImportedIntoState({
+        clicknicRows: clicknicImportedRows,
+        mlpRows: mlpImportedRows,
+        billingRows: billingImportedRows,
+      });
+    } else {
+      state.clicknicRows = dedupeClicknicRows(clicknicImportedRows);
+      state.manualClicknicRows = [];
+      state.auditTrail = [];
+      state.billOverrides = {};
+      state.mlpRows = dedupeMlpRows(mlpImportedRows);
+      state.billingRows = billingImportedRows;
+      state.activeSessionId = "";
+      state.snapshotMode = false;
+      state.allStepsComplete = false;
+    }
 
     renderAll();
     scheduleAutosave("file-import");
