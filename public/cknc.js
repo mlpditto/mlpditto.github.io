@@ -4046,7 +4046,9 @@ function parseBillPasteText(rawText) {
     sale: 0,
   };
 
-  result.refId = text.match(/Ref-?\s*ID\s*:?\s*(R-?\d+)/i)?.[1] || "";
+  result.refId = text.match(/Ref-?\s*ID\s*:?\s*(R-?\d+)/i)?.[1]
+    || text.match(/(?:^|\s)#\s*(R-?\d+)/im)?.[1]
+    || "";
   result.orderId = findOrderId(text);
 
   const nameMatch = text.match(/รายการของ\s*(.+?)\s*(?:\(([^)]*)\)|$)/m);
@@ -4069,6 +4071,19 @@ function parseBillPasteText(rawText) {
     const loosePhone = textWithoutRefId.match(/(?:^|[\s-])(0\d{9})(?!\d)/m);
     if (loosePhone && !findOrderId(loosePhone[1])) result.phone = loosePhone[1];
   }
+  // รูปแบบ memo "#R-xxx": บรรทัด "เลขบิล-ชื่อ(-รหัสไปรษณีย์)-ยอด-จำนวน" ไม่มีเบอร์โทร/วันที่
+  if (!orderLineMatch) {
+    const memoLine = text.match(/^.*?020\d{13}-(.+?)-([\d,]+(?:\.\d+)?)(?:-(\d+))?(?:\s+\d{1,2}[/.]\d{1,2}[/.]\d{2,4}\s+\d{1,2}[:.]\d{2})?\s*$/m);
+    if (memoLine) {
+      if (!result.patient) result.patient = clean(memoLine[1].split(/-(?=\d)/)[0]);
+      // กันเลขที่หน้าตาเป็นเบอร์โทรถูกอ่านเป็นยอดขาย
+      if (!/^0\d{8,9}$/.test(memoLine[2])) result.sale = toNumeric(memoLine[2]);
+      if (!result.address) {
+        const lineEnd = text.indexOf(memoLine[0]) + memoLine[0].length;
+        result.address = clean(text.slice(lineEnd).replace(/\s+/g, " "));
+      }
+    }
+  }
 
   const dtMatch = text.match(/(\d{1,2}\/\d{1,2}\/\d{4})\s+\d{1,2}[:.]\d{2}/);
   if (dtMatch) result.clicknicDate = dateKey(dtMatch[1]);
@@ -4088,7 +4103,11 @@ function parseBillPasteText(rawText) {
       if (orderLineEnd > 0 && orderLineEnd < dtMatch.index) from = orderLineEnd;
     }
     if (!from) from = text.lastIndexOf("\n", dtMatch.index) + 1;
-    result.address = clean(text.slice(from, dtMatch.index));
+    const addressCandidate = clean(text.slice(from, dtMatch.index));
+    // มีเลขบิลปนอยู่ = ตัดมาไม่ถูกช่วง ไม่ใช่ที่อยู่
+    if (!result.address && addressCandidate && !findOrderId(addressCandidate)) {
+      result.address = addressCandidate;
+    }
   }
 
   return result;
