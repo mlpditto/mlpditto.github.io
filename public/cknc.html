@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="./cknc.css?v=20260703160000" />
+    <link rel="stylesheet" href="./cknc.css?v=20260703170000" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -613,98 +613,121 @@
 
           <section class="drawer-section">
             <h3>แก้ไขข้อมูลแถวนี้</h3>
-            <div class="form-grid">
-              <label>
-                สถานะ
-                <select id="editStatus">
-                  <option value="matched">จับคู่แล้ว</option>
-                  <option value="mlp-only">ไม่พบรายการยา</option>
-                  <option value="pending-billing">รอใบวางบิล</option>
-                  <option value="clicknic-only">รายการยาไม่มี MLP</option>
-                  <option value="billing-only">ใบวางบิลไม่เจอ MLP</option>
-                </select>
-              </label>
-              <label>
-                งานวางบิล (PAID อยู่ที่นี่)
-                <select id="editBillingStage"></select>
-              </label>
-              <label>
-                ผู้รับบริการ
-                <input id="editPatient" type="text" placeholder="ชื่อผู้รับบริการ" />
-              </label>
-              <label>
-                Ref-ID
-                <input id="editRefId" type="text" placeholder="R-..." />
-              </label>
-              <label>
-                เบอร์โทร
-                <input id="editPhone" type="text" inputmode="tel" placeholder="0xxxxxxxxx" />
-              </label>
-              <label>
-                ORW
-                <input id="editOrw" type="text" />
-              </label>
-              <label>
-                INV
-                <input id="editInvoice" type="text" />
-              </label>
-              <label>
-                ใบวางบิล (BAR)
-                <input id="editBarNo" type="text" placeholder="BAR-..." />
-              </label>
-              <label>
-                เลขที่เครดิต (AR)
-                <input id="editCreditNos" type="text" placeholder="AR-... (หลายเลขคั่นด้วย ,)" />
-              </label>
-              <label>
-                วันที่ CLICKNIC
-                <span class="date-field">
-                  <input id="editClicknicDate" type="text" inputmode="numeric" placeholder="วว/ดด/ปปปป" />
-                  <button type="button" class="date-pick-btn" title="เลือกวันที่จากปฏิทิน" aria-label="เลือกวันที่จากปฏิทิน"><i class="fa-solid fa-calendar-days"></i></button>
-                  <input type="date" class="date-picker-hidden" tabindex="-1" aria-hidden="true" />
-                </span>
-              </label>
-              <label>
-                วันที่ MLP
-                <span class="date-field">
-                  <input id="editMlpDate" type="text" inputmode="numeric" placeholder="วว/ดด/ปปปป" />
-                  <button type="button" class="date-pick-btn" title="เลือกวันที่จากปฏิทิน" aria-label="เลือกวันที่จากปฏิทิน"><i class="fa-solid fa-calendar-days"></i></button>
-                  <input type="date" class="date-picker-hidden" tabindex="-1" aria-hidden="true" />
-                </span>
-              </label>
-              <label>
-                ครบกำหนดใบวางบิล
-                <span class="date-field">
-                  <input id="editBillingDueDate" type="text" inputmode="numeric" placeholder="วว/ดด/ปปปป" />
-                  <button type="button" class="date-pick-btn" title="เลือกวันที่จากปฏิทิน" aria-label="เลือกวันที่จากปฏิทิน"><i class="fa-solid fa-calendar-days"></i></button>
-                  <input type="date" class="date-picker-hidden" tabindex="-1" aria-hidden="true" />
-                </span>
-              </label>
-              <label>
-                ต้นทุน
-                <input id="editCost" type="number" step="0.01" min="0" />
-              </label>
-              <label>
-                ราคาขาย (ยอดขายยา)
-                <input id="editSale" type="number" step="0.01" min="0" />
-              </label>
-              <label>
-                กำไร (คำนวณอัตโนมัติ)
-                <input id="editProfit" type="text" readonly tabindex="-1" aria-label="กำไร คำนวณอัตโนมัติจากราคาขายหักต้นทุน" />
-              </label>
-              <label>
-                ยอดใบวางบิล
-                <input id="editBilledAmount" type="number" step="0.01" min="0" />
-              </label>
-              <label>
-                ยอดเรียกเก็บประกัน (CKNC-P)
-                <input id="editExpectedClaim" type="number" step="0.01" min="0" />
+            <div class="edit-group">
+              <h4 class="edit-group-title"><i class="fa-solid fa-list-check"></i> สถานะงาน</h4>
+              <div class="form-grid">
+                <label>
+                  สถานะ
+                  <select id="editStatus">
+                    <option value="matched">จับคู่แล้ว</option>
+                    <option value="mlp-only">ไม่พบรายการยา</option>
+                    <option value="pending-billing">รอใบวางบิล</option>
+                    <option value="clicknic-only">รายการยาไม่มี MLP</option>
+                    <option value="billing-only">ใบวางบิลไม่เจอ MLP</option>
+                  </select>
+                </label>
+                <label>
+                  งานวางบิล (PAID อยู่ที่นี่)
+                  <select id="editBillingStage"></select>
+                </label>
+              </div>
+            </div>
+            <div class="edit-group">
+              <h4 class="edit-group-title"><i class="fa-solid fa-user"></i> ผู้รับบริการ</h4>
+              <div class="form-grid">
+                <label>
+                  ผู้รับบริการ
+                  <input id="editPatient" type="text" placeholder="ชื่อผู้รับบริการ" />
+                </label>
+                <label>
+                  Ref-ID
+                  <input id="editRefId" type="text" placeholder="R-..." />
+                </label>
+                <label>
+                  เบอร์โทร
+                  <input id="editPhone" type="text" inputmode="tel" placeholder="0xxxxxxxxx" />
+                </label>
+              </div>
+              <label class="drawer-note">
+                ที่อยู่ผู้รับบริการ
+                <textarea id="editAddress" rows="2" placeholder="ที่อยู่จัดส่ง/ที่อยู่ผู้รับบริการ"></textarea>
               </label>
             </div>
-            <label class="drawer-note">
-              ที่อยู่ผู้รับบริการ
-              <textarea id="editAddress" rows="2" placeholder="ที่อยู่จัดส่ง/ที่อยู่ผู้รับบริการ"></textarea>
-            </label>
+            <div class="edit-group">
+              <h4 class="edit-group-title"><i class="fa-solid fa-file-lines"></i> เอกสารอ้างอิง</h4>
+              <div class="form-grid">
+                <label>
+                  ORW
+                  <input id="editOrw" type="text" />
+                </label>
+                <label>
+                  INV
+                  <input id="editInvoice" type="text" />
+                </label>
+                <label>
+                  ใบวางบิล (BAR)
+                  <input id="editBarNo" type="text" placeholder="BAR-..." />
+                </label>
+                <label>
+                  เลขที่เครดิต (AR)
+                  <input id="editCreditNos" type="text" placeholder="AR-... (หลายเลขคั่นด้วย ,)" />
+                </label>
+              </div>
+            </div>
+            <div class="edit-group">
+              <h4 class="edit-group-title"><i class="fa-solid fa-calendar-days"></i> วันที่</h4>
+              <div class="form-grid">
+                <label>
+                  วันที่ CLICKNIC
+                  <span class="date-field">
+                    <input id="editClicknicDate" type="text" inputmode="numeric" placeholder="วว/ดด/ปปปป" />
+                    <button type="button" class="date-pick-btn" title="เลือกวันที่จากปฏิทิน" aria-label="เลือกวันที่จากปฏิทิน"><i class="fa-solid fa-calendar-days"></i></button>
+                    <input type="date" class="date-picker-hidden" tabindex="-1" aria-hidden="true" />
+                  </span>
+                </label>
+                <label>
+                  วันที่ MLP
+                  <span class="date-field">
+                    <input id="editMlpDate" type="text" inputmode="numeric" placeholder="วว/ดด/ปปปป" />
+                    <button type="button" class="date-pick-btn" title="เลือกวันที่จากปฏิทิน" aria-label="เลือกวันที่จากปฏิทิน"><i class="fa-solid fa-calendar-days"></i></button>
+                    <input type="date" class="date-picker-hidden" tabindex="-1" aria-hidden="true" />
+                  </span>
+                </label>
+                <label>
+                  ครบกำหนดใบวางบิล
+                  <span class="date-field">
+                    <input id="editBillingDueDate" type="text" inputmode="numeric" placeholder="วว/ดด/ปปปป" />
+                    <button type="button" class="date-pick-btn" title="เลือกวันที่จากปฏิทิน" aria-label="เลือกวันที่จากปฏิทิน"><i class="fa-solid fa-calendar-days"></i></button>
+                    <input type="date" class="date-picker-hidden" tabindex="-1" aria-hidden="true" />
+                  </span>
+                </label>
+              </div>
+            </div>
+            <div class="edit-group money-card">
+              <h4 class="edit-group-title"><i class="fa-solid fa-coins"></i> ยอดเงิน</h4>
+              <div class="money-profit">
+                <span>กำไร (คำนวณอัตโนมัติ)</span>
+                <input id="editProfit" type="text" readonly tabindex="-1" aria-label="กำไร คำนวณอัตโนมัติจากราคาขายหักต้นทุน" />
+              </div>
+              <div class="form-grid">
+                <label>
+                  ต้นทุน
+                  <input id="editCost" type="number" step="0.01" min="0" />
+                </label>
+                <label>
+                  ราคาขาย (ยอดขายยา)
+                  <input id="editSale" type="number" step="0.01" min="0" />
+                </label>
+                <label>
+                  ยอดใบวางบิล
+                  <input id="editBilledAmount" type="number" step="0.01" min="0" />
+                </label>
+                <label>
+                  ยอดเรียกเก็บประกัน (CKNC-P)
+                  <input id="editExpectedClaim" type="number" step="0.01" min="0" />
+                </label>
+              </div>
+            </div>
             <label class="drawer-checkbox">
               <input id="editExcluded" type="checkbox" />
               ไม่นับบิลนี้ในการคำนวณ (ตัดออกจากสรุปยอด/รายงาน export)
@@ -732,7 +755,7 @@
       </div>
     </dialog>
 
-    <script src="./cknc.js?v=20260703160000"></script>
+    <script src="./cknc.js?v=20260703170000"></script>
     <script>
       (function () {
         const btn = document.getElementById("themeToggleBtn");

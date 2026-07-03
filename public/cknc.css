@@ -1894,6 +1894,73 @@ td {
   font-size: 16px;
 }
 
+.edit-group {
+  display: grid;
+  gap: 10px;
+}
+
+.edit-group + .edit-group {
+  margin-top: 8px;
+  border-top: 1px dashed var(--line);
+  padding-top: 16px;
+}
+
+.edit-group-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 800;
+}
+
+.edit-group-title i {
+  color: var(--green-dark);
+  font-size: 11px;
+}
+
+.edit-group .drawer-note {
+  margin-top: 0;
+}
+
+.edit-group.money-card {
+  border: 1px solid #bdd5cc;
+  border-radius: 12px;
+  padding: 14px;
+  background: #f3faf7;
+}
+
+.edit-group + .edit-group.money-card {
+  border-top: 1px solid #bdd5cc;
+  padding-top: 14px;
+  margin-top: 12px;
+}
+
+.money-profit {
+  display: grid;
+  gap: 2px;
+}
+
+.money-profit span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.money-profit input#editProfit[readonly] {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--green-dark);
+  font-size: 26px;
+  font-weight: 900;
+}
+
+.money-profit input#editProfit[readonly].profit-negative {
+  color: var(--red);
+}
+
 .drawer-summary {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3087,6 +3154,24 @@ html.dark .badge.excluded {
 
 html.dark #editProfit[readonly] {
   background: #0f172a;
+}
+
+html.dark .edit-group.money-card {
+  background: rgba(0, 177, 79, 0.08);
+  border-color: #2f6b52;
+}
+
+html.dark .edit-group + .edit-group.money-card {
+  border-top-color: #2f6b52;
+}
+
+html.dark .money-profit input#editProfit[readonly] {
+  background: transparent;
+  color: #bbf7d0;
+}
+
+html.dark .money-profit input#editProfit[readonly].profit-negative {
+  color: var(--red);
 }
 
 html.dark .date-pick-btn {
