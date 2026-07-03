@@ -1611,6 +1611,12 @@ td {
   gap: 12px;
 }
 
+.form-grid > label {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+
 .manual-panel label {
   display: grid;
   gap: 6px;
