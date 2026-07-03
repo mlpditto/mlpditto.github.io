@@ -3110,3 +3110,143 @@ html.dark .audit-item p,
 html.dark .panel-head p {
   color: var(--muted);
 }
+
+/* --- Paste & analyze (แก้ไขบิลจากข้อความ paste) ----------------------- */
+.bill-patient-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.bill-patient-row .bill-patient {
+  flex: 1;
+  min-width: 0;
+}
+
+.bill-analyze-btn {
+  flex: none;
+  width: 24px;
+  min-height: 24px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #f4f7f5;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.bill-analyze-btn:hover {
+  background: var(--mint);
+  border-color: var(--green);
+  color: var(--green-dark);
+}
+
+.paste-analyze-modal {
+  width: min(780px, calc(100vw - 28px));
+}
+
+.paste-analyze-body {
+  display: grid;
+  gap: 12px;
+  min-height: 0;
+  padding: 16px 18px;
+  overflow: auto;
+}
+
+#pasteAnalyzeText {
+  width: 100%;
+  min-height: 108px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  background: #fff;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12.5px;
+  resize: vertical;
+}
+
+.paste-analyze-warnings {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.paste-analyze-warnings:empty {
+  display: none;
+}
+
+.paste-analyze-results {
+  display: grid;
+  gap: 6px;
+}
+
+.paste-field {
+  display: grid;
+  grid-template-columns: 20px 168px minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: 8px;
+  align-items: center;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 12.5px;
+}
+
+.paste-field-empty {
+  opacity: 0.6;
+}
+
+.paste-field-label {
+  font-weight: 800;
+}
+
+.paste-field-old {
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.paste-field input[type="text"],
+.paste-field input[type="number"],
+.paste-field select {
+  width: 100%;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--ink);
+  background: #fff;
+  font: inherit;
+  font-size: 12.5px;
+}
+
+@media (max-width: 720px) {
+  .paste-field {
+    grid-template-columns: 20px minmax(0, 1fr);
+  }
+
+  .paste-field-old,
+  .paste-field input[type="text"],
+  .paste-field input[type="number"],
+  .paste-field select {
+    grid-column: 2;
+  }
+}
+
+html.dark .bill-analyze-btn {
+  background: #1e293b;
+  color: #cbd5e1;
+}
+
+html.dark #pasteAnalyzeText,
+html.dark .paste-field input[type="text"],
+html.dark .paste-field input[type="number"],
+html.dark .paste-field select {
+  background: #0f172a;
+  border-color: #334155;
+  color: var(--ink);
+}

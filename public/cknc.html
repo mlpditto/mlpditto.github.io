@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="./cknc.css?v=20260703100000" />
+    <link rel="stylesheet" href="./cknc.css?v=20260703110000" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -554,6 +554,36 @@
       </form>
     </dialog>
 
+    <dialog id="pasteAnalyzeModal" class="modal paste-analyze-modal">
+      <form method="dialog" class="modal-card">
+        <div class="modal-head">
+          <div>
+            <p class="eyebrow">Paste &amp; analyze</p>
+            <h2>แก้ไขบิลจากข้อความ paste</h2>
+          </div>
+          <button id="closePasteAnalyze" class="icon-button" type="button" aria-label="ปิด">×</button>
+        </div>
+        <div class="paste-analyze-body">
+          <div class="clipboard-toolbar">
+            <button id="pasteAnalyzeClipboardBtn" class="ghost small" type="button">วางจาก Clipboard</button>
+            <span id="pasteAnalyzeStatus">วางข้อความรายการจาก CLICKNIC แล้วระบบจะวิเคราะห์อัตโนมัติ</span>
+          </div>
+          <textarea id="pasteAnalyzeText" rows="5" spellcheck="false" placeholder="เช่น 3-[Ref-ID : R-0107733086] รายการของ คุณ... (เคสประกัน/บัตรเครดิต)&#10;020...-ชื่อ-เบอร์โทร-...&#10;ที่อยู่ ... 16/06/2569 16:59 1254.5-832"></textarea>
+          <div id="pasteAnalyzeWarnings" class="paste-analyze-warnings"></div>
+          <div id="pasteAnalyzeResults" class="paste-analyze-results">
+            <div class="empty">วางข้อความแล้วผลวิเคราะห์จะแสดงที่นี่</div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <span id="pasteAnalyzeSummary">ยังไม่มีผลวิเคราะห์</span>
+          <div>
+            <button id="cancelPasteAnalyze" class="ghost" type="button">ยกเลิก</button>
+            <button id="applyPasteAnalyzeBtn" class="primary" type="button" disabled>นำไปใช้กับบิลนี้</button>
+          </div>
+        </div>
+      </form>
+    </dialog>
+
     <dialog id="sessionModal" class="session-modal">
       <form method="dialog" class="session-card">
         <div class="modal-head">
@@ -608,6 +638,14 @@
                 <input id="editPatient" type="text" placeholder="ชื่อผู้รับบริการ" />
               </label>
               <label>
+                Ref-ID
+                <input id="editRefId" type="text" placeholder="R-..." />
+              </label>
+              <label>
+                เบอร์โทร
+                <input id="editPhone" type="text" inputmode="tel" placeholder="0xxxxxxxxx" />
+              </label>
+              <label>
                 ORW
                 <input id="editOrw" type="text" />
               </label>
@@ -659,7 +697,15 @@
                 ยอดใบวางบิล
                 <input id="editBilledAmount" type="number" step="0.01" min="0" />
               </label>
+              <label>
+                ยอดเรียกเก็บประกัน (CKNC คาดการณ์)
+                <input id="editExpectedClaim" type="number" step="0.01" min="0" />
+              </label>
             </div>
+            <label class="drawer-note">
+              ที่อยู่ผู้รับบริการ
+              <textarea id="editAddress" rows="2" placeholder="ที่อยู่จัดส่ง/ที่อยู่ผู้รับบริการ"></textarea>
+            </label>
             <label class="drawer-checkbox">
               <input id="editExcluded" type="checkbox" />
               ไม่นับบิลนี้ในการคำนวณ (ตัดออกจากสรุปยอด/รายงาน export)
@@ -687,7 +733,7 @@
       </div>
     </dialog>
 
-    <script src="./cknc.js?v=20260703100000"></script>
+    <script src="./cknc.js?v=20260703110000"></script>
     <script>
       (function () {
         const btn = document.getElementById("themeToggleBtn");

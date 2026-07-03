@@ -22,6 +22,7 @@ const state = {
   activeStatus: "all",
   currentManualBill: null,
   currentDetailKey: "",
+  pasteAnalyzeKey: "",
   drawerMedicines: [],
   screenshotObjectUrl: "",
   screenshotFile: null,
@@ -131,6 +132,10 @@ const elements = {
   editMlpDate: $("editMlpDate"),
   editBillingDueDate: $("editBillingDueDate"),
   editPatient: $("editPatient"),
+  editRefId: $("editRefId"),
+  editPhone: $("editPhone"),
+  editAddress: $("editAddress"),
+  editExpectedClaim: $("editExpectedClaim"),
   editBillingStage: $("editBillingStage"),
   editCost: $("editCost"),
   editMlpCost: $("editMlpCost"),
@@ -142,6 +147,16 @@ const elements = {
   editOverrideNote: $("editOverrideNote"),
   saveOverrideBtn: $("saveOverrideBtn"),
   resetOverrideBtn: $("resetOverrideBtn"),
+  pasteAnalyzeModal: $("pasteAnalyzeModal"),
+  closePasteAnalyze: $("closePasteAnalyze"),
+  cancelPasteAnalyze: $("cancelPasteAnalyze"),
+  pasteAnalyzeText: $("pasteAnalyzeText"),
+  pasteAnalyzeClipboardBtn: $("pasteAnalyzeClipboardBtn"),
+  pasteAnalyzeStatus: $("pasteAnalyzeStatus"),
+  pasteAnalyzeWarnings: $("pasteAnalyzeWarnings"),
+  pasteAnalyzeResults: $("pasteAnalyzeResults"),
+  pasteAnalyzeSummary: $("pasteAnalyzeSummary"),
+  applyPasteAnalyzeBtn: $("applyPasteAnalyzeBtn"),
   yearEraToggleBtn: $("yearEraToggleBtn"),
   authGateTitle: $("authGateTitle"),
   authGateMessage: $("authGateMessage"),
@@ -1129,6 +1144,10 @@ function validationRulesForBill(bill) {
       pushIssue(issues, "info", "BILLED_AMOUNT_MLP_COST_MISMATCH", `ยอดใบวางบิลไม่ตรง MLP cost ${money(bill.mlpCost)}`);
     }
   }
+  if (toNumeric(bill.expectedClaim) > 0 && toNumeric(bill.billedAmount) > 0
+    && moneyDiff(bill.expectedClaim, bill.billedAmount) > billingAmountTolerance()) {
+    pushIssue(issues, "info", "EXPECTED_CLAIM_MISMATCH", `ยอดใบวางบิลไม่ตรงยอดเรียกเก็บประกันที่ CKNC คาดไว้ ${money(bill.expectedClaim)}`);
+  }
   return issues;
 }
 
@@ -1209,6 +1228,10 @@ function buildBills() {
       mlpDate: mlp?.mlpDate || "",
       billingDueDate: uniqueBilling.map((row) => row.dueDate).filter(Boolean)[0] || "",
       patient: mlp?.patient || "",
+      refId: "",
+      phone: "",
+      address: "",
+      expectedClaim: 0,
       medicineCount: click?.medicines.length || 0,
       medicines: (click?.medicines || []).map((item) => ({
         medicine: item.medicine || item.medicineRaw || "",
@@ -1256,6 +1279,10 @@ function buildBills() {
       mlpDate: "",
       billingDueDate: row.dueDate,
       patient: "",
+      refId: "",
+      phone: "",
+      address: "",
+      expectedClaim: 0,
       medicineCount: 0,
       medicines: [],
       medicinesText: "",
@@ -1795,7 +1822,7 @@ function renderCaseTypeSelect(bill) {
     <select class="case-type-select ${value}" data-case-key="${htmlEscape(bill.billKey)}" aria-label="ประเภทเคส">
       ${caseTypeOptions.map(([key, label]) => `<option value="${key}" ${key === value ? "selected" : ""}>${label}</option>`).join("")}
     </select>
-    <span class="case-source">${bill.caseTypeSource === "manual" ? "แก้มือ" : bill.caseTypeSource === "auto-price" ? "auto·ราคา" : bill.caseTypeSource === "auto-status" ? "auto·รอบิล" : "auto"}</span>
+    <span class="case-source">${bill.caseTypeSource === "manual" ? "แก้มือ" : bill.caseTypeSource === "manual-paste" ? "แก้มือ·paste" : bill.caseTypeSource === "auto-price" ? "auto·ราคา" : bill.caseTypeSource === "auto-status" ? "auto·รอบิล" : "auto"}</span>
     ${priceHintHtml(bill)}
   `;
 }
@@ -1924,9 +1951,13 @@ function renderTable() {
         <button class="row-action icon-action ${bill.excluded ? "exclude-active" : ""}" type="button" data-toggle-exclude="${htmlEscape(bill.billKey)}" title="${bill.excluded ? "ยกเลิก Exclude" : "Exclude"}" aria-label="${bill.excluded ? "ยกเลิก Exclude" : "Exclude"}"><i class="fa-solid fa-ban"></i></button>
       </td>
       <td class="bill-cell">
-        <strong class="bill-patient">${htmlEscape(bill.patient || "-")}</strong>
+        <span class="bill-patient-row">
+          <strong class="bill-patient">${htmlEscape(bill.patient || "-")}</strong>
+          <button class="bill-analyze-btn" type="button" data-paste-analyze="${htmlEscape(bill.billKey)}" title="แก้ไขจากข้อความ paste (วิเคราะห์อัตโนมัติ)" aria-label="แก้ไขจากข้อความ paste"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
+        </span>
         <span class="bill-ref">${bill.orderId || "-"}</span>
         <span class="bill-ref">${bill.orw || "ORW -"} · ใบวางบิล ${bill.billingNo || "-"}</span>
+        ${bill.refId || bill.phone ? `<span class="bill-ref bill-contact">${htmlEscape([bill.refId, bill.phone].filter(Boolean).join(" · "))}</span>` : ""}
       </td>
       <td class="stack-cell">
         ${renderStatusSelect(bill)}
@@ -2145,6 +2176,7 @@ function auditActionLabel(action) {
   if (action === "billing_stage_update") return "แก้สถานะงานวางบิล";
   if (action === "toggle_excluded") return "แก้ไขไม่นับคำนวณ";
   if (action === "edit_medicine_line") return "แก้จำนวน/ราคายา";
+  if (action === "paste_analyze_apply") return "แก้ข้อมูลจากข้อความ paste";
   return action;
 }
 
@@ -2716,6 +2748,9 @@ function exportCsv() {
     "status",
     "order_id",
     "patient",
+    "ref_id",
+    "phone",
+    "address",
     "orw",
     "invoice",
     "billing_no",
@@ -2743,12 +2778,16 @@ function exportCsv() {
     "drug_cost",
     "mlp_cost",
     "billed_amount",
+    "expected_claim",
     "profit_after_mlp",
   ];
   const body = rows.map((bill) => [
     statusLabel(bill.status),
     bill.orderId,
     bill.patient,
+    bill.refId || "",
+    bill.phone || "",
+    bill.address || "",
     bill.orw,
     bill.invoice,
     bill.billingNo,
@@ -2776,6 +2815,7 @@ function exportCsv() {
     bill.cost,
     bill.mlpCost,
     bill.billedAmount,
+    bill.expectedClaim || 0,
     bill.profit,
   ]);
   const csv = [headers, ...body].map((row) => row.map((cell) => `"${clean(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
@@ -2793,6 +2833,9 @@ function billReportRow(bill) {
     status: statusLabel(bill.status),
     order_id: bill.orderId,
     patient: bill.patient,
+    ref_id: bill.refId || "",
+    phone: bill.phone || "",
+    address: bill.address || "",
     orw: bill.orw,
     invoice: bill.invoice,
     billing_no: bill.billingNo,
@@ -2820,6 +2863,7 @@ function billReportRow(bill) {
     drug_cost: bill.cost,
     mlp_cost: bill.mlpCost,
     billed_amount: bill.billedAmount,
+    expected_claim: bill.expectedClaim || 0,
     profit_after_mlp: bill.profit,
   };
 }
@@ -3880,6 +3924,10 @@ function openDetailDrawer(billKey) {
   elements.editStatus.value = bill.status;
   if (elements.editBillingStage) elements.editBillingStage.value = bill.billingStage || "pending-review";
   if (elements.editPatient) elements.editPatient.value = bill.patient || "";
+  if (elements.editRefId) elements.editRefId.value = bill.refId || "";
+  if (elements.editPhone) elements.editPhone.value = bill.phone || "";
+  if (elements.editAddress) elements.editAddress.value = bill.address || "";
+  if (elements.editExpectedClaim) elements.editExpectedClaim.value = bill.expectedClaim || 0;
   elements.editOrw.value = bill.orw || "";
   elements.editInvoice.value = bill.invoice || "";
   elements.editClicknicDate.value = formatDisplayDate(bill.clicknicDate);
@@ -3933,6 +3981,265 @@ function renderDrawerMedicines(bill) {
       <span class="med-line-total" title="ยอดขายบรรทัดนี้">${sale > 0 ? `= ${money(sale)}` : "= —"}</span>
     </div>`;
   }).join("");
+}
+
+const pasteAnalyzeFieldDefs = [
+  { key: "patient", label: "ผู้รับบริการ", type: "text" },
+  { key: "clicknicDate", label: "วันที่ CLICKNIC", type: "date" },
+  { key: "caseType", label: "ประเภทเคส", type: "case" },
+  { key: "refId", label: "Ref-ID", type: "text" },
+  { key: "phone", label: "เบอร์โทร", type: "text" },
+  { key: "address", label: "ที่อยู่", type: "text" },
+  { key: "expectedClaim", label: "ยอดเรียกเก็บประกัน (CKNC)", type: "number" },
+  { key: "sale", label: "ยอดขายยา (MLP เรียกเก็บ)", type: "number" },
+];
+
+function parseBillPasteText(rawText) {
+  const text = String(rawText || "").replace(/\r/g, "");
+  if (!clean(text)) return null;
+  const result = {
+    patient: "",
+    refId: "",
+    orderId: "",
+    phone: "",
+    address: "",
+    caseType: "",
+    clicknicDate: "",
+    expectedClaim: 0,
+    sale: 0,
+  };
+
+  result.refId = text.match(/Ref-?\s*ID\s*:?\s*(R-?\d+)/i)?.[1] || "";
+  result.orderId = findOrderId(text);
+
+  const nameMatch = text.match(/รายการของ\s*(.+?)\s*(?:\(([^)]*)\)|$)/m);
+  if (nameMatch) {
+    result.patient = clean(nameMatch[1]);
+    const caseText = clean(nameMatch[2] || "");
+    if (/ประกัน|เคลม|insurance/i.test(caseText)) result.caseType = "insurance";
+    else if (/สปสช|บัตรทอง/i.test(caseText)) result.caseType = "nhso";
+    else if (/เงินสด|ทั่วไป|general/i.test(caseText)) result.caseType = "general";
+  }
+  // บรรทัด "เลขบิล-ชื่อ-เบอร์โทร-n" ใช้เป็น fallback ของชื่อ และเป็นแหล่งเบอร์โทรหลัก
+  const orderLineMatch = text.match(/^.*?0?20\d{13,14}-(.+?)-(0\d{8,9})(?:-\d+)?\s*$/m);
+  if (orderLineMatch) {
+    if (!result.patient) result.patient = clean(orderLineMatch[1]);
+    result.phone = orderLineMatch[2];
+  }
+  if (!result.phone) {
+    const loosePhone = text.match(/(?:^|[\s-])(0\d{9})(?!\d)/m);
+    if (loosePhone && !findOrderId(loosePhone[1])) result.phone = loosePhone[1];
+  }
+
+  const dtMatch = text.match(/(\d{1,2}\/\d{1,2}\/\d{4})\s+\d{1,2}[:.]\d{2}/);
+  if (dtMatch) result.clicknicDate = dateKey(dtMatch[1]);
+
+  const amountMatch = text.match(/\d{1,2}[:.]\d{2}\s+([\d,]+(?:\.\d+)?)\s*-\s*([\d,]+(?:\.\d+)?)/)
+    || text.match(/([\d,]+(?:\.\d+)?)\s*-\s*([\d,]+(?:\.\d+)?)\s*$/);
+  if (amountMatch) {
+    result.expectedClaim = toNumeric(amountMatch[1]);
+    result.sale = toNumeric(amountMatch[2]);
+  }
+
+  // ที่อยู่ = ข้อความระหว่างบรรทัดเลขบิล กับตำแหน่งวันที่/เวลา
+  if (dtMatch) {
+    let from = 0;
+    if (orderLineMatch) {
+      const orderLineEnd = text.indexOf(orderLineMatch[0]) + orderLineMatch[0].length;
+      if (orderLineEnd > 0 && orderLineEnd < dtMatch.index) from = orderLineEnd;
+    }
+    if (!from) from = text.lastIndexOf("\n", dtMatch.index) + 1;
+    result.address = clean(text.slice(from, dtMatch.index));
+  }
+
+  return result;
+}
+
+// เลขบิล CLICKNIC ฝังวันที่ไว้: 0 + ค.ศ. 4 หลัก + เดือน 2 + วัน 2 เช่น 0202606161077945 -> 2026-06-16
+function orderIdEmbeddedDate(orderId) {
+  const match = clean(orderId).match(/^0(20\d{2})(\d{2})(\d{2})/);
+  if (!match) return "";
+  const [, year, month, day] = match;
+  if (Number(month) < 1 || Number(month) > 12 || Number(day) < 1 || Number(day) > 31) return "";
+  return `${year}-${month}-${day}`;
+}
+
+function currentPasteAnalyzeBill() {
+  return state.bills.find((bill) => bill.billKey === state.pasteAnalyzeKey);
+}
+
+function openPasteAnalyze(billKey) {
+  const bill = state.bills.find((item) => item.billKey === billKey);
+  if (!bill) return;
+  state.pasteAnalyzeKey = billKey;
+  elements.pasteAnalyzeText.value = "";
+  elements.pasteAnalyzeWarnings.innerHTML = "";
+  elements.pasteAnalyzeResults.innerHTML = `<div class="empty">วางข้อความแล้วผลวิเคราะห์จะแสดงที่นี่</div>`;
+  elements.pasteAnalyzeSummary.textContent = `บิล: ${bill.patient || bill.orderId || bill.orw || "-"}`;
+  elements.pasteAnalyzeStatus.textContent = "วางข้อความรายการจาก CLICKNIC แล้วระบบจะวิเคราะห์อัตโนมัติ";
+  elements.applyPasteAnalyzeBtn.disabled = true;
+  if (!elements.pasteAnalyzeModal.open) elements.pasteAnalyzeModal.showModal();
+  elements.pasteAnalyzeText.focus();
+}
+
+function closePasteAnalyzeModal() {
+  if (elements.pasteAnalyzeModal.open) elements.pasteAnalyzeModal.close();
+  state.pasteAnalyzeKey = "";
+}
+
+function pasteFieldNormalized(def, value) {
+  if (def.type === "date") return dateKey(value);
+  if (def.type === "number") return toNumeric(value);
+  return clean(value || "");
+}
+
+function pasteFieldCurrentDisplay(bill, def) {
+  if (def.type === "date") return formatDisplayDate(bill[def.key]) || "-";
+  if (def.type === "number") return money(toNumeric(bill[def.key]));
+  if (def.type === "case") return caseTypeLabel(bill.caseType);
+  return clean(bill[def.key]) || "-";
+}
+
+function renderPasteAnalyzeWarnings(bill, parsed) {
+  const chips = [];
+  if (parsed.orderId && bill.orderId && parsed.orderId !== bill.orderId) {
+    chips.push(`<span class="validation-chip danger">เลขบิลในข้อความ (${htmlEscape(parsed.orderId)}) ไม่ตรงกับแถวนี้ (${htmlEscape(bill.orderId)})</span>`);
+    const target = state.bills.find((item) => item.orderId === parsed.orderId);
+    if (target) {
+      chips.push(`<button class="ghost small" type="button" data-paste-switch="${htmlEscape(target.billKey)}">สลับไปใช้กับบิล ${htmlEscape(target.patient || target.orderId)}</button>`);
+    }
+  }
+  const embeddedDate = orderIdEmbeddedDate(parsed.orderId || bill.orderId);
+  if (embeddedDate && parsed.clicknicDate && embeddedDate !== parsed.clicknicDate) {
+    chips.push(`<span class="validation-chip warn">วันที่ในข้อความ (${formatDisplayDate(parsed.clicknicDate)}) ไม่ตรงกับวันที่ในเลขบิล (${formatDisplayDate(embeddedDate)})</span>`);
+  }
+  elements.pasteAnalyzeWarnings.innerHTML = chips.join("");
+}
+
+function updatePasteApplyState() {
+  const anyChecked = Boolean(elements.pasteAnalyzeResults.querySelector("[data-paste-apply]:checked"));
+  elements.applyPasteAnalyzeBtn.disabled = !anyChecked;
+}
+
+function runPasteAnalyze() {
+  const bill = currentPasteAnalyzeBill();
+  if (!bill) return;
+  const parsed = parseBillPasteText(elements.pasteAnalyzeText.value);
+  if (!parsed) {
+    elements.pasteAnalyzeWarnings.innerHTML = "";
+    elements.pasteAnalyzeResults.innerHTML = `<div class="empty">วางข้อความแล้วผลวิเคราะห์จะแสดงที่นี่</div>`;
+    elements.pasteAnalyzeStatus.textContent = "วางข้อความรายการจาก CLICKNIC แล้วระบบจะวิเคราะห์อัตโนมัติ";
+    elements.applyPasteAnalyzeBtn.disabled = true;
+    return;
+  }
+  renderPasteAnalyzeWarnings(bill, parsed);
+
+  let foundCount = 0;
+  elements.pasteAnalyzeResults.innerHTML = pasteAnalyzeFieldDefs.map((def) => {
+    const parsedValue = parsed[def.key];
+    const hasValue = def.type === "number" ? toNumeric(parsedValue) > 0 : Boolean(clean(parsedValue));
+    if (hasValue) foundCount += 1;
+    const changed = hasValue && pasteFieldNormalized(def, parsedValue) !== pasteFieldNormalized(def, def.type === "case" ? bill.caseType : bill[def.key]);
+    const checked = changed ? "checked" : "";
+    let valueInput = "";
+    if (def.type === "case") {
+      const selectedCase = clean(parsedValue) || bill.caseType || "unknown";
+      valueInput = `<select data-paste-value="${def.key}">${caseTypeOptions.map(([key, label]) => `<option value="${key}" ${key === selectedCase ? "selected" : ""}>${label}</option>`).join("")}</select>`;
+    } else if (def.type === "number") {
+      valueInput = `<input type="number" step="0.01" min="0" data-paste-value="${def.key}" value="${hasValue ? toNumeric(parsedValue) : ""}" placeholder="ไม่พบ" />`;
+    } else if (def.type === "date") {
+      valueInput = `<input type="text" inputmode="numeric" data-paste-value="${def.key}" value="${hasValue ? formatDisplayDate(parsedValue) : ""}" placeholder="วว/ดด/ปปปป" />`;
+    } else {
+      valueInput = `<input type="text" data-paste-value="${def.key}" value="${htmlEscape(clean(parsedValue) || "")}" placeholder="ไม่พบ" />`;
+    }
+    return `
+    <label class="paste-field ${hasValue ? "" : "paste-field-empty"}">
+      <input type="checkbox" data-paste-apply="${def.key}" ${checked} aria-label="ใช้ค่า ${def.label}" />
+      <span class="paste-field-label">${def.label}</span>
+      <span class="paste-field-old" title="ค่าปัจจุบันของบิลนี้">เดิม: ${htmlEscape(pasteFieldCurrentDisplay(bill, def))}</span>
+      ${valueInput}
+    </label>`;
+  }).join("");
+
+  elements.pasteAnalyzeStatus.textContent = foundCount
+    ? `วิเคราะห์พบ ${number(foundCount)} ฟิลด์ ติ๊กเลือกแล้วกดนำไปใช้`
+    : "วิเคราะห์ไม่พบข้อมูล ลองตรวจรูปแบบข้อความ";
+  updatePasteApplyState();
+}
+
+function switchPasteAnalyzeTarget(billKey) {
+  const bill = state.bills.find((item) => item.billKey === billKey);
+  if (!bill) return;
+  state.pasteAnalyzeKey = billKey;
+  elements.pasteAnalyzeSummary.textContent = `บิล: ${bill.patient || bill.orderId || bill.orw || "-"}`;
+  runPasteAnalyze();
+}
+
+function applyPasteAnalyzeToBill() {
+  const bill = currentPasteAnalyzeBill();
+  if (!bill) return;
+  const values = {};
+  const appliedLabels = [];
+  pasteAnalyzeFieldDefs.forEach((def) => {
+    const checkbox = elements.pasteAnalyzeResults.querySelector(`[data-paste-apply="${def.key}"]`);
+    if (!checkbox || !checkbox.checked) return;
+    const input = elements.pasteAnalyzeResults.querySelector(`[data-paste-value="${def.key}"]`);
+    if (!input) return;
+    let value;
+    if (def.type === "number") {
+      value = toNumeric(input.value);
+    } else if (def.type === "date") {
+      value = dateKey(input.value);
+      if (!value) return;
+    } else {
+      value = clean(input.value);
+      if (!value) return;
+    }
+    values[def.key] = value;
+    if (def.key === "caseType") values.caseTypeSource = "manual-paste";
+    appliedLabels.push(def.label);
+  });
+  if (!appliedLabels.length) return;
+
+  const existing = state.billOverrides[bill.billKey] || {};
+  // เปลี่ยนประเภทเคสแล้ว งานวางบิลที่ไม่ได้แก้มือ ให้คำนวณใหม่ตามประเภทเคส (เหมือน quickUpdateCaseType)
+  if (values.caseType && (existing.values?.billingStageSource || bill.billingStageSource) !== "manual") {
+    const stageDetection = deriveBillingStage(bill.status, values.caseType, bill.billedAmount, bill.billingNo);
+    values.billingStage = stageDetection.billingStage;
+    values.billingStageSource = stageDetection.billingStageSource;
+  }
+  state.billOverrides[bill.billKey] = {
+    ...existing,
+    values: {
+      ...(existing.values || {}),
+      ...values,
+    },
+    note: existing.note || "วิเคราะห์จากข้อความ paste",
+    updatedAt: new Date().toISOString(),
+  };
+  state.auditTrail.unshift({
+    id: makeAuditId(),
+    action: "paste_analyze_apply",
+    createdAt: new Date().toISOString(),
+    orderId: bill.orderId,
+    orw: bill.orw,
+    invoice: bill.invoice,
+    date: values.clicknicDate || bill.clicknicDate || bill.mlpDate,
+    lineCount: 0,
+    totalSale: values.sale !== undefined ? values.sale : bill.sale,
+    totalCost: bill.cost,
+    screenshotName: "paste-analyze",
+    replacedLineCount: 0,
+    note: `วิเคราะห์จากข้อความ paste: ${appliedLabels.join(", ")}`,
+    medicines: [],
+  });
+  rebuildBillsForCurrentMode();
+  renderMetrics();
+  renderTabs();
+  renderTable();
+  renderAuditTrail();
+  scheduleAutosave("paste-analyze");
+  closePasteAnalyzeModal();
 }
 
 function quickUpdateStatus(billKey, status) {
@@ -4184,6 +4491,10 @@ function saveBillOverride() {
       ? "manual"
       : bill.billingStageSource || "",
     patient: clean(elements.editPatient?.value),
+    refId: clean(elements.editRefId?.value),
+    phone: clean(elements.editPhone?.value),
+    address: clean(elements.editAddress?.value),
+    expectedClaim: elements.editExpectedClaim ? toNumeric(elements.editExpectedClaim.value) : toNumeric(bill.expectedClaim),
     orw: clean(elements.editOrw.value),
     invoice: clean(elements.editInvoice.value),
     clicknicDate: dateKey(elements.editClicknicDate.value),
@@ -4458,6 +4769,11 @@ elements.billTableBody.addEventListener("click", (event) => {
     }
     return;
   }
+  const pasteAnalyzeButton = event.target.closest("[data-paste-analyze]");
+  if (pasteAnalyzeButton) {
+    openPasteAnalyze(pasteAnalyzeButton.dataset.pasteAnalyze);
+    return;
+  }
   const detailButton = event.target.closest("[data-detail-key]");
   if (detailButton) {
     openDetailDrawer(detailButton.dataset.detailKey);
@@ -4533,6 +4849,36 @@ elements.yearEraToggleBtn?.addEventListener("click", () => {
 });
 syncYearEraButton();
 elements.resetOverrideBtn.addEventListener("click", resetBillOverride);
+elements.closePasteAnalyze?.addEventListener("click", closePasteAnalyzeModal);
+elements.cancelPasteAnalyze?.addEventListener("click", closePasteAnalyzeModal);
+elements.pasteAnalyzeModal?.addEventListener("click", (event) => {
+  if (event.target === elements.pasteAnalyzeModal) closePasteAnalyzeModal();
+});
+elements.pasteAnalyzeModal?.addEventListener("close", () => {
+  state.pasteAnalyzeKey = "";
+});
+// กัน Enter ในช่องผลวิเคราะห์ไป submit form แล้วปิด dialog โดยไม่ตั้งใจ
+elements.pasteAnalyzeModal?.querySelector("form")?.addEventListener("submit", (event) => event.preventDefault());
+elements.pasteAnalyzeText?.addEventListener("input", runPasteAnalyze);
+elements.pasteAnalyzeClipboardBtn?.addEventListener("click", async () => {
+  try {
+    const text = await navigator.clipboard.readText();
+    if (text) {
+      elements.pasteAnalyzeText.value = text;
+      runPasteAnalyze();
+    } else {
+      elements.pasteAnalyzeStatus.textContent = "clipboard ว่าง กด Ctrl+V ในช่องแทน";
+    }
+  } catch {
+    elements.pasteAnalyzeStatus.textContent = "อ่าน clipboard ไม่ได้ กด Ctrl+V ในช่องแทน";
+  }
+});
+elements.pasteAnalyzeResults?.addEventListener("change", updatePasteApplyState);
+elements.pasteAnalyzeWarnings?.addEventListener("click", (event) => {
+  const switchBtn = event.target.closest("[data-paste-switch]");
+  if (switchBtn) switchPasteAnalyzeTarget(switchBtn.dataset.pasteSwitch);
+});
+elements.applyPasteAnalyzeBtn?.addEventListener("click", applyPasteAnalyzeToBill);
 elements.screenshotForm.addEventListener("submit", saveManualEntry);
 elements.closeScreenshotModal.addEventListener("click", closeManualEntry);
 elements.cancelScreenshotEntry.addEventListener("click", closeManualEntry);
