@@ -1850,7 +1850,9 @@ function renderCaseTypeSelect(bill) {
     <select class="case-type-select ${value}" data-case-key="${htmlEscape(bill.billKey)}" aria-label="ประเภทเคส">
       ${caseTypeOptions.map(([key, label]) => `<option value="${key}" ${key === value ? "selected" : ""}>${label}</option>`).join("")}
     </select>
-    <span class="case-source">${bill.caseTypeSource === "manual" ? "แก้มือ" : bill.caseTypeSource === "manual-paste" ? "แก้มือ·paste" : bill.caseTypeSource === "auto-price" ? "auto·ราคา" : bill.caseTypeSource === "auto-status" ? "auto·รอบิล" : "auto"}</span>
+    ${bill.caseTypeSource === "manual" ? '<span class="case-source">แก้มือ</span>'
+      : bill.caseTypeSource === "manual-paste" ? '<span class="case-source">แก้มือ·paste</span>'
+        : ""}
     ${priceHintHtml(bill)}
   `;
 }
@@ -1861,7 +1863,7 @@ function renderBillingStageSelect(bill) {
     <select class="billing-stage-select ${value}" data-billing-stage-key="${htmlEscape(bill.billKey)}" aria-label="สถานะงานวางบิล">
       ${billingStageOptions.map(([key, label]) => `<option value="${key}" ${key === value ? "selected" : ""}>${label}</option>`).join("")}
     </select>
-    <span class="case-source">${bill.billingStageSource === "manual" ? "แก้มือ" : "auto"}</span>
+    ${bill.billingStageSource === "manual" ? '<span class="case-source">แก้มือ</span>' : ""}
   `;
 }
 
@@ -1992,7 +1994,7 @@ function renderTable() {
         ${bill.refId || bill.phone ? `<span class="bill-ref bill-contact">${htmlEscape([bill.refId, bill.phone].filter(Boolean).join(" · "))}</span>` : ""}
       </td>
       <td class="stack-cell">
-        ${renderStatusSelect(bill)}
+        ${bill.status === "matched" ? "" : renderStatusSelect(bill)}
         ${renderBillingStageSelect(bill)}
         ${renderCaseTypeSelect(bill)}
       </td>
