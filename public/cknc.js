@@ -151,6 +151,10 @@ const elements = {
   drawerPasteAnalyzeBtn: $("drawerPasteAnalyzeBtn"),
   mergeSessionsBtn: $("mergeSessionsBtn"),
   selectAllSessions: $("selectAllSessions"),
+  mergeResultModal: $("mergeResultModal"),
+  mergeResultBody: $("mergeResultBody"),
+  mergeResultOk: $("mergeResultOk"),
+  mergeResultClose: $("mergeResultClose"),
   importModeModal: $("importModeModal"),
   importModeSummary: $("importModeSummary"),
   importModeAppend: $("importModeAppend"),
@@ -4116,6 +4120,28 @@ function updateMergeSessionsButton() {
   }
 }
 
+// สรุปผลก่อน/หลังการรวม session ให้ผู้ใช้เห็นชัดว่าได้อะไรมา
+function showMergeResult(sessions, savedName) {
+  if (!elements.mergeResultModal) return;
+  const rawCount = sessions.reduce((sum, session) => sum + ((session.payload?.bills || []).length), 0);
+  const mergedDuplicates = rawCount - state.bills.length;
+  const beforeList = sessions
+    .map((session) => `<li>${htmlEscape(session.name || session.id)} — ${number((session.payload?.bills || []).length)} บิล</li>`)
+    .join("");
+  elements.mergeResultBody.innerHTML = `
+    <p><strong>ก่อนรวม</strong> — ${number(sessions.length)} sessions (รวมดิบ ${number(rawCount)} บิล)</p>
+    <ul>${beforeList}</ul>
+    <p><strong>หลังรวม</strong> — <strong>${number(state.bills.length)} บิล</strong>${mergedDuplicates > 0
+      ? ` (บิลเลขซ้ำถูกรวมข้อมูลเข้าด้วยกัน ${number(mergedDuplicates)} ใบ แบบเก็บข้อมูลมากที่สุด)`
+      : " (ไม่มีบิลเลขซ้ำ)"}</p>
+    <p>ค่าที่แก้มือ ${number(Object.keys(state.billOverrides).length)} รายการ · ประวัติ audit ${number(state.auditTrail.length)} รายการ</p>
+    <p>${savedName
+      ? `บันทึกเป็น session ใหม่: <strong>${htmlEscape(savedName)}</strong> (ต้นฉบับไม่ถูกลบ)`
+      : "ยังไม่ได้บันทึกเป็น session — ข้อมูลรวมอยู่บนจอ กด Save Session ได้ภายหลัง"}</p>
+  `;
+  elements.mergeResultModal.showModal();
+}
+
 async function mergeSelectedSessions() {
   const picks = [...elements.sessionList.querySelectorAll(".session-merge-pick:checked")]
     .map((checkbox) => ({ kind: checkbox.dataset.kind, id: checkbox.dataset.id }));
@@ -4182,6 +4208,7 @@ async function mergeSelectedSessions() {
       }
     }
     elements.statusText.textContent = `รวม ${number(sessions.length)} sessions → ${number(state.bills.length)} บิล${name ? ` (บันทึก "${name}")` : ""}`;
+    showMergeResult(sessions, name);
     await loadSessionList();
   } catch (error) {
     console.error(error);
@@ -5310,6 +5337,8 @@ elements.openSessionsBtn.addEventListener("click", openSessionsModal);
 elements.closeSessionModal.addEventListener("click", closeSessionsModal);
 elements.refreshSessionsBtn.addEventListener("click", loadSessionList);
 elements.mergeSessionsBtn?.addEventListener("click", mergeSelectedSessions);
+elements.mergeResultOk?.addEventListener("click", () => elements.mergeResultModal.close());
+elements.mergeResultClose?.addEventListener("click", () => elements.mergeResultModal.close());
 elements.selectAllSessions?.addEventListener("change", () => {
   const checked = elements.selectAllSessions.checked;
   elements.sessionList.querySelectorAll(".session-merge-pick").forEach((pick) => {
