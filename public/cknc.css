@@ -1880,6 +1880,28 @@ td {
   cursor: pointer;
 }
 
+.copy-ref-btn {
+  padding: 0 3px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.copy-ref-btn:hover {
+  color: var(--green-dark);
+}
+
+@keyframes rowFlash {
+  0% { background-color: rgba(0, 177, 79, 0.24); }
+  100% { background-color: transparent; }
+}
+
+tr.row-flash td {
+  animation: rowFlash 1.2s ease-out;
+}
+
 #selectAllRows {
   width: 15px;
   height: 15px;

@@ -2041,7 +2041,7 @@ function renderTable() {
 
   elements.billTableBody.innerHTML = rows.map((bill) => {
     return `
-    <tr class="${bill.excluded ? "row-excluded" : (bill.billingStage || "") === "paid" ? "row-paid" : ""}">
+    <tr class="${bill.excluded ? "row-excluded" : (bill.billingStage || "") === "paid" ? "row-paid" : ""}${wasJustEdited(bill) ? " row-flash" : ""}">
       <td class="action-cell">
         <input type="checkbox" class="row-pick" data-pick-key="${htmlEscape(bill.billKey)}" ${state.selectedBillKeys.has(bill.billKey) ? "checked" : ""} aria-label="เลือกบิลนี้" />
         <button class="row-action icon-action" type="button" data-detail-key="${bill.billKey}" title="รายละเอียด / แก้ไข" aria-label="รายละเอียด / แก้ไข"><i class="fa-solid fa-pen-to-square"></i></button>
@@ -2053,8 +2053,8 @@ function renderTable() {
           <strong class="bill-patient">${htmlEscape(bill.patient || "-")}</strong>
           <button class="bill-analyze-btn" type="button" data-paste-analyze="${htmlEscape(bill.billKey)}" title="แก้ไขจากข้อความ paste (วิเคราะห์อัตโนมัติ)" aria-label="แก้ไขจากข้อความ paste"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
         </span>
-        <span class="bill-ref">${bill.orderId || "-"}</span>
-        <span class="bill-ref">${htmlEscape(billRefLine(bill))}</span>
+        <span class="bill-ref">${bill.orderId ? `${bill.orderId} <button class="copy-ref-btn" type="button" data-copy-text="${htmlEscape(bill.orderId)}" title="คัดลอกเลขที่ออเดอร์" aria-label="คัดลอกเลขที่ออเดอร์"><i class="fa-regular fa-copy"></i></button>` : "-"}</span>
+        <span class="bill-ref">${htmlEscape(billRefLine(bill))}${clean(bill.orw) ? ` <button class="copy-ref-btn" type="button" data-copy-text="${htmlEscape(clean(bill.orw.split(",")[0]))}" title="คัดลอก ORW" aria-label="คัดลอก ORW"><i class="fa-regular fa-copy"></i></button>` : ""}</span>
         ${bill.refId || bill.phone ? `<span class="bill-ref bill-contact">${htmlEscape([bill.refId, bill.phone].filter(Boolean).join(" · "))}</span>` : ""}
       </td>
       <td class="stack-cell">
@@ -2082,6 +2082,14 @@ function renderTable() {
   `;
   }).join("");
   updateBulkBar();
+}
+
+// แถวที่เพิ่งถูกแก้ (override ภายใน 2.5 วิ) → กะพริบเขียวให้เห็นว่าค่าติดแล้ว
+function wasJustEdited(bill) {
+  const updatedAt = state.billOverrides[bill.billKey]?.updatedAt;
+  if (!updatedAt) return false;
+  const elapsed = Date.now() - new Date(updatedAt).getTime();
+  return elapsed >= 0 && elapsed < 2500;
 }
 
 function updateBulkBar() {
@@ -5317,6 +5325,17 @@ elements.billTableBody.addEventListener("change", (event) => {
   quickUpdateInlineField(input.dataset.inlineKey, input.dataset.inlineField, input.value, input.dataset.inlineType);
 });
 elements.billTableBody.addEventListener("click", (event) => {
+  const copyBtn = event.target.closest("[data-copy-text]");
+  if (copyBtn) {
+    navigator.clipboard?.writeText(copyBtn.dataset.copyText).then(() => {
+      const icon = copyBtn.querySelector("i");
+      if (icon) {
+        icon.className = "fa-solid fa-check";
+        setTimeout(() => { icon.className = "fa-regular fa-copy"; }, 1200);
+      }
+    }).catch(() => {});
+    return;
+  }
   const medsToggle = event.target.closest("[data-meds-toggle]");
   if (medsToggle) {
     const bodyEl = medsToggle.closest("td")?.querySelector("[data-meds-body]");
