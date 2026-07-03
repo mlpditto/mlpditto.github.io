@@ -19,6 +19,7 @@ const state = {
   bills: [],
   billOverrides: {},
   billMergeGroups: [],
+  deletedBillKeys: [],
   topMeds: [],
   activeStatus: "all",
   currentManualBill: null,
@@ -161,6 +162,7 @@ const elements = {
   bulkBarNo: $("bulkBarNo"),
   bulkApplyBarNo: $("bulkApplyBarNo"),
   bulkMergeBills: $("bulkMergeBills"),
+  bulkDeleteBills: $("bulkDeleteBills"),
   bulkExclude: $("bulkExclude"),
   bulkInclude: $("bulkInclude"),
   bulkClear: $("bulkClear"),
@@ -1387,6 +1389,7 @@ function buildBills() {
   });
 
   applyManualMergeGroups();
+  applyDeletedBills();
 }
 
 function activeBills() {
@@ -2347,6 +2350,7 @@ function auditActionLabel(action) {
   if (action === "edit_medicine_line") return "แก้จำนวน/ราคายา";
   if (action === "paste_analyze_apply") return "แก้ข้อมูลจากข้อความ paste";
   if (action === "merge_bills") return "รวมบิลเป็นใบเดียว";
+  if (action === "delete_bills") return "ลบบิลออกจากงานบนจอ";
   return action;
 }
 
@@ -2743,6 +2747,7 @@ function rebuildBillsForCurrentMode() {
     return merged;
   });
   applyManualMergeGroups();
+  applyDeletedBills();
 }
 
 function clipboardKindLabel(kind) {
@@ -2972,6 +2977,65 @@ function applyManualMergeGroups() {
   });
 }
 
+// ตัดบิลที่ผู้ใช้สั่งลบออกจากจอ — เก็บเป็นรายการคีย์เพราะบิลถูกสร้างใหม่จาก source rows ทุกครั้ง
+function applyDeletedBills() {
+  if (!state.deletedBillKeys?.length) return;
+  const deleted = new Set(state.deletedBillKeys);
+  state.bills = state.bills.filter((bill) => !deleted.has(bill.billKey));
+}
+
+// รับรายการคีย์ที่ถูกลบจาก session อื่นเข้ามารวม (กันซ้ำ)
+function mergeDeletedBillKeysInto(keys) {
+  const known = new Set(state.deletedBillKeys || []);
+  (keys || []).forEach((key) => {
+    if (!key || known.has(key)) return;
+    known.add(key);
+    state.deletedBillKeys.push(key);
+  });
+}
+
+// ลบบิลที่ติ๊กเลือกออกจากงานบนจอ — ต้นฉบับใน session/ไฟล์เดิมไม่ถูกแก้
+function deleteSelectedBills() {
+  const members = state.bills.filter((bill) => state.selectedBillKeys.has(bill.billKey));
+  if (!members.length) return;
+  const label = (bill) => [bill.orderId || bill.orw || bill.billingNo || "(ไม่มีเลขที่)", bill.patient]
+    .map(clean).filter(Boolean).join(" · ");
+  const ok = confirm([
+    `ลบ ${number(members.length)} บิลออกจากงานบนจอ?`,
+    "",
+    ...members.slice(0, 10).map((bill) => `- ${label(bill)}`),
+    ...(members.length > 10 ? [`... และอีก ${number(members.length - 10)} บิล`] : []),
+    "",
+    "บิลที่ลบจะหายจากตาราง/ยอดรวม/autosave ของงานนี้ และไม่กลับมาแม้แก้ค่าอื่นต่อ (ต้นฉบับใน session/ไฟล์เดิมไม่ถูกแก้ — เริ่มใหม่จากไฟล์/โหลด session เดิมจะได้คืน)",
+  ].join("\n"));
+  if (!ok) return;
+  mergeDeletedBillKeysInto(members.map((bill) => bill.billKey));
+  state.selectedBillKeys.clear();
+  state.auditTrail.unshift({
+    id: makeAuditId(),
+    action: "delete_bills",
+    createdAt: new Date().toISOString(),
+    orderId: members[0].orderId || "",
+    orw: members[0].orw || "",
+    invoice: members[0].invoice || "",
+    date: "",
+    lineCount: 0,
+    totalSale: 0,
+    totalCost: 0,
+    screenshotName: "bulk-bar",
+    replacedLineCount: 0,
+    note: `ลบบิล ${number(members.length)} ใบ: ${members.slice(0, 5).map(label).join(", ")}${members.length > 5 ? " ..." : ""}`,
+    medicines: [],
+  });
+  rebuildBillsForCurrentMode();
+  renderMetrics();
+  renderTabs();
+  renderTable();
+  renderAuditTrail();
+  scheduleAutosave("delete-bills");
+  elements.statusText.textContent = `ลบ ${number(members.length)} บิลออกจากงานบนจอแล้ว`;
+}
+
 // รับกลุ่มรวมบิลจาก session อื่นเข้ามาต่อท้าย (กันซ้ำด้วย id)
 function mergeBillMergeGroupsInto(groups) {
   const known = new Set((state.billMergeGroups || []).map((group) => group.id));
@@ -3141,6 +3205,7 @@ async function handleFiles() {
       state.auditTrail = [];
       state.billOverrides = {};
       state.billMergeGroups = [];
+      state.deletedBillKeys = [];
       state.mlpRows = dedupeMlpRows(mlpImportedRows);
       state.billingRows = billingImportedRows;
       state.activeSessionId = "";
@@ -3164,6 +3229,7 @@ async function loadSampleFiles() {
     state.auditTrail = [];
     state.billOverrides = {};
     state.billMergeGroups = [];
+    state.deletedBillKeys = [];
     state.billingRows = [];
     state.activeSessionId = "";
     state.snapshotMode = false;
@@ -4055,6 +4121,7 @@ function makeSessionPayload(name) {
       bills: state.bills,
       billOverrides: state.billOverrides,
       billMergeGroups: state.billMergeGroups,
+      deletedBillKeys: state.deletedBillKeys,
       auditTrail: state.auditTrail,
       topMeds: state.topMeds,
       ruleConfig: state.ruleConfig,
@@ -4201,7 +4268,9 @@ async function applySessionSnapshot(session) {
     state.bills = [...state.bills, ...loadedBills];
     state.billOverrides = mergeOverrideMaps(state.billOverrides, payload.billOverrides || {});
     mergeBillMergeGroupsInto(payload.billMergeGroups);
+    mergeDeletedBillKeysInto(payload.deletedBillKeys);
     applyManualMergeGroups();
+    applyDeletedBills();
     const auditIds = new Set(state.auditTrail.map((entry) => entry.id));
     state.auditTrail = [...state.auditTrail, ...(payload.auditTrail || []).filter((entry) => !auditIds.has(entry.id))];
     state.snapshotMode = true;
@@ -4229,6 +4298,7 @@ async function applySessionSnapshot(session) {
   }));
   state.billOverrides = payload.billOverrides || {};
   state.billMergeGroups = payload.billMergeGroups || [];
+  state.deletedBillKeys = payload.deletedBillKeys || [];
   state.auditTrail = payload.auditTrail || [];
   state.topMeds = payload.topMeds || [];
   state.clicknicImportSummary = payload.clicknicImportSummary || session.importSummary || { rawRows: 0, uniqueRows: 0, duplicateRows: 0 };
@@ -4426,6 +4496,7 @@ async function mergeSelectedSessions() {
     const audit = [];
     const mergeGroupIds = new Set();
     const mergeGroups = [];
+    const deletedKeys = new Set();
     sessions.forEach((session) => {
       (session.payload?.bills || []).forEach((bill) => {
         const existing = billMap.get(bill.billKey);
@@ -4436,6 +4507,9 @@ async function mergeSelectedSessions() {
         if (!group || !Array.isArray(group.memberKeys) || mergeGroupIds.has(group.id)) return;
         mergeGroupIds.add(group.id);
         mergeGroups.push(group);
+      });
+      (session.payload?.deletedBillKeys || []).forEach((key) => {
+        if (key) deletedKeys.add(key);
       });
       (session.payload?.auditTrail || []).forEach((entry) => {
         if (!entry || auditIds.has(entry.id)) return;
@@ -4459,7 +4533,9 @@ async function mergeSelectedSessions() {
     state.bills = mergedBills;
     state.billOverrides = overrides;
     state.billMergeGroups = mergeGroups;
+    state.deletedBillKeys = [...deletedKeys];
     applyManualMergeGroups();
+    applyDeletedBills();
     state.auditTrail = audit;
     state.topMeds = [];
     state.clicknicRows = [];
@@ -5626,6 +5702,7 @@ elements.bulkApplyBarNo?.addEventListener("click", () => {
   elements.bulkBarNo.value = "";
 });
 elements.bulkMergeBills?.addEventListener("click", mergeSelectedBills);
+elements.bulkDeleteBills?.addEventListener("click", deleteSelectedBills);
 elements.bulkExclude?.addEventListener("click", () => {
   applyBulkOverride(() => ({ excluded: true }), "Exclude");
 });

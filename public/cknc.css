@@ -1827,6 +1827,15 @@ td {
   background: rgba(14, 28, 36, 0.38);
 }
 
+button.ghost.danger {
+  color: #b3261e;
+  border-color: rgba(179, 38, 30, 0.35);
+}
+
+button.ghost.danger:hover {
+  background: rgba(179, 38, 30, 0.08);
+}
+
 #importModeModal,
 #mergeResultModal {
   width: min(520px, calc(100vw - 28px));
