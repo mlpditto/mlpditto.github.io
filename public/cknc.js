@@ -181,7 +181,6 @@ const tabCountIds = {
   "case-insurance": "tabCountCaseInsurance",
   "case-nhso": "tabCountCaseNhso",
   "mlp-only": "tabCountMlpOnly",
-  "pending-billing": "tabCountPendingBilling",
   "clicknic-only": "tabCountClickOnly",
   "billing-only": "tabCountBillingOnly",
   excluded: "tabCountExcluded",
@@ -189,7 +188,7 @@ const tabCountIds = {
 
 const statusOptions = [
   ["matched", "จับคู่แล้ว"],
-  ["mlp-only", "MLP ไม่มีรายการยา"],
+  ["mlp-only", "ไม่พบรายการยา"],
   ["pending-billing", "รอใบวางบิล"],
   ["clicknic-only", "รายการยาไม่มี MLP"],
   ["billing-only", "ใบวางบิลไม่เจอ MLP"],
@@ -1105,7 +1104,7 @@ function validationRulesForBill(bill) {
     pushIssue(issues, "info", "EXCLUDED", `ไม่นับคำนวณ${bill.excludeReason ? `: ${bill.excludeReason}` : ""}`);
   }
   if (bill.status === "mlp-only") {
-    pushIssue(issues, "danger", "MLP_NO_MEDICINE", "MLP ไม่มีรายการยา");
+    pushIssue(issues, "danger", "MLP_NO_MEDICINE", "ไม่พบรายการยา");
   }
   if (bill.status === "pending-billing") {
     pushIssue(issues, "warn", "PENDING_BILLING", "รอใบวางบิล");
@@ -1146,7 +1145,7 @@ function validationRulesForBill(bill) {
   }
   if (toNumeric(bill.expectedClaim) > 0 && toNumeric(bill.billedAmount) > 0
     && moneyDiff(bill.expectedClaim, bill.billedAmount) > billingAmountTolerance()) {
-    pushIssue(issues, "info", "EXPECTED_CLAIM_MISMATCH", `ยอดใบวางบิลไม่ตรงยอดเรียกเก็บประกันที่ CKNC คาดไว้ ${money(bill.expectedClaim)}`);
+    pushIssue(issues, "info", "EXPECTED_CLAIM_MISMATCH", `ยอดใบวางบิลไม่ตรงยอดเรียกเก็บประกัน CKNC-P ${money(bill.expectedClaim)}`);
   }
   return issues;
 }
@@ -1478,7 +1477,7 @@ const cardDetailConfigs = {
     apply: () => ({ status: "matched" }),
   },
   mlpOnly: {
-    title: "MLP ไม่มีรายการยา",
+    title: "ไม่พบรายการยา",
     rows: () => activeBills().filter((bill) => bill.status === "mlp-only"),
     apply: () => ({ status: "mlp-only" }),
   },
@@ -3249,7 +3248,7 @@ function exportPdfReport() {
   `;
   const metricHtml = [
     ["ครบ CKNC+MLP+BAR", metrics.matched],
-    ["MLP ไม่มีรายการยา", metrics.mlpOnly],
+    ["ไม่พบรายการยา", metrics.mlpOnly],
     ["รอใบวางบิล", metrics.mlpNoBilling],
     ["กำไร matched หลัง MLP", money(metrics.profit)],
     ["ยอดขายยา", money(metrics.sale)],
@@ -3361,7 +3360,7 @@ function exportPdfReportV2() {
   `;
   const metricHtml = [
     ["ครบ CKNC+MLP+BAR", metrics.matched],
-    ["MLP ไม่มีรายการยา", metrics.mlpOnly],
+    ["ไม่พบรายการยา", metrics.mlpOnly],
     ["รอใบวางบิล", metrics.mlpNoBilling],
     ["Critical/Danger", severityCounts.danger || 0],
     ["Warning", severityCounts.warn || 0],
@@ -3990,7 +3989,7 @@ const pasteAnalyzeFieldDefs = [
   { key: "refId", label: "Ref-ID", type: "text" },
   { key: "phone", label: "เบอร์โทร", type: "text" },
   { key: "address", label: "ที่อยู่", type: "text" },
-  { key: "expectedClaim", label: "ยอดเรียกเก็บประกัน (CKNC)", type: "number" },
+  { key: "expectedClaim", label: "ยอดเรียกเก็บประกัน (CKNC-P)", type: "number" },
   { key: "sale", label: "ยอดขายยา (MLP เรียกเก็บ)", type: "number" },
 ];
 

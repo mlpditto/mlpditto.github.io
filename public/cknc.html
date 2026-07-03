@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="./cknc.css?v=20260703110000" />
+    <link rel="stylesheet" href="./cknc.css?v=20260703120000" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -159,7 +159,7 @@
                 <strong id="metricClickOrders">0</strong>
               </article>
               <article class="metric mini warning" title="รายการ MLP (STEP 2) ที่หาเลขรายการยาจาก CLICKNIC (STEP 1) ไม่เจอ">
-                <span>MLP ไม่มีรายการยา</span>
+                <span>ไม่พบรายการยา</span>
                 <strong id="metricMlpOnly">0</strong>
               </article>
               <article class="metric mini danger" title="บิล CLICKNIC (STEP 1) ที่ยังไม่มีรายการ MLP (STEP 2) มาจับคู่">
@@ -262,8 +262,7 @@
           <button class="tab-button" type="button" data-status-tab="paid">PAID <span id="tabCountPaid">0</span></button>
           <button class="tab-button" type="button" data-status-tab="case-insurance">ประกัน <span id="tabCountCaseInsurance">0</span></button>
           <button class="tab-button" type="button" data-status-tab="case-nhso">สปสช <span id="tabCountCaseNhso">0</span></button>
-          <button class="tab-button" type="button" data-status-tab="mlp-only">MLP ไม่มีรายการยา <span id="tabCountMlpOnly">0</span></button>
-          <button class="tab-button" type="button" data-status-tab="pending-billing">รอใบวางบิล <span id="tabCountPendingBilling">0</span></button>
+          <button class="tab-button" type="button" data-status-tab="mlp-only">ไม่พบรายการยา <span id="tabCountMlpOnly">0</span></button>
           <button class="tab-button" type="button" data-status-tab="clicknic-only">รายการยาไม่มี MLP <span id="tabCountClickOnly">0</span></button>
           <button class="tab-button" type="button" data-status-tab="billing-only">ใบวางบิลไม่เจอ MLP <span id="tabCountBillingOnly">0</span></button>
           <button class="tab-button" type="button" data-status-tab="excluded">Exclude <span id="tabCountExcluded">0</span></button>
@@ -623,7 +622,7 @@
                 สถานะ
                 <select id="editStatus">
                   <option value="matched">จับคู่แล้ว</option>
-                  <option value="mlp-only">MLP ไม่มีรายการยา</option>
+                  <option value="mlp-only">ไม่พบรายการยา</option>
                   <option value="pending-billing">รอใบวางบิล</option>
                   <option value="clicknic-only">รายการยาไม่มี MLP</option>
                   <option value="billing-only">ใบวางบิลไม่เจอ MLP</option>
@@ -698,7 +697,7 @@
                 <input id="editBilledAmount" type="number" step="0.01" min="0" />
               </label>
               <label>
-                ยอดเรียกเก็บประกัน (CKNC คาดการณ์)
+                ยอดเรียกเก็บประกัน (CKNC-P)
                 <input id="editExpectedClaim" type="number" step="0.01" min="0" />
               </label>
             </div>
@@ -733,7 +732,7 @@
       </div>
     </dialog>
 
-    <script src="./cknc.js?v=20260703110000"></script>
+    <script src="./cknc.js?v=20260703120000"></script>
     <script>
       (function () {
         const btn = document.getElementById("themeToggleBtn");
