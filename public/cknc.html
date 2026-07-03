@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="./cknc.css?v=20260704010000" />
+    <link rel="stylesheet" href="./cknc.css?v=20260704020000" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -63,27 +63,39 @@
 
       <section class="upload-grid" aria-label="Upload Excel files">
         <label class="drop-zone">
-          <span class="workflow-step">STEP 1</span>
-          <span class="drop-title"><i class="fa-solid fa-file-import"></i> CLICKNIC</span>
+          <span class="drop-head">
+            <span class="workflow-step">STEP 1</span>
+            <span class="drop-title"><i class="fa-solid fa-file-import"></i> CLICKNIC</span>
+          </span>
           <span class="drop-copy">อัปโหลดได้หลายไฟล์ เช่น export-salee-order</span>
-          <input id="clicknicFiles" type="file" accept=".xlsx,.xls" multiple />
-          <button id="pasteClicknicBtn" class="ghost small paste-button" type="button">Paste Clipboard</button>
+          <span class="drop-actions">
+            <input id="clicknicFiles" type="file" accept=".xlsx,.xls" multiple />
+            <button id="pasteClicknicBtn" class="ghost small paste-button" type="button">Paste Clipboard</button>
+          </span>
           <span id="clicknicStatus" class="drop-status">ยังไม่ได้โหลด</span>
         </label>
         <label class="drop-zone">
-          <span class="workflow-step muted">STEP 2</span>
-          <span class="drop-title"><i class="fa-solid fa-notes-medical"></i> MEDLIFE PLUS</span>
+          <span class="drop-head">
+            <span class="workflow-step muted">STEP 2</span>
+            <span class="drop-title"><i class="fa-solid fa-notes-medical"></i> MEDLIFE PLUS</span>
+          </span>
           <span class="drop-copy">อัปโหลดรายการ ORW / MLPCKNC ได้หลายไฟล์</span>
-          <input id="mlpFile" type="file" accept=".xlsx,.xls" multiple />
-          <button id="pasteMlpBtn" class="ghost small paste-button" type="button">Paste Clipboard</button>
+          <span class="drop-actions">
+            <input id="mlpFile" type="file" accept=".xlsx,.xls" multiple />
+            <button id="pasteMlpBtn" class="ghost small paste-button" type="button">Paste Clipboard</button>
+          </span>
           <span id="mlpStatus" class="drop-status">ยังไม่ได้โหลด</span>
         </label>
         <label class="drop-zone">
-          <span class="workflow-step muted">STEP 3</span>
-          <span class="drop-title"><i class="fa-solid fa-receipt"></i> BILLING NOTE</span>
+          <span class="drop-head">
+            <span class="workflow-step muted">STEP 3</span>
+            <span class="drop-title"><i class="fa-solid fa-receipt"></i> BILLING NOTE</span>
+          </span>
           <span class="drop-copy">อัปโหลดใบวางบิลได้หลายไฟล์ เพื่อตรวจ ORW / INV / AR</span>
-          <input id="billingFiles" type="file" accept=".xlsx,.xls" multiple />
-          <button id="pasteBillingBtn" class="ghost small paste-button" type="button">Paste Clipboard</button>
+          <span class="drop-actions">
+            <input id="billingFiles" type="file" accept=".xlsx,.xls" multiple />
+            <button id="pasteBillingBtn" class="ghost small paste-button" type="button">Paste Clipboard</button>
+          </span>
           <span id="billingStatus" class="drop-status">ยังไม่ได้โหลด</span>
         </label>
       </section>
@@ -758,7 +770,7 @@
       </div>
     </dialog>
 
-    <script src="./cknc.js?v=20260704010000"></script>
+    <script src="./cknc.js?v=20260704020000"></script>
     <script>
       (function () {
         const btn = document.getElementById("themeToggleBtn");

@@ -317,10 +317,33 @@ button:not(:disabled):hover {
   color: var(--green-dark);
 }
 
+.drop-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
 .drop-title {
   font-size: 18px;
   font-weight: 850;
   color: var(--green-dark);
+}
+
+.drop-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.drop-actions input {
+  flex: 1;
+  min-width: 0;
+}
+
+.drop-actions .paste-button {
+  flex: 0 0 auto;
+  min-height: 38px;
 }
 
 .drop-copy {
