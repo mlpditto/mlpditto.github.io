@@ -4276,6 +4276,45 @@ async function autosaveMonthlySession(reason = "update") {
   }
 }
 
+// รวม payload จากหลาย session/autosave docs เป็นชุดเดียว — เรียงเก่า → ใหม่ ให้ตัวที่อัปเดตล่าสุดชนะ
+// เมื่อบิลเลขซ้ำ/override ชนกัน (กติกา "ข้อมูลมากที่สุด" เดียวกับรวม sessions)
+function combineSessionPayloads(sessions) {
+  const sorted = [...sessions].sort((a, b) => (a.updatedAt?.toMillis?.() || 0) - (b.updatedAt?.toMillis?.() || 0));
+  const billMap = new Map();
+  let overrides = {};
+  const auditIds = new Set();
+  const audit = [];
+  const mergeGroupIds = new Set();
+  const mergeGroups = [];
+  const deletedKeys = new Set();
+  sorted.forEach((session) => {
+    (session.payload?.bills || []).forEach((bill) => {
+      const existing = billMap.get(bill.billKey);
+      billMap.set(bill.billKey, existing ? mergeBillRecords(bill, existing) : bill);
+    });
+    overrides = mergeOverrideMaps(session.payload?.billOverrides || {}, overrides);
+    (session.payload?.billMergeGroups || []).forEach((group) => {
+      if (!group || !Array.isArray(group.memberKeys) || mergeGroupIds.has(group.id)) return;
+      mergeGroupIds.add(group.id);
+      mergeGroups.push(group);
+    });
+    (session.payload?.deletedBillKeys || []).forEach((key) => {
+      if (key) deletedKeys.add(key);
+    });
+    (session.payload?.auditTrail || []).forEach((entry) => {
+      if (!entry || auditIds.has(entry.id)) return;
+      auditIds.add(entry.id);
+      audit.push(entry);
+    });
+  });
+  const bills = [...billMap.values()].map((bill) => ({
+    ...bill,
+    medicines: (bill.medicines && bill.medicines.length) ? bill.medicines : parseMedicinesTextLines(bill.medicinesText),
+    validationIssues: validationRulesForBill(bill),
+  }));
+  return { bills, overrides, mergeGroups, deletedKeys: [...deletedKeys], audit };
+}
+
 async function restoreLatestSnapshotOnStartup() {
   if (!canPersistSessions() || state.bills.length) return;
   autosaveStatusText("Autosave: กำลังหา session ล่าสุด...");
@@ -4287,12 +4326,35 @@ async function restoreLatestSnapshotOnStartup() {
     const candidates = [];
     sessionSnap.forEach((doc) => candidates.push({ id: doc.id, ...doc.data() }));
     autosaveSnap.forEach((doc) => candidates.push({ id: doc.id, ...doc.data(), source: "autosave" }));
-    const latest = candidates
+    let latest = candidates
       .filter((item) => item.updatedAt?.toMillis)
       .sort((a, b) => b.updatedAt.toMillis() - a.updatedAt.toMillis())[0];
     if (!latest || state.bills.length) {
       setSessionButtons();
       return;
+    }
+    // autosave แบ่งถังรายเดือน: งานล่าสุดที่คร่อมหลายเดือนต้องกู้ทุกถังของรอบเดียวกันมารวมกัน
+    // ไม่งั้นได้งานกลับมาแค่เดือนเดียว (ถังที่อัปเดตล่าสุด) ที่เหลือต้องไปกดโหลดเอง
+    if (latest.source === "autosave" && Array.isArray(latest.months) && latest.months.length > 1) {
+      const monthDocs = await Promise.all(latest.months.map((month) =>
+        window.db.collection("cknc_monthly_autosaves").doc(month).get()));
+      const parts = monthDocs.filter((doc) => doc.exists).map((doc) => ({ id: doc.id, ...doc.data(), source: "autosave" }));
+      if (parts.length > 1) {
+        const combined = combineSessionPayloads(parts);
+        latest = {
+          ...latest,
+          name: `CKNC Autosave ${latest.months.join(" + ")}`,
+          payload: {
+            ...(latest.payload || {}),
+            bills: combined.bills,
+            billOverrides: combined.overrides,
+            billMergeGroups: combined.mergeGroups,
+            deletedBillKeys: combined.deletedKeys,
+            auditTrail: combined.audit,
+            topMeds: [],
+          },
+        };
+      }
     }
     await applySessionSnapshot(latest);
     elements.statusText.textContent = `กู้คืนอัตโนมัติหลังเปิดหน้า: ${latest.name || latest.id} (${number(state.bills.length)} บิล)`;
@@ -4362,6 +4424,9 @@ async function applySessionSnapshot(session) {
   state.billOverrides = payload.billOverrides || {};
   state.billMergeGroups = payload.billMergeGroups || [];
   state.deletedBillKeys = payload.deletedBillKeys || [];
+  // กลุ่มรวม/รายการลบต้องถูก apply ซ้ำเสมอ — กันบิลที่รวม/ลบไปแล้วโผล่กลับจากถังเดือนเก่า
+  applyManualMergeGroups();
+  applyDeletedBills();
   state.auditTrail = payload.auditTrail || [];
   state.topMeds = payload.topMeds || [];
   state.clicknicImportSummary = payload.clicknicImportSummary || session.importSummary || { rawRows: 0, uniqueRows: 0, duplicateRows: 0 };
@@ -4551,55 +4616,22 @@ async function mergeSelectedSessions() {
     ).doc(pick.id).get()));
     const sessions = docs.filter((doc) => doc.exists).map((doc) => ({ id: doc.id, ...doc.data() }));
     if (sessions.length < 2) throw new Error("โหลดข้อมูล session ที่เลือกได้ไม่ครบ");
-    // เรียงเก่า → ใหม่ ให้ session ที่อัปเดตล่าสุดชนะเมื่อบิลเลขซ้ำ/override ชนกัน
-    sessions.sort((a, b) => (a.updatedAt?.toMillis?.() || 0) - (b.updatedAt?.toMillis?.() || 0));
-    const billMap = new Map();
-    let overrides = {};
-    const auditIds = new Set();
-    const audit = [];
-    const mergeGroupIds = new Set();
-    const mergeGroups = [];
-    const deletedKeys = new Set();
-    sessions.forEach((session) => {
-      (session.payload?.bills || []).forEach((bill) => {
-        const existing = billMap.get(bill.billKey);
-        billMap.set(bill.billKey, existing ? mergeBillRecords(bill, existing) : bill);
-      });
-      overrides = mergeOverrideMaps(session.payload?.billOverrides || {}, overrides);
-      (session.payload?.billMergeGroups || []).forEach((group) => {
-        if (!group || !Array.isArray(group.memberKeys) || mergeGroupIds.has(group.id)) return;
-        mergeGroupIds.add(group.id);
-        mergeGroups.push(group);
-      });
-      (session.payload?.deletedBillKeys || []).forEach((key) => {
-        if (key) deletedKeys.add(key);
-      });
-      (session.payload?.auditTrail || []).forEach((entry) => {
-        if (!entry || auditIds.has(entry.id)) return;
-        auditIds.add(entry.id);
-        audit.push(entry);
-      });
-    });
-    const mergedBills = [...billMap.values()].map((bill) => ({
-      ...bill,
-      medicines: (bill.medicines && bill.medicines.length) ? bill.medicines : parseMedicinesTextLines(bill.medicinesText),
-      validationIssues: validationRulesForBill(bill),
-    }));
+    const combined = combineSessionPayloads(sessions);
 
     // แสดงผลก่อน/หลังให้ตรวจ ก่อนลงมือจริง
-    const confirmed = await confirmMergePreview(sessions, mergedBills, overrides, audit);
+    const confirmed = await confirmMergePreview(sessions, combined.bills, combined.overrides, combined.audit);
     if (!confirmed) {
       elements.sessionStatus.textContent = "ยกเลิกการรวม — ไม่มีอะไรเปลี่ยน";
       return;
     }
 
-    state.bills = mergedBills;
-    state.billOverrides = overrides;
-    state.billMergeGroups = mergeGroups;
-    state.deletedBillKeys = [...deletedKeys];
+    state.bills = combined.bills;
+    state.billOverrides = combined.overrides;
+    state.billMergeGroups = combined.mergeGroups;
+    state.deletedBillKeys = combined.deletedKeys;
     applyManualMergeGroups();
     applyDeletedBills();
-    state.auditTrail = audit;
+    state.auditTrail = combined.audit;
     state.topMeds = [];
     state.clicknicRows = [];
     state.manualClicknicRows = [];
