@@ -150,6 +150,7 @@ const elements = {
   resetOverrideBtn: $("resetOverrideBtn"),
   drawerPasteAnalyzeBtn: $("drawerPasteAnalyzeBtn"),
   mergeSessionsBtn: $("mergeSessionsBtn"),
+  selectAllSessions: $("selectAllSessions"),
   importModeModal: $("importModeModal"),
   importModeSummary: $("importModeSummary"),
   importModeAppend: $("importModeAppend"),
@@ -2226,7 +2227,7 @@ function renderAuditTrail() {
       <div>
         <span class="audit-kicker">รายการยา</span>
         <strong>${number(entry.lineCount)} รายการ | ยอดขาย ${money(entry.totalSale)} | ต้นทุน ${money(entry.totalCost)}</strong>
-        <p>${entry.medicines.map((item) => `${item.medicine} x${number(item.qty)}`).join(", ")}</p>
+        <p>${(entry.medicines || []).map((item) => `${item.medicine} x${number(item.qty)}`).join(", ")}</p>
       </div>
       <div>
         <span class="audit-kicker">หลักฐาน</span>
@@ -4103,11 +4104,16 @@ async function loadSessionList() {
 
 function updateMergeSessionsButton() {
   if (!elements.mergeSessionsBtn) return;
+  const picks = elements.sessionList.querySelectorAll(".session-merge-pick");
   const count = elements.sessionList.querySelectorAll(".session-merge-pick:checked").length;
   elements.mergeSessionsBtn.disabled = count < 2;
   elements.mergeSessionsBtn.textContent = count >= 2
     ? `รวมที่เลือก (${number(count)}) เป็น session เดียว`
     : "รวมที่เลือกเป็น session เดียว";
+  if (elements.selectAllSessions) {
+    elements.selectAllSessions.checked = picks.length > 0 && count === picks.length;
+    elements.selectAllSessions.indeterminate = count > 0 && count < picks.length;
+  }
 }
 
 async function mergeSelectedSessions() {
@@ -5304,6 +5310,13 @@ elements.openSessionsBtn.addEventListener("click", openSessionsModal);
 elements.closeSessionModal.addEventListener("click", closeSessionsModal);
 elements.refreshSessionsBtn.addEventListener("click", loadSessionList);
 elements.mergeSessionsBtn?.addEventListener("click", mergeSelectedSessions);
+elements.selectAllSessions?.addEventListener("change", () => {
+  const checked = elements.selectAllSessions.checked;
+  elements.sessionList.querySelectorAll(".session-merge-pick").forEach((pick) => {
+    pick.checked = checked;
+  });
+  updateMergeSessionsButton();
+});
 elements.sessionList.addEventListener("change", (event) => {
   if (event.target.closest(".session-merge-pick")) updateMergeSessionsButton();
 });

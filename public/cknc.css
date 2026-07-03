@@ -1847,6 +1847,23 @@ td {
   align-items: center;
 }
 
+.session-select-all {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.session-select-all input {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--green);
+  cursor: pointer;
+}
+
 .session-pick input {
   width: 17px;
   height: 17px;
