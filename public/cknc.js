@@ -140,7 +140,6 @@ const elements = {
   editExpectedClaim: $("editExpectedClaim"),
   editBillingStage: $("editBillingStage"),
   editCost: $("editCost"),
-  editMlpCost: $("editMlpCost"),
   editSale: $("editSale"),
   editProfit: $("editProfit"),
   editBilledAmount: $("editBilledAmount"),
@@ -237,8 +236,7 @@ const metricIds = {
   mlpOnly: "metricMlpOnly",
   clickOnly: "metricClickOnly",
   sale: "metricSale",
-  cost: "metricCost",
-  mlpCost: "metricMlpCost",
+  totalCost: "metricTotalCost",
   billingRows: "metricBillingRows",
   mlpNoBilling: "metricMlpNoBilling",
   billingOnly: "metricBillingOnly",
@@ -1146,8 +1144,8 @@ function validationRulesForBill(bill) {
   if (bill.clicknicDate && bill.mlpDate && dateKey(bill.clicknicDate) !== dateKey(bill.mlpDate)) {
     pushIssue(issues, "info", "DATE_MISMATCH", `วันที่ CKNC (${formatDisplayDate(bill.clicknicDate)}) ไม่ตรงกับ MLP (${formatDisplayDate(bill.mlpDate)})`);
   }
-  if ((bill.status === "matched" || bill.status === "pending-billing") && toNumeric(bill.mlpCost) <= 0) {
-    pushIssue(issues, "warn", "MISSING_MLP_COST", "ไม่มีค่าใช้จ่าย MLP");
+  if ((bill.status === "matched" || bill.status === "pending-billing") && toNumeric(bill.cost) + toNumeric(bill.mlpCost) <= 0) {
+    pushIssue(issues, "warn", "MISSING_MLP_COST", "ไม่มีต้นทุน");
   }
   if (bill.status === "matched" && toNumeric(bill.billedAmount) <= 0 && state.billingRows.length) {
     pushIssue(issues, "warn", "MISSING_BILLED_AMOUNT", "ยังไม่มียอดใบวางบิล");
@@ -1348,6 +1346,7 @@ function calculateMetrics() {
   const sale = bills.reduce((sum, bill) => sum + bill.sale, 0);
   const cost = bills.reduce((sum, bill) => sum + bill.cost, 0);
   const mlpCost = bills.reduce((sum, bill) => sum + bill.mlpCost, 0);
+  const totalCost = cost + mlpCost;
   const profit = bills
     .filter((bill) => bill.status === "matched" || bill.status === "pending-billing")
     .reduce((sum, bill) => sum + bill.profit, 0);
@@ -1357,7 +1356,7 @@ function calculateMetrics() {
   const billingInsurancePending = bills.filter((bill) => bill.billingStage === "insurance-review").length;
   const billingNhsoPending = bills.filter((bill) => bill.billingStage === "nhso-pending").length;
   const billingReviewPending = bills.filter((bill) => bill.billingStage === "pending-review").length;
-  return { clickOrders, matched, mlpOnly, clickOnly, billingRows, mlpNoBilling, billingOnly, sale, cost, mlpCost, profit, caseInsurance, caseNhso, caseUnknown, billingInsurancePending, billingNhsoPending, billingReviewPending };
+  return { clickOrders, matched, mlpOnly, clickOnly, billingRows, mlpNoBilling, billingOnly, sale, cost, mlpCost, totalCost, profit, caseInsurance, caseNhso, caseUnknown, billingInsurancePending, billingNhsoPending, billingReviewPending };
 }
 
 function updateEmptyState() {
@@ -1404,7 +1403,7 @@ function renderMetrics() {
   updateEmptyState();
   const metrics = calculateMetrics();
   Object.entries(metricIds).forEach(([key, id]) => {
-    $(id).textContent = ["sale", "cost", "mlpCost", "profit"].includes(key) ? money(metrics[key]) : number(metrics[key]);
+    $(id).textContent = ["sale", "totalCost", "profit"].includes(key) ? money(metrics[key]) : number(metrics[key]);
     const card = $(id)?.closest(".metric");
     if (card) {
       card.dataset.summaryCard = key;
@@ -1565,13 +1564,11 @@ const cardDetailConfigs = {
     title: "ยอดขายยา",
     rows: () => activeBills().filter((bill) => toNumeric(bill.sale) > 0).sort((a, b) => b.sale - a.sale),
   },
-  cost: {
-    title: "ต้นทุนยา",
-    rows: () => activeBills().filter((bill) => toNumeric(bill.cost) > 0).sort((a, b) => b.cost - a.cost),
-  },
-  mlpCost: {
-    title: "ค่าใช้จ่าย MLP",
-    rows: () => activeBills().filter((bill) => toNumeric(bill.mlpCost) > 0).sort((a, b) => b.mlpCost - a.mlpCost),
+  totalCost: {
+    title: "ต้นทุน",
+    rows: () => activeBills()
+      .filter((bill) => toNumeric(bill.cost) + toNumeric(bill.mlpCost) > 0)
+      .sort((a, b) => (toNumeric(b.cost) + toNumeric(b.mlpCost)) - (toNumeric(a.cost) + toNumeric(a.mlpCost))),
   },
   profit: {
     title: "กำไร matched หลัง MLP",
@@ -1610,7 +1607,7 @@ function summarizeCardRows(rows) {
   return [
     `${number(rows.length)} บิล`,
     `ยอดขาย ${money(rows.reduce((sum, bill) => sum + toNumeric(bill.sale), 0))}`,
-    `MLP ${money(rows.reduce((sum, bill) => sum + toNumeric(bill.mlpCost), 0))}`,
+    `ต้นทุน ${money(rows.reduce((sum, bill) => sum + toNumeric(bill.cost) + toNumeric(bill.mlpCost), 0))}`,
     `วางบิล ${money(rows.reduce((sum, bill) => sum + toNumeric(bill.billedAmount), 0))}`,
   ].join(" | ");
 }
@@ -1675,7 +1672,7 @@ const cardDetailColumns = [
     },
   },
   { label: "ยอดขาย", col: "col-num", num: true, text: (bill) => money(bill.sale) },
-  { label: "MLP", col: "col-num", num: true, text: (bill) => money(bill.mlpCost) },
+  { label: "ต้นทุน", col: "col-num", num: true, text: (bill) => money(toNumeric(bill.cost) + toNumeric(bill.mlpCost)) },
   {
     label: "รายการยา",
     col: "col-meds",
@@ -1888,7 +1885,9 @@ function renderInlineDateInput(bill, field, label) {
 }
 
 function renderInlineMoneyInput(bill, field, label) {
-  const value = Number(bill[field] || 0);
+  const value = field === "totalCost"
+    ? Math.round((toNumeric(bill.cost) + toNumeric(bill.mlpCost)) * 100) / 100
+    : Number(bill[field] || 0);
   return `
     <input
       class="inline-cell-input money-input"
@@ -2008,8 +2007,8 @@ function renderTable() {
       </td>
       <td class="num money-cell">
         <span class="money-row"><span class="money-tag">ขาย</span>${renderInlineMoneyInput(bill, "sale", "ยอดขายยา")}</span>
-        <span class="money-row"><span class="money-tag">ทุน</span>${renderInlineMoneyInput(bill, "cost", "ต้นทุนยา")}</span>
-        <span class="profit-line ${bill.profit < 0 ? "profit-negative" : ""}" title="กำไรหลัง MLP = ยอดขายยา − ต้นทุนยา − ค่าใช้จ่าย MLP (แก้ค่าใช้จ่าย MLP/ยอดใบวางบิลได้ในหน้ารายละเอียด)">กำไร ${money(bill.profit)}</span>
+        <span class="money-row"><span class="money-tag">ทุน</span>${renderInlineMoneyInput(bill, "totalCost", "ต้นทุน")}</span>
+        <span class="profit-line ${bill.profit < 0 ? "profit-negative" : ""}" title="กำไร = ยอดขายยา − ต้นทุน (แก้ยอดใบวางบิลได้ในหน้ารายละเอียด)">กำไร ${money(bill.profit)}</span>
       </td>
       <td class="check-cell">${renderCheckCell(bill)}</td>
     </tr>
@@ -3080,8 +3079,7 @@ function managementSummaryRows() {
     ["Validation Issues", validationReportRows().length],
     ["P1 Actions", actionRows.filter((row) => row.priority === "P1").length],
     ["Drug Sale", metrics.sale],
-    ["Drug Cost", metrics.cost],
-    ["MLP Cost", metrics.mlpCost],
+    ["Total Cost", metrics.totalCost],
     ["Profit After MLP", metrics.profit],
   ];
 }
@@ -3202,8 +3200,7 @@ function exportXlsxReport() {
     ["NHSO Pending Billing", metrics.billingNhsoPending],
     ["Billing Pending Review", metrics.billingReviewPending],
     ["Drug Sale", metrics.sale],
-    ["Drug Cost", metrics.cost],
-    ["MLP Cost", metrics.mlpCost],
+    ["Total Cost", metrics.totalCost],
     ["Matched Profit After MLP", metrics.profit],
     ["Validation Issues", validationReportRows().length],
     ["Audit Entries", state.auditTrail.length],
@@ -3292,8 +3289,7 @@ function exportPdfReport() {
     ["รอใบวางบิล", metrics.mlpNoBilling],
     ["กำไร matched หลัง MLP", money(metrics.profit)],
     ["ยอดขายยา", money(metrics.sale)],
-    ["ต้นทุนยา", money(metrics.cost)],
-    ["ค่าใช้จ่าย MLP", money(metrics.mlpCost)],
+    ["ต้นทุน", money(metrics.totalCost)],
     ["Audit entries", state.auditTrail.length],
   ].map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join("");
   const tableHtml = (rows) => rows.map((bill) => `
@@ -3305,8 +3301,7 @@ function exportPdfReport() {
       <td>${htmlEscape(bill.mlpDate || bill.clicknicDate)}</td>
       <td>${htmlEscape(bill.medicinesText)}</td>
       <td class="num">${money(bill.sale)}</td>
-      <td class="num">${money(bill.cost)}</td>
-      <td class="num">${money(bill.mlpCost)}</td>
+      <td class="num">${money(toNumeric(bill.cost) + toNumeric(bill.mlpCost))}</td>
       <td class="num">${money(bill.billedAmount)}</td>
       <td class="num">${money(bill.profit)}</td>
       <td>${htmlEscape((bill.validationIssues || []).map((issue) => issue.text).join("; "))}</td>
@@ -3323,12 +3318,12 @@ function exportPdfReport() {
         <section class="grid">${metricHtml}</section>
         <h2>รายการที่ต้องตรวจสอบ</h2>
         <table>
-          <thead><tr><th>สถานะ</th><th>เลขบิล</th><th>ORW</th><th>ใบวางบิล</th><th>วันที่</th><th>รายการยา</th><th>ขาย</th><th>ต้นทุน</th><th>MLP</th><th>วางบิล</th><th>กำไร</th><th>ตรวจสอบ</th></tr></thead>
+          <thead><tr><th>สถานะ</th><th>เลขบิล</th><th>ORW</th><th>ใบวางบิล</th><th>วันที่</th><th>รายการยา</th><th>ขาย</th><th>ต้นทุน</th><th>วางบิล</th><th>กำไร</th><th>ตรวจสอบ</th></tr></thead>
           <tbody>${tableHtml(issueRows)}</tbody>
         </table>
         <h2>ตัวอย่างรายการที่จับคู่แล้ว</h2>
         <table>
-          <thead><tr><th>สถานะ</th><th>เลขบิล</th><th>ORW</th><th>ใบวางบิล</th><th>วันที่</th><th>รายการยา</th><th>ขาย</th><th>ต้นทุน</th><th>MLP</th><th>วางบิล</th><th>กำไร</th><th>ตรวจสอบ</th></tr></thead>
+          <thead><tr><th>สถานะ</th><th>เลขบิล</th><th>ORW</th><th>ใบวางบิล</th><th>วันที่</th><th>รายการยา</th><th>ขาย</th><th>ต้นทุน</th><th>วางบิล</th><th>กำไร</th><th>ตรวจสอบ</th></tr></thead>
           <tbody>${tableHtml(matchedRows)}</tbody>
         </table>
       </body>
@@ -3407,8 +3402,7 @@ function exportPdfReportV2() {
     ["Info", severityCounts.info || 0],
     ["ยอดขายยา", money(metrics.sale)],
     ["กำไร matched หลัง MLP", money(metrics.profit)],
-    ["ต้นทุนยา", money(metrics.cost)],
-    ["ค่าใช้จ่าย MLP", money(metrics.mlpCost)],
+    ["ต้นทุน", money(metrics.totalCost)],
     ["บิลทั้งหมด", state.bills.length],
     ["CLICKNIC ซ้ำที่ตัด", state.clicknicImportSummary.duplicateRows],
   ].map(([label, value]) => `<div class="metric"><span>${htmlEscape(label)}</span><strong>${htmlEscape(value)}</strong></div>`).join("");
@@ -3447,8 +3441,7 @@ function exportPdfReportV2() {
       <td>${htmlEscape(bill.mlpDate || bill.clicknicDate)}</td>
       <td class="meds">${htmlEscape(bill.medicinesText)}</td>
       <td class="num">${money(bill.sale)}</td>
-      <td class="num">${money(bill.cost)}</td>
-      <td class="num">${money(bill.mlpCost)}</td>
+      <td class="num">${money(toNumeric(bill.cost) + toNumeric(bill.mlpCost))}</td>
       <td class="num">${money(bill.billedAmount)}</td>
       <td class="num">${money(bill.profit)}</td>
       <td class="issue">${htmlEscape(issueText(bill))}</td>
@@ -3463,7 +3456,7 @@ function exportPdfReportV2() {
       <td>${htmlEscape(row.order_id)}</td>
       <td>${htmlEscape(row.orw)}</td>
       <td>${htmlEscape(row.mlp_date || row.clicknic_date)}</td>
-      <td class="num">${money(row.mlp_cost)}</td>
+      <td class="num">${money(toNumeric(row.drug_cost) + toNumeric(row.mlp_cost))}</td>
       <td class="num">${money(row.billed_amount)}</td>
       <td class="num">${money(row.profit_after_mlp)}</td>
     </tr>
@@ -3519,18 +3512,18 @@ function exportPdfReportV2() {
         <h2>รายการที่ต้องตรวจสอบ</h2>
         <p class="note">แสดงสูงสุด 120 รายการแรกจากกลุ่มที่ยังไม่จับคู่ครบ หรือมี validation issue</p>
         <table>
-          <thead><tr><th>สถานะ</th><th>เลขบิล</th><th>ORW</th><th>ใบวางบิล</th><th>วันที่</th><th>รายการยา</th><th>ขาย</th><th>ต้นทุน</th><th>MLP</th><th>วางบิล</th><th>กำไร</th><th>ตรวจสอบ</th></tr></thead>
-          <tbody>${tableHtml(reviewRows) || '<tr><td colspan="12">ไม่มีรายการที่ต้องตรวจสอบ</td></tr>'}</tbody>
+          <thead><tr><th>สถานะ</th><th>เลขบิล</th><th>ORW</th><th>ใบวางบิล</th><th>วันที่</th><th>รายการยา</th><th>ขาย</th><th>ต้นทุน</th><th>วางบิล</th><th>กำไร</th><th>ตรวจสอบ</th></tr></thead>
+          <tbody>${tableHtml(reviewRows) || '<tr><td colspan="11">ไม่มีรายการที่ต้องตรวจสอบ</td></tr>'}</tbody>
         </table>
         <h2>Validation Issues</h2>
         <table>
-          <thead><tr><th>Severity</th><th>Code</th><th>Issue</th><th>สถานะ</th><th>เลขบิล</th><th>ORW</th><th>วันที่</th><th>MLP</th><th>วางบิล</th><th>กำไร</th></tr></thead>
+          <thead><tr><th>Severity</th><th>Code</th><th>Issue</th><th>สถานะ</th><th>เลขบิล</th><th>ORW</th><th>วันที่</th><th>ต้นทุน</th><th>วางบิล</th><th>กำไร</th></tr></thead>
           <tbody>${validationHtml || '<tr><td colspan="10">ไม่มี validation issue</td></tr>'}</tbody>
         </table>
         <h2>ตัวอย่างรายการที่จับคู่แล้ว</h2>
         <table>
-          <thead><tr><th>สถานะ</th><th>เลขบิล</th><th>ORW</th><th>ใบวางบิล</th><th>วันที่</th><th>รายการยา</th><th>ขาย</th><th>ต้นทุน</th><th>MLP</th><th>วางบิล</th><th>กำไร</th><th>ตรวจสอบ</th></tr></thead>
-          <tbody>${tableHtml(matchedRows) || '<tr><td colspan="12">ไม่มีรายการจับคู่แล้ว</td></tr>'}</tbody>
+          <thead><tr><th>สถานะ</th><th>เลขบิล</th><th>ORW</th><th>ใบวางบิล</th><th>วันที่</th><th>รายการยา</th><th>ขาย</th><th>ต้นทุน</th><th>วางบิล</th><th>กำไร</th><th>ตรวจสอบ</th></tr></thead>
+          <tbody>${tableHtml(matchedRows) || '<tr><td colspan="11">ไม่มีรายการจับคู่แล้ว</td></tr>'}</tbody>
         </table>
         <h2>Audit ล่าสุด</h2>
         <table>
@@ -3941,8 +3934,11 @@ function currentDetailBill() {
 
 function updateEditProfitPreview() {
   if (!elements.editProfit) return;
-  const drugCost = elements.editCost ? toNumeric(elements.editCost.value) : toNumeric(currentDetailBill()?.cost);
-  const profit = toNumeric(elements.editSale.value) - drugCost - toNumeric(elements.editMlpCost.value);
+  const bill = currentDetailBill();
+  const totalCost = elements.editCost
+    ? toNumeric(elements.editCost.value)
+    : toNumeric(bill?.cost) + toNumeric(bill?.mlpCost);
+  const profit = toNumeric(elements.editSale.value) - totalCost;
   elements.editProfit.value = money(profit);
   elements.editProfit.classList.toggle("profit-negative", profit < 0);
 }
@@ -3974,8 +3970,7 @@ function openDetailDrawer(billKey) {
   elements.editClicknicDate.value = formatDisplayDate(bill.clicknicDate);
   elements.editMlpDate.value = formatDisplayDate(bill.mlpDate);
   elements.editBillingDueDate.value = formatDisplayDate(bill.billingDueDate);
-  if (elements.editCost) elements.editCost.value = bill.cost || 0;
-  elements.editMlpCost.value = bill.mlpCost || 0;
+  if (elements.editCost) elements.editCost.value = Math.round((toNumeric(bill.cost) + toNumeric(bill.mlpCost)) * 100) / 100;
   elements.editSale.value = bill.sale || 0;
   elements.editBilledAmount.value = bill.billedAmount || 0;
   updateEditProfitPreview();
@@ -4454,6 +4449,7 @@ const inlineFieldLabels = {
   sale: "ยอดขายยา",
   cost: "ต้นทุนยา",
   mlpCost: "ค่าใช้จ่าย MLP",
+  totalCost: "ต้นทุน",
   billedAmount: "ยอดใบวางบิล",
 };
 
@@ -4475,8 +4471,13 @@ function quickUpdateInlineField(billKey, field, rawValue, type) {
   if (!bill) return;
   const value = normalizeInlineValue(rawValue, type);
   const existing = state.billOverrides[bill.billKey] || {};
-  const currentValue = Object.prototype.hasOwnProperty.call(existing.values || {}, field) ? existing.values[field] : bill[field];
+  // ต้นทุนรวม: บิลถูก merge override แล้ว ค่าปัจจุบัน = ต้นทุนยา + ค่าใช้จ่าย MLP; แก้แล้วเก็บรวมไว้ที่ cost ช่องเดียว
+  const isTotalCost = field === "totalCost";
+  const currentValue = isTotalCost
+    ? toNumeric(bill.cost) + toNumeric(bill.mlpCost)
+    : (Object.prototype.hasOwnProperty.call(existing.values || {}, field) ? existing.values[field] : bill[field]);
   if (!inlineValueChanged(currentValue, value, type)) return;
+  const fieldPatch = isTotalCost ? { cost: value, mlpCost: 0 } : { [field]: value };
   const stagePatch = {};
   if (field === "billedAmount" && (existing.values?.billingStageSource || bill.billingStageSource) !== "manual") {
     const stageDetection = deriveBillingStage(
@@ -4492,7 +4493,7 @@ function quickUpdateInlineField(billKey, field, rawValue, type) {
     ...existing,
     values: {
       ...(existing.values || {}),
-      [field]: value,
+      ...fieldPatch,
       ...stagePatch,
     },
     note: existing.note || "แก้ข้อมูลจากตาราง",
@@ -4547,8 +4548,14 @@ function saveBillOverride() {
     clicknicDate: dateKey(elements.editClicknicDate.value),
     mlpDate: dateKey(elements.editMlpDate.value),
     billingDueDate: dateKey(elements.editBillingDueDate.value),
-    cost: elements.editCost ? toNumeric(elements.editCost.value) : toNumeric(bill.cost),
-    mlpCost: toNumeric(elements.editMlpCost.value),
+    ...(() => {
+      // ต้นทุนช่องเดียว: ถ้าไม่ได้แก้ คงการแยก ต้นทุนยา/MLP เดิมไว้; ถ้าแก้ เก็บรวมที่ cost และล้าง mlpCost
+      const originalCombined = toNumeric(bill.cost) + toNumeric(bill.mlpCost);
+      const combined = elements.editCost ? toNumeric(elements.editCost.value) : originalCombined;
+      return moneyDiff(combined, originalCombined) < 0.005
+        ? { cost: toNumeric(bill.cost), mlpCost: toNumeric(bill.mlpCost) }
+        : { cost: combined, mlpCost: 0 };
+    })(),
     sale: toNumeric(elements.editSale.value),
     billedAmount: toNumeric(elements.editBilledAmount.value),
     excluded: Boolean(elements.editExcluded.checked),
@@ -4871,7 +4878,6 @@ elements.detailDrawer.addEventListener("close", () => {
 elements.saveOverrideBtn.addEventListener("click", saveBillOverride);
 elements.editSale?.addEventListener("input", updateEditProfitPreview);
 elements.editCost?.addEventListener("input", updateEditProfitPreview);
-elements.editMlpCost?.addEventListener("input", updateEditProfitPreview);
 if (elements.editBillingStage) {
   elements.editBillingStage.innerHTML = billingStageOptions
     .map(([value, label]) => `<option value="${value}">${label}</option>`)
