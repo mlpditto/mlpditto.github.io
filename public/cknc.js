@@ -128,6 +128,8 @@ const elements = {
   editStatus: $("editStatus"),
   editOrw: $("editOrw"),
   editInvoice: $("editInvoice"),
+  editBarNo: $("editBarNo"),
+  editCreditNos: $("editCreditNos"),
   editClicknicDate: $("editClicknicDate"),
   editMlpDate: $("editMlpDate"),
   editBillingDueDate: $("editBillingDueDate"),
@@ -674,6 +676,19 @@ function billingStageLabel(value) {
   return billingStageOptions.find(([key]) => key === value)?.[1] || "รอตรวจสอบ";
 }
 
+function displayBillingNo(bill) {
+  return clean(bill.barNo) || clean(bill.billingNo);
+}
+
+function billRefLine(bill) {
+  const parts = [bill.orw || "ORW -"];
+  if (clean(bill.barNo)) parts.push(`ใบวางบิล ${bill.barNo}`);
+  if (clean(bill.creditNos)) parts.push(`เครดิต ${bill.creditNos}`);
+  // snapshot เก่าไม่มี barNo/creditNos: แสดง billingNo เดิมไว้ก่อน
+  if (!clean(bill.barNo) && !clean(bill.creditNos) && clean(bill.billingNo)) parts.push(`ใบวางบิล ${bill.billingNo}`);
+  return parts.join(" · ");
+}
+
 function deriveBillingStage(status, caseType, billedAmount, billingNo) {
   if (status === "billing-only") return { billingStage: "billing-only", billingStageSource: "auto-status" };
   if (status === "clicknic-only") return { billingStage: "no-mlp", billingStageSource: "auto-status" };
@@ -1137,8 +1152,8 @@ function validationRulesForBill(bill) {
   if (bill.status === "matched" && toNumeric(bill.billedAmount) <= 0 && state.billingRows.length) {
     pushIssue(issues, "warn", "MISSING_BILLED_AMOUNT", "ยังไม่มียอดใบวางบิล");
   }
-  if (bill.status === "billing-only" && !bill.billingNo) {
-    pushIssue(issues, "warn", "MISSING_AR", "ใบวางบิลไม่มีเลข AR");
+  if (bill.status === "billing-only" && !clean(bill.creditNos) && !clean(bill.billingNo)) {
+    pushIssue(issues, "warn", "MISSING_AR", "ไม่มีเลขที่เครดิต (AR)");
   }
   if (toNumeric(bill.mlpCost) > 0 && toNumeric(bill.sale) > 0 && toNumeric(bill.mlpCost) > toNumeric(bill.sale) + Math.max(0, toNumeric(activeRuleConfig().mlpCostOverSaleBuffer))) {
     pushIssue(issues, "danger", "MLP_COST_OVER_SALE", "ค่าใช้จ่าย MLP สูงกว่ายอดขายยา");
@@ -1186,6 +1201,8 @@ function buildBills() {
     const billedAmount = uniqueBilling.reduce((sum, row) => sum + row.amount, 0);
     const barNos = [...new Set(uniqueBilling.map((row) => row.bar).filter(Boolean))];
     const arNos = [...new Set(uniqueBilling.map((row) => row.ar).filter(Boolean))];
+    const barNo = barNos.join(", ");
+    const creditNos = arNos.join(", ");
     const billingNo = (barNos.length ? barNos : arNos).join(", ");
     let status = "matched";
     if (!click) status = "mlp-only";
@@ -1230,6 +1247,8 @@ function buildBills() {
       orw: mlp?.orwList.filter(Boolean).join(", ") || "",
       invoice: mlp?.invoiceList.join(", ") || "",
       billingNo,
+      barNo,
+      creditNos,
       billingRefs: uniqueBilling.map((row) => [row.ar, row.orw, row.inv].filter(Boolean).join(" / ")).join(", "),
       mlpReferenceNos: [...new Set(mlp?.referenceList || [])].filter(Boolean).join(", "),
       mlpMemoOrderIds: [...new Set(mlp?.memoOrderIds || [])].filter(Boolean).join(", "),
@@ -1281,6 +1300,8 @@ function buildBills() {
       orw: row.orw,
       invoice: row.inv,
       billingNo: row.bar || row.ar,
+      barNo: row.bar || "",
+      creditNos: row.ar || "",
       billingRefs: [row.ar, row.orw, row.inv].filter(Boolean).join(" / "),
       mlpReferenceNos: "",
       mlpMemoOrderIds: "",
@@ -1904,6 +1925,8 @@ function filteredBills() {
       bill.orw,
       bill.invoice,
       bill.billingNo,
+      bill.barNo,
+      bill.creditNos,
       bill.billingRefs,
       bill.mlpReferenceNos,
       bill.mlpMemoOrderIds,
@@ -1965,7 +1988,7 @@ function renderTable() {
           <button class="bill-analyze-btn" type="button" data-paste-analyze="${htmlEscape(bill.billKey)}" title="แก้ไขจากข้อความ paste (วิเคราะห์อัตโนมัติ)" aria-label="แก้ไขจากข้อความ paste"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
         </span>
         <span class="bill-ref">${bill.orderId || "-"}</span>
-        <span class="bill-ref">${bill.orw || "ORW -"} · ใบวางบิล ${bill.billingNo || "-"}</span>
+        <span class="bill-ref">${htmlEscape(billRefLine(bill))}</span>
         ${bill.refId || bill.phone ? `<span class="bill-ref bill-contact">${htmlEscape([bill.refId, bill.phone].filter(Boolean).join(" · "))}</span>` : ""}
       </td>
       <td class="stack-cell">
@@ -2765,6 +2788,7 @@ function exportCsv() {
     "orw",
     "invoice",
     "billing_no",
+    "credit_no",
     "billing_refs",
     "mlp_reference_no",
     "mlp_memo_order_id",
@@ -2801,7 +2825,8 @@ function exportCsv() {
     bill.address || "",
     bill.orw,
     bill.invoice,
-    bill.billingNo,
+    displayBillingNo(bill),
+    bill.creditNos || "",
     bill.billingRefs,
     bill.mlpReferenceNos,
     bill.mlpMemoOrderIds,
@@ -2849,7 +2874,8 @@ function billReportRow(bill) {
     address: bill.address || "",
     orw: bill.orw,
     invoice: bill.invoice,
-    billing_no: bill.billingNo,
+    billing_no: displayBillingNo(bill),
+    credit_no: bill.creditNos || "",
     billing_refs: bill.billingRefs,
     mlp_reference_no: bill.mlpReferenceNos,
     mlp_memo_order_id: bill.mlpMemoOrderIds,
@@ -2936,7 +2962,8 @@ function validationReportRows() {
       order_id: bill.orderId,
       orw: bill.orw,
       invoice: bill.invoice,
-      billing_no: bill.billingNo,
+      billing_no: displayBillingNo(bill),
+      credit_no: bill.creditNos || "",
       clicknic_date: bill.clicknicDate,
       mlp_date: bill.mlpDate,
       billing_due_date: bill.billingDueDate,
@@ -3083,7 +3110,8 @@ function managementActionRows() {
       order_id: bill.orderId,
       orw: bill.orw,
       invoice: bill.invoice,
-      billing_no: bill.billingNo,
+      billing_no: displayBillingNo(bill),
+      credit_no: bill.creditNos || "",
       due_date: bill.billingDueDate,
       mlp_date: bill.mlpDate,
       patient: bill.patient,
@@ -3273,7 +3301,7 @@ function exportPdfReport() {
       <td>${htmlEscape(statusLabel(bill.status))}</td>
       <td>${htmlEscape(bill.orderId)}</td>
       <td>${htmlEscape(bill.orw)}</td>
-      <td>${htmlEscape(bill.billingNo)}</td>
+      <td>${htmlEscape(displayBillingNo(bill))}</td>
       <td>${htmlEscape(bill.mlpDate || bill.clicknicDate)}</td>
       <td>${htmlEscape(bill.medicinesText)}</td>
       <td class="num">${money(bill.sale)}</td>
@@ -3415,7 +3443,7 @@ function exportPdfReportV2() {
       <td class="status">${htmlEscape(statusLabel(bill.status))}</td>
       <td>${htmlEscape(bill.orderId)}</td>
       <td>${htmlEscape(bill.orw)}</td>
-      <td>${htmlEscape(bill.billingNo)}</td>
+      <td>${htmlEscape(displayBillingNo(bill))}</td>
       <td>${htmlEscape(bill.mlpDate || bill.clicknicDate)}</td>
       <td class="meds">${htmlEscape(bill.medicinesText)}</td>
       <td class="num">${money(bill.sale)}</td>
@@ -3941,6 +3969,8 @@ function openDetailDrawer(billKey) {
   if (elements.editExpectedClaim) elements.editExpectedClaim.value = bill.expectedClaim || 0;
   elements.editOrw.value = bill.orw || "";
   elements.editInvoice.value = bill.invoice || "";
+  if (elements.editBarNo) elements.editBarNo.value = bill.barNo || "";
+  if (elements.editCreditNos) elements.editCreditNos.value = bill.creditNos || "";
   elements.editClicknicDate.value = formatDisplayDate(bill.clicknicDate);
   elements.editMlpDate.value = formatDisplayDate(bill.mlpDate);
   elements.editBillingDueDate.value = formatDisplayDate(bill.billingDueDate);
@@ -4508,6 +4538,8 @@ function saveBillOverride() {
     expectedClaim: elements.editExpectedClaim ? toNumeric(elements.editExpectedClaim.value) : toNumeric(bill.expectedClaim),
     orw: clean(elements.editOrw.value),
     invoice: clean(elements.editInvoice.value),
+    barNo: elements.editBarNo ? clean(elements.editBarNo.value) : clean(bill.barNo),
+    creditNos: elements.editCreditNos ? clean(elements.editCreditNos.value) : clean(bill.creditNos),
     clicknicDate: dateKey(elements.editClicknicDate.value),
     mlpDate: dateKey(elements.editMlpDate.value),
     billingDueDate: dateKey(elements.editBillingDueDate.value),
@@ -4529,7 +4561,7 @@ function saveBillOverride() {
     values.medicinesText = values.medicines.map((item) => `${item.medicine} x${number(item.qty)}`).join(", ");
   }
   if (values.billingStageSource !== "manual") {
-    const stageDetection = deriveBillingStage(values.status, values.caseType, values.billedAmount, bill.billingNo);
+    const stageDetection = deriveBillingStage(values.status, values.caseType, values.billedAmount, values.barNo || values.creditNos || bill.billingNo);
     values.billingStage = stageDetection.billingStage;
     values.billingStageSource = stageDetection.billingStageSource;
   }
