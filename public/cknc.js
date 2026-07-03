@@ -2021,8 +2021,17 @@ function updateAdvancedFilterState() {
 function renderTable() {
   updateAdvancedFilterState();
   const rows = filteredBills();
+  // ยอดรวมของชุดที่กรองอยู่ (ไม่นับบิล Exclude ยกเว้นกำลังดูแท็บ Exclude)
+  const summaryRows = rows.filter((bill) => state.activeStatus === "excluded" || !bill.excluded);
+  const totals = summaryRows.reduce((acc, bill) => {
+    acc.sale += toNumeric(bill.sale);
+    acc.cost += toNumeric(bill.cost) + toNumeric(bill.mlpCost);
+    acc.profit += toNumeric(bill.profit);
+    acc.billed += toNumeric(bill.billedAmount);
+    return acc;
+  }, { sale: 0, cost: 0, profit: 0, billed: 0 });
   elements.tableSummary.textContent = state.bills.length
-    ? `แสดง ${number(rows.length)} จาก ${number(state.bills.length)} บิล`
+    ? `แสดง ${number(rows.length)} จาก ${number(state.bills.length)} บิล · ขาย ${money(totals.sale)} · ต้นทุน ${money(totals.cost)} · กำไร ${money(totals.profit)} · วางบิล ${money(totals.billed)}`
     : "ยังไม่มีข้อมูล";
 
   if (!rows.length) {
