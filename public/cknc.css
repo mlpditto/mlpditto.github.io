@@ -2806,7 +2806,6 @@ body {
 .workflow-panel,
 .merge-assistant,
 .metric,
-.metric-group,
 .workspace-panel,
 .insight,
 .audit-panel,
@@ -2995,78 +2994,24 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
-.metric-groups {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0;
-  align-items: start;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--glass);
-  padding: 10px 14px;
-}
-
-.metric-group {
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  backdrop-filter: none;
-}
-
-.metric-group:not(:first-child) {
-  border-left: 1px solid var(--line);
-  padding-left: 16px;
-}
-
-.metric-group:not(:last-child) {
-  padding-right: 16px;
-}
-
-.metric-group > h3 {
-  margin: 0 0 10px;
-  font-size: 12px;
-  font-weight: 850;
-  letter-spacing: 0.04em;
-  color: var(--muted);
-}
-
-.metric-group > h3 i {
-  margin-right: 6px;
-  color: var(--green);
-}
-
-.metric-group-grid {
-  display: grid;
-  gap: 0;
+/* การ์ดเล็กชุดเดียว: หน้าตาเดียวกับการ์ด KPI แต่ย่อส่วน เรียงต่อกันแถวเดียว (ห่อบรรทัดได้) */
+.metric-mini-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .metric.mini {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
   min-height: 0;
-  padding: 6px 4px;
-  border: 0;
-  border-bottom: 1px solid var(--line);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  backdrop-filter: none;
-}
-
-.metric-group .metric.mini:last-child {
-  border-bottom: 0;
+  padding: 7px 12px;
 }
 
 .metric.mini[role="button"]:hover,
 .metric.mini[role="button"]:focus-visible {
-  transform: none;
-  box-shadow: none;
-  border-color: var(--line);
-  background: var(--mint);
+  transform: translateY(-2px);
 }
 
 .metric.mini span {
@@ -3086,8 +3031,9 @@ button {
   color: #dc2637;
 }
 
+/* การ์ดค่า 0 ไม่ต้องแสดง — โผล่เฉพาะตอนมีตัวเลขจริง */
 .metric.mini.is-zero {
-  opacity: 0.45;
+  display: none;
 }
 
 html.dark .metric.mini.warning strong {
@@ -3101,21 +3047,6 @@ html.dark .metric.mini.danger strong {
 @media (max-width: 1180px) {
   .kpi-row {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .metric-groups {
-    grid-template-columns: 1fr;
-  }
-
-  .metric-group:not(:first-child) {
-    border-left: 0;
-    border-top: 1px solid var(--line);
-    margin-top: 10px;
-    padding: 10px 0 0;
-  }
-
-  .metric-group:not(:last-child) {
-    padding-right: 0;
   }
 }
 
