@@ -2730,36 +2730,35 @@ async function handleFiles() {
   try {
     const clickFiles = [...elements.clicknicFiles.files];
     const mlpFiles = [...elements.mlpFile.files];
+    const billingFiles = [...elements.billingFiles.files];
     elements.statusText.textContent = "กำลังอ่านไฟล์...";
 
-    state.clicknicRows = [];
-    state.manualClicknicRows = [];
-    state.auditTrail = [];
-    state.billOverrides = {};
-    state.mlpRows = [];
-    state.billingRows = [];
-    state.activeSessionId = "";
-    state.snapshotMode = false;
-    state.allStepsComplete = false;
-
+    // อ่านทุกไฟล์ให้สำเร็จก่อน ค่อยแทนที่ข้อมูลเดิม — ไฟล์พัง/ผิดช่องจะไม่ล้างงานบนจอ
     const clicknicImportedRows = [];
     for (const file of clickFiles) {
       const workbook = await readWorkbookFromFile(file);
       clicknicImportedRows.push(...parseClicknicWorkbook(workbook, file.name));
     }
-    state.clicknicRows = dedupeClicknicRows(clicknicImportedRows);
-
     const mlpImportedRows = [];
     for (const file of mlpFiles) {
       const workbook = await readWorkbookFromFile(file);
       mlpImportedRows.push(...parseMlpWorkbook(workbook, file.name));
     }
-    state.mlpRows = dedupeMlpRows(mlpImportedRows);
-
-    for (const file of [...elements.billingFiles.files]) {
+    const billingImportedRows = [];
+    for (const file of billingFiles) {
       const workbook = await readWorkbookFromFile(file);
-      state.billingRows.push(...parseBillingWorkbook(workbook, file.name));
+      billingImportedRows.push(...parseBillingWorkbook(workbook, file.name));
     }
+
+    state.clicknicRows = dedupeClicknicRows(clicknicImportedRows);
+    state.manualClicknicRows = [];
+    state.auditTrail = [];
+    state.billOverrides = {};
+    state.mlpRows = dedupeMlpRows(mlpImportedRows);
+    state.billingRows = billingImportedRows;
+    state.activeSessionId = "";
+    state.snapshotMode = false;
+    state.allStepsComplete = false;
 
     renderAll();
     scheduleAutosave("file-import");
