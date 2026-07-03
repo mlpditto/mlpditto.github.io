@@ -2763,6 +2763,45 @@ async function confirmClipboardImport() {
   }
 }
 
+// รวมบิลสองเวอร์ชันแบบ "ข้อมูลมากที่สุด": ตัวใหม่ชนะเมื่อมีค่า ช่องว่าง/ศูนย์เติมจากตัวเก่า รายการยาเอาชุดที่ยาวกว่า
+function mergeBillRecords(newerBill, olderBill) {
+  const merged = { ...olderBill, ...newerBill };
+  Object.keys(merged).forEach((key) => {
+    if (key === "profit" || key === "validationIssues") return;
+    const newer = newerBill[key];
+    const older = olderBill[key];
+    if (Array.isArray(newer) || Array.isArray(older)) {
+      const newerLen = Array.isArray(newer) ? newer.length : 0;
+      const olderLen = Array.isArray(older) ? older.length : 0;
+      merged[key] = newerLen >= olderLen ? (newer || []) : older;
+      return;
+    }
+    const newerEmpty = newer === undefined || newer === null || newer === "" || newer === 0;
+    const olderHasValue = older !== undefined && older !== null && older !== "" && older !== 0;
+    if (newerEmpty && olderHasValue) merged[key] = older;
+  });
+  if (merged.medicines?.length) {
+    merged.medicineCount = merged.medicines.length;
+    if (!clean(merged.medicinesText)) {
+      merged.medicinesText = merged.medicines.map((item) => `${item.medicine} x${number(item.qty)}`).join(", ");
+    }
+  }
+  merged.profit = toNumeric(merged.sale) - toNumeric(merged.cost) - toNumeric(merged.mlpCost);
+  return merged;
+}
+
+// รวม override สองชุด: ตัวใหม่ชนะรายฟิลด์ ฟิลด์ที่อีกฝั่งเคยแก้ไว้ไม่หาย
+function mergeOverrideMaps(newerMap, olderMap) {
+  const merged = { ...(olderMap || {}) };
+  Object.entries(newerMap || {}).forEach(([key, override]) => {
+    const older = merged[key];
+    merged[key] = older
+      ? { ...older, ...override, values: { ...(older.values || {}), ...(override.values || {}) } }
+      : override;
+  });
+  return merged;
+}
+
 // ถามผู้ใช้ว่าจะ "เพิ่มเข้าข้อมูลเดิม" หรือ "เริ่มใหม่ทั้งหมด" — คืน null เมื่อยกเลิก
 function askImportMode(summaryText) {
   return new Promise((resolve) => {
@@ -2809,6 +2848,15 @@ function mergeImportedIntoState(imported) {
     state.billingRows = dedupeBillingRows(imported.billingRows);
     state.snapshotMode = false;
     buildBills();
+    // คีย์ซ้ำ: รวมแบบข้อมูลมากที่สุด (บิลจากไฟล์ใหม่ชนะเมื่อมีค่า ช่องว่างเติมจากบิลเดิม)
+    const previousByKey = new Map(previousBills.map((bill) => [bill.billKey, bill]));
+    state.bills = state.bills.map((bill) => {
+      const previous = previousByKey.get(bill.billKey);
+      if (!previous) return bill;
+      const merged = mergeBillRecords(bill, previous);
+      merged.validationIssues = validationRulesForBill(merged);
+      return merged;
+    });
     const importedKeys = new Set(state.bills.map((bill) => bill.billKey));
     state.bills = [...state.bills, ...previousBills.filter((bill) => !importedKeys.has(bill.billKey))];
     state.snapshotMode = true;
@@ -3895,11 +3943,19 @@ async function applySessionSnapshot(session) {
   const payload = session.payload || {};
   let mode = "replace";
   if (state.bills.length) {
-    mode = await askImportMode(`ข้อมูลบนจอมี ${number(state.bills.length)} บิล — session "${session.name || session.id}" มี ${number((payload.bills || []).length)} บิล (โหมดเพิ่ม: บิลเลขซ้ำใช้ของบนจอ ค่าที่แก้ไว้คงอยู่)`);
+    mode = await askImportMode(`ข้อมูลบนจอมี ${number(state.bills.length)} บิล — session "${session.name || session.id}" มี ${number((payload.bills || []).length)} บิล (โหมดเพิ่ม: บิลเลขซ้ำรวมข้อมูลให้มากที่สุด ค่าที่แก้ไว้คงอยู่)`);
     if (!mode) return false;
   }
   if (mode === "append") {
-    // รวมบิลจาก session เข้ากับงานบนจอ: คีย์ซ้ำใช้ของบนจอ, override/audit รวมกันโดยของบนจอชนะ
+    // รวมบิลจาก session เข้ากับงานบนจอแบบ "ข้อมูลมากที่สุด": ของบนจอชนะเมื่อมีค่า ช่องว่างเติมจาก session
+    const loadedByKey = new Map((payload.bills || []).map((bill) => [bill.billKey, bill]));
+    state.bills = state.bills.map((bill) => {
+      const loaded = loadedByKey.get(bill.billKey);
+      if (!loaded) return bill;
+      const merged = mergeBillRecords(bill, loaded);
+      merged.validationIssues = validationRulesForBill(merged);
+      return merged;
+    });
     const currentKeys = new Set(state.bills.map((bill) => bill.billKey));
     const loadedBills = (payload.bills || [])
       .filter((bill) => !currentKeys.has(bill.billKey))
@@ -3909,7 +3965,7 @@ async function applySessionSnapshot(session) {
         validationIssues: validationRulesForBill(bill),
       }));
     state.bills = [...state.bills, ...loadedBills];
-    state.billOverrides = { ...(payload.billOverrides || {}), ...state.billOverrides };
+    state.billOverrides = mergeOverrideMaps(state.billOverrides, payload.billOverrides || {});
     const auditIds = new Set(state.auditTrail.map((entry) => entry.id));
     state.auditTrail = [...state.auditTrail, ...(payload.auditTrail || []).filter((entry) => !auditIds.has(entry.id))];
     state.snapshotMode = true;
@@ -4073,8 +4129,11 @@ async function mergeSelectedSessions() {
     const auditIds = new Set();
     const audit = [];
     sessions.forEach((session) => {
-      (session.payload?.bills || []).forEach((bill) => billMap.set(bill.billKey, bill));
-      overrides = { ...overrides, ...(session.payload?.billOverrides || {}) };
+      (session.payload?.bills || []).forEach((bill) => {
+        const existing = billMap.get(bill.billKey);
+        billMap.set(bill.billKey, existing ? mergeBillRecords(bill, existing) : bill);
+      });
+      overrides = mergeOverrideMaps(session.payload?.billOverrides || {}, overrides);
       (session.payload?.auditTrail || []).forEach((entry) => {
         if (!entry || auditIds.has(entry.id)) return;
         auditIds.add(entry.id);
