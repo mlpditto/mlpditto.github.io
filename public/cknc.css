@@ -3606,6 +3606,29 @@ html.dark .panel-head p {
   opacity: 0.6;
 }
 
+/* ค่าใหม่ต่างจากเดิม → เน้นทั้งแถวว่า "แถวนี้จะเปลี่ยน" */
+.paste-field-changed {
+  border-color: rgba(18, 150, 88, 0.45);
+  background: rgba(18, 150, 88, 0.06);
+}
+
+.paste-field-changed input[type="text"],
+.paste-field-changed input[type="number"],
+.paste-field-changed select {
+  border-color: rgba(18, 150, 88, 0.5);
+}
+
+/* ค่าที่วิเคราะห์ได้เท่ากับของเดิม → จางสีเดียวกันทั้งคู่ ไม่ต้องไล่เทียบเอง */
+.paste-field-same {
+  opacity: 0.72;
+}
+
+.paste-field-same input[type="text"],
+.paste-field-same input[type="number"],
+.paste-field-same select {
+  color: var(--muted);
+}
+
 .paste-field-label {
   font-weight: 800;
 }

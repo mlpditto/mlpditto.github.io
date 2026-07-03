@@ -4973,7 +4973,7 @@ function runPasteAnalyze() {
       const selectedCase = clean(parsedValue) || bill.caseType || "unknown";
       valueInput = `<select data-paste-value="${def.key}">${caseTypeOptions.map(([key, label]) => `<option value="${key}" ${key === selectedCase ? "selected" : ""}>${label}</option>`).join("")}</select>`;
     } else if (def.type === "number") {
-      valueInput = `<input type="number" step="0.01" min="0" data-paste-value="${def.key}" value="${hasValue ? toNumeric(parsedValue) : ""}" placeholder="ไม่พบ" />`;
+      valueInput = `<input type="text" inputmode="decimal" data-paste-value="${def.key}" value="${hasValue ? toNumeric(parsedValue) : ""}" placeholder="ไม่พบ" />`;
     } else if (def.type === "date") {
       valueInput = `<span class="date-field">
         <input type="text" inputmode="numeric" data-paste-value="${def.key}" value="${hasValue ? formatDisplayDate(parsedValue) : ""}" placeholder="วว/ดด/ปปปป" />
@@ -4983,11 +4983,13 @@ function runPasteAnalyze() {
     } else {
       valueInput = `<input type="text" data-paste-value="${def.key}" value="${htmlEscape(clean(parsedValue) || "")}" placeholder="ไม่พบ" />`;
     }
+    // สถานะแถวช่วยกวาดตา: เขียว = ค่าจะเปลี่ยน, จางเท่ากันทั้งคู่ = ค่าเท่าเดิม, จางมาก = วิเคราะห์ไม่พบ
+    const stateClass = !hasValue ? "paste-field-empty" : (changed ? "paste-field-changed" : "paste-field-same");
     return `
-    <label class="paste-field ${hasValue ? "" : "paste-field-empty"}">
+    <label class="paste-field ${stateClass}">
       <input type="checkbox" data-paste-apply="${def.key}" ${checked} aria-label="ใช้ค่า ${def.label}" />
       <span class="paste-field-label">${def.label}</span>
-      <span class="paste-field-old" title="ค่าปัจจุบันของบิลนี้">เดิม: ${htmlEscape(pasteFieldCurrentDisplay(bill, def))}</span>
+      <span class="paste-field-old" title="ค่าปัจจุบันของบิลนี้">เดิม: ${htmlEscape(pasteFieldCurrentDisplay(bill, def))}${hasValue && !changed ? " · เท่าเดิม" : ""}</span>
       ${valueInput}
     </label>`;
   }).join("");
