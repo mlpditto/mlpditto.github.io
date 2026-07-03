@@ -149,6 +149,7 @@ const elements = {
   saveOverrideBtn: $("saveOverrideBtn"),
   resetOverrideBtn: $("resetOverrideBtn"),
   drawerPasteAnalyzeBtn: $("drawerPasteAnalyzeBtn"),
+  mergeSessionsBtn: $("mergeSessionsBtn"),
   importModeModal: $("importModeModal"),
   importModeSummary: $("importModeSummary"),
   importModeAppend: $("importModeAppend"),
@@ -4016,6 +4017,9 @@ async function loadSessionList() {
     elements.sessionList.innerHTML = rows.length
       ? rows.map((session) => `
         <article class="session-item">
+          <label class="session-pick" title="เลือกเพื่อรวม">
+            <input type="checkbox" class="session-merge-pick" data-kind="${session.kind}" data-id="${htmlEscape(session.id)}" aria-label="เลือก ${htmlEscape(session.name || session.id)} เพื่อรวม" />
+          </label>
           <div>
             <h3>${htmlEscape(session.name || session.id)}${session.kind === "autosave" ? ' <span class="session-badge">Autosave</span>' : ""}</h3>
             <div class="session-meta">
@@ -4033,10 +4037,91 @@ async function loadSessionList() {
         </article>
       `).join("")
       : `<div class="empty">ยังไม่มี session ที่บันทึกไว้</div>`;
+    updateMergeSessionsButton();
   } catch (error) {
     console.error(error);
     elements.sessionStatus.textContent = "โหลดไม่สำเร็จ";
     elements.sessionList.innerHTML = `<div class="empty">โหลด session ไม่สำเร็จ: ${htmlEscape(error.message)}</div>`;
+  }
+}
+
+function updateMergeSessionsButton() {
+  if (!elements.mergeSessionsBtn) return;
+  const count = elements.sessionList.querySelectorAll(".session-merge-pick:checked").length;
+  elements.mergeSessionsBtn.disabled = count < 2;
+  elements.mergeSessionsBtn.textContent = count >= 2
+    ? `รวมที่เลือก (${number(count)}) เป็น session เดียว`
+    : "รวมที่เลือกเป็น session เดียว";
+}
+
+async function mergeSelectedSessions() {
+  const picks = [...elements.sessionList.querySelectorAll(".session-merge-pick:checked")]
+    .map((checkbox) => ({ kind: checkbox.dataset.kind, id: checkbox.dataset.id }));
+  if (picks.length < 2) return;
+  if (state.bills.length && !confirm(`ผลรวมจะแทนที่ข้อมูลบนจอ (${number(state.bills.length)} บิล) แล้วบันทึกเป็น session ใหม่ — ดำเนินการต่อหรือไม่?`)) return;
+  try {
+    elements.sessionStatus.textContent = "กำลังรวม session...";
+    const docs = await Promise.all(picks.map((pick) => (
+      pick.kind === "autosave" ? window.db.collection("cknc_monthly_autosaves") : window.db.collection("cknc_sessions")
+    ).doc(pick.id).get()));
+    const sessions = docs.filter((doc) => doc.exists).map((doc) => ({ id: doc.id, ...doc.data() }));
+    if (sessions.length < 2) throw new Error("โหลดข้อมูล session ที่เลือกได้ไม่ครบ");
+    // เรียงเก่า → ใหม่ ให้ session ที่อัปเดตล่าสุดชนะเมื่อบิลเลขซ้ำ/override ชนกัน
+    sessions.sort((a, b) => (a.updatedAt?.toMillis?.() || 0) - (b.updatedAt?.toMillis?.() || 0));
+    const billMap = new Map();
+    let overrides = {};
+    const auditIds = new Set();
+    const audit = [];
+    sessions.forEach((session) => {
+      (session.payload?.bills || []).forEach((bill) => billMap.set(bill.billKey, bill));
+      overrides = { ...overrides, ...(session.payload?.billOverrides || {}) };
+      (session.payload?.auditTrail || []).forEach((entry) => {
+        if (!entry || auditIds.has(entry.id)) return;
+        auditIds.add(entry.id);
+        audit.push(entry);
+      });
+    });
+    state.bills = [...billMap.values()].map((bill) => ({
+      ...bill,
+      medicines: (bill.medicines && bill.medicines.length) ? bill.medicines : parseMedicinesTextLines(bill.medicinesText),
+      validationIssues: validationRulesForBill(bill),
+    }));
+    state.billOverrides = overrides;
+    state.auditTrail = audit;
+    state.topMeds = [];
+    state.clicknicRows = [];
+    state.manualClicknicRows = [];
+    state.mlpRows = [];
+    state.billingRows = [];
+    state.snapshotMode = true;
+    state.activeSessionId = "";
+    renderSnapshot();
+
+    // บันทึกผลรวมเป็น session ใหม่อันเดียว (session ต้นทางไม่ถูกลบ)
+    const monthLabels = [...new Set(sessions.map((session) => session.month).filter(Boolean))].join("+");
+    const name = clean(prompt("ตั้งชื่อ session ที่รวมแล้ว", `CKNC Merge ${monthLabels || new Date().toISOString().slice(0, 10)} (${number(state.bills.length)} บิล)`) || "");
+    if (name) {
+      const doc = makeSessionPayload(name);
+      const approxBytes = new Blob([JSON.stringify(doc)]).size;
+      if (approxBytes > 900000) {
+        alert("ผลรวมใหญ่เกินกว่าจะบันทึกเป็น session เดียวใน Firestore — ข้อมูลรวมยังอยู่บนจอ ใช้ Export XLSX เก็บแทนได้");
+      } else {
+        doc.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+        doc.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+        doc.createdByUid = window.auth.currentUser.uid;
+        doc.createdByEmail = window.auth.currentUser.email || "";
+        const ref = window.db.collection("cknc_sessions").doc();
+        await ref.set(doc);
+        state.activeSessionId = ref.id;
+        setSessionButtons();
+      }
+    }
+    elements.statusText.textContent = `รวม ${number(sessions.length)} sessions → ${number(state.bills.length)} บิล${name ? ` (บันทึก "${name}")` : ""}`;
+    await loadSessionList();
+  } catch (error) {
+    console.error(error);
+    alert(`รวม session ไม่สำเร็จ: ${error.message}`);
+    elements.sessionStatus.textContent = "รวม session ไม่สำเร็จ";
   }
 }
 
@@ -5159,6 +5244,10 @@ elements.saveSessionBtn.addEventListener("click", saveCurrentSession);
 elements.openSessionsBtn.addEventListener("click", openSessionsModal);
 elements.closeSessionModal.addEventListener("click", closeSessionsModal);
 elements.refreshSessionsBtn.addEventListener("click", loadSessionList);
+elements.mergeSessionsBtn?.addEventListener("click", mergeSelectedSessions);
+elements.sessionList.addEventListener("change", (event) => {
+  if (event.target.closest(".session-merge-pick")) updateMergeSessionsButton();
+});
 elements.sessionList.addEventListener("click", (event) => {
   const loadButton = event.target.closest("[data-load-session]");
   if (loadButton) {

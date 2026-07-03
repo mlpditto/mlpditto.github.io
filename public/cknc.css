@@ -1834,12 +1834,24 @@ td {
 
 .session-item {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: auto 1fr auto;
   gap: 12px;
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fbfdfb;
+}
+
+.session-pick {
+  display: flex;
+  align-items: center;
+}
+
+.session-pick input {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--green);
+  cursor: pointer;
 }
 
 .session-item h3 {
