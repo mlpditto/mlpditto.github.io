@@ -1874,6 +1874,12 @@ td {
   cursor: pointer;
 }
 
+.session-refresh-btn {
+  min-width: 34px;
+  padding-inline: 9px;
+  margin-right: auto;
+}
+
 .session-select-all input {
   width: 17px;
   height: 17px;
