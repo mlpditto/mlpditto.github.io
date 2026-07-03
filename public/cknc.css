@@ -1882,6 +1882,12 @@ td {
   border-bottom: 0;
 }
 
+.drawer-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .drawer-body {
   display: grid;
   align-content: start;

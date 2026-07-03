@@ -148,6 +148,7 @@ const elements = {
   editOverrideNote: $("editOverrideNote"),
   saveOverrideBtn: $("saveOverrideBtn"),
   resetOverrideBtn: $("resetOverrideBtn"),
+  drawerPasteAnalyzeBtn: $("drawerPasteAnalyzeBtn"),
   pasteAnalyzeModal: $("pasteAnalyzeModal"),
   closePasteAnalyze: $("closePasteAnalyze"),
   cancelPasteAnalyze: $("cancelPasteAnalyze"),
@@ -4063,7 +4064,9 @@ function parseBillPasteText(rawText) {
     result.phone = orderLineMatch[2];
   }
   if (!result.phone) {
-    const loosePhone = text.match(/(?:^|[\s-])(0\d{9})(?!\d)/m);
+    // ตัด Ref-ID ทิ้งก่อน กันเลขใน R-0xxxxxxxxx ถูกอ่านเป็นเบอร์โทร
+    const textWithoutRefId = text.replace(/R-?\d+/gi, " ");
+    const loosePhone = textWithoutRefId.match(/(?:^|[\s-])(0\d{9})(?!\d)/m);
     if (loosePhone && !findOrderId(loosePhone[1])) result.phone = loosePhone[1];
   }
 
@@ -4280,6 +4283,8 @@ function applyPasteAnalyzeToBill() {
   renderAuditTrail();
   scheduleAutosave("paste-analyze");
   closePasteAnalyzeModal();
+  // เปิดจากปุ่มใน drawer: โหลดค่าใหม่เข้า drawer ให้เห็นผลทันที
+  if (elements.detailDrawer?.open && state.currentDetailKey) openDetailDrawer(state.currentDetailKey);
 }
 
 function quickUpdateStatus(billKey, status) {
@@ -4902,6 +4907,9 @@ elements.yearEraToggleBtn?.addEventListener("click", () => {
 });
 syncYearEraButton();
 elements.resetOverrideBtn.addEventListener("click", resetBillOverride);
+elements.drawerPasteAnalyzeBtn?.addEventListener("click", () => {
+  if (state.currentDetailKey) openPasteAnalyze(state.currentDetailKey);
+});
 elements.closePasteAnalyze?.addEventListener("click", closePasteAnalyzeModal);
 elements.cancelPasteAnalyze?.addEventListener("click", closePasteAnalyzeModal);
 elements.pasteAnalyzeModal?.addEventListener("click", (event) => {

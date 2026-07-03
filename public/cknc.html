@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="./cknc.css?v=20260703180000" />
+    <link rel="stylesheet" href="./cknc.css?v=20260703190000" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -603,7 +603,10 @@
             <p class="eyebrow">Bill detail</p>
             <h2 id="drawerTitle">รายละเอียดบิล</h2>
           </div>
-          <button id="closeDetailDrawer" class="icon-button" type="button" aria-label="ปิด">×</button>
+          <div class="drawer-head-actions">
+            <button id="drawerPasteAnalyzeBtn" class="icon-button" type="button" title="แก้ไขจากข้อความ paste (วิเคราะห์อัตโนมัติ)" aria-label="แก้ไขจากข้อความ paste"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
+            <button id="closeDetailDrawer" class="icon-button" type="button" aria-label="ปิด">×</button>
+          </div>
         </div>
 
         <div class="drawer-body">
@@ -755,7 +758,7 @@
       </div>
     </dialog>
 
-    <script src="./cknc.js?v=20260703180000"></script>
+    <script src="./cknc.js?v=20260703190000"></script>
     <script>
       (function () {
         const btn = document.getElementById("themeToggleBtn");
