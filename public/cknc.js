@@ -869,6 +869,16 @@ function extractPatientFromMemo(value) {
   return candidate || "";
 }
 
+function dedupeMlpRows(rows) {
+  const seen = new Set();
+  return rows.filter((row) => {
+    const key = [row.referenceNo, row.invoice, Number(row.mlpCost || 0).toFixed(4), row.detail].join("|");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 function parseMlpWorkbook(workbook, sourceName) {
   const rows = sheetToRows(workbook);
   return rows.map((row, index) => {
@@ -2672,7 +2682,7 @@ function confirmClipboardImport() {
 async function handleFiles() {
   try {
     const clickFiles = [...elements.clicknicFiles.files];
-    const mlpFile = elements.mlpFile.files[0];
+    const mlpFiles = [...elements.mlpFile.files];
     elements.statusText.textContent = "กำลังอ่านไฟล์...";
 
     state.clicknicRows = [];
@@ -2692,10 +2702,12 @@ async function handleFiles() {
     }
     state.clicknicRows = dedupeClicknicRows(clicknicImportedRows);
 
-    if (mlpFile) {
-      const workbook = await readWorkbookFromFile(mlpFile);
-      state.mlpRows = parseMlpWorkbook(workbook, mlpFile.name);
+    const mlpImportedRows = [];
+    for (const file of mlpFiles) {
+      const workbook = await readWorkbookFromFile(file);
+      mlpImportedRows.push(...parseMlpWorkbook(workbook, file.name));
     }
+    state.mlpRows = dedupeMlpRows(mlpImportedRows);
 
     for (const file of [...elements.billingFiles.files]) {
       const workbook = await readWorkbookFromFile(file);
