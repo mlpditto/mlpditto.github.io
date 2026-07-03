@@ -2009,7 +2009,7 @@ function renderTable() {
       <td class="num money-cell">
         <span class="money-row"><span class="money-tag">ขาย</span>${renderInlineMoneyInput(bill, "sale", "ยอดขายยา")}</span>
         <span class="money-row"><span class="money-tag">ทุน</span>${renderInlineMoneyInput(bill, "totalCost", "ต้นทุน")}</span>
-        <span class="profit-line ${bill.profit < 0 ? "profit-negative" : ""}" title="กำไร = ยอดขายยา − ต้นทุน (แก้ยอดใบวางบิลได้ในหน้ารายละเอียด)">กำไร ${money(bill.profit)}</span>
+        <span class="profit-line ${bill.profit < 0 ? "profit-negative" : ""}${Math.abs(toNumeric(bill.profit) - 10) < 0.005 ? " profit-nhso" : ""}" title="กำไร = ยอดขายยา − ต้นทุน (แก้ยอดใบวางบิลได้ในหน้ารายละเอียด)">กำไร ${money(bill.profit)}</span>
       </td>
       <td class="check-cell">${renderCheckCell(bill)}</td>
     </tr>

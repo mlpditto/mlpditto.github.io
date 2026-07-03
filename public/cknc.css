@@ -560,8 +560,8 @@ button:not(:disabled):hover {
 }
 
 .card-detail-chips .chip.case-nhso {
-  background: var(--mint);
-  color: var(--green-dark);
+  background: #e8f0fb;
+  color: #1a4f9c;
 }
 
 .card-detail-chips .chip.case-general {
@@ -1015,8 +1015,8 @@ td {
 }
 
 .badge.case-nhso {
-  background: var(--mint);
-  color: var(--green-dark);
+  background: #e8f0fb;
+  color: #1a4f9c;
 }
 
 .badge.case-general {
@@ -1093,9 +1093,9 @@ td {
 }
 
 .case-type-select.nhso {
-  border-color: #b8ddcf;
-  background: var(--mint);
-  color: var(--green-dark);
+  border-color: #b9d0ee;
+  background: #e8f0fb;
+  color: #1a4f9c;
 }
 
 .case-type-select.general {
@@ -1467,6 +1467,15 @@ td {
 
 .profit-line.profit-negative {
   color: var(--red);
+}
+
+/* กำไร 10.00 = กำไรมาตรฐานเคส สปสช → แสดงเป็น chip สีน้ำเงินแบบ สปสช. */
+.profit-line.profit-nhso {
+  width: fit-content;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #e8f0fb;
+  color: #1a4f9c;
 }
 
 .check-cell {
@@ -3228,6 +3237,19 @@ html.dark .card-detail-table td.col-action {
 html.dark .card-detail-chips .chip {
   background: #0f172a;
   color: #cbd5e1;
+}
+
+html.dark .badge.case-nhso,
+html.dark .card-detail-chips .chip.case-nhso,
+html.dark .profit-line.profit-nhso {
+  background: rgba(59, 130, 246, 0.18);
+  color: #93c5fd;
+}
+
+html.dark .case-type-select.nhso {
+  background: rgba(59, 130, 246, 0.18);
+  border-color: #2f4f7d;
+  color: #93c5fd;
 }
 
 html.dark .rank-item span,
