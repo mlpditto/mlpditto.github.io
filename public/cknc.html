@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="./cknc.css?v=20260704130000" />
+    <link rel="stylesheet" href="./cknc.css?v=20260704140000" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -368,11 +368,24 @@
           </div>
         </div>
 
+        <div id="bulkBar" class="bulk-bar" hidden>
+          <strong id="bulkCount">เลือก 0 บิล</strong>
+          <select id="bulkBillingStage" aria-label="ตั้งงานวางบิลให้บิลที่เลือก"></select>
+          <select id="bulkCaseType" aria-label="ตั้งประเภทเคสให้บิลที่เลือก"></select>
+          <span class="bulk-bar-field">
+            <input id="bulkBarNo" type="text" placeholder="BAR-..." aria-label="เลขใบวางบิล (BAR)" />
+            <button id="bulkApplyBarNo" class="ghost small" type="button">ใส่ BAR</button>
+          </span>
+          <button id="bulkExclude" class="ghost small" type="button">Exclude</button>
+          <button id="bulkInclude" class="ghost small" type="button">ยกเลิก Exclude</button>
+          <button id="bulkClear" class="ghost small" type="button">ล้างการเลือก</button>
+        </div>
+
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>จัดการ</th>
+                <th><input id="selectAllRows" type="checkbox" title="เลือกทุกแถวที่แสดง" aria-label="เลือกทุกแถวที่แสดง" /> จัดการ</th>
                 <th>บิล / ผู้รับบริการ</th>
                 <th>สถานะ · งานวางบิล</th>
                 <th>วันที่</th>
@@ -812,7 +825,7 @@
       </div>
     </dialog>
 
-    <script src="./cknc.js?v=20260704130000"></script>
+    <script src="./cknc.js?v=20260704140000"></script>
     <script>
       (function () {
         const btn = document.getElementById("themeToggleBtn");

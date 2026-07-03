@@ -31,6 +31,7 @@ const state = {
   activeSessionId: "",
   snapshotMode: false,
   showMergedAutosaves: false,
+  selectedBillKeys: new Set(),
   activeClipboardKind: "",
   autosaveTimer: null,
   autosaveInFlight: false,
@@ -152,6 +153,16 @@ const elements = {
   drawerPasteAnalyzeBtn: $("drawerPasteAnalyzeBtn"),
   mergeSessionsBtn: $("mergeSessionsBtn"),
   selectAllSessions: $("selectAllSessions"),
+  bulkBar: $("bulkBar"),
+  bulkCount: $("bulkCount"),
+  bulkBillingStage: $("bulkBillingStage"),
+  bulkCaseType: $("bulkCaseType"),
+  bulkBarNo: $("bulkBarNo"),
+  bulkApplyBarNo: $("bulkApplyBarNo"),
+  bulkExclude: $("bulkExclude"),
+  bulkInclude: $("bulkInclude"),
+  bulkClear: $("bulkClear"),
+  selectAllRows: $("selectAllRows"),
   mergeResultModal: $("mergeResultModal"),
   mergeResultBody: $("mergeResultBody"),
   mergeResultOk: $("mergeResultOk"),
@@ -2023,6 +2034,7 @@ function renderTable() {
     return `
     <tr class="${bill.excluded ? "row-excluded" : (bill.billingStage || "") === "paid" ? "row-paid" : ""}">
       <td class="action-cell">
+        <input type="checkbox" class="row-pick" data-pick-key="${htmlEscape(bill.billKey)}" ${state.selectedBillKeys.has(bill.billKey) ? "checked" : ""} aria-label="เลือกบิลนี้" />
         <button class="row-action icon-action" type="button" data-detail-key="${bill.billKey}" title="รายละเอียด / แก้ไข" aria-label="รายละเอียด / แก้ไข"><i class="fa-solid fa-pen-to-square"></i></button>
         ${bill.status === "mlp-only" || bill.hasManualMedicines ? `<button class="row-action icon-action" type="button" data-manual-entry="${htmlEscape(bill.orderId || bill.billKey)}" title="${bill.hasManualMedicines ? "แก้ยา" : "เพิ่มยา"}" aria-label="${bill.hasManualMedicines ? "แก้ยา" : "เพิ่มยา"}"><i class="fa-solid fa-pills"></i></button>` : ""}
         <button class="row-action icon-action ${bill.excluded ? "exclude-active" : ""}" type="button" data-toggle-exclude="${htmlEscape(bill.billKey)}" title="${bill.excluded ? "ยกเลิก Exclude" : "Exclude"}" aria-label="${bill.excluded ? "ยกเลิก Exclude" : "Exclude"}"><i class="fa-solid fa-ban"></i></button>
@@ -2060,6 +2072,62 @@ function renderTable() {
     </tr>
   `;
   }).join("");
+  updateBulkBar();
+}
+
+function updateBulkBar() {
+  if (!elements.bulkBar) return;
+  // ตัดคีย์ของบิลที่ไม่อยู่แล้วออกจากการเลือก
+  const validKeys = new Set(state.bills.map((bill) => bill.billKey));
+  [...state.selectedBillKeys].forEach((key) => {
+    if (!validKeys.has(key)) state.selectedBillKeys.delete(key);
+  });
+  const count = state.selectedBillKeys.size;
+  elements.bulkBar.hidden = count === 0;
+  elements.bulkCount.textContent = `เลือก ${number(count)} บิล`;
+  if (elements.selectAllRows) {
+    const visible = [...document.querySelectorAll("#billTableBody .row-pick")];
+    const checkedVisible = visible.filter((pick) => pick.checked).length;
+    elements.selectAllRows.checked = visible.length > 0 && checkedVisible === visible.length;
+    elements.selectAllRows.indeterminate = checkedVisible > 0 && checkedVisible < visible.length;
+  }
+}
+
+// แก้บิลที่ติ๊กเลือกทั้งชุดในครั้งเดียว — makeValues(bill, existingOverride) คืนฟิลด์ที่จะ override
+function applyBulkOverride(makeValues, noteLabel) {
+  const bills = state.bills.filter((bill) => state.selectedBillKeys.has(bill.billKey));
+  if (!bills.length) return;
+  bills.forEach((bill) => {
+    const existing = state.billOverrides[bill.billKey] || {};
+    state.billOverrides[bill.billKey] = {
+      ...existing,
+      values: { ...(existing.values || {}), ...makeValues(bill, existing) },
+      note: existing.note || "แก้แบบกลุ่ม",
+      updatedAt: new Date().toISOString(),
+    };
+  });
+  state.auditTrail.unshift({
+    id: makeAuditId(),
+    action: "bulk_update",
+    createdAt: new Date().toISOString(),
+    orderId: "",
+    orw: "",
+    invoice: "",
+    date: "",
+    lineCount: 0,
+    totalSale: 0,
+    totalCost: 0,
+    screenshotName: "bulk-bar",
+    replacedLineCount: 0,
+    note: `${noteLabel} (${number(bills.length)} บิล)`,
+    medicines: [],
+  });
+  rebuildBillsForCurrentMode();
+  renderMetrics();
+  renderTabs();
+  renderTable();
+  renderAuditTrail();
+  scheduleAutosave("bulk-update");
 }
 
 function parseMedicinesTextLines(medicinesText) {
@@ -5208,6 +5276,13 @@ elements.ruleSuggestions?.addEventListener("click", (event) => {
   addRuleWord(button.dataset.ruleType, button.dataset.addRuleWord);
 });
 elements.billTableBody.addEventListener("change", (event) => {
+  const pick = event.target.closest(".row-pick");
+  if (pick) {
+    if (pick.checked) state.selectedBillKeys.add(pick.dataset.pickKey);
+    else state.selectedBillKeys.delete(pick.dataset.pickKey);
+    updateBulkBar();
+    return;
+  }
   const medInput = event.target.closest("[data-med-key][data-med-field]");
   if (medInput) {
     quickUpdateMedicineLine(medInput.dataset.medKey, Number(medInput.dataset.medIndex), medInput.dataset.medField, medInput.value);
@@ -5302,6 +5377,70 @@ if (elements.editBillingStage) {
     .map(([value, label]) => `<option value="${value}">${label}</option>`)
     .join("");
 }
+if (elements.bulkBillingStage) {
+  elements.bulkBillingStage.innerHTML = `<option value="">งานวางบิล…</option>${billingStageOptions
+    .map(([value, label]) => `<option value="${value}">${label}</option>`).join("")}`;
+}
+if (elements.bulkCaseType) {
+  elements.bulkCaseType.innerHTML = `<option value="">ประเภทเคส…</option>${caseTypeOptions
+    .map(([value, label]) => `<option value="${value}">${label}</option>`).join("")}`;
+}
+elements.selectAllRows?.addEventListener("change", () => {
+  const checked = elements.selectAllRows.checked;
+  document.querySelectorAll("#billTableBody .row-pick").forEach((pick) => {
+    pick.checked = checked;
+    if (checked) state.selectedBillKeys.add(pick.dataset.pickKey);
+    else state.selectedBillKeys.delete(pick.dataset.pickKey);
+  });
+  updateBulkBar();
+});
+elements.bulkBillingStage?.addEventListener("change", () => {
+  const value = elements.bulkBillingStage.value;
+  if (!value) return;
+  applyBulkOverride(() => ({ billingStage: value, billingStageSource: "manual" }), `งานวางบิล → ${billingStageLabel(value)}`);
+  elements.bulkBillingStage.value = "";
+});
+elements.bulkCaseType?.addEventListener("change", () => {
+  const value = elements.bulkCaseType.value;
+  if (!value) return;
+  applyBulkOverride((bill, existing) => {
+    const values = { caseType: value, caseTypeSource: "manual" };
+    if ((existing.values?.billingStageSource || bill.billingStageSource) !== "manual") {
+      const stage = deriveBillingStage(bill.status, value, bill.billedAmount, bill.billingNo);
+      values.billingStage = stage.billingStage;
+      values.billingStageSource = stage.billingStageSource;
+    }
+    return values;
+  }, `ประเภทเคส → ${caseTypeLabel(value)}`);
+  elements.bulkCaseType.value = "";
+});
+elements.bulkApplyBarNo?.addEventListener("click", () => {
+  const barValue = clean(elements.bulkBarNo.value);
+  if (!barValue) return;
+  applyBulkOverride((bill, existing) => {
+    const values = { barNo: barValue };
+    if ((existing.values?.billingStageSource || bill.billingStageSource) !== "manual") {
+      const stage = deriveBillingStage(bill.status, bill.caseType || "unknown", bill.billedAmount, barValue);
+      values.billingStage = stage.billingStage;
+      values.billingStageSource = stage.billingStageSource;
+    }
+    return values;
+  }, `ใส่ใบวางบิล ${barValue}`);
+  elements.bulkBarNo.value = "";
+});
+elements.bulkExclude?.addEventListener("click", () => {
+  applyBulkOverride(() => ({ excluded: true }), "Exclude");
+});
+elements.bulkInclude?.addEventListener("click", () => {
+  applyBulkOverride(() => ({ excluded: false }), "ยกเลิก Exclude");
+});
+elements.bulkClear?.addEventListener("click", () => {
+  state.selectedBillKeys.clear();
+  document.querySelectorAll("#billTableBody .row-pick").forEach((pick) => {
+    pick.checked = false;
+  });
+  updateBulkBar();
+});
 function syncYearEraButton() {
   if (!elements.yearEraToggleBtn) return;
   elements.yearEraToggleBtn.innerHTML = `<i class="fa-solid fa-calendar-day"></i> ${yearEra === "be" ? "พ.ศ." : "ค.ศ."}`;
