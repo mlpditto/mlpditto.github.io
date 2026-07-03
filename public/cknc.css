@@ -956,6 +956,37 @@ table {
   min-width: 1220px;
 }
 
+/* จอแคบต้อง scroll แนวนอน: ตรึงคอลัมน์ จัดการ + บิล/ผู้รับบริการ ไว้ซ้าย */
+.table-wrap th:nth-child(1),
+.table-wrap td.action-cell {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  width: 150px;
+  min-width: 150px;
+  background: var(--panel);
+}
+
+.table-wrap th:nth-child(2),
+.table-wrap td.bill-cell {
+  position: sticky;
+  left: 150px;
+  z-index: 2;
+  min-width: 195px;
+  background: var(--panel);
+  box-shadow: 8px 0 12px rgba(18, 38, 32, 0.06);
+}
+
+.table-wrap thead th:nth-child(1),
+.table-wrap thead th:nth-child(2) {
+  z-index: 3;
+}
+
+html.dark .table-wrap th:nth-child(2),
+html.dark .table-wrap td.bill-cell {
+  box-shadow: 8px 0 12px rgba(0, 0, 0, 0.35);
+}
+
 th,
 td {
   padding: 10px 12px;
