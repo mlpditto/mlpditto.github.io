@@ -129,6 +129,7 @@ const elements = {
   drawerTitle: $("drawerTitle"),
   drawerChecks: $("drawerChecks"),
   drawerMedicines: $("drawerMedicines"),
+  drawerAddMedicineBtn: $("drawerAddMedicineBtn"),
   editStatus: $("editStatus"),
   editOrw: $("editOrw"),
   editInvoice: $("editInvoice"),
@@ -4769,7 +4770,7 @@ function closeDetailDrawer() {
 function renderDrawerMedicines(bill) {
   const lines = state.drawerMedicines || [];
   if (!lines.length) {
-    elements.drawerMedicines.innerHTML = `<div class="empty">ไม่มีรายการยา</div>`;
+    elements.drawerMedicines.innerHTML = `<div class="empty">ไม่มีรายการยา — กด "+ เพิ่มรายการยา" เพื่อใส่เอง</div>`;
     return;
   }
   const source = bill?.hasManualMedicines ? "จาก Screenshot/manual" : "จาก Excel";
@@ -4777,14 +4778,15 @@ function renderDrawerMedicines(bill) {
     const qty = toNumeric(line.qty);
     const sale = toNumeric(line.sale);
     const unit = qty > 0 ? Math.round((sale / qty) * 100) / 100 : Math.round(sale * 100) / 100;
-    const name = htmlEscape(line.medicine || "-");
+    const name = htmlEscape(line.medicine || "");
     return `
     <div class="drawer-list-item med-line" title="${source}">
-      <span class="med-name" title="${name}">${name}</span>
-      <input class="inline-cell-input med-input" type="text" inputmode="decimal" value="${qty}" data-drawer-med-index="${index}" data-drawer-med-field="qty" aria-label="จำนวน ${name}" title="จำนวน" />
+      <input class="inline-cell-input med-name-input" type="text" value="${name}" placeholder="ชื่อยา" data-drawer-med-index="${index}" data-drawer-med-field="medicine" aria-label="ชื่อยา" />
+      <input class="inline-cell-input med-input" type="text" inputmode="decimal" value="${qty}" data-drawer-med-index="${index}" data-drawer-med-field="qty" aria-label="จำนวน ${name || "ยาใหม่"}" title="จำนวน" />
       <span class="med-x">×</span>
-      <input class="inline-cell-input med-input med-price" type="text" inputmode="decimal" value="${unit > 0 ? unit : ""}" placeholder="ราคา" data-drawer-med-index="${index}" data-drawer-med-field="unitPrice" aria-label="ราคาต่อหน่วย ${name}" title="ราคาต่อหน่วย" />
+      <input class="inline-cell-input med-input med-price" type="text" inputmode="decimal" value="${unit > 0 ? unit : ""}" placeholder="ราคา" data-drawer-med-index="${index}" data-drawer-med-field="unitPrice" aria-label="ราคาต่อหน่วย ${name || "ยาใหม่"}" title="ราคาต่อหน่วย" />
       <span class="med-line-total" title="ยอดขายบรรทัดนี้">${sale > 0 ? `= ${money(sale)}` : "= —"}</span>
+      <button class="icon-button med-remove-btn" type="button" data-drawer-med-remove="${index}" title="ลบรายการนี้" aria-label="ลบ ${name || "ยาใหม่"}">×</button>
     </div>`;
   }).join("");
 }
@@ -5356,15 +5358,21 @@ function saveBillOverride() {
     excluded: Boolean(elements.editExcluded.checked),
     excludeReason: clean(elements.editExcludeReason.value),
   };
-  if (state.drawerMedicines && state.drawerMedicines.length) {
-    values.medicines = state.drawerMedicines.map((line) => ({
-      medicine: line.medicine || "",
-      qty: toNumeric(line.qty),
+  // รายการยาจาก drawer: แถวว่าง (ไม่มีชื่อและไม่มียอด) ถูกตัดทิ้ง; ลบจนหมดก็บันทึกเป็นว่างได้ถ้าบิลเคยมีรายการ
+  const drawerMeds = (state.drawerMedicines || [])
+    .filter((line) => clean(line.medicine) || toNumeric(line.sale) > 0)
+    .map((line) => ({
+      medicine: clean(line.medicine) || "-",
+      qty: toNumeric(line.qty) || 1,
       sale: toNumeric(line.sale),
       cost: toNumeric(line.cost),
     }));
-    values.medicineCount = values.medicines.length;
-    values.medicinesText = values.medicines.map((item) => `${item.medicine} x${number(item.qty)}`).join(", ");
+  const hadMedicines = Boolean((bill.medicines || []).length)
+    || Boolean(clean(bill.medicinesText) && clean(bill.medicinesText) !== "-");
+  if (drawerMeds.length || hadMedicines) {
+    values.medicines = drawerMeds;
+    values.medicineCount = drawerMeds.length;
+    values.medicinesText = drawerMeds.map((item) => `${item.medicine} x${number(item.qty)}`).join(", ");
   }
   if (values.billingStageSource !== "manual") {
     const stageDetection = deriveBillingStage(values.status, values.caseType, values.billedAmount, values.barNo || values.creditNos || bill.billingNo);
@@ -5687,6 +5695,10 @@ elements.drawerMedicines.addEventListener("change", (event) => {
   const lines = state.drawerMedicines || [];
   const line = lines[Number(input.dataset.drawerMedIndex)];
   if (!line) return;
+  if (input.dataset.drawerMedField === "medicine") {
+    line.medicine = clean(input.value);
+    return;
+  }
   const round2 = (value) => Math.round(value * 100) / 100;
   const pricedBefore = lines.some((item) => toNumeric(item.sale) > 0);
   const field = input.dataset.drawerMedField;
@@ -5704,6 +5716,29 @@ elements.drawerMedicines.addEventListener("change", (event) => {
   // ยังไม่เคยกรอกราคาเลย: แก้จำนวนอย่างเดียวไม่ทับยอดขายเดิมของบิล
   if (pricedBefore || field === "unitPrice" || newSale > 0) {
     elements.editSale.value = newSale;
+  }
+  renderDrawerMedicines(currentDetailBill());
+  updateEditProfitPreview();
+});
+// เพิ่ม/ลบรายการยาจากใน drawer — บันทึกจริงเมื่อกด "บันทึกการแก้ไข"
+elements.drawerAddMedicineBtn?.addEventListener("click", () => {
+  const bill = currentDetailBill();
+  if (!bill) return;
+  state.drawerMedicines = state.drawerMedicines || [];
+  state.drawerMedicines.push({ medicine: "", qty: 1, sale: 0, cost: 0 });
+  renderDrawerMedicines(bill);
+  elements.drawerMedicines.querySelector(`[data-drawer-med-index="${state.drawerMedicines.length - 1}"][data-drawer-med-field="medicine"]`)?.focus();
+});
+elements.drawerMedicines.addEventListener("click", (event) => {
+  const removeBtn = event.target.closest("[data-drawer-med-remove]");
+  if (!removeBtn) return;
+  const lines = state.drawerMedicines || [];
+  const index = Number(removeBtn.dataset.drawerMedRemove);
+  if (!lines[index]) return;
+  const pricedBefore = lines.some((item) => toNumeric(item.sale) > 0);
+  lines.splice(index, 1);
+  if (pricedBefore) {
+    elements.editSale.value = Math.round(lines.reduce((sum, item) => sum + toNumeric(item.sale), 0) * 100) / 100;
   }
   renderDrawerMedicines(currentDetailBill());
   updateEditProfitPreview();

@@ -1516,6 +1516,25 @@ td {
   width: 74px;
 }
 
+/* ช่องชื่อยา (แก้ได้ใน drawer) + ปุ่มลบรายบรรทัด */
+.med-name-input {
+  flex: 1 1 auto;
+  min-width: 90px;
+  min-height: 26px;
+  padding: 2px 6px;
+  font-size: 12px;
+}
+
+.med-remove-btn {
+  flex: 0 0 auto;
+  min-width: 26px;
+  min-height: 26px;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1;
+  color: #b3261e;
+}
+
 .med-x {
   color: var(--muted);
   font-size: 11px;
