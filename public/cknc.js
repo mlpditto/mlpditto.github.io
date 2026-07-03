@@ -20,6 +20,8 @@ const state = {
   billOverrides: {},
   billMergeGroups: [],
   deletedBillKeys: [],
+  mergeSuggestions: [],
+  mergeSuggestCacheRef: null,
   topMeds: [],
   activeStatus: "all",
   currentManualBill: null,
@@ -162,6 +164,7 @@ const elements = {
   bulkCaseType: $("bulkCaseType"),
   bulkBarNo: $("bulkBarNo"),
   bulkApplyBarNo: $("bulkApplyBarNo"),
+  mergeSuggestBar: $("mergeSuggestBar"),
   bulkMergeBills: $("bulkMergeBills"),
   bulkDeleteBills: $("bulkDeleteBills"),
   bulkExclude: $("bulkExclude"),
@@ -2159,6 +2162,7 @@ function renderTable() {
   `;
   }).join("");
   updateBulkBar();
+  renderMergeSuggestions();
 }
 
 // แถวที่เพิ่งถูกแก้ (override ภายใน 2.5 วิ) → กะพริบเขียวให้เห็นว่าค่าติดแล้ว
@@ -3167,6 +3171,144 @@ function mergeSelectedBills() {
   renderAuditTrail();
   scheduleAutosave("merge-bills");
   elements.statusText.textContent = `รวม ${number(ordered.length)} บิลเป็นบิลเดียว: ${label(ordered[0])}`;
+}
+
+// ---- ระบบแนะนำคู่บิลที่น่าจะรวมกัน (merge suggestions) --------------------
+// คีย์ชื่อผู้รับบริการแบบ normalize: ตัดคำนำหน้า/ช่องว่าง เทียบกันได้ตรง ๆ
+function normalizedPatientKey(name) {
+  return clean(name).toLowerCase()
+    .replace(/^(คุณ|นาย|นางสาว|นาง|ดช\.?|ดญ\.?|เด็กชาย|เด็กหญิง|บริษัท)\s*/g, "")
+    .replace(/\s+/g, "");
+}
+
+// เลข ORW ทั้งหมดของบิล (จากช่อง orw และเลขที่ออเดอร์ที่เป็นรูปแบบ ORW)
+function billOrwRefs(bill) {
+  const refs = new Set();
+  clean(bill.orw).split(",").map(clean).filter(Boolean).forEach((ref) => refs.add(ref.toUpperCase()));
+  if (/^ORW-/i.test(clean(bill.orderId))) refs.add(clean(bill.orderId).toUpperCase());
+  return refs;
+}
+
+// ให้คะแนนความคล้ายของบิลคู่หนึ่ง (0-99%) พร้อมเหตุผลที่ตรงกัน
+function mergeSimilarity(a, b) {
+  let score = 0;
+  const reasons = [];
+  const orwA = billOrwRefs(a);
+  const orwB = billOrwRefs(b);
+  if ([...orwA].some((ref) => orwB.has(ref))) {
+    score += 45;
+    reasons.push("ORW เดียวกัน");
+  }
+  const nameA = normalizedPatientKey(a.patient);
+  const nameB = normalizedPatientKey(b.patient);
+  if (nameA && nameA === nameB) {
+    score += 25;
+    reasons.push("ชื่อผู้รับบริการตรงกัน");
+  }
+  if (clean(a.phone) && clean(a.phone) === clean(b.phone)) {
+    score += 20;
+    reasons.push("เบอร์โทรตรงกัน");
+  }
+  const dateA = dateKey(a.clicknicDate || a.mlpDate);
+  const dateB = dateKey(b.clicknicDate || b.mlpDate);
+  if (dateA && dateA === dateB) {
+    score += 10;
+    reasons.push("วันที่ตรงกัน");
+  }
+  const complementary = (a.status === "clicknic-only" && b.status === "mlp-only")
+    || (a.status === "mlp-only" && b.status === "clicknic-only");
+  if (complementary) {
+    score += 15;
+    reasons.push("ข้อมูลคนละฝั่งเติมกันพอดี (CKNC ↔ MLP)");
+  }
+  if (toNumeric(a.sale) > 0 && Math.abs(toNumeric(a.sale) - toNumeric(b.sale)) < 0.005) {
+    score += 10;
+    reasons.push("ยอดขายเท่ากัน");
+  }
+  return { score: Math.min(score, 99), reasons };
+}
+
+function mergeSuggestBillLabel(bill) {
+  return [clean(bill.patient) || "(ไม่มีชื่อ)", clean(bill.orderId) || clean(bill.orw.split(",")[0]) || ""]
+    .filter(Boolean).join(" · ");
+}
+
+// หา "คู่ที่น่าจะเป็นบิลเดียวกัน" — จับกลุ่มจากสัญญาณแรง (ORW/เบอร์/ชื่อ) ก่อน แล้วค่อยให้คะแนนรายคู่
+function computeMergeSuggestions() {
+  const bills = state.bills.filter((bill) => !bill.excluded);
+  if (bills.length < 2 || bills.length > 800) return [];
+  const buckets = new Map();
+  const push = (key, bill) => {
+    if (!key) return;
+    const arr = buckets.get(key) || [];
+    if (!arr.includes(bill)) arr.push(bill);
+    buckets.set(key, arr);
+  };
+  bills.forEach((bill) => {
+    billOrwRefs(bill).forEach((ref) => push(`orw:${ref}`, bill));
+    const phone = clean(bill.phone);
+    if (phone) push(`phone:${phone}`, bill);
+    const name = normalizedPatientKey(bill.patient);
+    if (name && name.length > 3) push(`name:${name}`, bill);
+  });
+  const seenPairs = new Set();
+  const suggestions = [];
+  buckets.forEach((arr) => {
+    // กลุ่มใหญ่เกิน = สัญญาณกว้างเกินไป (เช่นชื่อบริษัทเดียวกันทั้งไฟล์) ข้ามไป
+    if (arr.length < 2 || arr.length > 6) return;
+    for (let i = 0; i < arr.length; i += 1) {
+      for (let j = i + 1; j < arr.length; j += 1) {
+        const pairKey = [arr[i].billKey, arr[j].billKey].sort().join("|");
+        if (seenPairs.has(pairKey)) continue;
+        seenPairs.add(pairKey);
+        const { score, reasons } = mergeSimilarity(arr[i], arr[j]);
+        if (score < 50) continue;
+        suggestions.push({
+          aKey: arr[i].billKey,
+          bKey: arr[j].billKey,
+          aLabel: mergeSuggestBillLabel(arr[i]),
+          bLabel: mergeSuggestBillLabel(arr[j]),
+          score,
+          reasons,
+        });
+      }
+    }
+  });
+  return suggestions.sort((a, b) => b.score - a.score).slice(0, 8);
+}
+
+function renderMergeSuggestions() {
+  if (!elements.mergeSuggestBar) return;
+  // คำนวณใหม่เฉพาะเมื่อชุดบิลเปลี่ยน (state.bills ถูกสร้างใหม่ทุกครั้งที่ rebuild) — พิมพ์ค้นหาไม่ต้องคิดซ้ำ
+  if (state.mergeSuggestCacheRef !== state.bills) {
+    state.mergeSuggestCacheRef = state.bills;
+    state.mergeSuggestions = computeMergeSuggestions();
+  }
+  const suggestions = state.mergeSuggestions;
+  elements.mergeSuggestBar.hidden = !suggestions.length;
+  if (!suggestions.length) {
+    elements.mergeSuggestBar.innerHTML = "";
+    return;
+  }
+  elements.mergeSuggestBar.innerHTML = `
+    <strong class="merge-suggest-title"><i class="fa-solid fa-object-group"></i> น่าจะเป็นบิลเดียวกัน ${number(suggestions.length)} คู่</strong>
+    ${suggestions.map((item, index) => `
+      <span class="merge-suggest-item" title="เหตุผล: ${htmlEscape(item.reasons.join(" + "))}">
+        <span class="merge-suggest-score">${item.score}%</span>
+        <span class="merge-suggest-names">${htmlEscape(item.aLabel)} ↔ ${htmlEscape(item.bLabel)}</span>
+        <button class="ghost small" type="button" data-suggest-select="${index}" title="ติ๊กเลือกสองบิลนี้ในตาราง">เลือก</button>
+        <button class="ghost small" type="button" data-suggest-merge="${index}" title="รวมสองบิลนี้ (มีสรุปให้ยืนยันก่อน)">รวม</button>
+      </span>
+    `).join("")}
+  `;
+}
+
+// เลือก/รวมจากแผงแนะนำ — "รวม" วิ่งเข้าปุ่มรวมบิลเดิม (มี confirm สรุปก่อนเสมอ)
+function applySuggestionSelection(item) {
+  state.selectedBillKeys.clear();
+  state.selectedBillKeys.add(item.aKey);
+  state.selectedBillKeys.add(item.bKey);
+  renderTable();
 }
 
 // ถามผู้ใช้ว่าจะ "เพิ่มเข้าข้อมูลเดิม" หรือ "เริ่มใหม่ทั้งหมด" — คืน null เมื่อยกเลิก
@@ -5869,6 +6011,21 @@ elements.bulkBarNo?.addEventListener("keydown", (event) => {
 });
 elements.bulkMergeBills?.addEventListener("click", mergeSelectedBills);
 elements.bulkDeleteBills?.addEventListener("click", deleteSelectedBills);
+elements.mergeSuggestBar?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-suggest-select], [data-suggest-merge]");
+  if (!button) return;
+  const isMerge = button.hasAttribute("data-suggest-merge");
+  const index = Number(isMerge ? button.dataset.suggestMerge : button.dataset.suggestSelect);
+  const item = state.mergeSuggestions[index];
+  if (!item) return;
+  applySuggestionSelection(item);
+  if (isMerge) {
+    mergeSelectedBills();
+    return;
+  }
+  document.querySelector(`#billTableBody .row-pick[data-pick-key="${CSS.escape(item.aKey)}"]`)
+    ?.closest("tr")?.scrollIntoView({ block: "center", behavior: "smooth" });
+});
 elements.bulkExclude?.addEventListener("click", () => {
   applyBulkOverride(() => ({ excluded: true }), "Exclude");
 });
