@@ -990,6 +990,12 @@ function parseBillingWorkbook(workbook, sourceName) {
         return;
       }
 
+      // แถวสรุป "รวม" ท้ายตาราง: ปิด record ก่อนหน้า กันยอดรวมไปทับยอดรายการ
+      if (!refs.orw.length && !refs.inv.length && /(^|\s)(รวม|ยอดรวม|total)/i.test(text)) {
+        flushPendingRecord();
+        return;
+      }
+
       if (pendingRecord) {
         pendingRecord.cells.push(...cells);
         return;
