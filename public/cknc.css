@@ -1544,6 +1544,7 @@ td {
 /* กำไร 10.00 = กำไรมาตรฐานเคส สปสช → แสดงเป็น chip สีน้ำเงินแบบ สปสช. */
 .profit-line.profit-nhso {
   width: fit-content;
+  margin-left: auto; /* กล่อง fit-content ต้องดันชิดขวาเอง ไม่งั้นหลุดไปเกาะซ้ายของเซลล์ */
   padding: 1px 8px;
   border-radius: 999px;
   background: #e8f0fb;
