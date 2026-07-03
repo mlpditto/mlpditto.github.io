@@ -3210,6 +3210,13 @@ html.dark .panel-head p {
   white-space: nowrap;
 }
 
+.paste-field .date-pick-btn {
+  min-height: 28px;
+  min-width: 28px;
+  padding-inline: 6px;
+  font-size: 11px;
+}
+
 .paste-field input[type="text"],
 .paste-field input[type="number"],
 .paste-field select {
@@ -3230,6 +3237,7 @@ html.dark .panel-head p {
   }
 
   .paste-field-old,
+  .paste-field .date-field,
   .paste-field input[type="text"],
   .paste-field input[type="number"],
   .paste-field select {

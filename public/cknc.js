@@ -4189,7 +4189,11 @@ function runPasteAnalyze() {
     } else if (def.type === "number") {
       valueInput = `<input type="number" step="0.01" min="0" data-paste-value="${def.key}" value="${hasValue ? toNumeric(parsedValue) : ""}" placeholder="ไม่พบ" />`;
     } else if (def.type === "date") {
-      valueInput = `<input type="text" inputmode="numeric" data-paste-value="${def.key}" value="${hasValue ? formatDisplayDate(parsedValue) : ""}" placeholder="วว/ดด/ปปปป" />`;
+      valueInput = `<span class="date-field">
+        <input type="text" inputmode="numeric" data-paste-value="${def.key}" value="${hasValue ? formatDisplayDate(parsedValue) : ""}" placeholder="วว/ดด/ปปปป" />
+        <button type="button" class="date-pick-btn" title="เลือกวันที่จากปฏิทิน" aria-label="เลือกวันที่จากปฏิทิน"><i class="fa-solid fa-calendar-days"></i></button>
+        <input type="date" class="date-picker-hidden" tabindex="-1" aria-hidden="true" />
+      </span>`;
     } else {
       valueInput = `<input type="text" data-paste-value="${def.key}" value="${htmlEscape(clean(parsedValue) || "")}" placeholder="ไม่พบ" />`;
     }
