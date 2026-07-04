@@ -1777,7 +1777,10 @@ const cardDetailColumns = [
       const order = clean(bill.orderId);
       const main = orw || order || "-";
       const sub = orw && order ? order : "";
-      return `<span class="ref-main">${htmlEscape(main)}</span>${sub ? `<span class="ref-sub">${htmlEscape(sub)}</span>` : ""}`;
+      const copyBtn = main !== "-"
+        ? ` <button class="copy-ref-btn" type="button" data-copy-text="${htmlEscape(clean(main.split(",")[0]))}" title="คัดลอก" aria-label="คัดลอก"><i class="fa-regular fa-copy"></i></button>`
+        : "";
+      return `<span class="ref-main">${htmlEscape(main)}${copyBtn}</span>${sub ? `<span class="ref-sub">${htmlEscape(sub)}</span>` : ""}`;
     },
   },
   { label: "ผู้รับบริการ", col: "col-patient", hideable: true, text: (bill) => bill.patient || "-" },
@@ -5776,6 +5779,17 @@ elements.cardDetailModal?.addEventListener("change", (event) => {
 elements.closeCardDetailModal?.addEventListener("click", closeCardDetail);
 elements.cardDetailModal?.addEventListener("click", (event) => {
   if (event.target === elements.cardDetailModal) closeCardDetail();
+  const copyBtn = event.target.closest("[data-copy-text]");
+  if (copyBtn) {
+    navigator.clipboard?.writeText(copyBtn.dataset.copyText).then(() => {
+      const icon = copyBtn.querySelector("i");
+      if (icon) {
+        icon.className = "fa-solid fa-check";
+        setTimeout(() => { icon.className = "fa-regular fa-copy"; }, 1200);
+      }
+    }).catch(() => {});
+    return;
+  }
   const editButton = event.target.closest("[data-card-edit-key]");
   if (!editButton) return;
   const key = editButton.dataset.cardEditKey;
