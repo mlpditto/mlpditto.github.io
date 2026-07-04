@@ -1179,6 +1179,7 @@ function expectedBillingForBill(bill) {
 }
 
 function pushIssue(issues, level, code, text) {
+  if (issues.some((issue) => issue.code === code)) return;
   issues.push({ level, code, text });
 }
 
@@ -1213,6 +1214,16 @@ function validationRulesForBill(bill) {
   }
   if (bill.status === "billing-only" && !clean(bill.creditNos) && !clean(bill.billingNo)) {
     pushIssue(issues, "warn", "MISSING_AR", "ไม่มีเลขที่เครดิต (AR)");
+  }
+  // วางบิลแล้ว/PAID ต้องมีทั้งเลขใบวางบิล (BAR) และเลขที่เครดิต (AR) กำกับเสมอ
+  if (["billed", "paid"].includes(bill.billingStage)) {
+    const stageLabel = billingStageLabel(bill.billingStage);
+    if (!clean(bill.barNo)) {
+      pushIssue(issues, "warn", "MISSING_BAR", `${stageLabel} แต่ไม่มีเลขใบวางบิล (BAR)`);
+    }
+    if (!clean(bill.creditNos)) {
+      pushIssue(issues, "warn", "MISSING_AR", `${stageLabel} แต่ไม่มีเลขที่เครดิต (AR)`);
+    }
   }
   if (toNumeric(bill.mlpCost) > 0 && toNumeric(bill.sale) > 0 && toNumeric(bill.mlpCost) > toNumeric(bill.sale) + Math.max(0, toNumeric(activeRuleConfig().mlpCostOverSaleBuffer))) {
     pushIssue(issues, "danger", "MLP_COST_OVER_SALE", "ค่าใช้จ่าย MLP สูงกว่ายอดขายยา");
@@ -3764,6 +3775,7 @@ const issueChipDefs = {
   MISSING_MLP_COST: { code: "NCO", label: "ไม่มีต้นทุน", tone: "amber" },
   MISSING_BILLED_AMOUNT: { code: "NBA", label: "ไม่มียอดวางบิล", tone: "amber" },
   MISSING_AR: { code: "NAR", label: "ไม่มีเลข AR", tone: "amber" },
+  MISSING_BAR: { code: "NBR", label: "ไม่มีเลข BAR", tone: "amber" },
   BILLED_AMOUNT_EXPECTED_MISMATCH: { code: "BEM", label: "ยอดวางบิลไม่ตรงคาด", tone: "gray" },
   BILLED_AMOUNT_MLP_COST_MISMATCH: { code: "BCM", label: "ยอดไม่ตรง MLP", tone: "gray" },
   EXPECTED_CLAIM_MISMATCH: { code: "ECM", label: "ไม่ตรง CKNC-P", tone: "gray" },
