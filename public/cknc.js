@@ -2260,7 +2260,8 @@ function parseMedicinesTextLines(medicinesText) {
 
 function renderMedsCell(bill) {
   const lines = (bill.medicines && bill.medicines.length) ? bill.medicines : parseMedicinesTextLines(bill.medicinesText);
-  if (!lines.length) return '<div class="meds-clamp" data-meds-body>-</div>';
+  const addBtn = `<button class="med-add-btn" type="button" data-med-add="${htmlEscape(bill.billKey)}" title="เพิ่มรายการยาในบิลนี้">+ เพิ่มยา</button>`;
+  if (!lines.length) return `<div class="meds-clamp" data-meds-body>-</div>${addBtn}`;
   const rowsHtml = lines.map((line, index) => {
     const qty = toNumeric(line.qty);
     const sale = toNumeric(line.sale);
@@ -2281,6 +2282,7 @@ function renderMedsCell(bill) {
   return `
     <div class="med-lines${collapsible ? " collapsible" : ""}" data-meds-body>${rowsHtml}</div>
     ${collapsible ? `<button class="meds-toggle" type="button" data-meds-toggle data-label-full="${fullLabel}">${fullLabel}</button>` : ""}
+    ${addBtn}
   `;
 }
 
@@ -2350,6 +2352,97 @@ function quickUpdateMedicineLine(billKey, index, field, rawValue) {
   renderTable();
   renderAuditTrail();
   scheduleAutosave("medicine-line-update");
+}
+
+// ฟอร์มเพิ่มรายการยาใหม่ในเซลล์ตาราง — ไม่ต้องเปิด drawer แก้ไข
+function openInlineMedForm(addBtn) {
+  const cell = addBtn.closest("td");
+  if (!cell) return;
+  const existing = cell.querySelector("[data-new-med-form]");
+  if (existing) {
+    existing.querySelector('[data-new-med-field="medicine"]')?.focus();
+    return;
+  }
+  const form = document.createElement("div");
+  form.className = "med-line med-new-line";
+  form.dataset.newMedForm = addBtn.dataset.medAdd;
+  form.innerHTML = `
+    <input class="inline-cell-input med-name-input" type="text" placeholder="ชื่อยา" data-new-med-field="medicine" aria-label="ชื่อยาใหม่" />
+    <input class="inline-cell-input med-input" type="text" inputmode="decimal" value="1" data-new-med-field="qty" aria-label="จำนวน" title="จำนวน" />
+    <span class="med-x">×</span>
+    <input class="inline-cell-input med-input med-price" type="text" inputmode="decimal" placeholder="ราคา" data-new-med-field="unitPrice" aria-label="ราคาต่อหน่วย" title="ราคาต่อหน่วย" />
+    <button class="icon-button med-confirm-btn" type="button" data-new-med-confirm title="บันทึก (Enter)" aria-label="บันทึกรายการยาใหม่">✓</button>
+    <button class="icon-button med-remove-btn" type="button" data-new-med-cancel title="ยกเลิก (Esc)" aria-label="ยกเลิกรายการยาใหม่">×</button>
+  `;
+  addBtn.before(form);
+  form.querySelector('[data-new-med-field="medicine"]').focus();
+}
+
+function commitInlineMedForm(form) {
+  if (!form) return;
+  const nameInput = form.querySelector('[data-new-med-field="medicine"]');
+  const medicine = clean(nameInput?.value || "");
+  if (!medicine) {
+    nameInput?.focus();
+    return;
+  }
+  const qty = Math.max(0, toNumeric(form.querySelector('[data-new-med-field="qty"]')?.value)) || 1;
+  const unitPrice = Math.max(0, toNumeric(form.querySelector('[data-new-med-field="unitPrice"]')?.value));
+  quickAddMedicineLine(form.dataset.newMedForm, medicine, qty, unitPrice);
+}
+
+function quickAddMedicineLine(billKey, medicine, qty, unitPrice) {
+  const bill = state.bills.find((item) => item.billKey === billKey);
+  if (!bill) return;
+  const round2 = (value) => Math.round(value * 100) / 100;
+  const baseLines = (bill.medicines && bill.medicines.length) ? bill.medicines : parseMedicinesTextLines(bill.medicinesText);
+  const lines = baseLines.map((line) => ({
+    medicine: line.medicine || "",
+    qty: toNumeric(line.qty),
+    sale: toNumeric(line.sale),
+    cost: toNumeric(line.cost),
+  }));
+  const pricedBefore = lines.some((line) => line.sale > 0);
+  const newLine = { medicine, qty, sale: round2(qty * unitPrice), cost: 0 };
+  lines.push(newLine);
+  const newSale = round2(lines.reduce((sum, item) => sum + toNumeric(item.sale), 0));
+  // บิลเก่าที่ไม่มีราคาต่อหน่วยเลยและไม่ได้ใส่ราคา: อย่าทับยอดขายเดิมของบิล
+  const shouldSetSale = pricedBefore || unitPrice > 0;
+  const existing = state.billOverrides[bill.billKey] || {};
+  state.billOverrides[bill.billKey] = {
+    ...existing,
+    values: {
+      ...(existing.values || {}),
+      medicines: lines,
+      medicineCount: lines.length,
+      medicinesText: lines.map((item) => `${item.medicine} x${number(item.qty)}`).join(", "),
+      ...(shouldSetSale ? { sale: newSale } : {}),
+    },
+    note: existing.note || "เพิ่มรายการยาจากตาราง",
+    updatedAt: new Date().toISOString(),
+  };
+  state.auditTrail.unshift({
+    id: makeAuditId(),
+    action: "add_medicine_line",
+    createdAt: new Date().toISOString(),
+    orderId: bill.orderId,
+    orw: bill.orw,
+    invoice: bill.invoice,
+    date: bill.clicknicDate || bill.mlpDate,
+    lineCount: lines.length,
+    totalSale: newSale,
+    totalCost: bill.cost,
+    screenshotName: "summary-table",
+    replacedLineCount: 0,
+    note: `เพิ่ม ${medicine}: x${number(qty)}${unitPrice > 0 ? ` @${money(unitPrice)}` : ""}`,
+    medicines: [newLine],
+  });
+  rebuildBillsForCurrentMode();
+  renderMetrics();
+  renderTabs();
+  renderTable();
+  renderAuditTrail();
+  scheduleAutosave("medicine-line-add");
 }
 
 function renderCheckCell(bill) {
@@ -2439,6 +2532,7 @@ function auditActionLabel(action) {
   if (action === "billing_stage_update") return "แก้สถานะงานวางบิล";
   if (action === "toggle_excluded") return "แก้ไขไม่นับคำนวณ";
   if (action === "edit_medicine_line") return "แก้จำนวน/ราคายา";
+  if (action === "add_medicine_line") return "เพิ่มรายการยาจากตาราง";
   if (action === "paste_analyze_apply") return "แก้ข้อมูลจากข้อความ paste";
   if (action === "merge_bills") return "รวมบิลเป็นใบเดียว";
   if (action === "delete_bills") return "ลบบิลออกจากงานบนจอ";
@@ -5852,6 +5946,18 @@ elements.ruleSuggestions?.addEventListener("click", (event) => {
   if (!button) return;
   addRuleWord(button.dataset.ruleType, button.dataset.addRuleWord);
 });
+// Enter = บันทึก / Esc = ยกเลิก ในฟอร์มเพิ่มยาใหม่บนตาราง
+elements.billTableBody.addEventListener("keydown", (event) => {
+  const input = event.target.closest("[data-new-med-field]");
+  if (!input) return;
+  if (event.key === "Enter") {
+    event.preventDefault();
+    commitInlineMedForm(input.closest("[data-new-med-form]"));
+  } else if (event.key === "Escape") {
+    event.preventDefault();
+    input.closest("[data-new-med-form]")?.remove();
+  }
+});
 elements.billTableBody.addEventListener("change", (event) => {
   const pick = event.target.closest(".row-pick");
   if (pick) {
@@ -5912,6 +6018,21 @@ elements.billTableBody.addEventListener("click", (event) => {
         setTimeout(() => { icon.className = "fa-regular fa-copy"; }, 1200);
       }
     }).catch(() => {});
+    return;
+  }
+  const addMedBtn = event.target.closest("[data-med-add]");
+  if (addMedBtn) {
+    openInlineMedForm(addMedBtn);
+    return;
+  }
+  const newMedConfirm = event.target.closest("[data-new-med-confirm]");
+  if (newMedConfirm) {
+    commitInlineMedForm(newMedConfirm.closest("[data-new-med-form]"));
+    return;
+  }
+  const newMedCancel = event.target.closest("[data-new-med-cancel]");
+  if (newMedCancel) {
+    newMedCancel.closest("[data-new-med-form]")?.remove();
     return;
   }
   const medsToggle = event.target.closest("[data-meds-toggle]");

@@ -1540,6 +1540,47 @@ th.th-center {
   color: #b3261e;
 }
 
+/* ปุ่ม + เพิ่มยา ในเซลล์ตาราง และปุ่มยืนยันของฟอร์มแถวใหม่ */
+.med-add-btn {
+  margin-top: 3px;
+  padding: 0;
+  min-height: 0;
+  border: 0;
+  background: none;
+  color: var(--green-dark);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.med-add-btn:hover {
+  text-decoration: underline;
+}
+
+/* ชนะ .icon-button (38px วงกลม) ที่ประกาศทีหลัง ให้ปุ่มเล็กพอดีแถวตาราง */
+.med-new-line .icon-button.med-confirm-btn,
+.med-new-line .icon-button.med-remove-btn {
+  flex: 0 0 auto;
+  width: 26px;
+  min-width: 26px;
+  min-height: 26px;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.med-new-line .icon-button.med-confirm-btn {
+  color: var(--green-dark);
+}
+
+.med-new-line .icon-button.med-remove-btn {
+  color: #b3261e;
+}
+
+.med-new-line .med-name-input {
+  min-width: 70px;
+}
+
 .med-x {
   color: var(--muted);
   font-size: 11px;
