@@ -1184,15 +1184,30 @@ th.th-center {
   color: #1a4f9c;
 }
 
-/* chip เลขลำดับเคสต่อเดือน (สปสช/ประกัน) — โทนสีเดียวกับประเภทเคส */
+/* chip เลขลำดับเคสต่อเดือน (สปสช/ประกัน) — โทนสีเดียวกับประเภทเคส คลิกเพื่อแก้เลขได้ */
 .case-seq-chip {
   display: inline-block;
+  min-height: 0;
   padding: 1px 7px;
   border: 1px solid transparent;
   border-radius: 999px;
   font-size: 10.5px;
   font-weight: 800;
+  line-height: 1.5;
   white-space: nowrap;
+  cursor: pointer;
+}
+
+.case-seq-chip:hover {
+  filter: brightness(0.95);
+}
+
+/* ช่องแก้เลขลำดับที่โผล่แทน chip ตอนคลิก */
+.case-seq-input {
+  width: 60px;
+  min-height: 22px;
+  padding: 1px 6px;
+  font-size: 11px;
 }
 
 .case-seq-chip.case-nhso {

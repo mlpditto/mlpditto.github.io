@@ -1431,8 +1431,32 @@ function activeBills() {
   return state.bills.filter((bill) => !bill.excluded);
 }
 
+// ชุดบิลตามช่วงวันที่ที่กรองอยู่ — การ์ดสรุป chips แท็บ และ Card Detail ใช้ชุดเดียวกันให้เลขสอดคล้องกัน
+function dateFilteredBills() {
+  return activeBills().filter(isWithinDateRange);
+}
+
+// ป้ายบอกช่วงที่กรองอยู่ เช่น "พ.ค. 2569" / "ปี 2569" / "12/06/2569 – 15/06/2569"
+function activePeriodLabel() {
+  const from = elements.dateFrom.value;
+  const to = elements.dateTo.value;
+  if (!from && !to) return "";
+  if (from && to) {
+    if (from === to) return formatDisplayDate(from);
+    const [year, month] = from.split("-").map(Number);
+    const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    if (from.slice(0, 7) === to.slice(0, 7) && from.endsWith("-01") && Number(to.slice(8)) === lastDay) {
+      return monthChipLabel(from.slice(0, 7));
+    }
+    if (from.slice(0, 4) === to.slice(0, 4) && from.endsWith("-01-01") && to.endsWith("-12-31")) {
+      return `ปี ${year + (yearEra === "be" ? 543 : 0)}`;
+    }
+  }
+  return `${formatDisplayDate(from) || "…"} – ${formatDisplayDate(to) || "…"}`;
+}
+
 function calculateMetrics() {
-  const bills = activeBills();
+  const bills = dateFilteredBills();
   const clickOrders = new Set([...state.clicknicRows, ...state.manualClicknicRows].map((row) => row.orderId)).size;
   const matched = bills.filter((bill) => bill.status === "matched").length;
   const mlpOnly = bills.filter((bill) => bill.status === "mlp-only").length;
@@ -1657,107 +1681,107 @@ function renderMergeAssistant() {
 const cardDetailConfigs = {
   clickOrders: {
     title: "บิล CLICKNIC",
-    rows: () => activeBills().filter((bill) => bill.orderId && bill.status !== "billing-only"),
+    rows: () => dateFilteredBills().filter((bill) => bill.orderId && bill.status !== "billing-only"),
     apply: () => ({ status: "all" }),
   },
   matched: {
     title: "ครบ CKNC+MLP+BAR",
-    rows: () => activeBills().filter((bill) => bill.status === "matched"),
+    rows: () => dateFilteredBills().filter((bill) => bill.status === "matched"),
     apply: () => ({ status: "matched" }),
   },
   mlpOnly: {
     title: "ไม่พบรายการยา",
-    rows: () => activeBills().filter((bill) => bill.status === "mlp-only"),
+    rows: () => dateFilteredBills().filter((bill) => bill.status === "mlp-only"),
     apply: () => ({ status: "mlp-only" }),
   },
   mlpNoBilling: {
     title: "MLP รอใบวางบิล",
-    rows: () => activeBills().filter((bill) => bill.status === "pending-billing"),
+    rows: () => dateFilteredBills().filter((bill) => bill.status === "pending-billing"),
     apply: () => ({ status: "pending-billing" }),
   },
   clickOnly: {
     title: "รายการยาไม่มี MLP",
-    rows: () => activeBills().filter((bill) => bill.status === "clicknic-only"),
+    rows: () => dateFilteredBills().filter((bill) => bill.status === "clicknic-only"),
     apply: () => ({ status: "clicknic-only" }),
   },
   billingRows: {
     title: "มีข้อมูลใบวางบิล",
-    rows: () => activeBills().filter((bill) => bill.billingNo || toNumeric(bill.billedAmount) > 0),
+    rows: () => dateFilteredBills().filter((bill) => bill.billingNo || toNumeric(bill.billedAmount) > 0),
   },
   billingOnly: {
     title: "ใบวางบิลไม่เจอ MLP",
-    rows: () => activeBills().filter((bill) => bill.status === "billing-only"),
+    rows: () => dateFilteredBills().filter((bill) => bill.status === "billing-only"),
     apply: () => ({ status: "billing-only" }),
   },
   caseInsurance: {
     title: "เคสประกัน",
-    rows: () => activeBills().filter((bill) => bill.caseType === "insurance"),
+    rows: () => dateFilteredBills().filter((bill) => bill.caseType === "insurance"),
     apply: () => ({ caseType: "insurance" }),
   },
   caseNhso: {
     title: "เคส สปสช",
-    rows: () => activeBills().filter((bill) => bill.caseType === "nhso"),
+    rows: () => dateFilteredBills().filter((bill) => bill.caseType === "nhso"),
     apply: () => ({ caseType: "nhso" }),
   },
   caseUnknown: {
     title: "ยังไม่ทราบประเภท",
-    rows: () => activeBills().filter((bill) => !bill.caseType || bill.caseType === "unknown"),
+    rows: () => dateFilteredBills().filter((bill) => !bill.caseType || bill.caseType === "unknown"),
     apply: () => ({ caseType: "unknown" }),
   },
   billingInsurancePending: {
     title: "ประกันรอเอกสาร",
-    rows: () => activeBills().filter((bill) => bill.billingStage === "insurance-review"),
+    rows: () => dateFilteredBills().filter((bill) => bill.billingStage === "insurance-review"),
     apply: () => ({ billingStage: "insurance-review" }),
   },
   billingNhsoPending: {
     title: "สปสชรอวางบิล",
-    rows: () => activeBills().filter((bill) => bill.billingStage === "nhso-pending"),
+    rows: () => dateFilteredBills().filter((bill) => bill.billingStage === "nhso-pending"),
     apply: () => ({ billingStage: "nhso-pending" }),
   },
   billingReviewPending: {
     title: "รอตรวจสอบวางบิล",
-    rows: () => activeBills().filter((bill) => bill.billingStage === "pending-review"),
+    rows: () => dateFilteredBills().filter((bill) => bill.billingStage === "pending-review"),
     apply: () => ({ billingStage: "pending-review" }),
   },
   sale: {
     title: "ยอดขายยา",
-    rows: () => activeBills().filter((bill) => toNumeric(bill.sale) > 0).sort((a, b) => b.sale - a.sale),
+    rows: () => dateFilteredBills().filter((bill) => toNumeric(bill.sale) > 0).sort((a, b) => b.sale - a.sale),
   },
   totalCost: {
     title: "ต้นทุน",
-    rows: () => activeBills()
+    rows: () => dateFilteredBills()
       .filter((bill) => toNumeric(bill.cost) + toNumeric(bill.mlpCost) > 0)
       .sort((a, b) => (toNumeric(b.cost) + toNumeric(b.mlpCost)) - (toNumeric(a.cost) + toNumeric(a.mlpCost))),
   },
   profit: {
     title: "กำไร matched หลัง MLP",
-    rows: () => activeBills().filter((bill) => bill.status === "matched" || bill.status === "pending-billing").sort((a, b) => a.profit - b.profit),
+    rows: () => dateFilteredBills().filter((bill) => bill.status === "matched" || bill.status === "pending-billing").sort((a, b) => a.profit - b.profit),
   },
   mergeClicknicBase: {
     title: "Merge: CLICKNIC base",
-    rows: () => activeBills().filter((bill) => bill.orderId && bill.status !== "billing-only"),
+    rows: () => dateFilteredBills().filter((bill) => bill.orderId && bill.status !== "billing-only"),
   },
   mergeMlpMemo: {
     title: "Merge: MLP by memo",
-    rows: () => activeBills().filter((bill) => bill.orderId && bill.status !== "clicknic-only" && bill.status !== "billing-only"),
+    rows: () => dateFilteredBills().filter((bill) => bill.orderId && bill.status !== "clicknic-only" && bill.status !== "billing-only"),
   },
   mergeBillingRef: {
     title: "Merge: Billing by ORW/INV/AR",
-    rows: () => activeBills().filter((bill) => clean(bill.billingRefs)),
+    rows: () => dateFilteredBills().filter((bill) => clean(bill.billingRefs)),
   },
   mergeNeedsMlp: {
     title: "Merge: ยังไม่มี MLP",
-    rows: () => activeBills().filter((bill) => bill.status === "clicknic-only"),
+    rows: () => dateFilteredBills().filter((bill) => bill.status === "clicknic-only"),
     apply: () => ({ status: "clicknic-only" }),
   },
   mergeNeedsBilling: {
     title: "Merge: รอวางบิล",
-    rows: () => activeBills().filter((bill) => bill.status === "pending-billing"),
+    rows: () => dateFilteredBills().filter((bill) => bill.status === "pending-billing"),
     apply: () => ({ status: "pending-billing" }),
   },
   mergeBillingOnly: {
     title: "Merge: Billing ไม่เจอ MLP",
-    rows: () => activeBills().filter((bill) => bill.status === "billing-only"),
+    rows: () => dateFilteredBills().filter((bill) => bill.status === "billing-only"),
     apply: () => ({ status: "billing-only" }),
   },
 };
@@ -1928,7 +1952,7 @@ function openCardDetail(cardKey) {
   const shownRows = rows.slice(0, 80);
   const { columns, chips } = visibleCardColumns(shownRows);
   elements.cardDetailTitle.textContent = config.title;
-  elements.cardDetailSummary.textContent = `${summarizeCardRows(rows)}${rows.length > 80 ? ` | แสดง 80 แถวแรก` : ""}`;
+  elements.cardDetailSummary.textContent = `${activePeriodLabel() ? `${activePeriodLabel()} | ` : ""}${summarizeCardRows(rows)}${rows.length > 80 ? ` | แสดง 80 แถวแรก` : ""}`;
   elements.cardDetailHeadRow.innerHTML = columns
     .map((column) => `<th class="${cardColumnClass(column, false)}">${htmlEscape(column.label)}</th>`)
     .join("");
@@ -1954,7 +1978,7 @@ function closeCardDetail() {
 }
 
 function statusCounts() {
-  return state.bills.reduce((counts, bill) => {
+  return state.bills.filter(isWithinDateRange).reduce((counts, bill) => {
     counts.all += 1;
     counts[bill.status] = (counts[bill.status] || 0) + 1;
     if ((bill.billingStage || "") === "paid") counts.paid += 1;
@@ -2147,8 +2171,21 @@ function renderTable() {
     acc.billed += toNumeric(bill.billedAmount);
     return acc;
   }, { sale: 0, cost: 0, profit: 0, billed: 0 });
+  // นับประเภทเคสของชุดที่กรองอยู่ + ป้ายช่วงวันที่ ให้เลขอ่านสอดคล้องกับตัวกรอง
+  const caseCounts = summaryRows.reduce((acc, bill) => {
+    const key = bill.caseType || "unknown";
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+  const caseText = [
+    caseCounts.nhso ? `สปสช ${number(caseCounts.nhso)} เคส` : "",
+    caseCounts.insurance ? `ประกัน ${number(caseCounts.insurance)} เคส` : "",
+    caseCounts.general ? `ทั่วไป ${number(caseCounts.general)} เคส` : "",
+    caseCounts.unknown ? `ไม่ทราบ ${number(caseCounts.unknown)} เคส` : "",
+  ].filter(Boolean).join(" · ");
+  const periodLabel = activePeriodLabel();
   elements.tableSummary.textContent = state.bills.length
-    ? `แสดง ${number(rows.length)} จาก ${number(state.bills.length)} บิล · ขาย ${money(totals.sale)} · ต้นทุน ${money(totals.cost)} · กำไร ${money(totals.profit)} · วางบิล ${money(totals.billed)}`
+    ? `${periodLabel ? `${periodLabel}: ` : ""}แสดง ${number(rows.length)} จาก ${number(state.bills.length)} บิล · ขาย ${money(totals.sale)} · ต้นทุน ${money(totals.cost)} · กำไร ${money(totals.profit)} · วางบิล ${money(totals.billed)}${caseText ? ` · ${caseText}` : ""}`
     : "ยังไม่มีข้อมูล";
 
   if (!rows.length) {
@@ -2554,6 +2591,7 @@ function auditActionLabel(action) {
   if (action === "toggle_excluded") return "แก้ไขไม่นับคำนวณ";
   if (action === "edit_medicine_line") return "แก้จำนวน/ราคายา";
   if (action === "add_medicine_line") return "เพิ่มรายการยาจากตาราง";
+  if (action === "case_seq_update") return "แก้เลขลำดับเคส";
   if (action === "paste_analyze_apply") return "แก้ข้อมูลจากข้อความ paste";
   if (action === "merge_bills") return "รวมบิลเป็นใบเดียว";
   if (action === "delete_bills") return "ลบบิลออกจากงานบนจอ";
@@ -2976,8 +3014,91 @@ function caseSeqChipHtml(bill) {
   const [year, month] = bill.caseSeqMonth.split("-").map(Number);
   const monthShort = new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString("th-TH", { month: "short", timeZone: "UTC" });
   const manual = toNumeric(bill.caseSeqManual) > 0;
-  const title = `เคส${caseSeqNames[bill.caseType]} ลำดับที่ ${number(bill.caseSeq)} ของเดือน ${monthChipLabel(bill.caseSeqMonth)}${manual ? " (กำหนดเลขเอง)" : ""}`;
-  return `<span class="case-seq-chip case-${bill.caseType}" title="${htmlEscape(title)}">${caseSeqNames[bill.caseType]} #${number(bill.caseSeq)}·${htmlEscape(monthShort)}${manual ? "*" : ""}</span>`;
+  const title = `เคส${caseSeqNames[bill.caseType]} ลำดับที่ ${number(bill.caseSeq)} ของเดือน ${monthChipLabel(bill.caseSeqMonth)}${manual ? " (กำหนดเลขเอง)" : ""} — คลิกเพื่อแก้เลขลำดับ`;
+  return `<button type="button" class="case-seq-chip case-${bill.caseType}" data-seq-edit="${htmlEscape(bill.billKey)}" title="${htmlEscape(title)}">${caseSeqNames[bill.caseType]} #${number(bill.caseSeq)}·${htmlEscape(monthShort)}${manual ? "*" : ""}</button>`;
+}
+
+// คลิก chip ลำดับเคส = แก้เลขตรงนั้นเลย (Enter บันทึก / Esc ยกเลิก / ว่าง = กลับไปนับอัตโนมัติ)
+function openCaseSeqEditor(chip) {
+  const billKey = chip.dataset.seqEdit;
+  const bill = state.bills.find((item) => item.billKey === billKey);
+  if (!bill) return;
+  const currentManual = Math.max(0, Math.round(toNumeric(bill.caseSeqManual)));
+  const input = document.createElement("input");
+  input.type = "text";
+  input.inputMode = "numeric";
+  input.className = "inline-cell-input case-seq-input";
+  input.value = currentManual > 0 ? currentManual : (bill.caseSeq || "");
+  input.title = "เลขลำดับเคส — ว่าง = กลับไปนับอัตโนมัติ";
+  input.setAttribute("aria-label", "เลขลำดับเคส");
+  chip.replaceWith(input);
+  input.focus();
+  input.select();
+  let done = false;
+  const restore = () => {
+    if (done) return;
+    done = true;
+    input.replaceWith(chip);
+  };
+  const commit = () => {
+    if (done) return;
+    const manual = Math.max(0, Math.round(toNumeric(input.value)));
+    // ไม่ได้แก้อะไร (ค่าเดิม หรือพิมพ์เลข auto เดิมทั้งที่ไม่เคยตอกเอง) = คืน chip เฉย ๆ
+    if (manual === currentManual || (currentManual === 0 && manual === (bill.caseSeq || 0))) {
+      restore();
+      return;
+    }
+    done = true;
+    quickUpdateCaseSeq(billKey, manual);
+  };
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      commit();
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      restore();
+    }
+  });
+  input.addEventListener("blur", commit);
+}
+
+function quickUpdateCaseSeq(billKey, manual) {
+  const bill = state.bills.find((item) => item.billKey === billKey);
+  if (!bill) return;
+  const existing = state.billOverrides[bill.billKey] || {};
+  state.billOverrides[bill.billKey] = {
+    ...existing,
+    values: {
+      ...(existing.values || {}),
+      caseSeqManual: manual,
+    },
+    note: existing.note || "แก้เลขลำดับเคสจากตาราง",
+    updatedAt: new Date().toISOString(),
+  };
+  state.auditTrail.unshift({
+    id: makeAuditId(),
+    action: "case_seq_update",
+    createdAt: new Date().toISOString(),
+    orderId: bill.orderId,
+    orw: bill.orw,
+    invoice: bill.invoice,
+    date: bill.clicknicDate || bill.mlpDate,
+    lineCount: 0,
+    totalSale: bill.sale,
+    totalCost: bill.cost,
+    screenshotName: "case-seq-chip",
+    replacedLineCount: 0,
+    note: `ลำดับเคส: #${number(bill.caseSeq)} -> ${manual > 0 ? `#${number(manual)}` : "อัตโนมัติ"}`,
+    medicines: [],
+  });
+  rebuildBillsForCurrentMode();
+  renderMetrics();
+  renderTabs();
+  renderTable();
+  renderAuditTrail();
+  refreshCardDetail();
+  scheduleAutosave("case-seq-update");
 }
 
 function rebuildBillsForCurrentMode() {
@@ -5870,6 +5991,7 @@ function showTargetDate() {
   elements.dateFrom.value = date;
   elements.dateTo.value = date;
   state.activeStatus = "all";
+  renderMetrics();
   renderTabs();
   renderTable();
   renderQuickDateFilters();
@@ -5904,9 +6026,15 @@ elements.closeClipboardModal.addEventListener("click", closeClipboardImport);
 elements.searchInput.addEventListener("input", renderTable);
 elements.caseTypeFilter.addEventListener("change", renderTable);
 elements.billingStageFilter.addEventListener("change", renderTable);
-elements.dateField.addEventListener("change", renderTable);
-elements.dateFrom.addEventListener("change", renderTable);
-elements.dateTo.addEventListener("change", renderTable);
+// เปลี่ยนช่วงวันที่ = ตัวเลขทุกจุดต้องนับใหม่ (การ์ด chips แท็บ ตาราง)
+function renderDateScopedViews() {
+  renderMetrics();
+  renderTabs();
+  renderTable();
+}
+elements.dateField.addEventListener("change", renderDateScopedViews);
+elements.dateFrom.addEventListener("change", renderDateScopedViews);
+elements.dateTo.addEventListener("change", renderDateScopedViews);
 elements.sortBy.addEventListener("change", renderTable);
 elements.expectedBillingAmount.addEventListener("input", () => {
   rebuildBillsForCurrentMode();
@@ -5942,6 +6070,11 @@ elements.cardDetailModal?.addEventListener("change", (event) => {
 elements.closeCardDetailModal?.addEventListener("click", closeCardDetail);
 elements.cardDetailModal?.addEventListener("click", (event) => {
   if (event.target === elements.cardDetailModal) closeCardDetail();
+  const seqChip = event.target.closest("[data-seq-edit]");
+  if (seqChip) {
+    openCaseSeqEditor(seqChip);
+    return;
+  }
   const copyBtn = event.target.closest("[data-copy-text]");
   if (copyBtn) {
     navigator.clipboard?.writeText(copyBtn.dataset.copyText).then(() => {
@@ -6004,6 +6137,7 @@ elements.quickDateFilters?.addEventListener("click", (event) => {
     elements.targetDate.value = "";
   }
   state.activeStatus = "all";
+  renderMetrics();
   renderTabs();
   renderTable();
   renderQuickDateFilters();
@@ -6087,6 +6221,11 @@ elements.billTableBody.addEventListener("click", (event) => {
         setTimeout(() => { icon.className = "fa-regular fa-copy"; }, 1200);
       }
     }).catch(() => {});
+    return;
+  }
+  const seqChip = event.target.closest("[data-seq-edit]");
+  if (seqChip) {
+    openCaseSeqEditor(seqChip);
     return;
   }
   const addMedBtn = event.target.closest("[data-med-add]");
