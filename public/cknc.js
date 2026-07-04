@@ -1520,8 +1520,57 @@ function maybeAutosaveOnComplete() {
   autosaveMonthlySession("all-steps-complete");
 }
 
+// การ์ดเคสรายเดือนของปีปัจจุบัน — นับจากบิลทั้งหมดบนจอ (ไม่ตามตัวกรอง) กดแถวเดือน = กรอง/ยกเลิกกรอง
+function renderMonthlyCases() {
+  const body = $("monthlyCasesBody");
+  if (!body) return;
+  const yearNow = new Date().getFullYear();
+  const yearLabel = $("monthlyCasesYear");
+  if (yearLabel) yearLabel.textContent = String(yearNow + (yearEra === "be" ? 543 : 0));
+  const byMonth = new Map();
+  activeBills().forEach((bill) => {
+    if (!caseSeqNames[bill.caseType]) return;
+    const month = (dateKey(bill.clicknicDate || bill.mlpDate) || "").slice(0, 7);
+    if (!month || Number(month.slice(0, 4)) !== yearNow) return;
+    const entry = byMonth.get(month) || { nhso: 0, insurance: 0 };
+    entry[bill.caseType] += 1;
+    byMonth.set(month, entry);
+  });
+  const months = [...byMonth.keys()].sort();
+  if (!months.length) {
+    body.innerHTML = '<div class="monthly-cases-empty">ยังไม่มีเคส สปสช/ประกัน ในปีนี้</div>';
+    return;
+  }
+  const rows = months.map((month) => {
+    const entry = byMonth.get(month);
+    const [year, monthNum] = month.split("-").map(Number);
+    const monthShort = new Date(Date.UTC(year, monthNum - 1, 1)).toLocaleDateString("th-TH", { month: "short", timeZone: "UTC" });
+    const range = monthRangeOf(month);
+    const isActive = elements.dateFrom.value === range.from && elements.dateTo.value === range.to;
+    return `<button type="button" class="monthly-cases-row${isActive ? " active" : ""}" data-month-filter="${month}" title="${isActive ? "กดอีกครั้งเพื่อยกเลิกกรอง" : `กรองทั้งจอเป็นเดือน ${htmlEscape(monthChipLabel(month))}`}">
+      <span>${htmlEscape(monthShort)}</span><span>${entry.nhso ? number(entry.nhso) : "—"}</span><span>${entry.insurance ? number(entry.insurance) : "—"}</span>
+    </button>`;
+  }).join("");
+  body.innerHTML = `<div class="monthly-cases-row head"><span></span><span>สปสช</span><span>ประกัน</span></div>${rows}`;
+}
+
+function toggleMonthFilter(month) {
+  const range = monthRangeOf(month);
+  const alreadyActive = elements.dateFrom.value === range.from && elements.dateTo.value === range.to;
+  elements.dateField.value = "clicknicDate";
+  elements.dateFrom.value = alreadyActive ? "" : range.from;
+  elements.dateTo.value = alreadyActive ? "" : range.to;
+  elements.targetDate.value = "";
+  state.activeStatus = "all";
+  renderMetrics();
+  renderTabs();
+  renderTable();
+  renderQuickDateFilters();
+}
+
 function renderMetrics() {
   updateEmptyState();
+  renderMonthlyCases();
   const metrics = calculateMetrics();
   Object.entries(metricIds).forEach(([key, id]) => {
     $(id).textContent = ["sale", "totalCost", "profit"].includes(key) ? money(metrics[key]) : number(metrics[key]);
@@ -5997,6 +6046,11 @@ function showTargetDate() {
   renderQuickDateFilters();
 }
 
+$("monthlyCasesBody")?.addEventListener("click", (event) => {
+  const row = event.target.closest("[data-month-filter]");
+  if (!row) return;
+  toggleMonthFilter(row.dataset.monthFilter);
+});
 elements.clicknicFiles.addEventListener("change", handleFiles);
 elements.mlpFile.addEventListener("change", handleFiles);
 elements.billingFiles.addEventListener("change", handleFiles);

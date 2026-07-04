@@ -1184,6 +1184,69 @@ th.th-center {
   color: #1a4f9c;
 }
 
+/* การ์ดเคสรายเดือน — ตารางย่อ สปสช/ประกัน กดแถวเดือนเพื่อกรอง */
+.metric.monthly-cases em {
+  font-style: normal;
+}
+
+.monthly-cases-body {
+  display: grid;
+  gap: 2px;
+  margin-top: 6px;
+}
+
+.monthly-cases-row {
+  display: grid;
+  grid-template-columns: 1fr 44px 48px;
+  gap: 4px;
+  align-items: center;
+  min-height: 0;
+  padding: 2px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--ink);
+  text-align: right;
+  cursor: pointer;
+}
+
+.monthly-cases-row span:first-child {
+  text-align: left;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.monthly-cases-row.head {
+  cursor: default;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.monthly-cases-row.head span {
+  color: var(--muted);
+}
+
+.monthly-cases-row:not(.head):hover {
+  background: var(--mint);
+}
+
+.monthly-cases-row.active {
+  background: var(--mint);
+  color: var(--green-dark);
+}
+
+.monthly-cases-row.active span:first-child {
+  color: var(--green-dark);
+}
+
+.monthly-cases-empty {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
 /* chip เลขลำดับเคสต่อเดือน (สปสช/ประกัน) — โทนสีเดียวกับประเภทเคส คลิกเพื่อแก้เลขได้ */
 .case-seq-chip {
   display: inline-block;
