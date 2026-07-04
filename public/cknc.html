@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="./cknc.css?v=20260705130000" />
+    <link rel="stylesheet" href="./cknc.css?v=20260705140000" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -50,7 +50,7 @@
           </nav>
           <a href="admin.html" class="ghost icon-toggle" aria-label="กลับไป MLP HUB" title="MLP HUB"><i class="fa-solid fa-house-medical"></i></a>
           <button id="themeToggleBtn" class="ghost icon-toggle" type="button" aria-label="สลับโหมดมืด"><i class="fa-solid fa-moon"></i></button>
-          <button id="yearEraToggleBtn" class="ghost" type="button" aria-label="สลับรูปแบบปี พ.ศ./ค.ศ." title="สลับรูปแบบปี พ.ศ./ค.ศ."><i class="fa-solid fa-calendar-day"></i> พ.ศ.</button>
+          <div class="era-toggle" data-era-toggle role="group" aria-label="รูปแบบปี BE = พ.ศ. / CE = ค.ศ." title="สลับรูปแบบปี: BE = พ.ศ., CE = ค.ศ."><button type="button" data-era="be">BE</button><button type="button" data-era="ce">CE</button></div>
           <button id="loadSampleBtn" class="ghost" type="button" hidden disabled><i class="fa-solid fa-flask"></i> ใช้ไฟล์ตัวอย่าง</button>
           <button id="saveSessionBtn" class="ghost" type="button" disabled><i class="fa-solid fa-floppy-disk"></i> Save Session</button>
           <button id="openSessionsBtn" class="ghost" type="button"><i class="fa-solid fa-folder-open"></i> Sessions</button>
@@ -215,7 +215,10 @@
               <h2 id="cardDetailTitle">รายละเอียด</h2>
               <p id="cardDetailSummary" class="card-detail-summary">-</p>
             </div>
-            <button id="closeCardDetailModal" class="icon-button" type="button" aria-label="ปิด">×</button>
+            <div class="drawer-head-actions">
+              <div class="era-toggle" data-era-toggle role="group" aria-label="รูปแบบปี BE = พ.ศ. / CE = ค.ศ." title="สลับรูปแบบปี: BE = พ.ศ., CE = ค.ศ."><button type="button" data-era="be">BE</button><button type="button" data-era="ce">CE</button></div>
+              <button id="closeCardDetailModal" class="icon-button" type="button" aria-label="ปิด">×</button>
+            </div>
           </div>
           <div class="card-detail-actions">
             <button id="cardDetailFilterBtn" class="primary small" type="button" hidden>กรองตารางตามนี้</button>
@@ -362,6 +365,7 @@
             <input id="bulkBarNo" type="text" placeholder="BAR-..." aria-label="เลขใบวางบิล (BAR)" />
             <button id="bulkApplyBarNo" class="ghost small" type="button">ใส่ BAR</button>
           </span>
+          <button id="bulkMoneyBtn" class="ghost small" type="button" title="แก้ยอดขาย/ต้นทุนของบิลที่เลือกพร้อมกัน">แก้เงิน</button>
           <button id="bulkMergeBills" class="ghost small" type="button">รวมบิล</button>
           <button id="bulkDeleteBills" class="ghost small danger" type="button" title="ลบบิลที่เลือกออกจากงานบนจอ (ต้นฉบับใน session/ไฟล์เดิมไม่ถูกแก้)">ลบรายการ</button>
           <button id="bulkExclude" class="ghost small" type="button">Exclude</button>
@@ -599,6 +603,38 @@
       </form>
     </dialog>
 
+    <dialog id="bulkMoneyModal" class="clipboard-modal">
+      <form method="dialog" class="clipboard-card bulk-money-card">
+        <div class="modal-head">
+          <div>
+            <p class="eyebrow">Bulk edit</p>
+            <h2>แก้เงินบิลที่เลือก</h2>
+          </div>
+          <button id="closeBulkMoney" class="icon-button" type="button" aria-label="ปิด">×</button>
+        </div>
+        <div class="bulk-money-body">
+          <label class="bulk-money-field">ยอดขาย (บาท)
+            <input id="bulkMoneySale" type="text" inputmode="decimal" placeholder="เว้นว่าง = คงเดิม" />
+          </label>
+          <label class="bulk-money-field">ต้นทุน
+            <span class="bulk-money-cost-row">
+              <select id="bulkMoneyCostMode" aria-label="วิธีคิดต้นทุน">
+                <option value="fixed">ค่าคงที่ (บาท)</option>
+                <option value="percent">% ของยอดขาย</option>
+                <option value="profit">ให้กำไรคงที่ (บาท)</option>
+              </select>
+              <input id="bulkMoneyCost" type="text" inputmode="decimal" placeholder="เว้นว่าง = คงเดิม" />
+            </span>
+          </label>
+          <p id="bulkMoneyPreview" class="bulk-money-preview">-</p>
+        </div>
+        <div class="modal-actions">
+          <button id="cancelBulkMoney" class="ghost" type="button">ยกเลิก</button>
+          <button id="applyBulkMoney" class="primary" type="button">บันทึก</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog id="pasteAnalyzeModal" class="modal paste-analyze-modal">
       <form method="dialog" class="modal-card">
         <div class="modal-head">
@@ -659,6 +695,7 @@
             <h2 id="drawerTitle">รายละเอียดบิล</h2>
           </div>
           <div class="drawer-head-actions">
+            <div class="era-toggle" data-era-toggle role="group" aria-label="รูปแบบปี BE = พ.ศ. / CE = ค.ศ." title="สลับรูปแบบปี: BE = พ.ศ., CE = ค.ศ."><button type="button" data-era="be">BE</button><button type="button" data-era="ce">CE</button></div>
             <button id="drawerPasteAnalyzeBtn" class="icon-button" type="button" title="แก้ไขจากข้อความ paste (วิเคราะห์อัตโนมัติ)" aria-label="แก้ไขจากข้อความ paste"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
             <button id="closeDetailDrawer" class="icon-button" type="button" aria-label="ปิด">×</button>
           </div>
@@ -730,6 +767,10 @@
                 <label>
                   เลขที่เครดิต (AR)
                   <input id="editCreditNos" type="text" placeholder="AR-... (หลายเลขคั่นด้วย ,)" />
+                </label>
+                <label>
+                  ลำดับเคสของเดือน
+                  <input id="editCaseSeq" type="text" inputmode="numeric" placeholder="เว้นว่าง = นับอัตโนมัติ" />
                 </label>
               </div>
             </div>
@@ -817,7 +858,7 @@
       </div>
     </dialog>
 
-    <script src="./cknc.js?v=20260705130000"></script>
+    <script src="./cknc.js?v=20260705140000"></script>
     <script>
       (function () {
         const btn = document.getElementById("themeToggleBtn");

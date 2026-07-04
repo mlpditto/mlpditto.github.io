@@ -147,6 +147,7 @@ const elements = {
   editAddress: $("editAddress"),
   editExpectedClaim: $("editExpectedClaim"),
   editBillingStage: $("editBillingStage"),
+  editCaseSeq: $("editCaseSeq"),
   editCost: $("editCost"),
   editSale: $("editSale"),
   editProfit: $("editProfit"),
@@ -164,6 +165,15 @@ const elements = {
   bulkBillingStage: $("bulkBillingStage"),
   bulkCaseType: $("bulkCaseType"),
   bulkBarNo: $("bulkBarNo"),
+  bulkMoneyBtn: $("bulkMoneyBtn"),
+  bulkMoneyModal: $("bulkMoneyModal"),
+  bulkMoneySale: $("bulkMoneySale"),
+  bulkMoneyCostMode: $("bulkMoneyCostMode"),
+  bulkMoneyCost: $("bulkMoneyCost"),
+  bulkMoneyPreview: $("bulkMoneyPreview"),
+  closeBulkMoney: $("closeBulkMoney"),
+  cancelBulkMoney: $("cancelBulkMoney"),
+  applyBulkMoney: $("applyBulkMoney"),
   bulkApplyBarNo: $("bulkApplyBarNo"),
   mergeSuggestBar: $("mergeSuggestBar"),
   bulkMergeBills: $("bulkMergeBills"),
@@ -193,7 +203,6 @@ const elements = {
   pasteAnalyzeResults: $("pasteAnalyzeResults"),
   pasteAnalyzeSummary: $("pasteAnalyzeSummary"),
   applyPasteAnalyzeBtn: $("applyPasteAnalyzeBtn"),
-  yearEraToggleBtn: $("yearEraToggleBtn"),
   authGateTitle: $("authGateTitle"),
   authGateMessage: $("authGateMessage"),
   authGateAction: $("authGateAction"),
@@ -1791,7 +1800,8 @@ const cardDetailColumns = [
       const copyBtn = main !== "-"
         ? ` <button class="copy-ref-btn" type="button" data-copy-text="${htmlEscape(clean(main.split(",")[0]))}" title="คัดลอก" aria-label="คัดลอก"><i class="fa-regular fa-copy"></i></button>`
         : "";
-      return `<span class="ref-main">${htmlEscape(main)}${copyBtn}</span>${sub ? `<span class="ref-sub">${htmlEscape(sub)}</span>` : ""}`;
+      const seqChip = caseSeqChipHtml(bill);
+      return `<span class="ref-main">${htmlEscape(main)}${copyBtn}</span>${sub ? `<span class="ref-sub">${htmlEscape(sub)}</span>` : ""}${seqChip ? `<span class="ref-sub">${seqChip}</span>` : ""}`;
     },
   },
   { label: "ผู้รับบริการ", col: "col-patient", hideable: true, text: (bill) => bill.patient || "-" },
@@ -2161,7 +2171,7 @@ function renderTable() {
           <button class="bill-analyze-btn" type="button" data-paste-analyze="${htmlEscape(bill.billKey)}" title="แก้ไขจากข้อความ paste (วิเคราะห์อัตโนมัติ)" aria-label="แก้ไขจากข้อความ paste"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
         </span>
         <span class="bill-ref">${bill.orderId ? `${bill.orderId} <button class="copy-ref-btn" type="button" data-copy-text="${htmlEscape(bill.orderId)}" title="คัดลอกเลขที่ออเดอร์" aria-label="คัดลอกเลขที่ออเดอร์"><i class="fa-regular fa-copy"></i></button>` : "-"}</span>
-        <span class="bill-ref">${htmlEscape(billRefLine(bill))}${clean(bill.orw) ? ` <button class="copy-ref-btn" type="button" data-copy-text="${htmlEscape(clean(bill.orw.split(",")[0]))}" title="คัดลอก ORW" aria-label="คัดลอก ORW"><i class="fa-regular fa-copy"></i></button>` : ""}</span>
+        <span class="bill-ref">${htmlEscape(billRefLine(bill))}${clean(bill.orw) ? ` <button class="copy-ref-btn" type="button" data-copy-text="${htmlEscape(clean(bill.orw.split(",")[0]))}" title="คัดลอก ORW" aria-label="คัดลอก ORW"><i class="fa-regular fa-copy"></i></button>` : ""}${caseSeqChipHtml(bill) ? ` ${caseSeqChipHtml(bill)}` : ""}</span>
         ${bill.refId || bill.phone ? `<span class="bill-ref bill-contact">${htmlEscape([bill.refId, bill.phone].filter(Boolean).join(" · "))}</span>` : ""}
       </td>
       <td class="stack-cell">
@@ -2932,9 +2942,48 @@ function renderSnapshot() {
   setSessionButtons();
 }
 
+// เลขลำดับเคสต่อเดือน (สปสช/ประกัน) ไว้ช่วยนับยอดส่งเบิก — เรียงตามวันที่ CLICKNIC (ไม่มีใช้ MLP)
+// เลขคำนวณใหม่ทุกครั้งที่ rebuild; แก้มือทับรายบิลได้ผ่าน override caseSeqManual (0/ว่าง = อัตโนมัติ)
+const caseSeqNames = { nhso: "สปสช", insurance: "ประกัน" };
+
+function caseSeqDate(bill) {
+  return dateKey(bill.clicknicDate || bill.mlpDate);
+}
+
+function assignCaseSequences() {
+  const counters = new Map();
+  state.bills.forEach((bill) => {
+    bill.caseSeq = 0;
+    bill.caseSeqMonth = "";
+  });
+  state.bills
+    .filter((bill) => caseSeqNames[bill.caseType] && !bill.excluded && caseSeqDate(bill))
+    .sort((a, b) => caseSeqDate(a).localeCompare(caseSeqDate(b))
+      || clean(a.orw || a.orderId).localeCompare(clean(b.orw || b.orderId)))
+    .forEach((bill) => {
+      const month = caseSeqDate(bill).slice(0, 7);
+      const key = `${bill.caseType}|${month}`;
+      const next = (counters.get(key) || 0) + 1;
+      counters.set(key, next);
+      bill.caseSeqMonth = month;
+      // บิลที่ตอกเลขเองยังกินลำดับ auto ของตัวเองไว้ เลขบิลอื่นจะได้ไม่ขยับ
+      bill.caseSeq = toNumeric(bill.caseSeqManual) > 0 ? Math.round(toNumeric(bill.caseSeqManual)) : next;
+    });
+}
+
+function caseSeqChipHtml(bill) {
+  if (!bill.caseSeq || !caseSeqNames[bill.caseType] || !bill.caseSeqMonth) return "";
+  const [year, month] = bill.caseSeqMonth.split("-").map(Number);
+  const monthShort = new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString("th-TH", { month: "short", timeZone: "UTC" });
+  const manual = toNumeric(bill.caseSeqManual) > 0;
+  const title = `เคส${caseSeqNames[bill.caseType]} ลำดับที่ ${number(bill.caseSeq)} ของเดือน ${monthChipLabel(bill.caseSeqMonth)}${manual ? " (กำหนดเลขเอง)" : ""}`;
+  return `<span class="case-seq-chip case-${bill.caseType}" title="${htmlEscape(title)}">${caseSeqNames[bill.caseType]} #${number(bill.caseSeq)}·${htmlEscape(monthShort)}${manual ? "*" : ""}</span>`;
+}
+
 function rebuildBillsForCurrentMode() {
   if (!state.snapshotMode) {
     buildBills();
+    assignCaseSequences();
     return;
   }
   state.bills = state.bills.map((bill) => {
@@ -2944,6 +2993,7 @@ function rebuildBillsForCurrentMode() {
   });
   applyManualMergeGroups();
   applyDeletedBills();
+  assignCaseSequences();
 }
 
 function clipboardKindLabel(kind) {
@@ -3697,6 +3747,7 @@ function billReportRow(bill) {
     mlp_memo_order_id: bill.mlpMemoOrderIds,
     case_type: caseTypeLabel(bill.caseType),
     case_type_source: bill.caseTypeSource || "",
+    case_seq: bill.caseSeq ? `${caseSeqNames[bill.caseType] || ""} ${bill.caseSeq}/${bill.caseSeqMonth}` : "",
     billing_stage: billingStageLabel(bill.billingStage),
     billing_stage_source: bill.billingStageSource || "",
     clicknic_date: bill.clicknicDate,
@@ -5078,6 +5129,10 @@ function openDetailDrawer(billKey) {
   elements.editInvoice.value = bill.invoice || "";
   if (elements.editBarNo) elements.editBarNo.value = bill.barNo || "";
   if (elements.editCreditNos) elements.editCreditNos.value = bill.creditNos || "";
+  if (elements.editCaseSeq) {
+    elements.editCaseSeq.value = toNumeric(bill.caseSeqManual) > 0 ? Math.round(toNumeric(bill.caseSeqManual)) : "";
+    elements.editCaseSeq.placeholder = bill.caseSeq ? `เว้นว่าง = นับอัตโนมัติ (ตอนนี้ #${number(bill.caseSeq)})` : "เว้นว่าง = นับอัตโนมัติ";
+  }
   elements.editClicknicDate.value = formatDisplayDate(bill.clicknicDate);
   elements.editMlpDate.value = formatDisplayDate(bill.mlpDate);
   elements.editBillingDueDate.value = formatDisplayDate(bill.billingDueDate);
@@ -5682,6 +5737,8 @@ function saveBillOverride() {
     invoice: clean(elements.editInvoice.value),
     barNo: elements.editBarNo ? clean(elements.editBarNo.value) : clean(bill.barNo),
     creditNos: elements.editCreditNos ? clean(elements.editCreditNos.value) : clean(bill.creditNos),
+    // 0 = กลับไปนับอัตโนมัติ
+    caseSeqManual: elements.editCaseSeq ? Math.max(0, Math.round(toNumeric(elements.editCaseSeq.value))) : toNumeric(bill.caseSeqManual),
     clicknicDate: dateKey(elements.editClicknicDate.value),
     mlpDate: dateKey(elements.editMlpDate.value),
     billingDueDate: dateKey(elements.editBillingDueDate.value),
@@ -6223,6 +6280,106 @@ elements.bulkBarNo?.addEventListener("keydown", (event) => {
   event.preventDefault();
   applyBulkBarNo();
 });
+// แก้เงินแบบกลุ่ม: ยอดขาย + ต้นทุน 3 โหมด (ค่าคงที่ / % ของยอดขาย / กำไรคงที่)
+function bulkMoneyInputs() {
+  const saleRaw = clean(elements.bulkMoneySale.value);
+  const costRaw = clean(elements.bulkMoneyCost.value);
+  return {
+    saleRaw,
+    costRaw,
+    mode: elements.bulkMoneyCostMode.value,
+    saleValue: toNumeric(saleRaw),
+    costValue: toNumeric(costRaw),
+  };
+}
+
+function bulkMoneyValuesForBill(bill, input) {
+  const round2 = (value) => Math.round(value * 100) / 100;
+  const values = {};
+  const newSale = input.saleRaw === "" ? toNumeric(bill.sale) : Math.max(0, input.saleValue);
+  if (input.saleRaw !== "") values.sale = round2(newSale);
+  if (input.costRaw !== "") {
+    let cost;
+    if (input.mode === "percent") cost = (newSale * input.costValue) / 100;
+    else if (input.mode === "profit") cost = newSale - input.costValue;
+    else cost = input.costValue;
+    // ต้นทุนรวมเก็บที่ cost ช่องเดียวแบบเดียวกับการแก้รายตัว (mlpCost ถูกยุบเป็น 0)
+    values.cost = round2(Math.max(0, cost));
+    values.mlpCost = 0;
+  }
+  return values;
+}
+
+function bulkMoneyNote(input) {
+  const parts = [];
+  if (input.saleRaw !== "") parts.push(`ขาย ${money(Math.max(0, input.saleValue))}`);
+  if (input.costRaw !== "") {
+    parts.push(input.mode === "percent" ? `ทุน ${number(input.costValue)}% ของขาย`
+      : input.mode === "profit" ? `ทุน = ขาย − กำไร ${money(input.costValue)}`
+        : `ทุน ${money(input.costValue)}`);
+  }
+  return parts.join(", ");
+}
+
+function renderBulkMoneyPreview() {
+  const input = bulkMoneyInputs();
+  const bills = state.bills.filter((bill) => state.selectedBillKeys.has(bill.billKey));
+  if (!bills.length) {
+    elements.bulkMoneyPreview.textContent = "ยังไม่ได้เลือกบิล";
+    return;
+  }
+  if (input.saleRaw === "" && input.costRaw === "") {
+    elements.bulkMoneyPreview.textContent = `เลือกไว้ ${number(bills.length)} บิล — กรอกเฉพาะช่องที่อยากแก้ (เว้นว่าง = คงเดิม)`;
+    return;
+  }
+  const sample = bills[0];
+  const values = bulkMoneyValuesForBill(sample, input);
+  const sale = Object.prototype.hasOwnProperty.call(values, "sale") ? values.sale : toNumeric(sample.sale);
+  const cost = Object.prototype.hasOwnProperty.call(values, "cost") ? values.cost : toNumeric(sample.cost) + toNumeric(sample.mlpCost);
+  elements.bulkMoneyPreview.textContent = `จะแก้ ${number(bills.length)} บิล — ตัวอย่างบิลแรก (${sample.orw || sample.orderId || "-"}): ขาย ${money(sale)} · ทุน ${money(cost)} · กำไร ${money(sale - cost)}`;
+}
+
+function openBulkMoneyModal() {
+  if (!state.selectedBillKeys.size) {
+    elements.statusText.textContent = "ติ๊กเลือกบิลก่อน แล้วค่อยกด แก้เงิน";
+    return;
+  }
+  elements.bulkMoneySale.value = "";
+  elements.bulkMoneyCost.value = "";
+  elements.bulkMoneyCostMode.value = "fixed";
+  renderBulkMoneyPreview();
+  elements.bulkMoneyModal.showModal();
+  elements.bulkMoneySale.focus();
+}
+
+function applyBulkMoneyEdit() {
+  const input = bulkMoneyInputs();
+  if (input.saleRaw === "" && input.costRaw === "") {
+    elements.bulkMoneyPreview.textContent = "กรอกยอดขายหรือต้นทุนอย่างน้อยหนึ่งช่องก่อนบันทึก";
+    elements.bulkMoneySale.focus();
+    return;
+  }
+  const count = state.selectedBillKeys.size;
+  const note = bulkMoneyNote(input);
+  applyBulkOverride((bill) => bulkMoneyValuesForBill(bill, input), `แก้เงิน: ${note}`);
+  elements.bulkMoneyModal.close();
+  elements.statusText.textContent = `แก้เงิน (${note}) ให้ ${number(count)} บิลแล้ว`;
+}
+
+elements.bulkMoneyBtn?.addEventListener("click", openBulkMoneyModal);
+elements.closeBulkMoney?.addEventListener("click", () => elements.bulkMoneyModal.close());
+elements.cancelBulkMoney?.addEventListener("click", () => elements.bulkMoneyModal.close());
+elements.applyBulkMoney?.addEventListener("click", applyBulkMoneyEdit);
+[elements.bulkMoneySale, elements.bulkMoneyCost].forEach((inputEl) => {
+  inputEl?.addEventListener("input", renderBulkMoneyPreview);
+  // Enter = บันทึกเลย ไม่ต้องเอื้อมไปกดปุ่ม
+  inputEl?.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    applyBulkMoneyEdit();
+  });
+});
+elements.bulkMoneyCostMode?.addEventListener("change", renderBulkMoneyPreview);
 elements.bulkMergeBills?.addEventListener("click", mergeSelectedBills);
 elements.bulkDeleteBills?.addEventListener("click", deleteSelectedBills);
 elements.mergeSuggestBar?.addEventListener("click", (event) => {
@@ -6253,24 +6410,31 @@ elements.bulkClear?.addEventListener("click", () => {
   });
   updateBulkBar();
 });
-function syncYearEraButton() {
-  if (!elements.yearEraToggleBtn) return;
-  elements.yearEraToggleBtn.innerHTML = `<i class="fa-solid fa-calendar-day"></i> ${yearEra === "be" ? "พ.ศ." : "ค.ศ."}`;
-  elements.yearEraToggleBtn.title = yearEra === "be" ? "กำลังแสดงปี พ.ศ. — กดเพื่อสลับเป็น ค.ศ." : "กำลังแสดงปี ค.ศ. — กดเพื่อสลับเป็น พ.ศ.";
+// สวิตช์ BE|CE มีหลายจุด (header + popup) — sync ฝั่ง active พร้อมกันทุกตัว
+function syncEraToggles() {
+  document.querySelectorAll("[data-era-toggle] [data-era]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.era === yearEra);
+  });
 }
-elements.yearEraToggleBtn?.addEventListener("click", () => {
-  yearEra = yearEra === "be" ? "ce" : "be";
+function setYearEra(era) {
+  if (era !== "be" && era !== "ce") return;
+  if (era === yearEra) return;
+  yearEra = era;
   try {
     localStorage.setItem(YEAR_ERA_STORAGE_KEY, yearEra);
   } catch (error) {
     /* ignore */
   }
-  syncYearEraButton();
+  syncEraToggles();
   renderAll();
   refreshCardDetail();
   if (elements.detailDrawer?.open && state.currentDetailKey) openDetailDrawer(state.currentDetailKey);
+}
+document.addEventListener("click", (event) => {
+  const eraButton = event.target.closest("[data-era-toggle] [data-era]");
+  if (eraButton) setYearEra(eraButton.dataset.era);
 });
-syncYearEraButton();
+syncEraToggles();
 elements.resetOverrideBtn.addEventListener("click", resetBillOverride);
 elements.drawerPasteAnalyzeBtn?.addEventListener("click", () => {
   if (state.currentDetailKey) openPasteAnalyze(state.currentDetailKey);
