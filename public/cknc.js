@@ -3204,6 +3204,16 @@ function caseSeqDate(bill) {
   return dateKey(bill.clicknicDate || bill.mlpDate);
 }
 
+// เลขลำดับว่างถัดไปของประเภทเคส+เดือน = จำนวนเต็มบวกน้อยสุดที่ยังไม่มีบิลใดใช้ (เติมช่องว่างก่อน)
+function nextFreeCaseSeq(caseType, month) {
+  const used = new Set(state.bills
+    .filter((bill) => bill.caseType === caseType && bill.caseSeqMonth === month && bill.caseSeq)
+    .map((bill) => bill.caseSeq));
+  let next = 1;
+  while (used.has(next)) next += 1;
+  return next;
+}
+
 function assignCaseSequences() {
   const counters = new Map();
   state.bills.forEach((bill) => {
@@ -3266,6 +3276,8 @@ function renderCaseSeqModal() {
   allRows.forEach((item) => seqTally.set(item.caseSeq, (seqTally.get(item.caseSeq) || 0) + 1));
   const dupSeqs = [...seqTally.entries()].filter(([, count]) => count > 1).map(([seq]) => seq).sort((a, b) => a - b);
   const dupSet = new Set(dupSeqs);
+  // เลขว่างถัดไปของเดือน (สำหรับปุ่มแก้อัตโนมัติแถวซ้ำ) — เลขบวกน้อยสุดที่ยังไม่มีใครใช้
+  const dupNextFree = dupSet.size ? nextFreeCaseSeq(caseType, month) : 0;
   const term = clean(elements.caseSeqSearch?.value).toLowerCase();
   const rows = term
     ? allRows.filter((item) => [item.orderId, item.orw, item.patient, caseSeqCode(caseType, item.caseSeq, monthNo)]
@@ -3289,7 +3301,7 @@ function renderCaseSeqModal() {
     const barTitle = bar ? `ใบวางบิล ${bar}` : "ยังไม่มีใบวางบิล (BAR)";
     const isDup = dupSet.has(item.caseSeq);
     return `<tr data-row-seq="${item.caseSeq}" class="${item.billKey === activeKey ? "case-seq-row-active" : ""}${isDup ? " case-seq-row-dup" : ""}">
-            <td class="seq-col"><input type="text" inputmode="numeric" class="inline-cell-input case-seq-input${isDup ? " case-seq-input-dup" : ""}" data-seq-row="${htmlEscape(item.billKey)}" value="${item.caseSeq}" title="${isDup ? `ลำดับ #${number(item.caseSeq)} ซ้ำกับบิลอื่น — แก้ให้ไม่ซ้ำ` : "เลขลำดับเคส — ว่าง = กลับไปนับอัตโนมัติ"}" aria-label="เลขลำดับเคส" /></td>
+            <td class="seq-col"><span class="seq-edit-wrap"><input type="text" inputmode="numeric" class="inline-cell-input case-seq-input${isDup ? " case-seq-input-dup" : ""}" data-seq-row="${htmlEscape(item.billKey)}" value="${item.caseSeq}" title="${isDup ? `ลำดับ #${number(item.caseSeq)} ซ้ำกับบิลอื่น — คลิกพิมพ์แก้เลขได้เลย` : "คลิกพิมพ์แก้เลขลำดับได้เลย · เว้นว่าง = นับอัตโนมัติ"}" aria-label="เลขลำดับเคส" /><i class="fa-solid fa-pen seq-edit-hint" aria-hidden="true"></i></span></td>
             <td><span class="case-seq-chip case-${htmlEscape(caseType)} case-seq-bar-chip" style="border-color:${barColor}" title="${htmlEscape(barTitle)}">${htmlEscape(caseSeqCode(caseType, item.caseSeq, monthNo))}${manual ? "*" : ""}</span>${bar ? "" : `<button type="button" class="case-seq-addbar-chip" data-bar-add="${htmlEscape(item.billKey)}" title="ยังไม่มีใบวางบิล (BAR) — กดเพื่อใส่ BAR ให้เคสนี้">+ BAR</button>`}</td>
             <td class="case-seq-date">${htmlEscape(formatDisplayDate(item.clicknicDate || item.mlpDate) || "-")}</td>
             <td class="case-seq-bill">
@@ -3299,7 +3311,7 @@ function renderCaseSeqModal() {
               </span>
               <span class="case-seq-patient">${htmlEscape(item.patient || "-")}</span>
             </td>
-            <td class="act-col"><button type="button" class="row-action icon-action" data-seq-open="${htmlEscape(item.billKey)}" title="รายละเอียด / แก้ไข" aria-label="รายละเอียด / แก้ไข"><i class="fa-solid fa-pen-to-square"></i></button></td>
+            <td class="act-col">${isDup ? `<button type="button" class="case-seq-autofix" data-seq-autofix="${htmlEscape(item.billKey)}" title="แก้เป็นเลขว่างถัดไป #${number(dupNextFree)} (อัตโนมัติ)"><i class="fa-solid fa-wand-magic-sparkles"></i> #${number(dupNextFree)}</button>` : ""}<button type="button" class="row-action icon-action" data-seq-open="${htmlEscape(item.billKey)}" title="รายละเอียด / แก้ไข" aria-label="รายละเอียด / แก้ไข"><i class="fa-solid fa-pen-to-square"></i></button></td>
           </tr>`;
   }).join("")}
       </tbody>
@@ -6677,6 +6689,14 @@ elements.caseSeqModalBody?.addEventListener("click", (event) => {
         setTimeout(() => { icon.className = "fa-regular fa-copy"; }, 1200);
       }
     }).catch(() => {});
+    return;
+  }
+  const autofix = event.target.closest("[data-seq-autofix]");
+  if (autofix) {
+    const bill = state.bills.find((item) => item.billKey === autofix.dataset.seqAutofix);
+    if (!bill || !bill.caseSeqMonth) return;
+    quickUpdateCaseSeq(bill.billKey, nextFreeCaseSeq(bill.caseType, bill.caseSeqMonth));
+    renderCaseSeqModal();
     return;
   }
   const addBar = event.target.closest("[data-bar-add]");

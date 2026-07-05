@@ -2435,17 +2435,80 @@ html.dark .case-seq-search {
 }
 
 .case-seq-table .act-col {
-  width: 56px;
-  text-align: center;
+  width: 118px;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .case-seq-table .case-seq-input {
   width: 52px;
   min-height: 26px;
-  padding: 3px 4px;
+  padding: 3px 18px 3px 6px;
   text-align: center;
   font-weight: 800;
   border-radius: 8px;
+  border: 1px solid rgba(15, 55, 40, 0.22);
+  background: #fff;
+  cursor: text;
+}
+
+.case-seq-table .case-seq-input:hover {
+  border-color: var(--green, #168250);
+}
+
+/* ไอคอนดินสอจาง ๆ ในช่องลำดับ — บอกว่าคลิกพิมพ์แก้ได้ */
+.seq-edit-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.seq-edit-hint {
+  position: absolute;
+  right: 6px;
+  font-size: 8.5px;
+  color: var(--muted);
+  opacity: 0.45;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.seq-edit-wrap:hover .seq-edit-hint,
+.seq-edit-wrap:focus-within .seq-edit-hint {
+  opacity: 0.85;
+}
+
+html.dark .case-seq-table .case-seq-input {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* ปุ่มแก้ลำดับซ้ำอัตโนมัติ — ใส่เลขว่างถัดไปให้ทันที */
+.case-seq-autofix {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 6px;
+  padding: 3px 8px;
+  border: 1px solid #e0a94e;
+  border-radius: 999px;
+  background: var(--amber-soft, #fdf3d8);
+  color: #92600b;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.case-seq-autofix:hover {
+  filter: brightness(0.96);
+}
+
+html.dark .case-seq-autofix {
+  background: rgba(245, 158, 11, 0.16);
+  border-color: #7a5a1e;
+  color: #fbbf24;
 }
 
 .case-seq-table .case-seq-chip {
