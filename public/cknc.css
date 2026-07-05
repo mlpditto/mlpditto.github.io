@@ -4106,6 +4106,25 @@ html.dark .dismiss-reason-chip:hover {
   border-color: #7a5a1e;
 }
 
+.warn-section-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 12px 8px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.warn-section-title:first-child {
+  margin-top: 8px;
+}
+
+.warn-section-title .ghost.small {
+  margin-left: auto;
+}
+
 .merge-warn-names {
   font-weight: 800;
 }

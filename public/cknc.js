@@ -3797,30 +3797,41 @@ function computeMergeSuggestions() {
   return suggestions.sort((a, b) => b.score - a.score).slice(0, 8);
 }
 
+// เคส สปสช โดยปกติต้นทุน MLP = 0.00 — เคสที่ ≠ 0 ถือเป็นรายการต้องตรวจ (รวมที่ WARN)
+function nhsoCostIssues() {
+  return activeBills().filter((bill) => bill.caseType === "nhso" && Math.abs(toNumeric(bill.mlpCost)) >= 0.005);
+}
+
+function warnTotalCount() {
+  return state.mergeSuggestions.length + nhsoCostIssues().length;
+}
+
 function renderMergeSuggestions() {
   // คำนวณใหม่เฉพาะเมื่อชุดบิลเปลี่ยน (state.bills ถูกสร้างใหม่ทุกครั้งที่ rebuild) — พิมพ์ค้นหาไม่ต้องคิดซ้ำ
   if (state.mergeSuggestCacheRef !== state.bills) {
     state.mergeSuggestCacheRef = state.bills;
     state.mergeSuggestions = computeMergeSuggestions();
   }
-  const suggestions = state.mergeSuggestions;
-  // การ์ด WARN ในแถวการ์ดเล็ก — กดแล้วเปิด popup รายการคู่ (ไม่มีคู่ = ซ่อนการ์ด)
+  const warnCount = warnTotalCount();
+  // การ์ด WARN ในแถวการ์ดเล็ก — กดแล้วเปิด popup (ไม่มีอะไรเตือน = ซ่อนการ์ด)
   if (elements.mergeWarnCard) {
-    elements.mergeWarnCard.hidden = !suggestions.length;
-    if (elements.metricMergeWarn) elements.metricMergeWarn.textContent = number(suggestions.length);
+    elements.mergeWarnCard.hidden = warnCount === 0;
+    if (elements.metricMergeWarn) elements.metricMergeWarn.textContent = number(warnCount);
   }
-  // popup เปิดค้างอยู่ → ตามข้อมูลล่าสุด (คู่หมดแล้วปิดเอง)
+  // popup เปิดค้างอยู่ → ตามข้อมูลล่าสุด (เตือนหมดแล้วปิดเอง)
   if (elements.mergeWarnModal?.open) {
-    if (!suggestions.length) elements.mergeWarnModal.close();
+    if (warnCount === 0) elements.mergeWarnModal.close();
     else renderMergeWarnBody();
   }
 }
 
 function renderMergeWarnBody() {
   const suggestions = state.mergeSuggestions;
-  if (elements.mergeWarnTitle) elements.mergeWarnTitle.textContent = `น่าจะเป็นบิลเดียวกัน ${number(suggestions.length)} คู่`;
+  const nhsoIssues = nhsoCostIssues();
+  if (elements.mergeWarnTitle) elements.mergeWarnTitle.textContent = `รายการที่ต้องตรวจ (${number(suggestions.length + nhsoIssues.length)})`;
   if (!elements.mergeWarnBody) return;
-  elements.mergeWarnBody.innerHTML = `
+  const pairSection = suggestions.length ? `
+    <h3 class="warn-section-title">น่าจะเป็นบิลเดียวกัน ${number(suggestions.length)} คู่</h3>
     <table class="case-seq-table">
       <thead><tr><th>%</th><th>คู่บิล</th><th>เหตุผล</th><th class="act-col">จัดการ</th></tr></thead>
       <tbody>
@@ -3836,12 +3847,29 @@ function renderMergeWarnBody() {
         </tr>`).join("")}
       </tbody>
     </table>
-    <p class="case-seq-hint">เทียบ = เปิดตารางเทียบสองบิล (มีปุ่มรวม/ซ่อนคู่พร้อมเหตุผลในนั้น) · รวม = เข้าขั้นตอนรวมบิล มีสรุปให้ยืนยันก่อนเสมอ</p>
-  `;
+    <p class="case-seq-hint">เทียบ = เปิดตารางเทียบสองบิล (มีปุ่มรวม/ซ่อนคู่พร้อมเหตุผลในนั้น) · รวม = เข้าขั้นตอนรวมบิล มีสรุปให้ยืนยันก่อนเสมอ</p>` : "";
+  const nhsoSection = nhsoIssues.length ? `
+    <h3 class="warn-section-title">สปสช ต้นทุน MLP ไม่ใช่ 0 — ${number(nhsoIssues.length)} บิล
+      <button class="ghost small" type="button" data-nhso-fix-all title="ตั้งต้นทุน MLP = 0 ให้บิลสปสชทั้งหมดที่ผิด">ตั้งต้นทุน MLP = 0 ให้ทั้งหมด</button>
+    </h3>
+    <table class="case-seq-table">
+      <thead><tr><th>ผู้รับบริการ</th><th>ออเดอร์ / ORW</th><th>ต้นทุน MLP</th><th class="act-col">จัดการ</th></tr></thead>
+      <tbody>
+        ${nhsoIssues.map((bill) => `
+        <tr>
+          <td>${htmlEscape(bill.patient || "-")}</td>
+          <td>${htmlEscape(bill.orderId || bill.orw || "-")}</td>
+          <td class="case-seq-code" style="color:#a12626">${money(bill.mlpCost)}</td>
+          <td class="act-col"><button class="ghost small" type="button" data-nhso-open="${htmlEscape(bill.billKey)}" title="เปิดรายละเอียดบิลนี้">แก้เอง</button></td>
+        </tr>`).join("")}
+      </tbody>
+    </table>
+    <p class="case-seq-hint">เคส สปสช ปกติต้นทุน MLP = 0.00 · กด "ตั้งต้นทุน MLP = 0 ให้ทั้งหมด" เพื่อแก้ทีเดียว หรือ "แก้เอง" รายบิลใน drawer</p>` : "";
+  elements.mergeWarnBody.innerHTML = pairSection + nhsoSection;
 }
 
 function openMergeWarnModal() {
-  if (!elements.mergeWarnModal || !state.mergeSuggestions.length) return;
+  if (!elements.mergeWarnModal || warnTotalCount() === 0) return;
   renderMergeWarnBody();
   if (!elements.mergeWarnModal.open) elements.mergeWarnModal.showModal();
 }
@@ -7173,6 +7201,24 @@ elements.mergeWarnModal?.addEventListener("click", (event) => {
   if (event.target === elements.mergeWarnModal) elements.mergeWarnModal.close();
 });
 elements.mergeWarnBody?.addEventListener("click", (event) => {
+  const fixAll = event.target.closest("[data-nhso-fix-all]");
+  if (fixAll) {
+    const issues = nhsoCostIssues();
+    if (!issues.length) return;
+    const keys = new Set(issues.map((bill) => bill.billKey));
+    // applyBulkOverride คาสเคด render ต่อ (รวม renderMergeSuggestions → อัปเดต/ปิด popup เอง)
+    applyBulkOverride(() => ({ mlpCost: 0 }), "ตั้งต้นทุน MLP = 0 (สปสช)", keys);
+    elements.statusText.textContent = `ตั้งต้นทุน MLP = 0 ให้ ${number(keys.size)} บิล สปสช แล้ว`;
+    // drawer เปิดอยู่ = โหลดค่าใหม่
+    if (elements.detailDrawer?.open && state.currentDetailKey) openDetailDrawer(state.currentDetailKey);
+    return;
+  }
+  const openBill = event.target.closest("[data-nhso-open]");
+  if (openBill) {
+    elements.mergeWarnModal?.close();
+    openDetailDrawer(openBill.dataset.nhsoOpen);
+    return;
+  }
   const button = event.target.closest("[data-warn-compare], [data-warn-merge]");
   if (!button) return;
   const isMerge = button.hasAttribute("data-warn-merge");
