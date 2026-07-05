@@ -3860,6 +3860,15 @@ html.dark .profit-breakdown-chip.case-other {
   padding: 0 18px 4px;
 }
 
+/* label/textarea เหตุผลใน modal นี้ไม่มี padding ของ section drawer จึงต้องเว้นขอบเอง */
+#dismissReasonModal .drawer-note {
+  margin: 10px 18px 0;
+}
+
+#dismissReasonModal .import-mode-summary {
+  padding: 0 18px 6px;
+}
+
 .dismiss-reason-chip {
   padding: 5px 12px;
   border: 1px solid rgba(15, 55, 40, 0.16);
