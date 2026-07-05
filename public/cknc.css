@@ -2144,6 +2144,48 @@ html.dark .input-empty-warn {
   border-color: #7a5a1e;
 }
 
+/* ช่องลำดับเคสใน drawer: ซ้ำ = พื้นแดงอ่อน + บรรทัดเตือน + chip โค้ด */
+.case-seq-input-dup-red {
+  background: #fdecec;
+  border-color: #e58a8a;
+  color: #a12626;
+}
+
+html.dark .case-seq-input-dup-red {
+  background: rgba(220, 38, 38, 0.16);
+  border-color: #7a2e2e;
+  color: #f8b4b4;
+}
+
+.case-seq-drawer-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.case-seq-drawer-hint:empty {
+  display: none;
+}
+
+.case-seq-drawer-hint .case-seq-chip {
+  cursor: default;
+}
+
+.case-seq-drawer-warn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #a12626;
+  font-size: 11.5px;
+  font-weight: 800;
+}
+
+html.dark .case-seq-drawer-warn {
+  color: #f8b4b4;
+}
+
 /* การ์ดของ popup ลำดับเคส/เทียบคู่บิล: เต็มกรอบ dialog (import-mode-card จำกัด 520px ทำให้ตารางถูกบีบ) */
 .case-seq-card,
 .suggest-pair-card {

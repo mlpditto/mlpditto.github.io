@@ -134,6 +134,8 @@ const elements = {
   metricProfitBreakdown: $("metricProfitBreakdown"),
   metricSalePeriod: $("metricSalePeriod"),
   metricSaleBreakdown: $("metricSaleBreakdown"),
+  editCaseSeqLabel: $("editCaseSeqLabel"),
+  editCaseSeqHint: $("editCaseSeqHint"),
   drawerTitle: $("drawerTitle"),
   drawerTitleCopy: $("drawerTitleCopy"),
   drawerChecks: $("drawerChecks"),
@@ -3864,7 +3866,7 @@ function openSuggestPairModal(item) {
   const billB = state.bills.find((bill) => bill.billKey === item.bKey);
   if (!billA || !billB || !elements.suggestPairModal) return;
   suggestPairContext = item;
-  elements.suggestPairTitle.textContent = `น่าจะเป็นบิลเดียวกัน (${item.score}%)`;
+  elements.suggestPairTitle.textContent = item.titleText || `น่าจะเป็นบิลเดียวกัน (${item.score}%)`;
   const fields = [
     ["ผู้รับบริการ", (bill) => bill.patient || "-"],
     ["เลขที่ออเดอร์", (bill) => bill.orderId || "-"],
@@ -5580,6 +5582,48 @@ function updateBarEmptyHint() {
   elements.editBarNo.classList.toggle("input-empty-warn", !clean(elements.editBarNo.value));
 }
 
+// ช่องลำดับเคสใน drawer: label บอกเดือน/ปี + chip โค้ดเต็ม + เตือนแดงถ้าลำดับซ้ำกับบิลอื่น (เช็คสดตอนพิมพ์)
+function updateCaseSeqDrawerHint(bill) {
+  const input = elements.editCaseSeq;
+  if (!input) return;
+  const isSeqCase = Boolean(caseSeqNames[bill.caseType] && bill.caseSeqMonth);
+  if (elements.editCaseSeqLabel) {
+    elements.editCaseSeqLabel.textContent = isSeqCase
+      ? `ลำดับเคสของเดือน · ${monthChipLabel(bill.caseSeqMonth)}`
+      : "ลำดับเคสของเดือน";
+  }
+  input.classList.remove("case-seq-input-dup-red");
+  if (!elements.editCaseSeqHint) return;
+  if (!isSeqCase) {
+    elements.editCaseSeqHint.innerHTML = "";
+    return;
+  }
+  const monthNo = Number(bill.caseSeqMonth.split("-")[1]);
+  // เลขที่กำลังจะใช้: พิมพ์ในช่อง = ใช้ตัวนั้น, ว่าง = เลข auto ปัจจุบัน
+  const typed = Math.max(0, Math.round(toNumeric(input.value)));
+  const effectiveSeq = typed > 0 ? typed : (bill.caseSeq || 0);
+  const codeChip = effectiveSeq > 0
+    ? `<span class="case-seq-chip case-${htmlEscape(bill.caseType)}">${htmlEscape(caseSeqCode(bill.caseType, effectiveSeq, monthNo))}</span>`
+    : "";
+  const dups = effectiveSeq > 0
+    ? state.bills.filter((other) => other.billKey !== bill.billKey
+        && other.caseType === bill.caseType
+        && other.caseSeqMonth === bill.caseSeqMonth
+        && other.caseSeq === effectiveSeq)
+    : [];
+  if (dups.length) {
+    input.classList.add("case-seq-input-dup-red");
+    const first = dups[0];
+    const firstLabel = clean(first.orderId || first.orw) || "-";
+    const extra = dups.length > 1 ? ` และอีก ${number(dups.length - 1)} ใบ` : "";
+    elements.editCaseSeqHint.innerHTML = `${codeChip}
+      <span class="case-seq-drawer-warn"><i class="fa-solid fa-triangle-exclamation"></i> ลำดับ #${number(effectiveSeq)} ซ้ำกับ ${htmlEscape(firstLabel)}${extra}</span>
+      <button type="button" class="ghost small" data-caseseq-compare="${htmlEscape(bill.billKey)}" data-caseseq-dup="${htmlEscape(first.billKey)}" data-caseseq-dupcount="${dups.length}">เทียบข้อมูล</button>`;
+  } else {
+    elements.editCaseSeqHint.innerHTML = codeChip;
+  }
+}
+
 function updateEditProfitPreview() {
   if (!elements.editProfit) return;
   const bill = currentDetailBill();
@@ -5633,6 +5677,7 @@ function openDetailDrawer(billKey) {
   if (elements.editCaseSeq) {
     elements.editCaseSeq.value = toNumeric(bill.caseSeqManual) > 0 ? Math.round(toNumeric(bill.caseSeqManual)) : "";
     elements.editCaseSeq.placeholder = bill.caseSeq ? `เว้นว่าง = นับอัตโนมัติ (ตอนนี้ #${number(bill.caseSeq)})` : "เว้นว่าง = นับอัตโนมัติ";
+    updateCaseSeqDrawerHint(bill);
   }
   elements.editClicknicDate.value = formatDisplayDate(bill.clicknicDate);
   elements.editMlpDate.value = formatDisplayDate(bill.mlpDate);
@@ -6761,6 +6806,28 @@ elements.detailDrawer.addEventListener("click", (event) => {
         setTimeout(() => { icon.className = "fa-regular fa-copy"; }, 1200);
       }
     }).catch(() => {});
+    return;
+  }
+  const compareBtn = event.target.closest("[data-caseseq-compare]");
+  if (compareBtn) {
+    const bill = state.bills.find((item) => item.billKey === compareBtn.dataset.caseseqCompare);
+    const dupCount = Number(compareBtn.dataset.caseseqDupcount);
+    if (!bill) return;
+    if (dupCount > 1) {
+      // ซ้ำหลายใบ = เปิดตารางลำดับทั้งเดือน (ไฮไลต์แถวซ้ำอยู่แล้ว)
+      openCaseSeqTable({ dataset: { seqEdit: bill.billKey } });
+      return;
+    }
+    const other = state.bills.find((item) => item.billKey === compareBtn.dataset.caseseqDup);
+    if (!other) return;
+    openSuggestPairModal({
+      aKey: bill.billKey,
+      bKey: other.billKey,
+      aLabel: mergeSuggestBillLabel(bill),
+      bLabel: mergeSuggestBillLabel(other),
+      reasons: [`ลำดับเคส #${number(bill.caseSeq)} ซ้ำกัน`],
+      titleText: `เทียบข้อมูลบิล — ลำดับ #${number(bill.caseSeq)} ซ้ำกัน`,
+    });
   }
 });
 elements.detailDrawer.addEventListener("close", () => {
@@ -6771,6 +6838,10 @@ elements.editSale?.addEventListener("input", updateEditProfitPreview);
 elements.editCost?.addEventListener("input", updateEditProfitPreview);
 elements.editMlpCost?.addEventListener("input", updateEditProfitPreview);
 elements.editBarNo?.addEventListener("input", updateBarEmptyHint);
+elements.editCaseSeq?.addEventListener("input", () => {
+  const bill = currentDetailBill();
+  if (bill) updateCaseSeqDrawerHint(bill);
+});
 if (elements.editBillingStage) {
   elements.editBillingStage.innerHTML = billingStageOptions
     .map(([value, label]) => `<option value="${value}">${label}</option>`)
