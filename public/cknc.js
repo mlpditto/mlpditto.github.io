@@ -1914,7 +1914,10 @@ const cardDetailColumns = [
         ? ` <button class="copy-ref-btn" type="button" data-copy-text="${htmlEscape(clean(main.split(",")[0]))}" title="คัดลอก" aria-label="คัดลอก"><i class="fa-regular fa-copy"></i></button>`
         : "";
       const seqChip = caseSeqChipHtml(bill);
-      return `<span class="ref-main">${htmlEscape(main)}${copyBtn}</span>${sub ? `<span class="ref-sub">${htmlEscape(sub)}</span>` : ""}${seqChip ? `<span class="ref-sub">${seqChip}</span>` : ""}`;
+      const subCopyBtn = sub
+        ? ` <button class="copy-ref-btn" type="button" data-copy-text="${htmlEscape(sub)}" title="คัดลอกเลขที่ออเดอร์" aria-label="คัดลอกเลขที่ออเดอร์"><i class="fa-regular fa-copy"></i></button>`
+        : "";
+      return `<span class="ref-main">${htmlEscape(main)}${copyBtn}</span>${sub ? `<span class="ref-sub">${htmlEscape(sub)}${subCopyBtn}</span>` : ""}${seqChip ? `<span class="ref-sub">${seqChip}</span>` : ""}`;
     },
   },
   { label: "ผู้รับบริการ", col: "col-patient", hideable: true, text: (bill) => bill.patient || "-" },
