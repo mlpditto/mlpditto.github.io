@@ -2523,6 +2523,43 @@ html.dark .case-seq-addbar-chip {
   background: rgba(245, 158, 11, 0.10);
 }
 
+/* chip เลขซ้ำในแถบเตือน — กดเพื่อ jump ไปแถวนั้น */
+.case-seq-dup-warn {
+  flex-wrap: wrap;
+}
+
+.case-seq-dup-chip {
+  padding: 1px 10px;
+  border: 1px solid #e0a94e;
+  border-radius: 999px;
+  background: #fff;
+  color: #92600b;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.case-seq-dup-chip:hover {
+  background: #fff7e6;
+}
+
+html.dark .case-seq-dup-chip {
+  background: rgba(0, 0, 0, 0.2);
+  border-color: #7a5a1e;
+  color: #fbbf24;
+}
+
+/* แฟลชแถวเมื่อ jump มาจาก chip */
+@keyframes caseSeqJump {
+  0%, 55% { box-shadow: inset 0 0 0 2px #f59e0b; }
+  100% { box-shadow: inset 0 0 0 0 transparent; }
+}
+
+.case-seq-table tr.case-seq-row-jump td {
+  animation: caseSeqJump 1.3s ease;
+}
+
 .case-seq-table .case-seq-input-dup {
   border-color: #f59e0b;
   background: var(--amber-soft, #fdf3d8);

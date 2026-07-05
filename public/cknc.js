@@ -3231,7 +3231,7 @@ function renderCaseSeqModal() {
     : allRows;
   elements.caseSeqModalTitle.textContent = `ลำดับเคส${caseSeqNames[caseType]} · ${monthChipLabel(month)} (${number(term ? rows.length : allRows.length)}${term ? ` จาก ${number(allRows.length)}` : ""} เคส)`;
   const dupWarn = dupSeqs.length
-    ? `<div class="case-seq-dup-warn"><i class="fa-solid fa-triangle-exclamation"></i> พบลำดับซ้ำ: ${htmlEscape(dupSeqs.map((seq) => `#${number(seq)}`).join(", "))} — แก้เลขให้ไม่ซ้ำกันก่อนส่งเบิก</div>`
+    ? `<div class="case-seq-dup-warn"><i class="fa-solid fa-triangle-exclamation"></i> <span>พบลำดับซ้ำ — กดเพื่อไปที่รายการ:</span> ${dupSeqs.map((seq) => `<button type="button" class="case-seq-dup-chip" data-dup-seq="${htmlEscape(String(seq))}" title="ไปที่ลำดับ #${number(seq)}">#${number(seq)}</button>`).join(" ")}</div>`
     : "";
   elements.caseSeqModalBody.innerHTML = rows.length ? `
     ${dupWarn}
@@ -3244,7 +3244,7 @@ function renderCaseSeqModal() {
     const barColor = bar ? barColors.get(bar) : "#f59e0b";
     const barTitle = bar ? `ใบวางบิล ${bar}` : "ยังไม่มีใบวางบิล (BAR)";
     const isDup = dupSet.has(item.caseSeq);
-    return `<tr class="${item.billKey === activeKey ? "case-seq-row-active" : ""}${isDup ? " case-seq-row-dup" : ""}">
+    return `<tr data-row-seq="${item.caseSeq}" class="${item.billKey === activeKey ? "case-seq-row-active" : ""}${isDup ? " case-seq-row-dup" : ""}">
             <td class="seq-col"><input type="text" inputmode="numeric" class="inline-cell-input case-seq-input${isDup ? " case-seq-input-dup" : ""}" data-seq-row="${htmlEscape(item.billKey)}" value="${item.caseSeq}" title="${isDup ? `ลำดับ #${number(item.caseSeq)} ซ้ำกับบิลอื่น — แก้ให้ไม่ซ้ำ` : "เลขลำดับเคส — ว่าง = กลับไปนับอัตโนมัติ"}" aria-label="เลขลำดับเคส" /></td>
             <td><span class="case-seq-chip case-${htmlEscape(caseType)} case-seq-bar-chip" style="border-color:${barColor}" title="${htmlEscape(barTitle)}">${htmlEscape(caseSeqCode(caseType, item.caseSeq, monthNo))}${manual ? "*" : ""}</span>${bar ? "" : `<button type="button" class="case-seq-addbar-chip" data-bar-add="${htmlEscape(item.billKey)}" title="ยังไม่มีใบวางบิล (BAR) — กดเพื่อใส่ BAR ให้เคสนี้">+ BAR</button>`}</td>
             <td class="case-seq-date">${htmlEscape(formatDisplayDate(item.clicknicDate || item.mlpDate) || "-")}</td>
@@ -6533,6 +6533,22 @@ elements.caseSeqModalBody?.addEventListener("click", (event) => {
         setTimeout(() => { icon.className = "fa-regular fa-copy"; }, 1200);
       }
     }).catch(() => {});
+    return;
+  }
+  const dupChip = event.target.closest("[data-dup-seq]");
+  if (dupChip) {
+    // กด chip เลขซ้ำ → เลื่อนไปแถวแรกที่ลำดับนั้น + ไฮไลต์ทุกแถวที่ซ้ำเลขเดียวกัน + โฟกัสช่องแก้
+    const seq = dupChip.dataset.dupSeq;
+    const dupRows = elements.caseSeqModalBody.querySelectorAll(`tr[data-row-seq="${CSS.escape(seq)}"]`);
+    if (dupRows.length) {
+      dupRows[0].scrollIntoView({ block: "center", behavior: "smooth" });
+      dupRows.forEach((row) => {
+        row.classList.remove("case-seq-row-jump");
+        void row.offsetWidth; // รีสตาร์ท animation
+        row.classList.add("case-seq-row-jump");
+      });
+      dupRows[0].querySelector("[data-seq-row]")?.focus();
+    }
     return;
   }
   const addBar = event.target.closest("[data-bar-add]");
