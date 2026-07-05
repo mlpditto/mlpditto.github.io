@@ -99,6 +99,15 @@ const elements = {
   quickDateFilters: $("quickDateFilters"),
   mergeAssistant: $("mergeAssistant"),
   cardDetailModal: $("cardDetailModal"),
+  cardDetailBulkBar: $("cardDetailBulkBar"),
+  cardBulkCount: $("cardBulkCount"),
+  cardBulkBillingStage: $("cardBulkBillingStage"),
+  cardBulkCaseType: $("cardBulkCaseType"),
+  cardBulkBarNo: $("cardBulkBarNo"),
+  cardBulkApplyBar: $("cardBulkApplyBar"),
+  cardBulkExclude: $("cardBulkExclude"),
+  cardBulkInclude: $("cardBulkInclude"),
+  cardBulkClear: $("cardBulkClear"),
   cardDetailTitle: $("cardDetailTitle"),
   cardDetailSummary: $("cardDetailSummary"),
   cardDetailBody: $("cardDetailBody"),
@@ -1936,12 +1945,16 @@ function statusBadgesHtml(bill) {
   return badges.join(" ");
 }
 
+// บิลที่ติ๊กเลือกในหน้า Card Detail สำหรับแก้แบบ bulk ในตัว (แยกจาก state.selectedBillKeys ของตารางหลัก)
+const cardBulkSelected = new Set();
+
 const cardDetailColumns = [
   {
     label: "จัดการ",
     col: "col-action",
     cellClass: "card-action-cell",
-    html: (bill) => `<button class="row-action" type="button" data-card-edit-key="${htmlEscape(bill.billKey)}" title="แก้ไข" aria-label="แก้ไข">✎</button>`,
+    headHtml: () => `<input type="checkbox" id="cardSelectAll" aria-label="เลือกทั้งหมด" title="เลือกทั้งหมด" />`,
+    html: (bill) => `<span class="card-action-wrap"><input type="checkbox" class="card-row-pick" data-card-pick="${htmlEscape(bill.billKey)}" ${cardBulkSelected.has(bill.billKey) ? "checked" : ""} aria-label="เลือกบิลนี้" /><button class="row-action" type="button" data-card-edit-key="${htmlEscape(bill.billKey)}" title="แก้ไข" aria-label="แก้ไข">✎</button></span>`,
   },
   {
     label: "บิล / ORW",
@@ -2080,14 +2093,19 @@ function applyCardFilter(config) {
 function openCardDetail(cardKey) {
   const config = cardDetailConfigs[cardKey];
   if (!config || !elements.cardDetailModal) return;
+  const cardChanged = state.currentCardKey !== cardKey;
   state.currentCardKey = cardKey;
+  if (cardChanged) cardBulkSelected.clear();
   const rows = config.rows();
+  // ตัดคีย์ที่เลือกไว้แต่ไม่อยู่ในกลุ่มนี้แล้ว (เช่นเปลี่ยนประเภทเคสแล้วบิลหลุดออกจากการ์ด)
+  const rowKeys = new Set(rows.map((bill) => bill.billKey));
+  [...cardBulkSelected].forEach((key) => { if (!rowKeys.has(key)) cardBulkSelected.delete(key); });
   const shownRows = rows.slice(0, 80);
   const { columns, chips } = visibleCardColumns(shownRows);
   elements.cardDetailTitle.textContent = config.title;
   elements.cardDetailSummary.textContent = `${activePeriodLabel() ? `${activePeriodLabel()} | ` : ""}${summarizeCardRows(rows)}${rows.length > 80 ? ` | แสดง 80 แถวแรก` : ""}`;
   elements.cardDetailHeadRow.innerHTML = columns
-    .map((column) => `<th class="${cardColumnClass(column, false)}">${htmlEscape(column.label)}</th>`)
+    .map((column) => `<th class="${cardColumnClass(column, false)}">${column.headHtml ? column.headHtml() : htmlEscape(column.label)}</th>`)
     .join("");
   elements.cardDetailChips.hidden = !chips.length;
   elements.cardDetailChips.innerHTML = chips.length
@@ -2098,7 +2116,29 @@ function openCardDetail(cardKey) {
     : `<tr><td colspan="${columns.length}" class="empty">ไม่มีข้อมูลในกลุ่มนี้</td></tr>`;
   elements.cardDetailFilterBtn.hidden = !config.apply;
   elements.cardDetailFilterBtn.onclick = () => applyCardFilter(config);
+  renderCardBulkBar();
   if (!elements.cardDetailModal.open) elements.cardDetailModal.showModal();
+}
+
+// แถบแก้ bulk ในหน้า Card Detail — โผล่เมื่อมีบิลติ๊กเลือก
+function renderCardBulkBar() {
+  if (!elements.cardDetailBulkBar) return;
+  const count = cardBulkSelected.size;
+  elements.cardDetailBulkBar.hidden = count === 0;
+  if (elements.cardBulkCount) elements.cardBulkCount.textContent = `เลือก ${number(count)} บิล`;
+  // sync select-all ตามสถานะแถวที่แสดง
+  const picks = elements.cardDetailBody?.querySelectorAll(".card-row-pick") || [];
+  const selectAll = elements.cardDetailBody?.closest(".modal-card")?.querySelector("#cardSelectAll") || document.getElementById("cardSelectAll");
+  if (selectAll && picks.length) {
+    selectAll.checked = [...picks].every((pick) => pick.checked);
+  }
+}
+
+// แก้ bulk จากหน้า Card Detail: apply ผ่าน applyBulkOverride (key set ของ Card Detail) แล้ว refresh
+function applyCardBulk(makeValues, noteLabel) {
+  if (!cardBulkSelected.size) return;
+  applyBulkOverride(makeValues, noteLabel, new Set(cardBulkSelected));
+  refreshCardDetail();
 }
 
 function refreshCardDetail() {
@@ -2108,6 +2148,7 @@ function refreshCardDetail() {
 function closeCardDetail() {
   elements.cardDetailModal?.close();
   state.currentCardKey = "";
+  cardBulkSelected.clear();
 }
 
 function statusCounts() {
@@ -6518,10 +6559,90 @@ document.addEventListener("keydown", (event) => {
 });
 // เปลี่ยนประเภทเคสจากตารางใน Card Detail ได้เลย
 elements.cardDetailModal?.addEventListener("change", (event) => {
+  // ติ๊กเลือกบิลรายแถวในหน้า Card Detail
+  const pick = event.target.closest(".card-row-pick");
+  if (pick) {
+    if (pick.checked) cardBulkSelected.add(pick.dataset.cardPick);
+    else cardBulkSelected.delete(pick.dataset.cardPick);
+    pick.closest("tr")?.classList.toggle("row-selected", pick.checked);
+    renderCardBulkBar();
+    return;
+  }
+  // เลือกทั้งหมดในกลุ่ม
+  if (event.target.id === "cardSelectAll") {
+    const checked = event.target.checked;
+    elements.cardDetailBody.querySelectorAll(".card-row-pick").forEach((box) => {
+      box.checked = checked;
+      if (checked) cardBulkSelected.add(box.dataset.cardPick);
+      else cardBulkSelected.delete(box.dataset.cardPick);
+      box.closest("tr")?.classList.toggle("row-selected", checked);
+    });
+    renderCardBulkBar();
+    return;
+  }
   const select = event.target.closest("[data-card-case-key]");
   if (!select) return;
   quickUpdateCaseType(select.dataset.cardCaseKey, select.value);
   refreshCardDetail();
+});
+// Card Detail bulk bar: ตั้งประเภทเคส / งานวางบิล / ใส่ BAR / Exclude ให้บิลที่ติ๊ก (reuse applyBulkOverride)
+if (elements.cardBulkBillingStage) {
+  elements.cardBulkBillingStage.innerHTML = `<option value="">งานวางบิล…</option>${billingStageOptions
+    .map(([value, label]) => `<option value="${value}">${label}</option>`).join("")}`;
+}
+if (elements.cardBulkCaseType) {
+  elements.cardBulkCaseType.innerHTML = `<option value="">ประเภทเคส…</option>${caseTypeOptions
+    .map(([value, label]) => `<option value="${value}">${label}</option>`).join("")}`;
+}
+elements.cardBulkBillingStage?.addEventListener("change", () => {
+  const value = elements.cardBulkBillingStage.value;
+  if (!value) return;
+  applyCardBulk(() => ({ billingStage: value, billingStageSource: "manual" }), `งานวางบิล → ${billingStageLabel(value)}`);
+  elements.cardBulkBillingStage.value = "";
+});
+elements.cardBulkCaseType?.addEventListener("change", () => {
+  const value = elements.cardBulkCaseType.value;
+  if (!value) return;
+  applyCardBulk((bill, existing) => {
+    const values = { caseType: value, caseTypeSource: "manual" };
+    if ((existing.values?.billingStageSource || bill.billingStageSource) !== "manual") {
+      const stage = deriveBillingStage(bill.status, value, bill.barNo, bill.creditNos);
+      values.billingStage = stage.billingStage;
+      values.billingStageSource = stage.billingStageSource;
+    }
+    return values;
+  }, `ประเภทเคส → ${caseTypeLabel(value)}`);
+  elements.cardBulkCaseType.value = "";
+});
+function applyCardBulkBarNo() {
+  const barValue = clean(elements.cardBulkBarNo?.value);
+  if (!barValue) {
+    elements.cardBulkBarNo?.focus();
+    return;
+  }
+  applyCardBulk((bill, existing) => {
+    const values = { barNo: barValue };
+    if ((existing.values?.billingStageSource || bill.billingStageSource) !== "manual") {
+      const stage = deriveBillingStage(bill.status, bill.caseType || "unknown", barValue, existing.values?.creditNos || bill.creditNos);
+      values.billingStage = stage.billingStage;
+      values.billingStageSource = stage.billingStageSource;
+    }
+    return values;
+  }, `ใส่ใบวางบิล ${barValue}`);
+  if (elements.cardBulkBarNo) elements.cardBulkBarNo.value = "";
+}
+elements.cardBulkApplyBar?.addEventListener("click", applyCardBulkBarNo);
+elements.cardBulkBarNo?.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  applyCardBulkBarNo();
+});
+elements.cardBulkExclude?.addEventListener("click", () => applyCardBulk(() => ({ excluded: true }), "Exclude"));
+elements.cardBulkInclude?.addEventListener("click", () => applyCardBulk(() => ({ excluded: false }), "ยกเลิก Exclude"));
+elements.cardBulkClear?.addEventListener("click", () => {
+  cardBulkSelected.clear();
+  elements.cardDetailBody.querySelectorAll(".card-row-pick").forEach((box) => { box.checked = false; box.closest("tr")?.classList.remove("row-selected"); });
+  renderCardBulkBar();
 });
 elements.caseSeqModalClose?.addEventListener("click", () => elements.caseSeqModal?.close());
 elements.caseSeqModal?.addEventListener("click", (event) => {

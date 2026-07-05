@@ -776,6 +776,37 @@ html.dark .gap-chip.danger {
   text-align: center;
 }
 
+/* คอลัมน์จัดการ Card Detail: checkbox เลือก bulk + ปุ่มแก้ */
+.card-action-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.card-detail-table .col-action {
+  width: 74px;
+}
+
+.card-detail-table tr.row-selected td {
+  background: rgba(0, 177, 79, 0.08);
+}
+
+.card-detail-table tr.row-selected td.col-action {
+  background: #e7f6ee;
+}
+
+html.dark .card-detail-table tr.row-selected td {
+  background: rgba(0, 177, 79, 0.14);
+}
+
+html.dark .card-detail-table tr.row-selected td.col-action {
+  background: #17362a;
+}
+
+.card-detail-bulk-bar {
+  margin: 4px 0 10px;
+}
+
 .metric span {
   display: block;
   margin-bottom: 8px;
