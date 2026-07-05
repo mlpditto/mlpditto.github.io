@@ -703,7 +703,7 @@ html.dark .gap-chip.danger {
 }
 
 .card-detail-table .col-status { width: 108px; }
-.card-detail-table .col-ref { width: 152px; }
+.card-detail-table .col-ref { width: 210px; }
 .card-detail-table td.col-ref { padding-right: 14px; }
 .card-detail-table .col-patient { padding-left: 10px; }
 .card-detail-table .col-case { width: 96px; }

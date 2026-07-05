@@ -3853,7 +3853,7 @@ function renderMergeWarnBody() {
     <p class="case-seq-hint">เทียบ = เปิดตารางเทียบสองบิล (มีปุ่มรวม/ซ่อนคู่พร้อมเหตุผลในนั้น) · รวม = เข้าขั้นตอนรวมบิล มีสรุปให้ยืนยันก่อนเสมอ</p>` : "";
   const nhsoSection = nhsoIssues.length ? `
     <h3 class="warn-section-title">สปสช ต้นทุน MLP ไม่ใช่ 0 — ${number(nhsoIssues.length)} บิล
-      <button class="ghost small" type="button" data-nhso-fix-all title="ตั้งต้นทุน MLP = 0 ให้บิลสปสชทั้งหมดที่ผิด">ตั้งต้นทุน MLP = 0 ให้ทั้งหมด</button>
+      <button class="ghost small" type="button" data-nhso-fix-all title="ตั้งต้นทุน MLP = 0 ให้บิลสปสชทั้งหมดที่ผิด">Set MLP cost 0</button>
     </h3>
     <table class="case-seq-table">
       <thead><tr><th>ผู้รับบริการ</th><th>ออเดอร์ / ORW</th><th>ต้นทุน MLP</th><th class="act-col">จัดการ</th></tr></thead>
@@ -3867,7 +3867,7 @@ function renderMergeWarnBody() {
         </tr>`).join("")}
       </tbody>
     </table>
-    <p class="case-seq-hint">เคส สปสช ปกติต้นทุน MLP = 0.00 · กด "ตั้งต้นทุน MLP = 0 ให้ทั้งหมด" เพื่อแก้ทีเดียว หรือ "แก้เอง" รายบิลใน drawer</p>` : "";
+    <p class="case-seq-hint">เคส สปสช ปกติต้นทุน MLP = 0.00 · กด "Set MLP cost 0" เพื่อแก้ทีเดียว หรือปุ่มดินสอเพื่อแก้รายบิลใน drawer</p>` : "";
   elements.mergeWarnBody.innerHTML = pairSection + nhsoSection;
 }
 
