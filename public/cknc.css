@@ -2044,6 +2044,74 @@ button.ghost.danger:hover {
   width: min(680px, calc(100vw - 28px));
 }
 
+#barPickerModal {
+  width: min(720px, calc(100vw - 28px));
+}
+
+.bar-picker-top {
+  display: grid;
+  gap: 10px;
+  padding: 4px 18px 0;
+}
+
+.bar-picker-field {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+.bar-picker-field input {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.bar-picker-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.bar-picker-controls .case-seq-search {
+  flex: 1;
+  min-width: 200px;
+  margin: 0;
+}
+
+.bar-picker-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.bar-pick-nobar {
+  color: #b45309;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+html.dark .bar-pick-nobar {
+  color: #fbbf24;
+}
+
+.bar-field-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bar-field-row input {
+  flex: 1;
+  min-width: 0;
+}
+
 #suggestPairModal {
   width: min(760px, calc(100vw - 28px));
 }

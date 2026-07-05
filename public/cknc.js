@@ -210,6 +210,16 @@ const elements = {
   cancelBulkMoney: $("cancelBulkMoney"),
   applyBulkMoney: $("applyBulkMoney"),
   bulkApplyBarNo: $("bulkApplyBarNo"),
+  bulkBarPickerBtn: $("bulkBarPickerBtn"),
+  editBarPickerBtn: $("editBarPickerBtn"),
+  barPickerModal: $("barPickerModal"),
+  barPickerInput: $("barPickerInput"),
+  barPickerSearch: $("barPickerSearch"),
+  barPickerShowAll: $("barPickerShowAll"),
+  barPickerBody: $("barPickerBody"),
+  barPickerClose: $("barPickerClose"),
+  barPickerCancel: $("barPickerCancel"),
+  barPickerApply: $("barPickerApply"),
   bulkMergeBills: $("bulkMergeBills"),
   bulkDeleteBills: $("bulkDeleteBills"),
   bulkExclude: $("bulkExclude"),
@@ -2412,8 +2422,9 @@ function updateBulkBar() {
 }
 
 // แก้บิลที่ติ๊กเลือกทั้งชุดในครั้งเดียว — makeValues(bill, existingOverride) คืนฟิลด์ที่จะ override
-function applyBulkOverride(makeValues, noteLabel) {
-  const bills = state.bills.filter((bill) => state.selectedBillKeys.has(bill.billKey));
+function applyBulkOverride(makeValues, noteLabel, keySet) {
+  const keys = keySet || state.selectedBillKeys;
+  const bills = state.bills.filter((bill) => keys.has(bill.billKey));
   if (!bills.length) return;
   bills.forEach((bill) => {
     const existing = state.billOverrides[bill.billKey] || {};
@@ -6912,6 +6923,135 @@ elements.bulkBarNo?.addEventListener("keydown", (event) => {
   if (event.key !== "Enter") return;
   event.preventDefault();
   applyBulkBarNo();
+});
+
+// ปุ่มลัด "ใส่ BAR ให้หลายบิล" — พิมพ์ BAR ครั้งเดียว แล้วติ๊กเลือกบิล (ตาม AR) ในตัว modal
+// default: โชว์เฉพาะบิลที่มี AR แต่ยังไม่มี BAR (มี toggle แสดงทุกบิล)
+const barPickerSelected = new Set();
+
+function openBarPicker(prefillBar) {
+  if (!elements.barPickerModal) return;
+  barPickerSelected.clear();
+  if (elements.barPickerInput) elements.barPickerInput.value = clean(prefillBar);
+  if (elements.barPickerSearch) elements.barPickerSearch.value = "";
+  if (elements.barPickerShowAll) elements.barPickerShowAll.checked = false;
+  renderBarPicker();
+  if (!elements.barPickerModal.open) elements.barPickerModal.showModal();
+  elements.barPickerInput?.focus();
+}
+
+function barPickerCandidates() {
+  const showAll = Boolean(elements.barPickerShowAll?.checked);
+  const term = clean(elements.barPickerSearch?.value).toLowerCase();
+  return state.bills
+    .filter((bill) => {
+      if (bill.excluded) return false;
+      // default = เฉพาะบิลที่มีเลขเครดิต (AR) แต่ยังไม่มี BAR
+      if (!showAll && (!clean(bill.creditNos) || clean(bill.barNo))) return false;
+      if (term) {
+        const hay = [bill.patient, bill.creditNos, bill.orderId, bill.orw].map(clean).join(" ").toLowerCase();
+        if (!hay.includes(term)) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => dateKey(a.clicknicDate || a.mlpDate).localeCompare(dateKey(b.clicknicDate || b.mlpDate))
+      || clean(a.orderId || a.orw).localeCompare(clean(b.orderId || b.orw)));
+}
+
+function updateBarPickerApplyBtn() {
+  if (!elements.barPickerApply) return;
+  const n = barPickerSelected.size;
+  elements.barPickerApply.textContent = `ใส่ BAR ให้ ${number(n)} บิล`;
+  elements.barPickerApply.disabled = n === 0 || !clean(elements.barPickerInput?.value);
+}
+
+function renderBarPicker() {
+  if (!elements.barPickerBody) return;
+  const rows = barPickerCandidates();
+  const allChecked = rows.length > 0 && rows.every((bill) => barPickerSelected.has(bill.billKey));
+  const term = clean(elements.barPickerSearch?.value);
+  elements.barPickerBody.innerHTML = rows.length ? `
+    <table class="case-seq-table">
+      <thead><tr>
+        <th class="seq-col"><input type="checkbox" data-bar-pick-all ${allChecked ? "checked" : ""} aria-label="เลือกทั้งหมดในรายการ" /></th>
+        <th>ผู้รับบริการ</th><th>เลขที่เครดิต (AR)</th><th>ออเดอร์ / ORW</th><th>วันที่</th><th>BAR เดิม</th>
+      </tr></thead>
+      <tbody>
+        ${rows.map((bill) => `
+        <tr class="${barPickerSelected.has(bill.billKey) ? "case-seq-row-active" : ""}">
+          <td class="seq-col"><input type="checkbox" data-bar-pick="${htmlEscape(bill.billKey)}" ${barPickerSelected.has(bill.billKey) ? "checked" : ""} aria-label="เลือกบิลนี้" /></td>
+          <td>${htmlEscape(bill.patient || "-")}</td>
+          <td class="case-seq-code">${htmlEscape(bill.creditNos || "-")}</td>
+          <td>${htmlEscape(bill.orderId || bill.orw || "-")}</td>
+          <td class="case-seq-date">${htmlEscape(formatDisplayDate(bill.clicknicDate || bill.mlpDate) || "-")}</td>
+          <td>${clean(bill.barNo) ? `<span class="case-seq-chip case-${htmlEscape(bill.caseType || "unknown")}">${htmlEscape(bill.barNo)}</span>` : '<span class="bar-pick-nobar">— ยังไม่มี</span>'}</td>
+        </tr>`).join("")}
+      </tbody>
+    </table>
+    <p class="case-seq-hint">ติ๊กเลือกบิลที่ต้องใส่ BAR นี้ · BAR+AR ครบ = สถานะเปลี่ยนเป็น "วางบิลแล้ว" · แก้แล้วลง audit trail</p>
+  ` : `<p class="case-seq-hint">${term ? "ไม่พบบิลที่ตรงกับคำค้นหา" : "ไม่มีบิลที่มี AR แต่ยังไม่มี BAR — ติ๊ก \"แสดงทุกบิล\" เพื่อดูทั้งหมด"}</p>`;
+  updateBarPickerApplyBtn();
+}
+
+function applyBarPickerSelection() {
+  const bar = clean(elements.barPickerInput?.value);
+  if (!bar) {
+    elements.barPickerInput?.focus();
+    return;
+  }
+  if (!barPickerSelected.size) return;
+  const keys = new Set(barPickerSelected);
+  applyBulkOverride((bill, existing) => {
+    const values = { barNo: bar };
+    if ((existing.values?.billingStageSource || bill.billingStageSource) !== "manual") {
+      const stage = deriveBillingStage(bill.status, bill.caseType || "unknown", bar, existing.values?.creditNos || bill.creditNos);
+      values.billingStage = stage.billingStage;
+      values.billingStageSource = stage.billingStageSource;
+    }
+    return values;
+  }, `ใส่ใบวางบิล ${bar}`, keys);
+  const count = keys.size;
+  elements.barPickerModal?.close();
+  elements.statusText.textContent = `ใส่ใบวางบิล ${bar} ให้ ${number(count)} บิลแล้ว`;
+  // drawer เปิดอยู่ = โหลดค่าใหม่ (BAR/สถานะอาจเปลี่ยน)
+  if (elements.detailDrawer?.open && state.currentDetailKey) openDetailDrawer(state.currentDetailKey);
+}
+
+elements.bulkBarPickerBtn?.addEventListener("click", () => openBarPicker(clean(elements.bulkBarNo?.value)));
+elements.editBarPickerBtn?.addEventListener("click", () => openBarPicker(clean(elements.editBarNo?.value)));
+elements.barPickerClose?.addEventListener("click", () => elements.barPickerModal?.close());
+elements.barPickerCancel?.addEventListener("click", () => elements.barPickerModal?.close());
+elements.barPickerModal?.addEventListener("click", (event) => {
+  if (event.target === elements.barPickerModal) elements.barPickerModal.close();
+});
+elements.barPickerInput?.addEventListener("input", updateBarPickerApplyBtn);
+elements.barPickerInput?.addEventListener("keydown", (event) => { if (event.key === "Enter") event.preventDefault(); });
+elements.barPickerSearch?.addEventListener("input", renderBarPicker);
+elements.barPickerSearch?.addEventListener("keydown", (event) => { if (event.key === "Enter") event.preventDefault(); });
+elements.barPickerShowAll?.addEventListener("change", renderBarPicker);
+elements.barPickerApply?.addEventListener("click", applyBarPickerSelection);
+elements.barPickerBody?.addEventListener("change", (event) => {
+  const all = event.target.closest("[data-bar-pick-all]");
+  if (all) {
+    const keys = barPickerCandidates().map((bill) => bill.billKey);
+    if (all.checked) keys.forEach((key) => barPickerSelected.add(key));
+    else keys.forEach((key) => barPickerSelected.delete(key));
+    renderBarPicker();
+    return;
+  }
+  const pick = event.target.closest("[data-bar-pick]");
+  if (pick) {
+    if (pick.checked) barPickerSelected.add(pick.dataset.barPick);
+    else barPickerSelected.delete(pick.dataset.barPick);
+    // อัปเดต highlight แถว + ปุ่ม โดยไม่ re-render ทั้งตาราง (กันโฟกัส/เลื่อนกระตุก)
+    pick.closest("tr")?.classList.toggle("case-seq-row-active", pick.checked);
+    const allBox = elements.barPickerBody.querySelector("[data-bar-pick-all]");
+    if (allBox) {
+      const rows = barPickerCandidates();
+      allBox.checked = rows.length > 0 && rows.every((bill) => barPickerSelected.has(bill.billKey));
+    }
+    updateBarPickerApplyBtn();
+  }
 });
 // แก้เงินแบบกลุ่ม: ยอดขาย + ต้นทุน 3 โหมด (ค่าคงที่ / % ของยอดขาย / กำไรคงที่)
 function bulkMoneyInputs() {

@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="./cknc.css?v=20260706210000" />
+    <link rel="stylesheet" href="./cknc.css?v=20260706220000" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -360,6 +360,7 @@
           <span class="bulk-bar-field">
             <input id="bulkBarNo" type="text" placeholder="BAR-..." aria-label="เลขใบวางบิล (BAR)" />
             <button id="bulkApplyBarNo" class="ghost small" type="button">ใส่ BAR</button>
+            <button id="bulkBarPickerBtn" class="ghost small" type="button" title="เปิดตัวเลือกบิลตาม AR (ไม่ต้องติ๊กในตาราง)">เลือกหลายบิล…</button>
           </span>
           <button id="bulkMoneyBtn" class="ghost small" type="button" title="แก้ยอดขาย/ต้นทุนของบิลที่เลือกพร้อมกัน">แก้เงิน</button>
           <button id="bulkMergeBills" class="ghost small" type="button">รวมบิล</button>
@@ -677,6 +678,36 @@
       </form>
     </dialog>
 
+    <dialog id="barPickerModal" class="clipboard-modal">
+      <form method="dialog" class="clipboard-card case-seq-card">
+        <div class="modal-head">
+          <div>
+            <p class="eyebrow">ใส่ BAR</p>
+            <h2>ใส่ใบวางบิล (BAR) ให้หลายบิล</h2>
+          </div>
+          <button id="barPickerClose" class="icon-button" type="button" aria-label="ปิด">×</button>
+        </div>
+        <div class="bar-picker-top">
+          <label class="bar-picker-field">
+            เลขใบวางบิล (BAR) — พิมพ์ครั้งเดียว
+            <input id="barPickerInput" type="text" placeholder="BAR-..." autocomplete="off" />
+          </label>
+          <div class="bar-picker-controls">
+            <div class="case-seq-search">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input id="barPickerSearch" type="text" placeholder="ค้นหา ผู้รับบริการ / AR / ออเดอร์" autocomplete="off" />
+            </div>
+            <label class="bar-picker-toggle"><input id="barPickerShowAll" type="checkbox" /> แสดงทุกบิล</label>
+          </div>
+        </div>
+        <div id="barPickerBody" class="case-seq-modal-body"></div>
+        <div class="modal-actions">
+          <button id="barPickerCancel" class="ghost" type="button">ยกเลิก</button>
+          <button id="barPickerApply" class="primary" type="button" disabled>ใส่ BAR ให้ 0 บิล</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog id="bulkMoneyModal" class="clipboard-modal">
       <form method="dialog" class="clipboard-card bulk-money-card">
         <div class="modal-head">
@@ -838,7 +869,10 @@
                 </label>
                 <label>
                   ใบวางบิล (BAR)
-                  <input id="editBarNo" type="text" placeholder="BAR-..." />
+                  <span class="bar-field-row">
+                    <input id="editBarNo" type="text" placeholder="BAR-..." />
+                    <button id="editBarPickerBtn" class="ghost small" type="button" title="ใส่ BAR นี้ให้หลายบิล (เลือกตาม AR)">+ หลายบิล</button>
+                  </span>
                 </label>
                 <label>
                   เลขที่เครดิต (AR)
@@ -939,7 +973,7 @@
       </div>
     </dialog>
 
-    <script src="./cknc.js?v=20260706210000"></script>
+    <script src="./cknc.js?v=20260706220000"></script>
     <script>
       (function () {
         const btn = document.getElementById("themeToggleBtn");
