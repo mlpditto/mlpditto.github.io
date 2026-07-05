@@ -724,13 +724,35 @@ function displayBillingNo(bill) {
   return clean(bill.barNo) || clean(bill.billingNo);
 }
 
-function billRefLine(bill) {
-  const parts = [bill.orw || "ORW -"];
-  if (clean(bill.barNo)) parts.push(`ใบวางบิล ${bill.barNo}`);
-  if (clean(bill.creditNos)) parts.push(`เครดิต ${bill.creditNos}`);
-  // snapshot เก่าไม่มี barNo/creditNos: แสดง billingNo เดิมไว้ก่อน
-  if (!clean(bill.barNo) && !clean(bill.creditNos) && clean(bill.billingNo)) parts.push(`ใบวางบิล ${bill.billingNo}`);
-  return parts.join(" · ");
+// จำนวนเลขเครดิต (AR) ทั้งหมดที่เกาะ BAR เดียวกัน — นับข้ามทุกบิลที่ไม่ Exclude
+function barCreditCountMap() {
+  const map = new Map();
+  state.bills.forEach((bill) => {
+    if (bill.excluded) return;
+    const bars = clean(bill.barNo).split(",").map(clean).filter(Boolean);
+    if (!bars.length) return;
+    const credits = clean(bill.creditNos).split(",").map(clean).filter(Boolean);
+    bars.forEach((bar) => {
+      if (!map.has(bar)) map.set(bar, new Set());
+      credits.forEach((credit) => map.get(bar).add(credit));
+    });
+  });
+  return map;
+}
+
+// บรรทัดอ้างอิงใต้ ORW: เครดิต (AR) ก่อน แล้ว ใบวางบิล (BAR) พร้อมจำนวนเครดิตที่เกาะ BAR เดียวกัน
+function billRefLinesHtml(bill, barCredits) {
+  const lines = [];
+  if (clean(bill.creditNos)) lines.push(`เครดิต ${bill.creditNos}`);
+  if (clean(bill.barNo)) {
+    const bars = clean(bill.barNo).split(",").map(clean).filter(Boolean);
+    const count = bars.reduce((sum, bar) => sum + (barCredits?.get(bar)?.size || 0), 0);
+    lines.push(`ใบวางบิล ${bill.barNo}${count ? ` (${number(count)} เครดิต)` : ""}`);
+  } else if (!clean(bill.creditNos) && clean(bill.billingNo)) {
+    // snapshot เก่าไม่มี barNo/creditNos: แสดง billingNo เดิมไว้ก่อน
+    lines.push(`ใบวางบิล ${bill.billingNo}`);
+  }
+  return lines.map((line) => `<span class="bill-ref">${htmlEscape(line)}</span>`).join("");
 }
 
 function deriveBillingStage(status, caseType, barNo, creditNos) {
@@ -2243,6 +2265,7 @@ function renderTable() {
     return;
   }
 
+  const barCredits = barCreditCountMap();
   elements.billTableBody.innerHTML = rows.map((bill) => {
     return `
     <tr class="${bill.excluded ? "row-excluded" : (bill.billingStage || "") === "paid" ? "row-paid" : ""}${wasJustEdited(bill) ? " row-flash" : ""}">
@@ -2258,7 +2281,8 @@ function renderTable() {
           <button class="bill-analyze-btn" type="button" data-paste-analyze="${htmlEscape(bill.billKey)}" title="แก้ไขจากข้อความ paste (วิเคราะห์อัตโนมัติ)" aria-label="แก้ไขจากข้อความ paste"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
         </span>
         <span class="bill-ref">${bill.orderId ? `${bill.orderId} <button class="copy-ref-btn" type="button" data-copy-text="${htmlEscape(bill.orderId)}" title="คัดลอกเลขที่ออเดอร์" aria-label="คัดลอกเลขที่ออเดอร์"><i class="fa-regular fa-copy"></i></button>` : "-"}</span>
-        <span class="bill-ref">${htmlEscape(billRefLine(bill))}${clean(bill.orw) ? ` <button class="copy-ref-btn" type="button" data-copy-text="${htmlEscape(clean(bill.orw.split(",")[0]))}" title="คัดลอก ORW" aria-label="คัดลอก ORW"><i class="fa-regular fa-copy"></i></button>` : ""}${caseSeqChipHtml(bill) ? ` ${caseSeqChipHtml(bill)}` : ""}</span>
+        <span class="bill-ref">${htmlEscape(bill.orw || "ORW -")}${clean(bill.orw) ? ` <button class="copy-ref-btn" type="button" data-copy-text="${htmlEscape(clean(bill.orw.split(",")[0]))}" title="คัดลอก ORW" aria-label="คัดลอก ORW"><i class="fa-regular fa-copy"></i></button>` : ""}${caseSeqChipHtml(bill) ? ` ${caseSeqChipHtml(bill)}` : ""}</span>
+        ${billRefLinesHtml(bill, barCredits)}
         ${bill.refId || bill.phone ? `<span class="bill-ref bill-contact">${htmlEscape([bill.refId, bill.phone].filter(Boolean).join(" · "))}</span>` : ""}
       </td>
       <td class="stack-cell">
