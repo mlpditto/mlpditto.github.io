@@ -2566,6 +2566,16 @@ html.dark .merge-suggest-score {
   color: var(--green-dark);
 }
 
+.drawer-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.drawer-title-row .copy-ref-btn {
+  font-size: 14px;
+}
+
 @keyframes rowFlash {
   0% { background-color: rgba(0, 177, 79, 0.24); }
   100% { background-color: transparent; }

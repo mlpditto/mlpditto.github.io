@@ -131,6 +131,7 @@ const elements = {
   detailDrawer: $("detailDrawer"),
   closeDetailDrawer: $("closeDetailDrawer"),
   drawerTitle: $("drawerTitle"),
+  drawerTitleCopy: $("drawerTitleCopy"),
   drawerChecks: $("drawerChecks"),
   drawerMedicines: $("drawerMedicines"),
   drawerAddMedicineBtn: $("drawerAddMedicineBtn"),
@@ -5534,7 +5535,13 @@ function openDetailDrawer(billKey) {
   const bill = state.bills.find((item) => item.billKey === billKey);
   if (!bill) return;
   state.currentDetailKey = billKey;
-  elements.drawerTitle.textContent = bill.orderId || bill.orw || bill.billingNo || "รายละเอียดบิล";
+  const drawerTitleText = bill.orderId || bill.orw || bill.billingNo || "รายละเอียดบิล";
+  elements.drawerTitle.textContent = drawerTitleText;
+  if (elements.drawerTitleCopy) {
+    const copyable = clean(bill.orderId) || clean(bill.orw) || clean(bill.billingNo);
+    elements.drawerTitleCopy.hidden = !copyable;
+    elements.drawerTitleCopy.dataset.copyText = copyable;
+  }
   const drawerIssues = bill.validationIssues || [];
   elements.drawerChecks.innerHTML = `
     ${statusBadgesHtml(bill)}
@@ -6669,6 +6676,16 @@ elements.editBillingStageChips?.addEventListener("click", (event) => {
 elements.closeDetailDrawer.addEventListener("click", closeDetailDrawer);
 elements.detailDrawer.addEventListener("click", (event) => {
   if (event.target === elements.detailDrawer) closeDetailDrawer();
+  const copyBtn = event.target.closest("[data-copy-text]");
+  if (copyBtn) {
+    navigator.clipboard?.writeText(copyBtn.dataset.copyText).then(() => {
+      const icon = copyBtn.querySelector("i");
+      if (icon) {
+        icon.className = "fa-solid fa-check";
+        setTimeout(() => { icon.className = "fa-regular fa-copy"; }, 1200);
+      }
+    }).catch(() => {});
+  }
 });
 elements.detailDrawer.addEventListener("close", () => {
   state.currentDetailKey = "";
