@@ -770,6 +770,11 @@ button:not(:disabled):hover {
   font-weight: 800;
 }
 
+/* แท็บค่า 0 ถูกซ่อน — ต้องเจาะจงเพราะ display ของ .tab-button ทับ [hidden] ปกติ */
+.tab-button[hidden] {
+  display: none;
+}
+
 .tab-button span {
   display: inline-flex;
   align-items: center;
