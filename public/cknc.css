@@ -3694,6 +3694,75 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
+.metric-period {
+  font-style: normal;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.profit-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin-top: 6px;
+}
+
+.profit-breakdown:empty {
+  display: none;
+}
+
+.profit-breakdown-chip {
+  padding: 1px 8px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.profit-breakdown-chip em {
+  font-style: normal;
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+.profit-breakdown-chip.case-nhso {
+  border-color: #b9d0ee;
+  background: #e8f0fb;
+  color: #1a4f9c;
+}
+
+.profit-breakdown-chip.case-insurance {
+  border-color: #d5c3f2;
+  background: #f4eefc;
+  color: #6d28a8;
+}
+
+.profit-breakdown-chip.case-other {
+  border-color: #d8dde3;
+  background: #f6f8fa;
+  color: #475569;
+}
+
+html.dark .profit-breakdown-chip.case-nhso {
+  background: rgba(59, 130, 246, 0.18);
+  border-color: #2f4f7d;
+  color: #93c5fd;
+}
+
+html.dark .profit-breakdown-chip.case-insurance {
+  background: rgba(147, 51, 234, 0.2);
+  border-color: #5b3a86;
+  color: #d8b4fe;
+}
+
+html.dark .profit-breakdown-chip.case-other {
+  background: rgba(148, 163, 184, 0.16);
+  border-color: #475569;
+  color: #cbd5e1;
+}
+
 /* การ์ดเล็กชุดเดียว: หน้าตาเดียวกับการ์ด KPI แต่ย่อส่วน เรียงต่อกันแถวเดียว (ห่อบรรทัดได้) */
 .metric-mini-row {
   display: flex;
