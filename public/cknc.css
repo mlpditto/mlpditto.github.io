@@ -2214,6 +2214,11 @@ html.dark .input-empty-warn {
   padding: 2px 9px;
 }
 
+/* ขอบ chip บอกกลุ่ม BAR — สีมาจาก inline style, ทำขอบหนาให้เห็นชัด */
+.case-seq-table .case-seq-chip.case-seq-bar-chip {
+  border-width: 2px;
+}
+
 .case-seq-date {
   color: var(--muted);
   white-space: nowrap;

@@ -3158,6 +3158,9 @@ function openCaseSeqTable(chip) {
   if (elements.caseSeqModal && !elements.caseSeqModal.open) elements.caseSeqModal.showModal();
 }
 
+// สีขอบ chip ตามกลุ่ม BAR — ใบวางบิลเดียวกันได้สีเดียวกัน (ส้มสงวนไว้ให้ "ยังไม่มี BAR")
+const caseSeqBarPalette = ["#15803d", "#7c3aed", "#0284c7", "#db2777", "#0d9488", "#4338ca", "#b91c1c", "#475569"];
+
 function renderCaseSeqModal() {
   if (!caseSeqModalContext || !elements.caseSeqModal) return;
   const { caseType, month, activeKey } = caseSeqModalContext;
@@ -3165,6 +3168,11 @@ function renderCaseSeqModal() {
     .filter((item) => item.caseType === caseType && item.caseSeqMonth === month && item.caseSeq)
     .sort((a, b) => a.caseSeq - b.caseSeq || caseSeqDate(a).localeCompare(caseSeqDate(b)));
   const monthNo = Number(month.split("-")[1]);
+  const barColors = new Map();
+  rows.forEach((item) => {
+    const bar = clean(item.barNo);
+    if (bar && !barColors.has(bar)) barColors.set(bar, caseSeqBarPalette[barColors.size % caseSeqBarPalette.length]);
+  });
   elements.caseSeqModalTitle.textContent = `ลำดับเคส${caseSeqNames[caseType]} · ${monthChipLabel(month)} (${number(rows.length)} เคส)`;
   elements.caseSeqModalBody.innerHTML = rows.length ? `
     <table class="case-seq-table">
@@ -3172,9 +3180,12 @@ function renderCaseSeqModal() {
       <tbody>
         ${rows.map((item) => {
     const manual = toNumeric(item.caseSeqManual) > 0;
+    const bar = clean(item.barNo);
+    const barColor = bar ? barColors.get(bar) : "#f59e0b";
+    const barTitle = bar ? `ใบวางบิล ${bar}` : "ยังไม่มีใบวางบิล (BAR)";
     return `<tr class="${item.billKey === activeKey ? "case-seq-row-active" : ""}">
             <td class="seq-col"><input type="text" inputmode="numeric" class="inline-cell-input case-seq-input" data-seq-row="${htmlEscape(item.billKey)}" value="${item.caseSeq}" title="เลขลำดับเคส — ว่าง = กลับไปนับอัตโนมัติ" aria-label="เลขลำดับเคส" /></td>
-            <td><span class="case-seq-chip case-${htmlEscape(caseType)}">${htmlEscape(caseSeqCode(caseType, item.caseSeq, monthNo))}${manual ? "*" : ""}</span></td>
+            <td><span class="case-seq-chip case-${htmlEscape(caseType)} case-seq-bar-chip" style="border-color:${barColor}" title="${htmlEscape(barTitle)}">${htmlEscape(caseSeqCode(caseType, item.caseSeq, monthNo))}${manual ? "*" : ""}</span></td>
             <td class="case-seq-date">${htmlEscape(formatDisplayDate(item.clicknicDate || item.mlpDate) || "-")}</td>
             <td class="case-seq-bill">
               <button type="button" class="case-seq-bill-link" data-seq-open="${htmlEscape(item.billKey)}" title="เปิดรายละเอียด / แก้ไขบิลนี้">${htmlEscape(item.orderId || item.orw || "-")}</button>
@@ -3185,7 +3196,7 @@ function renderCaseSeqModal() {
   }).join("")}
       </tbody>
     </table>
-    <p class="case-seq-hint">แก้เลขในช่องลำดับ (Enter บันทึก · เว้นว่าง = กลับไปนับอัตโนมัติ · * = กำหนดเลขเอง) · กดเลขบิลหรือปุ่มดินสอเพื่อเปิดแก้ไขรายละเอียด</p>
+    <p class="case-seq-hint">แก้เลขในช่องลำดับ (Enter บันทึก · เว้นว่าง = กลับไปนับอัตโนมัติ · * = กำหนดเลขเอง) · กดเลขบิลหรือปุ่มดินสอเพื่อเปิดแก้ไขรายละเอียด · สีขอบโค้ด = กลุ่มใบวางบิล (BAR) เดียวกัน, ขอบส้ม = ยังไม่มี BAR</p>
   ` : '<p class="case-seq-hint">ไม่มีเคสในเดือนนี้</p>';
 }
 
