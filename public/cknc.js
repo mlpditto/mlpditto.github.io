@@ -132,6 +132,8 @@ const elements = {
   closeDetailDrawer: $("closeDetailDrawer"),
   metricProfitPeriod: $("metricProfitPeriod"),
   metricProfitBreakdown: $("metricProfitBreakdown"),
+  metricSalePeriod: $("metricSalePeriod"),
+  metricSaleBreakdown: $("metricSaleBreakdown"),
   drawerTitle: $("drawerTitle"),
   drawerTitleCopy: $("drawerTitleCopy"),
   drawerChecks: $("drawerChecks"),
@@ -1521,6 +1523,10 @@ function calculateMetrics() {
   const mlpNoBilling = bills.filter((bill) => bill.status === "pending-billing").length;
   const billingOnly = bills.filter((bill) => bill.status === "billing-only").length;
   const sale = bills.reduce((sum, bill) => sum + bill.sale, 0);
+  // แยกยอดขายตามประเภทเคส (ตามช่วงวันที่ที่กรองอยู่) — สปสช / ประกัน / อื่น ๆ
+  const saleNhso = bills.filter((bill) => bill.caseType === "nhso").reduce((sum, bill) => sum + bill.sale, 0);
+  const saleInsurance = bills.filter((bill) => bill.caseType === "insurance").reduce((sum, bill) => sum + bill.sale, 0);
+  const saleOther = sale - saleNhso - saleInsurance;
   const cost = bills.reduce((sum, bill) => sum + bill.cost, 0);
   const mlpCost = bills.reduce((sum, bill) => sum + bill.mlpCost, 0);
   const totalCost = cost + mlpCost;
@@ -1536,7 +1542,7 @@ function calculateMetrics() {
   const billingInsurancePending = bills.filter((bill) => bill.billingStage === "insurance-review").length;
   const billingNhsoPending = bills.filter((bill) => bill.billingStage === "nhso-pending").length;
   const billingReviewPending = bills.filter((bill) => bill.billingStage === "pending-review").length;
-  return { clickOrders, matched, mlpOnly, clickOnly, billingRows, mlpNoBilling, billingOnly, sale, cost, mlpCost, totalCost, profit, profitNhso, profitInsurance, profitOther, caseInsurance, caseNhso, caseUnknown, billingInsurancePending, billingNhsoPending, billingReviewPending };
+  return { clickOrders, matched, mlpOnly, clickOnly, billingRows, mlpNoBilling, billingOnly, sale, saleNhso, saleInsurance, saleOther, cost, mlpCost, totalCost, profit, profitNhso, profitInsurance, profitOther, caseInsurance, caseNhso, caseUnknown, billingInsurancePending, billingNhsoPending, billingReviewPending };
 }
 
 function updateEmptyState() {
@@ -1642,22 +1648,21 @@ function renderMetrics() {
       if (card.classList.contains("mini")) card.classList.toggle("is-zero", !toNumeric(metrics[key]));
     }
   });
-  renderProfitBreakdown(metrics);
+  const period = activePeriodLabel();
+  // การ์ดกำไร + ยอดขาย: ป้ายช่วงเวลา + chip แยก สปสช/ประกัน/อื่น ๆ ตามช่วงวันที่ที่กรองอยู่
+  renderCaseBreakdown(elements.metricProfitPeriod, elements.metricProfitBreakdown, period, metrics.profitNhso, metrics.profitInsurance, metrics.profitOther);
+  renderCaseBreakdown(elements.metricSalePeriod, elements.metricSaleBreakdown, period, metrics.saleNhso, metrics.saleInsurance, metrics.saleOther);
 }
 
-// แยกกำไร สปสช/ประกัน/อื่น ๆ ใต้การ์ดกำไร — ตามช่วงวันที่ที่กรองอยู่
-function renderProfitBreakdown(metrics) {
-  if (elements.metricProfitPeriod) {
-    const period = activePeriodLabel();
-    elements.metricProfitPeriod.textContent = period ? `· ${period}` : "";
-  }
-  if (!elements.metricProfitBreakdown) return;
+function renderCaseBreakdown(periodEl, breakdownEl, period, nhso, insurance, other) {
+  if (periodEl) periodEl.textContent = period ? `· ${period}` : "";
+  if (!breakdownEl) return;
   const parts = [
-    { label: "สปสช", value: metrics.profitNhso, cls: "case-nhso" },
-    { label: "ประกัน", value: metrics.profitInsurance, cls: "case-insurance" },
-    { label: "อื่น ๆ", value: metrics.profitOther, cls: "case-other" },
+    { label: "สปสช", value: nhso, cls: "case-nhso" },
+    { label: "ประกัน", value: insurance, cls: "case-insurance" },
+    { label: "อื่น ๆ", value: other, cls: "case-other" },
   ].filter((part) => Math.abs(toNumeric(part.value)) >= 0.005);
-  elements.metricProfitBreakdown.innerHTML = parts
+  breakdownEl.innerHTML = parts
     .map((part) => `<span class="profit-breakdown-chip ${part.cls}"><em>${htmlEscape(part.label)}</em> ${money(part.value)}</span>`)
     .join("");
 }
