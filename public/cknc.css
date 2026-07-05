@@ -3688,8 +3688,24 @@ button {
 }
 
 /* การ์ดค่า 0 ไม่ต้องแสดง — โผล่เฉพาะตอนมีตัวเลขจริง */
-.metric.mini.is-zero {
+.metric.mini.is-zero,
+.metric.mini[hidden] {
   display: none;
+}
+
+/* การ์ด WARN คู่บิลซ้ำ — กดกาง/หุบแผงรายการคู่ */
+.merge-warn-card {
+  cursor: pointer;
+  border-left-color: #f59e0b;
+}
+
+.merge-warn-card.merge-warn-open {
+  background: var(--amber-soft, #fdf3d8);
+  box-shadow: var(--shadow-hover);
+}
+
+html.dark .merge-warn-card.merge-warn-open {
+  background: rgba(245, 158, 11, 0.14);
 }
 
 html.dark .metric.mini.warning strong {

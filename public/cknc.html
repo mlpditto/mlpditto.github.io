@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="./cknc.css?v=20260706050000" />
+    <link rel="stylesheet" href="./cknc.css?v=20260706060000" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -192,17 +192,13 @@
             <span>สปสชรอวางบิล</span>
             <strong id="metricBillingNhsoPending">0</strong>
           </article>
+          <article id="mergeWarnCard" class="metric mini warning merge-warn-card" role="button" tabindex="0" title="WARN: คู่บิลที่น่าจะเป็นบิลเดียวกัน — กดเพื่อกาง/ซ่อนรายการคู่" hidden>
+            <span>WARN</span>
+            <strong id="metricMergeWarn">0</strong>
+          </article>
           <article class="metric mini warning" title="งานวางบิล: รอตรวจสอบวางบิล">
             <span>รอตรวจสอบวางบิล</span>
             <strong id="metricBillingReviewPending">0</strong>
-          </article>
-          <article class="metric mini" title="ประเภทเคส: เคสประกัน">
-            <span>เคสประกัน</span>
-            <strong id="metricCaseInsurance">0</strong>
-          </article>
-          <article class="metric mini" title="ประเภทเคส: เคส สปสช">
-            <span>เคส สปสช</span>
-            <strong id="metricCaseNhso">0</strong>
           </article>
           <article class="metric mini warning" title="ประเภทเคส: ยังไม่ทราบประเภท">
             <span>ยังไม่ทราบประเภท</span>
@@ -898,7 +894,7 @@
       </div>
     </dialog>
 
-    <script src="./cknc.js?v=20260706050000"></script>
+    <script src="./cknc.js?v=20260706060000"></script>
     <script>
       (function () {
         const btn = document.getElementById("themeToggleBtn");

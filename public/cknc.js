@@ -22,6 +22,8 @@ const state = {
   deletedBillKeys: [],
   // คู่แนะนำรวมบิลที่ผู้ใช้ยืนยันแล้วว่า "ไม่ใช่บิลเดียวกัน" — ซ่อนถาวร ติดไปกับ session/autosave
   dismissedSuggestions: [],
+  // แผงรายการคู่แนะนำ กาง/หุบจากการ์ด WARN (ค่าเริ่มต้น: หุบ)
+  showMergeSuggestPanel: false,
   mergeSuggestions: [],
   mergeSuggestCacheRef: null,
   topMeds: [],
@@ -151,6 +153,8 @@ const elements = {
   suggestPairCancel: $("suggestPairCancel"),
   suggestPairDismiss: $("suggestPairDismiss"),
   suggestPairMerge: $("suggestPairMerge"),
+  mergeWarnCard: $("mergeWarnCard"),
+  metricMergeWarn: $("metricMergeWarn"),
   editClicknicDate: $("editClicknicDate"),
   editMlpDate: $("editMlpDate"),
   editBillingDueDate: $("editBillingDueDate"),
@@ -300,8 +304,6 @@ const metricIds = {
   mlpNoBilling: "metricMlpNoBilling",
   billingOnly: "metricBillingOnly",
   profit: "metricProfit",
-  caseInsurance: "metricCaseInsurance",
-  caseNhso: "metricCaseNhso",
   caseUnknown: "metricCaseUnknown",
   billingInsurancePending: "metricBillingInsurancePending",
   billingNhsoPending: "metricBillingNhsoPending",
@@ -3728,7 +3730,13 @@ function renderMergeSuggestions() {
     state.mergeSuggestions = computeMergeSuggestions();
   }
   const suggestions = state.mergeSuggestions;
-  elements.mergeSuggestBar.hidden = !suggestions.length;
+  // การ์ด WARN ในแถวการ์ดเล็ก = ตัวเปิด/ปิดแผงรายการคู่ (ไม่มีคู่ = ซ่อนทั้งการ์ดและแผง)
+  if (elements.mergeWarnCard) {
+    elements.mergeWarnCard.hidden = !suggestions.length;
+    elements.mergeWarnCard.classList.toggle("merge-warn-open", Boolean(suggestions.length && state.showMergeSuggestPanel));
+    if (elements.metricMergeWarn) elements.metricMergeWarn.textContent = number(suggestions.length);
+  }
+  elements.mergeSuggestBar.hidden = !suggestions.length || !state.showMergeSuggestPanel;
   if (!suggestions.length) {
     elements.mergeSuggestBar.innerHTML = "";
     return;
@@ -6823,6 +6831,20 @@ elements.mergeSuggestBar?.addEventListener("click", (event) => {
     return;
   }
   openSuggestPairModal(item);
+});
+const toggleMergeSuggestPanel = () => {
+  state.showMergeSuggestPanel = !state.showMergeSuggestPanel;
+  renderMergeSuggestions();
+  if (state.showMergeSuggestPanel && elements.mergeSuggestBar && !elements.mergeSuggestBar.hidden) {
+    elements.mergeSuggestBar.scrollIntoView({ block: "center", behavior: "smooth" });
+  }
+};
+elements.mergeWarnCard?.addEventListener("click", toggleMergeSuggestPanel);
+elements.mergeWarnCard?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    toggleMergeSuggestPanel();
+  }
 });
 elements.suggestPairClose?.addEventListener("click", () => elements.suggestPairModal?.close());
 elements.suggestPairCancel?.addEventListener("click", () => elements.suggestPairModal?.close());
