@@ -3013,6 +3013,8 @@ function renderAll() {
 }
 
 function renderSnapshot() {
+  // เส้นทางโหลด session/autosave ตั้ง state.bills ตรง ๆ โดยไม่ผ่าน rebuild — คำนวณลำดับเคสที่นี่เสมอ
+  assignCaseSequences();
   renderMetrics();
   renderStepStatuses();
   renderTabs();
