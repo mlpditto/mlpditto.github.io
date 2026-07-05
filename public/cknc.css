@@ -2168,11 +2168,18 @@ html.dark .bar-pick-nobar {
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0; /* ให้ shrink ใน grid cell ได้ ไม่งั้นปุ่มล้นไปทับคอลัมน์ AR */
 }
 
 .bar-field-row input {
-  flex: 1;
+  flex: 1 1 0;
   min-width: 0;
+  width: 100%;
+}
+
+.bar-field-row button {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 #suggestPairModal {
