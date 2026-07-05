@@ -2523,9 +2523,36 @@ html.dark .case-seq-addbar-chip {
   background: rgba(245, 158, 11, 0.10);
 }
 
-/* chip เลขซ้ำในแถบเตือน — กดเพื่อ jump ไปแถวนั้น */
-.case-seq-dup-warn {
+/* เตือนลำดับซ้ำ inline ต่อท้ายหัวข้อ modal — chip กดเพื่อ jump ไปแถวนั้น */
+.case-seq-title-row {
+  display: flex;
+  align-items: center;
   flex-wrap: wrap;
+  gap: 8px 10px;
+}
+
+.case-seq-dup-inline {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.case-seq-dup-inline:empty {
+  display: none;
+}
+
+.case-seq-dup-inline-warn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #92600b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+html.dark .case-seq-dup-inline-warn {
+  color: #fbbf24;
 }
 
 .case-seq-dup-chip {

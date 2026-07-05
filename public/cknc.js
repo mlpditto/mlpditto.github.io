@@ -149,6 +149,7 @@ const elements = {
   editCreditNos: $("editCreditNos"),
   caseSeqModal: $("caseSeqModal"),
   caseSeqModalTitle: $("caseSeqModalTitle"),
+  caseSeqDupInline: $("caseSeqDupInline"),
   caseSeqModalBody: $("caseSeqModalBody"),
   caseSeqModalClose: $("caseSeqModalClose"),
   caseSeqSearch: $("caseSeqSearch"),
@@ -3230,11 +3231,13 @@ function renderCaseSeqModal() {
         .some((field) => clean(field).toLowerCase().includes(term)))
     : allRows;
   elements.caseSeqModalTitle.textContent = `ลำดับเคส${caseSeqNames[caseType]} · ${monthChipLabel(month)} (${number(term ? rows.length : allRows.length)}${term ? ` จาก ${number(allRows.length)}` : ""} เคส)`;
-  const dupWarn = dupSeqs.length
-    ? `<div class="case-seq-dup-warn"><i class="fa-solid fa-triangle-exclamation"></i> <span>พบลำดับซ้ำ — กดเพื่อไปที่รายการ:</span> ${dupSeqs.map((seq) => `<button type="button" class="case-seq-dup-chip" data-dup-seq="${htmlEscape(String(seq))}" title="ไปที่ลำดับ #${number(seq)}">#${number(seq)}</button>`).join(" ")}</div>`
-    : "";
+  // เตือนลำดับซ้ำ = chip ต่อท้ายหัวข้อ (อยู่ในหัว modal ที่ไม่เลื่อน) กด chip = jump ไปแถวนั้น
+  if (elements.caseSeqDupInline) {
+    elements.caseSeqDupInline.innerHTML = dupSeqs.length
+      ? `<span class="case-seq-dup-inline-warn" title="แก้เลขให้ไม่ซ้ำก่อนส่งเบิก"><i class="fa-solid fa-triangle-exclamation"></i> ซ้ำ:</span> ${dupSeqs.map((seq) => `<button type="button" class="case-seq-dup-chip" data-dup-seq="${htmlEscape(String(seq))}" title="ไปที่ลำดับ #${number(seq)}">#${number(seq)}</button>`).join(" ")}`
+      : "";
+  }
   elements.caseSeqModalBody.innerHTML = rows.length ? `
-    ${dupWarn}
     <table class="case-seq-table">
       <thead><tr><th class="seq-col">ลำดับ</th><th>โค้ด</th><th>วันที่ CKNC</th><th>บิล / ผู้รับบริการ</th><th class="act-col">จัดการ</th></tr></thead>
       <tbody>
@@ -6523,6 +6526,20 @@ elements.caseSeqSearch?.addEventListener("input", renderCaseSeqModal);
 elements.caseSeqSearch?.addEventListener("keydown", (event) => {
   if (event.key === "Enter") event.preventDefault();
 });
+// chip เลขซ้ำ (ในหัว modal) → เลื่อนไปแถวแรกของลำดับนั้น + ไฮไลต์ทุกแถวที่ซ้ำ + โฟกัสช่องแก้
+elements.caseSeqDupInline?.addEventListener("click", (event) => {
+  const dupChip = event.target.closest("[data-dup-seq]");
+  if (!dupChip || !elements.caseSeqModalBody) return;
+  const dupRows = elements.caseSeqModalBody.querySelectorAll(`tr[data-row-seq="${CSS.escape(dupChip.dataset.dupSeq)}"]`);
+  if (!dupRows.length) return;
+  dupRows[0].scrollIntoView({ block: "center", behavior: "smooth" });
+  dupRows.forEach((row) => {
+    row.classList.remove("case-seq-row-jump");
+    void row.offsetWidth; // รีสตาร์ท animation
+    row.classList.add("case-seq-row-jump");
+  });
+  dupRows[0].querySelector("[data-seq-row]")?.focus();
+});
 elements.caseSeqModalBody?.addEventListener("click", (event) => {
   const copyBtn = event.target.closest("[data-copy-text]");
   if (copyBtn) {
@@ -6533,22 +6550,6 @@ elements.caseSeqModalBody?.addEventListener("click", (event) => {
         setTimeout(() => { icon.className = "fa-regular fa-copy"; }, 1200);
       }
     }).catch(() => {});
-    return;
-  }
-  const dupChip = event.target.closest("[data-dup-seq]");
-  if (dupChip) {
-    // กด chip เลขซ้ำ → เลื่อนไปแถวแรกที่ลำดับนั้น + ไฮไลต์ทุกแถวที่ซ้ำเลขเดียวกัน + โฟกัสช่องแก้
-    const seq = dupChip.dataset.dupSeq;
-    const dupRows = elements.caseSeqModalBody.querySelectorAll(`tr[data-row-seq="${CSS.escape(seq)}"]`);
-    if (dupRows.length) {
-      dupRows[0].scrollIntoView({ block: "center", behavior: "smooth" });
-      dupRows.forEach((row) => {
-        row.classList.remove("case-seq-row-jump");
-        void row.offsetWidth; // รีสตาร์ท animation
-        row.classList.add("case-seq-row-jump");
-      });
-      dupRows[0].querySelector("[data-seq-row]")?.focus();
-    }
     return;
   }
   const addBar = event.target.closest("[data-bar-add]");
