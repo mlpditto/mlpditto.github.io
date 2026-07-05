@@ -5400,6 +5400,12 @@ function currentDetailBill() {
   return state.bills.find((bill) => bill.billKey === state.currentDetailKey);
 }
 
+// ช่อง BAR ว่าง = พื้นส้มอ่อน เตือนให้ไล่เก็บเลขใบวางบิล
+function updateBarEmptyHint() {
+  if (!elements.editBarNo) return;
+  elements.editBarNo.classList.toggle("input-empty-warn", !clean(elements.editBarNo.value));
+}
+
 function updateEditProfitPreview() {
   if (!elements.editProfit) return;
   const bill = currentDetailBill();
@@ -5439,7 +5445,10 @@ function openDetailDrawer(billKey) {
   }
   elements.editOrw.value = bill.orw || "";
   elements.editInvoice.value = bill.invoice || "";
-  if (elements.editBarNo) elements.editBarNo.value = bill.barNo || "";
+  if (elements.editBarNo) {
+    elements.editBarNo.value = bill.barNo || "";
+    updateBarEmptyHint();
+  }
   if (elements.editCreditNos) elements.editCreditNos.value = bill.creditNos || "";
   if (elements.editCaseSeq) {
     elements.editCaseSeq.value = toNumeric(bill.caseSeqManual) > 0 ? Math.round(toNumeric(bill.caseSeqManual)) : "";
@@ -6555,6 +6564,7 @@ elements.saveOverrideBtn.addEventListener("click", saveBillOverride);
 elements.editSale?.addEventListener("input", updateEditProfitPreview);
 elements.editCost?.addEventListener("input", updateEditProfitPreview);
 elements.editMlpCost?.addEventListener("input", updateEditProfitPreview);
+elements.editBarNo?.addEventListener("input", updateBarEmptyHint);
 if (elements.editBillingStage) {
   elements.editBillingStage.innerHTML = billingStageOptions
     .map(([value, label]) => `<option value="${value}">${label}</option>`)

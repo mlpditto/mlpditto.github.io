@@ -2128,6 +2128,17 @@ html.dark .suggest-pair-table td.pair-diff {
   background: rgba(245, 158, 11, 0.14);
 }
 
+/* ช่องที่ยังว่างและควรไล่เก็บข้อมูล (เช่น BAR ใน drawer) — พื้นส้มอ่อนเตือนสายตา */
+.input-empty-warn {
+  background: var(--amber-soft, #fdf3d8);
+  border-color: #f0d6a4;
+}
+
+html.dark .input-empty-warn {
+  background: rgba(245, 158, 11, 0.14);
+  border-color: #7a5a1e;
+}
+
 /* การ์ดของ popup ลำดับเคส/เทียบคู่บิล: เต็มกรอบ dialog (import-mode-card จำกัด 520px ทำให้ตารางถูกบีบ) */
 .case-seq-card,
 .suggest-pair-card {
