@@ -3013,8 +3013,35 @@ function renderAll() {
   maybeAutosaveOnComplete();
 }
 
+// สะสางบิลจาก snapshot เก่า: แตกเลขจากฟิลด์เดิม billingNo เข้า barNo/creditNos + stage auto คิดใหม่ตามกติกาปัจจุบัน
+function normalizeSnapshotBills() {
+  state.bills.forEach((bill) => {
+    let changed = false;
+    if (!clean(bill.barNo) && !clean(bill.creditNos) && clean(bill.billingNo)) {
+      const tokens = clean(bill.billingNo).split(",").map(clean).filter(Boolean);
+      const bars = tokens.filter((token) => /^bar/i.test(token));
+      const credits = tokens.filter((token) => /^ar/i.test(token));
+      if (bars.length || credits.length) {
+        bill.barNo = bars.join(", ");
+        bill.creditNos = credits.join(", ");
+        changed = true;
+      }
+    }
+    if ((bill.billingStageSource || "") !== "manual" && bill.billingStage !== "paid") {
+      const stage = deriveBillingStage(bill.status, bill.caseType || "unknown", bill.barNo, bill.creditNos);
+      if (stage.billingStage !== bill.billingStage) {
+        bill.billingStage = stage.billingStage;
+        bill.billingStageSource = stage.billingStageSource;
+        changed = true;
+      }
+    }
+    if (changed) bill.validationIssues = validationRulesForBill(bill);
+  });
+}
+
 function renderSnapshot() {
-  // เส้นทางโหลด session/autosave ตั้ง state.bills ตรง ๆ โดยไม่ผ่าน rebuild — คำนวณลำดับเคสที่นี่เสมอ
+  // เส้นทางโหลด session/autosave ตั้ง state.bills ตรง ๆ โดยไม่ผ่าน rebuild — สะสาง + คำนวณลำดับเคสที่นี่เสมอ
+  normalizeSnapshotBills();
   assignCaseSequences();
   renderMetrics();
   renderStepStatuses();
