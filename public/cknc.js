@@ -3261,7 +3261,7 @@ function renderCaseSeqModal() {
     const isDup = dupSet.has(item.caseSeq);
     return `<tr class="${item.billKey === activeKey ? "case-seq-row-active" : ""}${isDup ? " case-seq-row-dup" : ""}">
             <td class="seq-col"><input type="text" inputmode="numeric" class="inline-cell-input case-seq-input${isDup ? " case-seq-input-dup" : ""}" data-seq-row="${htmlEscape(item.billKey)}" value="${item.caseSeq}" title="${isDup ? `ลำดับ #${number(item.caseSeq)} ซ้ำกับบิลอื่น — แก้ให้ไม่ซ้ำ` : "เลขลำดับเคส — ว่าง = กลับไปนับอัตโนมัติ"}" aria-label="เลขลำดับเคส" /></td>
-            <td><span class="case-seq-chip case-${htmlEscape(caseType)} case-seq-bar-chip" style="border-color:${barColor}" title="${htmlEscape(barTitle)}">${htmlEscape(caseSeqCode(caseType, item.caseSeq, monthNo))}${manual ? "*" : ""}</span></td>
+            <td><span class="case-seq-chip case-${htmlEscape(caseType)} case-seq-bar-chip" style="border-color:${barColor}" title="${htmlEscape(barTitle)}">${htmlEscape(caseSeqCode(caseType, item.caseSeq, monthNo))}${manual ? "*" : ""}</span>${bar ? "" : `<button type="button" class="case-seq-addbar-chip" data-bar-add="${htmlEscape(item.billKey)}" title="ยังไม่มีใบวางบิล (BAR) — กดเพื่อใส่ BAR ให้เคสนี้">+ BAR</button>`}</td>
             <td class="case-seq-date">${htmlEscape(formatDisplayDate(item.clicknicDate || item.mlpDate) || "-")}</td>
             <td class="case-seq-bill">
               <span class="case-seq-bill-line">
@@ -6513,6 +6513,12 @@ elements.caseSeqModalBody?.addEventListener("click", (event) => {
     }).catch(() => {});
     return;
   }
+  const addBar = event.target.closest("[data-bar-add]");
+  if (addBar) {
+    elements.caseSeqModal?.close();
+    openBarPicker("", addBar.dataset.barAdd);
+    return;
+  }
   const openBtn = event.target.closest("[data-seq-open]");
   if (!openBtn) return;
   elements.caseSeqModal?.close();
@@ -6929,12 +6935,18 @@ elements.bulkBarNo?.addEventListener("keydown", (event) => {
 // default: โชว์เฉพาะบิลที่มี AR แต่ยังไม่มี BAR (มี toggle แสดงทุกบิล)
 const barPickerSelected = new Set();
 
-function openBarPicker(prefillBar) {
+function openBarPicker(prefillBar, preselectKey) {
   if (!elements.barPickerModal) return;
   barPickerSelected.clear();
   if (elements.barPickerInput) elements.barPickerInput.value = clean(prefillBar);
   if (elements.barPickerSearch) elements.barPickerSearch.value = "";
   if (elements.barPickerShowAll) elements.barPickerShowAll.checked = false;
+  if (preselectKey) {
+    barPickerSelected.add(preselectKey);
+    // บิลที่ pre-select ถ้าไม่มี AR จะไม่โผล่ในรายการ default → เปิด "แสดงทุกบิล" ให้เห็น
+    const target = state.bills.find((bill) => bill.billKey === preselectKey);
+    if (target && !clean(target.creditNos) && elements.barPickerShowAll) elements.barPickerShowAll.checked = true;
+  }
   renderBarPicker();
   if (!elements.barPickerModal.open) elements.barPickerModal.showModal();
   elements.barPickerInput?.focus();
