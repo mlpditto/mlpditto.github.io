@@ -3265,6 +3265,15 @@ html.dark .bulk-bar input {
   margin-top: 12px;
 }
 
+/* แถวต้นทุน CKNC / ต้นทุน MLP / ราคาขาย อยู่แถวเดียว — ช่องต้นทุนแคบกว่า, ราคาขายกว้างสุด */
+.money-card .form-grid.money-cost-row {
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 0.82fr) minmax(0, 1fr);
+}
+
+.money-card .form-grid + .form-grid {
+  margin-top: 12px;
+}
+
 .money-profit {
   display: grid;
   gap: 2px;
