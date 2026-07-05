@@ -4,6 +4,7 @@
 
 ### 🐛 แก้ไขบัค
 *   **CKNC Bill Reconciliation (cknc.html):**
+    *   **แก้บั๊ก UI: modal ระบุเหตุผลซ่อนคู่บิล เลย์เอาต์เพี้ยน (textarea ถูกตัด):** `.clipboard-card` เป็น grid 3 แถว (auto/1fr/auto) แต่ modal มีลูก 5 ตัว → summary ไปอยู่แถว 1fr แล้ว stretch ดัน textarea/actions เพี้ยน/ถูกตัด → ห่อ summary+chips+label เป็น `.dismiss-reason-body` เดียว (min-height:0 + overflow-y:auto) ให้การ์ดเหลือ 3 ลูก (head/body/actions) พอดี grid — bump v=20260706310000
     *   **Popup เทียบคู่บิล: ปุ่ม copy ต่อจากเลขที่ออเดอร์:** แถว "เลขที่ออเดอร์" ในตารางเทียบสองบิล มีปุ่มคัดลอกทั้งสองฝั่ง (flag copyable ใน fields tuple) กดแล้วไอคอนเปลี่ยน ✓ — bump v=20260706300000
     *   **Popup ลำดับเคส: ย้ายเตือนเลขซ้ำไปต่อท้ายหัวข้อ (inline บรรทัดเดียว):** จากแถบเตือนใน scroll body (เลื่อนหาย) → ย้ายเป็น chip ต่อท้าย "ลำดับเคสสปสช · มิ.ย. 2026 (81 เคส)" ในหัว modal (ไม่เลื่อน เห็นตลอด): "⚠ ซ้ำ: [#60][#67]" กด chip = jump ไปแถว + แฟลชเหมือนเดิม (ย้าย handler ไป caseSeqDupInline) — bump v=20260706290000
     *   **Popup ลำดับเคส: แถบเตือนเลขซ้ำเป็น chip กดกระโดดไปแถวได้:** เปลี่ยน "พบลำดับซ้ำ: #45, #60, #67" จากข้อความล้วนเป็น chip แต่ละเลข (data-dup-seq) กดแล้วเลื่อนไปแถวแรกของลำดับนั้น + ไฮไลต์แฟลชทุกแถวที่ซ้ำเลขเดียวกัน (animation caseSeqJump box-shadow ส้ม) + โฟกัสช่องแก้เลข; เพิ่ม data-row-seq ให้ทุกแถว — bump v=20260706280000
