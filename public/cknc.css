@@ -2044,7 +2044,7 @@ button.ghost.danger:hover {
 }
 
 .suggest-pair-body {
-  margin-top: 10px;
+  margin: 4px 18px 8px;
   max-height: min(62vh, 560px);
   overflow-y: auto;
 }
@@ -2128,8 +2128,15 @@ html.dark .suggest-pair-table td.pair-diff {
   background: rgba(245, 158, 11, 0.14);
 }
 
+/* การ์ดของ popup ลำดับเคส/เทียบคู่บิล: เต็มกรอบ dialog (import-mode-card จำกัด 520px ทำให้ตารางถูกบีบ) */
+.case-seq-card,
+.suggest-pair-card {
+  width: 100%;
+  max-width: none;
+}
+
 .case-seq-modal-body {
-  margin-top: 10px;
+  margin: 4px 18px 16px;
   max-height: min(62vh, 560px);
   overflow-y: auto;
   border: 1px solid rgba(15, 55, 40, 0.10);
