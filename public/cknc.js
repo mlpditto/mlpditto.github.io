@@ -3863,7 +3863,7 @@ function renderMergeWarnBody() {
           <td>${htmlEscape(bill.patient || "-")}</td>
           <td>${htmlEscape(bill.orderId || bill.orw || "-")}</td>
           <td class="case-seq-code" style="color:#a12626">${money(bill.mlpCost)}</td>
-          <td class="act-col"><button class="ghost small" type="button" data-nhso-open="${htmlEscape(bill.billKey)}" title="เปิดรายละเอียดบิลนี้">แก้เอง</button></td>
+          <td class="act-col"><button type="button" class="row-action icon-action" data-nhso-open="${htmlEscape(bill.billKey)}" title="เปิดรายละเอียด / แก้ไขบิลนี้" aria-label="เปิดรายละเอียด / แก้ไขบิลนี้"><i class="fa-solid fa-pen-to-square"></i></button></td>
         </tr>`).join("")}
       </tbody>
     </table>
