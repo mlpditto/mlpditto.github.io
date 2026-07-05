@@ -20,6 +20,8 @@ const state = {
   billOverrides: {},
   billMergeGroups: [],
   deletedBillKeys: [],
+  // คู่แนะนำรวมบิลที่ผู้ใช้ยืนยันแล้วว่า "ไม่ใช่บิลเดียวกัน" — ซ่อนถาวร ติดไปกับ session/autosave
+  dismissedSuggestions: [],
   mergeSuggestions: [],
   mergeSuggestCacheRef: null,
   topMeds: [],
@@ -147,6 +149,7 @@ const elements = {
   suggestPairBody: $("suggestPairBody"),
   suggestPairClose: $("suggestPairClose"),
   suggestPairCancel: $("suggestPairCancel"),
+  suggestPairDismiss: $("suggestPairDismiss"),
   suggestPairMerge: $("suggestPairMerge"),
   editClicknicDate: $("editClicknicDate"),
   editMlpDate: $("editMlpDate"),
@@ -2678,6 +2681,7 @@ function auditActionLabel(action) {
   if (action === "edit_medicine_line") return "แก้จำนวน/ราคายา";
   if (action === "add_medicine_line") return "เพิ่มรายการยาจากตาราง";
   if (action === "case_seq_update") return "แก้เลขลำดับเคส";
+  if (action === "suggestion_dismiss") return "ซ่อนคู่แนะนำรวมบิล";
   if (action === "paste_analyze_apply") return "แก้ข้อมูลจากข้อความ paste";
   if (action === "merge_bills") return "รวมบิลเป็นใบเดียว";
   if (action === "delete_bills") return "ลบบิลออกจากงานบนจอ";
@@ -3538,6 +3542,18 @@ function deleteSelectedBills() {
   elements.statusText.textContent = `ลบ ${number(members.length)} บิลออกจากงานบนจอแล้ว`;
 }
 
+// รับรายการคู่แนะนำที่ถูกซ่อนจาก session อื่นเข้ามาต่อท้าย (กันซ้ำด้วย pairKey)
+function mergeDismissedSuggestionsInto(list) {
+  if (!Array.isArray(list)) return;
+  state.dismissedSuggestions = state.dismissedSuggestions || [];
+  const known = new Set(state.dismissedSuggestions.map((entry) => entry.pairKey));
+  list.forEach((entry) => {
+    if (!entry?.pairKey || known.has(entry.pairKey)) return;
+    known.add(entry.pairKey);
+    state.dismissedSuggestions.push(entry);
+  });
+}
+
 // รับกลุ่มรวมบิลจาก session อื่นเข้ามาต่อท้าย (กันซ้ำด้วย id)
 function mergeBillMergeGroupsInto(groups) {
   const known = new Set((state.billMergeGroups || []).map((group) => group.id));
@@ -3675,6 +3691,7 @@ function computeMergeSuggestions() {
     if (name && name.length > 3) push(`name:${name}`, bill);
   });
   const seenPairs = new Set();
+  const dismissedPairs = new Set((state.dismissedSuggestions || []).map((entry) => entry.pairKey));
   const suggestions = [];
   buckets.forEach((arr) => {
     // กลุ่มใหญ่เกิน = สัญญาณกว้างเกินไป (เช่นชื่อบริษัทเดียวกันทั้งไฟล์) ข้ามไป
@@ -3682,7 +3699,7 @@ function computeMergeSuggestions() {
     for (let i = 0; i < arr.length; i += 1) {
       for (let j = i + 1; j < arr.length; j += 1) {
         const pairKey = [arr[i].billKey, arr[j].billKey].sort().join("|");
-        if (seenPairs.has(pairKey)) continue;
+        if (seenPairs.has(pairKey) || dismissedPairs.has(pairKey)) continue;
         seenPairs.add(pairKey);
         const { score, reasons } = mergeSimilarity(arr[i], arr[j]);
         if (score < 50) continue;
@@ -3734,12 +3751,15 @@ function applySuggestionSelection(item) {
   renderTable();
 }
 
-// "เลือก" เปิด popup เทียบสองบิลข้าง ๆ กัน พร้อมปุ่ม action ต่อ (รวม/เปิดรายละเอียด)
+// "เลือก" เปิด popup เทียบสองบิลข้าง ๆ กัน พร้อมปุ่ม action ต่อ (รวม/เปิดรายละเอียด/ไม่ใช่คู่เดียวกัน)
 // — บิลอาจถูกตัวกรอง/ค้นหาซ่อนอยู่ในตาราง popup ทำให้เห็นคู่เสมอ
+let suggestPairContext = null;
+
 function openSuggestPairModal(item) {
   const billA = state.bills.find((bill) => bill.billKey === item.aKey);
   const billB = state.bills.find((bill) => bill.billKey === item.bKey);
   if (!billA || !billB || !elements.suggestPairModal) return;
+  suggestPairContext = item;
   elements.suggestPairTitle.textContent = `น่าจะเป็นบิลเดียวกัน (${item.score}%)`;
   const fields = [
     ["ผู้รับบริการ", (bill) => bill.patient || "-"],
@@ -3787,6 +3807,45 @@ function openSuggestPairModal(item) {
     <p class="case-seq-hint">ช่องพื้นเหลือง = ค่าสองฝั่งไม่ตรงกัน · สองบิลนี้ถูกติ๊กเลือกในตารางให้แล้ว · กด "รวมบิล" มีสรุปผลรวมให้ตรวจก่อนยืนยันเสมอ</p>
   `;
   if (!elements.suggestPairModal.open) elements.suggestPairModal.showModal();
+}
+
+// ยืนยันว่า "ไม่ใช่บิลเดียวกัน" — ซ่อนคู่นี้ถาวรพร้อมเหตุผล (ติดไปกับ session/autosave + audit trail)
+function dismissSuggestionPair(item, reason) {
+  const pairKey = [item.aKey, item.bKey].sort().join("|");
+  state.dismissedSuggestions = state.dismissedSuggestions || [];
+  if (!state.dismissedSuggestions.some((entry) => entry.pairKey === pairKey)) {
+    state.dismissedSuggestions.push({
+      pairKey,
+      aLabel: item.aLabel,
+      bLabel: item.bLabel,
+      reason,
+      createdAt: new Date().toISOString(),
+    });
+  }
+  state.auditTrail.unshift({
+    id: makeAuditId(),
+    action: "suggestion_dismiss",
+    createdAt: new Date().toISOString(),
+    orderId: "",
+    orw: "",
+    invoice: "",
+    date: "",
+    lineCount: 0,
+    totalSale: 0,
+    totalCost: 0,
+    screenshotName: "merge-suggest",
+    replacedLineCount: 0,
+    note: `ไม่ใช่บิลเดียวกัน: ${item.aLabel} ↔ ${item.bLabel} — เหตุผล: ${reason}`,
+    medicines: [],
+  });
+  elements.suggestPairModal?.close();
+  state.selectedBillKeys.clear();
+  state.mergeSuggestCacheRef = null; // บังคับคำนวณคู่แนะนำใหม่ (ตัดคู่ที่ซ่อนออก)
+  renderTable();
+  renderMergeAssistant();
+  renderAuditTrail();
+  scheduleAutosave("suggestion-dismiss");
+  elements.statusText.textContent = `ซ่อนคู่แนะนำแล้ว: ${item.aLabel} ↔ ${item.bLabel}`;
 }
 
 // ถามผู้ใช้ว่าจะ "เพิ่มเข้าข้อมูลเดิม" หรือ "เริ่มใหม่ทั้งหมด" — คืน null เมื่อยกเลิก
@@ -3901,6 +3960,7 @@ async function handleFiles() {
       state.billOverrides = {};
       state.billMergeGroups = [];
       state.deletedBillKeys = [];
+      state.dismissedSuggestions = [];
       state.mlpRows = dedupeMlpRows(mlpImportedRows);
       state.billingRows = billingImportedRows;
       state.activeSessionId = "";
@@ -3925,6 +3985,7 @@ async function loadSampleFiles() {
     state.billOverrides = {};
     state.billMergeGroups = [];
     state.deletedBillKeys = [];
+    state.dismissedSuggestions = [];
     state.billingRows = [];
     state.activeSessionId = "";
     state.snapshotMode = false;
@@ -4850,6 +4911,7 @@ function makeSessionPayload(name) {
       billOverrides: state.billOverrides,
       billMergeGroups: state.billMergeGroups,
       deletedBillKeys: state.deletedBillKeys,
+      dismissedSuggestions: state.dismissedSuggestions,
       auditTrail: state.auditTrail,
       topMeds: state.topMeds,
       ruleConfig: state.ruleConfig,
@@ -4952,6 +5014,7 @@ function combineSessionPayloads(sessions) {
   const mergeGroupIds = new Set();
   const mergeGroups = [];
   const deletedKeys = new Set();
+  const dismissedByKey = new Map();
   sorted.forEach((session) => {
     (session.payload?.bills || []).forEach((bill) => {
       const existing = billMap.get(bill.billKey);
@@ -4966,6 +5029,9 @@ function combineSessionPayloads(sessions) {
     (session.payload?.deletedBillKeys || []).forEach((key) => {
       if (key) deletedKeys.add(key);
     });
+    (session.payload?.dismissedSuggestions || []).forEach((entry) => {
+      if (entry?.pairKey && !dismissedByKey.has(entry.pairKey)) dismissedByKey.set(entry.pairKey, entry);
+    });
     (session.payload?.auditTrail || []).forEach((entry) => {
       if (!entry || auditIds.has(entry.id)) return;
       auditIds.add(entry.id);
@@ -4977,7 +5043,7 @@ function combineSessionPayloads(sessions) {
     medicines: (bill.medicines && bill.medicines.length) ? bill.medicines : parseMedicinesTextLines(bill.medicinesText),
     validationIssues: validationRulesForBill(bill),
   }));
-  return { bills, overrides, mergeGroups, deletedKeys: [...deletedKeys], audit };
+  return { bills, overrides, mergeGroups, deletedKeys: [...deletedKeys], dismissed: [...dismissedByKey.values()], audit };
 }
 
 async function restoreLatestSnapshotOnStartup() {
@@ -5015,6 +5081,7 @@ async function restoreLatestSnapshotOnStartup() {
             billOverrides: combined.overrides,
             billMergeGroups: combined.mergeGroups,
             deletedBillKeys: combined.deletedKeys,
+            dismissedSuggestions: combined.dismissed,
             auditTrail: combined.audit,
             topMeds: [],
           },
@@ -5059,6 +5126,7 @@ async function applySessionSnapshot(session) {
     state.billOverrides = mergeOverrideMaps(state.billOverrides, payload.billOverrides || {});
     mergeBillMergeGroupsInto(payload.billMergeGroups);
     mergeDeletedBillKeysInto(payload.deletedBillKeys);
+    mergeDismissedSuggestionsInto(payload.dismissedSuggestions);
     applyManualMergeGroups();
     applyDeletedBills();
     const auditIds = new Set(state.auditTrail.map((entry) => entry.id));
@@ -5089,6 +5157,7 @@ async function applySessionSnapshot(session) {
   state.billOverrides = payload.billOverrides || {};
   state.billMergeGroups = payload.billMergeGroups || [];
   state.deletedBillKeys = payload.deletedBillKeys || [];
+  state.dismissedSuggestions = payload.dismissedSuggestions || [];
   // กลุ่มรวม/รายการลบต้องถูก apply ซ้ำเสมอ — กันบิลที่รวม/ลบไปแล้วโผล่กลับจากถังเดือนเก่า
   applyManualMergeGroups();
   applyDeletedBills();
@@ -5294,6 +5363,7 @@ async function mergeSelectedSessions() {
     state.billOverrides = combined.overrides;
     state.billMergeGroups = combined.mergeGroups;
     state.deletedBillKeys = combined.deletedKeys;
+    state.dismissedSuggestions = combined.dismissed;
     applyManualMergeGroups();
     applyDeletedBills();
     state.auditTrail = combined.audit;
@@ -6761,6 +6831,12 @@ elements.suggestPairBody?.addEventListener("click", (event) => {
   if (!openBtn) return;
   elements.suggestPairModal?.close();
   openDetailDrawer(openBtn.dataset.pairOpen);
+});
+elements.suggestPairDismiss?.addEventListener("click", () => {
+  if (!suggestPairContext) return;
+  const reason = prompt("ยืนยันว่าไม่ใช่บิลเดียวกัน — ระบุเหตุผล (บันทึกลง audit trail)", "");
+  if (reason === null) return; // กดยกเลิก = ไม่ทำอะไร
+  dismissSuggestionPair(suggestPairContext, clean(reason) || "-");
 });
 elements.suggestPairMerge?.addEventListener("click", () => {
   elements.suggestPairModal?.close();
