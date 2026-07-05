@@ -142,6 +142,12 @@ const elements = {
   caseSeqModalTitle: $("caseSeqModalTitle"),
   caseSeqModalBody: $("caseSeqModalBody"),
   caseSeqModalClose: $("caseSeqModalClose"),
+  suggestPairModal: $("suggestPairModal"),
+  suggestPairTitle: $("suggestPairTitle"),
+  suggestPairBody: $("suggestPairBody"),
+  suggestPairClose: $("suggestPairClose"),
+  suggestPairCancel: $("suggestPairCancel"),
+  suggestPairMerge: $("suggestPairMerge"),
   editClicknicDate: $("editClicknicDate"),
   editMlpDate: $("editMlpDate"),
   editBillingDueDate: $("editBillingDueDate"),
@@ -3728,6 +3734,61 @@ function applySuggestionSelection(item) {
   renderTable();
 }
 
+// "เลือก" เปิด popup เทียบสองบิลข้าง ๆ กัน พร้อมปุ่ม action ต่อ (รวม/เปิดรายละเอียด)
+// — บิลอาจถูกตัวกรอง/ค้นหาซ่อนอยู่ในตาราง popup ทำให้เห็นคู่เสมอ
+function openSuggestPairModal(item) {
+  const billA = state.bills.find((bill) => bill.billKey === item.aKey);
+  const billB = state.bills.find((bill) => bill.billKey === item.bKey);
+  if (!billA || !billB || !elements.suggestPairModal) return;
+  elements.suggestPairTitle.textContent = `น่าจะเป็นบิลเดียวกัน (${item.score}%)`;
+  const fields = [
+    ["ผู้รับบริการ", (bill) => bill.patient || "-"],
+    ["เลขที่ออเดอร์", (bill) => bill.orderId || "-"],
+    ["ORW", (bill) => bill.orw || "-"],
+    ["สถานะ", (bill) => statusLabel(bill.status)],
+    ["งานวางบิล", (bill) => billingStageLabel(bill.billingStage)],
+    ["ประเภทเคส", (bill) => caseTypeLabel(bill.caseType)],
+    ["วันที่ CKNC", (bill) => formatDisplayDate(bill.clicknicDate) || "-"],
+    ["วันที่ MLP", (bill) => formatDisplayDate(bill.mlpDate) || "-"],
+    ["ยอดขายยา", (bill) => money(bill.sale)],
+    ["ต้นทุนรวม", (bill) => money(toNumeric(bill.cost) + toNumeric(bill.mlpCost))],
+    ["กำไร", (bill) => money(bill.profit)],
+    ["รายการยา", (bill) => {
+      const count = bill.medicines?.length || bill.medicineCount || 0;
+      return count ? `${number(count)} รายการ` : (clean(bill.medicinesText) ? bill.medicinesText : "-");
+    }],
+    ["ใบวางบิล (BAR)", (bill) => bill.barNo || "-"],
+    ["เลขที่เครดิต (AR)", (bill) => bill.creditNos || "-"],
+    ["เบอร์โทร", (bill) => bill.phone || "-"],
+  ];
+  elements.suggestPairBody.innerHTML = `
+    <p class="suggest-pair-reasons">เหตุผลที่จับคู่: ${htmlEscape(item.reasons.join(" + "))}</p>
+    <table class="suggest-pair-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>บิล 1 <button type="button" class="ghost small" data-pair-open="${htmlEscape(billA.billKey)}">ดูรายละเอียด</button></th>
+          <th>บิล 2 <button type="button" class="ghost small" data-pair-open="${htmlEscape(billB.billKey)}">ดูรายละเอียด</button></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${fields.map(([label, pick]) => {
+    const valueA = pick(billA);
+    const valueB = pick(billB);
+    const diff = valueA !== valueB;
+    return `<tr>
+            <th>${htmlEscape(label)}</th>
+            <td class="${diff ? "pair-diff" : ""}">${htmlEscape(valueA)}</td>
+            <td class="${diff ? "pair-diff" : ""}">${htmlEscape(valueB)}</td>
+          </tr>`;
+  }).join("")}
+      </tbody>
+    </table>
+    <p class="case-seq-hint">ช่องพื้นเหลือง = ค่าสองฝั่งไม่ตรงกัน · สองบิลนี้ถูกติ๊กเลือกในตารางให้แล้ว · กด "รวมบิล" มีสรุปผลรวมให้ตรวจก่อนยืนยันเสมอ</p>
+  `;
+  if (!elements.suggestPairModal.open) elements.suggestPairModal.showModal();
+}
+
 // ถามผู้ใช้ว่าจะ "เพิ่มเข้าข้อมูลเดิม" หรือ "เริ่มใหม่ทั้งหมด" — คืน null เมื่อยกเลิก
 function askImportMode(summaryText) {
   return new Promise((resolve) => {
@@ -6678,8 +6739,23 @@ elements.mergeSuggestBar?.addEventListener("click", (event) => {
     mergeSelectedBills();
     return;
   }
-  document.querySelector(`#billTableBody .row-pick[data-pick-key="${CSS.escape(item.aKey)}"]`)
-    ?.closest("tr")?.scrollIntoView({ block: "center", behavior: "smooth" });
+  openSuggestPairModal(item);
+});
+elements.suggestPairClose?.addEventListener("click", () => elements.suggestPairModal?.close());
+elements.suggestPairCancel?.addEventListener("click", () => elements.suggestPairModal?.close());
+elements.suggestPairModal?.addEventListener("click", (event) => {
+  if (event.target === elements.suggestPairModal) elements.suggestPairModal.close();
+});
+elements.suggestPairBody?.addEventListener("click", (event) => {
+  const openBtn = event.target.closest("[data-pair-open]");
+  if (!openBtn) return;
+  elements.suggestPairModal?.close();
+  openDetailDrawer(openBtn.dataset.pairOpen);
+});
+elements.suggestPairMerge?.addEventListener("click", () => {
+  elements.suggestPairModal?.close();
+  // สองบิลถูกติ๊กเลือกไว้แล้วตอนเปิด popup — วิ่งเข้า flow รวมบิลเดิม (มี confirm สรุปก่อน)
+  mergeSelectedBills();
 });
 elements.bulkExclude?.addEventListener("click", () => {
   applyBulkOverride(() => ({ excluded: true }), "Exclude");
