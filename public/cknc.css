@@ -2293,6 +2293,47 @@ html.dark .case-seq-search {
   color: var(--muted);
 }
 
+/* เตือนลำดับซ้ำ + ไฮไลต์แถว/ช่องลำดับที่ซ้ำ */
+.case-seq-dup-warn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  border: 1px solid #f0c68a;
+  border-radius: 10px;
+  background: var(--amber-soft, #fdf3d8);
+  color: #92600b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.case-seq-table tr.case-seq-row-dup td {
+  background: rgba(245, 158, 11, 0.10);
+}
+
+.case-seq-table .case-seq-input-dup {
+  border-color: #f59e0b;
+  background: var(--amber-soft, #fdf3d8);
+  color: #92600b;
+}
+
+html.dark .case-seq-dup-warn {
+  border-color: #7a5a1e;
+  background: rgba(245, 158, 11, 0.14);
+  color: #fbbf24;
+}
+
+html.dark .case-seq-table tr.case-seq-row-dup td {
+  background: rgba(245, 158, 11, 0.12);
+}
+
+html.dark .case-seq-table .case-seq-input-dup {
+  border-color: #7a5a1e;
+  background: rgba(245, 158, 11, 0.14);
+  color: #fbbf24;
+}
+
 html.dark .case-seq-modal-body {
   border-color: rgba(255, 255, 255, 0.10);
 }

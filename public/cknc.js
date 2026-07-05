@@ -3210,13 +3210,22 @@ function renderCaseSeqModal() {
     const bar = clean(item.barNo);
     if (bar && !barColors.has(bar)) barColors.set(bar, caseSeqBarPalette[barColors.size % caseSeqBarPalette.length]);
   });
+  // ลำดับซ้ำ = เลข caseSeq เดียวกันเกิน 1 บิลในเดือน (มักเกิดจากตอกเลขเองชนกับ auto) — เตือน + ไฮไลต์
+  const seqTally = new Map();
+  allRows.forEach((item) => seqTally.set(item.caseSeq, (seqTally.get(item.caseSeq) || 0) + 1));
+  const dupSeqs = [...seqTally.entries()].filter(([, count]) => count > 1).map(([seq]) => seq).sort((a, b) => a - b);
+  const dupSet = new Set(dupSeqs);
   const term = clean(elements.caseSeqSearch?.value).toLowerCase();
   const rows = term
     ? allRows.filter((item) => [item.orderId, item.orw, item.patient, caseSeqCode(caseType, item.caseSeq, monthNo)]
         .some((field) => clean(field).toLowerCase().includes(term)))
     : allRows;
   elements.caseSeqModalTitle.textContent = `ลำดับเคส${caseSeqNames[caseType]} · ${monthChipLabel(month)} (${number(term ? rows.length : allRows.length)}${term ? ` จาก ${number(allRows.length)}` : ""} เคส)`;
+  const dupWarn = dupSeqs.length
+    ? `<div class="case-seq-dup-warn"><i class="fa-solid fa-triangle-exclamation"></i> พบลำดับซ้ำ: ${htmlEscape(dupSeqs.map((seq) => `#${number(seq)}`).join(", "))} — แก้เลขให้ไม่ซ้ำกันก่อนส่งเบิก</div>`
+    : "";
   elements.caseSeqModalBody.innerHTML = rows.length ? `
+    ${dupWarn}
     <table class="case-seq-table">
       <thead><tr><th class="seq-col">ลำดับ</th><th>โค้ด</th><th>วันที่ CKNC</th><th>บิล / ผู้รับบริการ</th><th class="act-col">จัดการ</th></tr></thead>
       <tbody>
@@ -3225,8 +3234,9 @@ function renderCaseSeqModal() {
     const bar = clean(item.barNo);
     const barColor = bar ? barColors.get(bar) : "#f59e0b";
     const barTitle = bar ? `ใบวางบิล ${bar}` : "ยังไม่มีใบวางบิล (BAR)";
-    return `<tr class="${item.billKey === activeKey ? "case-seq-row-active" : ""}">
-            <td class="seq-col"><input type="text" inputmode="numeric" class="inline-cell-input case-seq-input" data-seq-row="${htmlEscape(item.billKey)}" value="${item.caseSeq}" title="เลขลำดับเคส — ว่าง = กลับไปนับอัตโนมัติ" aria-label="เลขลำดับเคส" /></td>
+    const isDup = dupSet.has(item.caseSeq);
+    return `<tr class="${item.billKey === activeKey ? "case-seq-row-active" : ""}${isDup ? " case-seq-row-dup" : ""}">
+            <td class="seq-col"><input type="text" inputmode="numeric" class="inline-cell-input case-seq-input${isDup ? " case-seq-input-dup" : ""}" data-seq-row="${htmlEscape(item.billKey)}" value="${item.caseSeq}" title="${isDup ? `ลำดับ #${number(item.caseSeq)} ซ้ำกับบิลอื่น — แก้ให้ไม่ซ้ำ` : "เลขลำดับเคส — ว่าง = กลับไปนับอัตโนมัติ"}" aria-label="เลขลำดับเคส" /></td>
             <td><span class="case-seq-chip case-${htmlEscape(caseType)} case-seq-bar-chip" style="border-color:${barColor}" title="${htmlEscape(barTitle)}">${htmlEscape(caseSeqCode(caseType, item.caseSeq, monthNo))}${manual ? "*" : ""}</span></td>
             <td class="case-seq-date">${htmlEscape(formatDisplayDate(item.clicknicDate || item.mlpDate) || "-")}</td>
             <td class="case-seq-bill">
