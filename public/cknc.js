@@ -145,6 +145,7 @@ const elements = {
   caseSeqModalTitle: $("caseSeqModalTitle"),
   caseSeqModalBody: $("caseSeqModalBody"),
   caseSeqModalClose: $("caseSeqModalClose"),
+  caseSeqSearch: $("caseSeqSearch"),
   suggestPairModal: $("suggestPairModal"),
   suggestPairTitle: $("suggestPairTitle"),
   suggestPairBody: $("suggestPairBody"),
@@ -3159,6 +3160,7 @@ function openCaseSeqTable(chip) {
   const bill = state.bills.find((item) => item.billKey === chip.dataset.seqEdit);
   if (!bill || !caseSeqNames[bill.caseType] || !bill.caseSeqMonth) return;
   caseSeqModalContext = { caseType: bill.caseType, month: bill.caseSeqMonth, activeKey: bill.billKey };
+  if (elements.caseSeqSearch) elements.caseSeqSearch.value = "";
   renderCaseSeqModal();
   if (elements.caseSeqModal && !elements.caseSeqModal.open) elements.caseSeqModal.showModal();
 }
@@ -3169,16 +3171,22 @@ const caseSeqBarPalette = ["#15803d", "#7c3aed", "#0284c7", "#db2777", "#0d9488"
 function renderCaseSeqModal() {
   if (!caseSeqModalContext || !elements.caseSeqModal) return;
   const { caseType, month, activeKey } = caseSeqModalContext;
-  const rows = state.bills
+  const allRows = state.bills
     .filter((item) => item.caseType === caseType && item.caseSeqMonth === month && item.caseSeq)
     .sort((a, b) => a.caseSeq - b.caseSeq || caseSeqDate(a).localeCompare(caseSeqDate(b)));
   const monthNo = Number(month.split("-")[1]);
+  // สีกลุ่ม BAR คิดจากทุกแถวของเดือน (ค้นหาแล้วสียังคงที่)
   const barColors = new Map();
-  rows.forEach((item) => {
+  allRows.forEach((item) => {
     const bar = clean(item.barNo);
     if (bar && !barColors.has(bar)) barColors.set(bar, caseSeqBarPalette[barColors.size % caseSeqBarPalette.length]);
   });
-  elements.caseSeqModalTitle.textContent = `ลำดับเคส${caseSeqNames[caseType]} · ${monthChipLabel(month)} (${number(rows.length)} เคส)`;
+  const term = clean(elements.caseSeqSearch?.value).toLowerCase();
+  const rows = term
+    ? allRows.filter((item) => [item.orderId, item.orw, item.patient, caseSeqCode(caseType, item.caseSeq, monthNo)]
+        .some((field) => clean(field).toLowerCase().includes(term)))
+    : allRows;
+  elements.caseSeqModalTitle.textContent = `ลำดับเคส${caseSeqNames[caseType]} · ${monthChipLabel(month)} (${number(term ? rows.length : allRows.length)}${term ? ` จาก ${number(allRows.length)}` : ""} เคส)`;
   elements.caseSeqModalBody.innerHTML = rows.length ? `
     <table class="case-seq-table">
       <thead><tr><th class="seq-col">ลำดับ</th><th>โค้ด</th><th>วันที่ CKNC</th><th>บิล / ผู้รับบริการ</th><th class="act-col">จัดการ</th></tr></thead>
@@ -3202,7 +3210,7 @@ function renderCaseSeqModal() {
       </tbody>
     </table>
     <p class="case-seq-hint">แก้เลขในช่องลำดับ (Enter บันทึก · เว้นว่าง = กลับไปนับอัตโนมัติ · * = กำหนดเลขเอง) · กดเลขบิลหรือปุ่มดินสอเพื่อเปิดแก้ไขรายละเอียด · สีขอบโค้ด = กลุ่มใบวางบิล (BAR) เดียวกัน, ขอบส้ม = ยังไม่มี BAR</p>
-  ` : '<p class="case-seq-hint">ไม่มีเคสในเดือนนี้</p>';
+  ` : `<p class="case-seq-hint">${term ? "ไม่พบเคสที่ตรงกับคำค้นหา" : "ไม่มีเคสในเดือนนี้"}</p>`;
 }
 
 function commitCaseSeqRow(input) {
@@ -6378,6 +6386,11 @@ elements.cardDetailModal?.addEventListener("change", (event) => {
 elements.caseSeqModalClose?.addEventListener("click", () => elements.caseSeqModal?.close());
 elements.caseSeqModal?.addEventListener("click", (event) => {
   if (event.target === elements.caseSeqModal) elements.caseSeqModal.close();
+});
+elements.caseSeqSearch?.addEventListener("input", renderCaseSeqModal);
+// กัน Enter submit form dialog (จะปิด popup) — ช่องค้นหาอยู่ในฟอร์ม method="dialog"
+elements.caseSeqSearch?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") event.preventDefault();
 });
 elements.caseSeqModalBody?.addEventListener("click", (event) => {
   const openBtn = event.target.closest("[data-seq-open]");
