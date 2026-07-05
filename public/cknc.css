@@ -486,6 +486,69 @@ button:not(:disabled):hover {
   font-size: 14px;
 }
 
+/* แถบ "ยังไม่ครบ" — chip กลุ่มที่ยัง match ไม่ครบ กดกรองได้ */
+.gap-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 12px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: filter 0.12s ease, box-shadow 0.12s ease;
+}
+
+.gap-chip strong {
+  font-weight: 900;
+}
+
+.gap-chip.warning {
+  background: var(--amber-soft, #fdf3d8);
+  border-color: #f0d6a4;
+  color: #92600b;
+}
+
+.gap-chip.danger {
+  background: #fdecec;
+  border-color: #e5a3a3;
+  color: #a12626;
+}
+
+.gap-chip:hover {
+  filter: brightness(0.97);
+}
+
+.gap-chip.active {
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.12) inset;
+}
+
+.gap-all-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--mint);
+  color: var(--green-dark);
+  font-size: 12.5px;
+  font-weight: 800;
+}
+
+html.dark .gap-chip.warning {
+  background: rgba(245, 158, 11, 0.16);
+  border-color: #7a5a1e;
+  color: #fbbf24;
+}
+
+html.dark .gap-chip.danger {
+  background: rgba(220, 38, 38, 0.16);
+  border-color: #7a2e2e;
+  color: #f8b4b4;
+}
+
 .metric[role="button"] {
   cursor: pointer;
   transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;

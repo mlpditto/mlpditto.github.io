@@ -1786,38 +1786,23 @@ function renderQuickDateFilters() {
   elements.quickDateFilters.innerHTML = yearRow + monthRow + dayRow;
 }
 
-function mergeAssistantData() {
-  const bills = activeBills();
-  const total = bills.length;
-  const clickOrders = new Set([...state.clicknicRows, ...state.manualClicknicRows].map((row) => row.orderId).filter(Boolean)).size || bills.filter((bill) => bill.orderId).length;
-  const withMlp = bills.filter((bill) => bill.status !== "clicknic-only" && bill.status !== "billing-only").length;
-  const withBilling = bills.filter((bill) => clean(bill.billingNo) || toNumeric(bill.billedAmount) > 0).length;
-  const exactOrderMatch = bills.filter((bill) => bill.orderId && bill.status !== "clicknic-only" && bill.status !== "billing-only").length;
-  const refMatch = bills.filter((bill) => clean(bill.billingRefs)).length;
-  const needsMlp = bills.filter((bill) => bill.status === "clicknic-only").length;
-  const needsBilling = bills.filter((bill) => bill.status === "pending-billing").length;
-  const billingOnly = bills.filter((bill) => bill.status === "billing-only").length;
-  const confident = bills.filter((bill) => bill.orderId && bill.orw && (bill.billingNo || bill.status === "pending-billing")).length;
-  return { total, clickOrders, withMlp, withBilling, exactOrderMatch, refMatch, needsMlp, needsBilling, billingOnly, confident };
-}
-
+// แถบ "ยังไม่ครบ" — โชว์เฉพาะกลุ่มที่ยัง match ไม่ครบ (กด chip = กรองไปที่กลุ่มนั้น) นับตามช่วงวันที่ที่กรอง
 function renderMergeAssistant() {
   if (!elements.mergeAssistant) return;
-  const data = mergeAssistantData();
-  const confidence = data.total ? Math.round((data.confident / data.total) * 100) : 0;
-  const steps = [
-    { key: "mergeClicknicBase", label: "CLICKNIC", value: data.clickOrders, hint: "1. CLICKNIC base: ใช้วันที่จาก Excel เป็นแกนรายวัน" },
-    { key: "mergeMlpMemo", label: "MLP memo", value: data.exactOrderMatch, hint: "2. MLP by memo: จับจากเลขที่ออเดอร์ในบันทึกช่วยจำ" },
-    { key: "mergeBillingRef", label: "Billing ref", value: data.refMatch, hint: "3. Billing by ref: จับจาก ORW / INV / AR" },
-  ];
+  const counts = statusCounts();
+  const gaps = [
+    { status: "clicknic-only", label: "รายการยาไม่มี MLP", value: counts["clicknic-only"] || 0, tone: "danger" },
+    { status: "mlp-only", label: "ไม่พบรายการยา", value: counts["mlp-only"] || 0, tone: "warning" },
+    { status: "billing-only", label: "ใบวางบิลไม่เจอ MLP", value: counts["billing-only"] || 0, tone: "danger" },
+    { status: "pending-billing", label: "รอใบวางบิล", value: counts["pending-billing"] || 0, tone: "warning" },
+  ].filter((gap) => gap.value > 0);
+  const totalGap = gaps.reduce((sum, gap) => sum + gap.value, 0);
   elements.mergeAssistant.innerHTML = `
     <div class="merge-line">
-      <span class="merge-line-title" title="เส้นทางจับคู่ 3 ฝั่ง: CLICKNIC เลขที่ออเดอร์ → MLP บันทึกช่วยจำ → Billing ORW/INV/AR">Merge 3 ฝั่ง</span>
-      ${steps.map((step, index) => `
-        ${index ? '<i class="fa-solid fa-arrow-right merge-step-arrow" aria-hidden="true"></i>' : ""}
-        <span class="merge-step" data-summary-card="${step.key}" role="button" tabindex="0" title="${htmlEscape(step.hint)}">${step.label} <strong>${number(step.value)}</strong></span>
-      `).join("")}
-      <strong class="merge-confidence" title="ความมั่นใจการจับคู่ 3 ฝั่ง">${number(confidence)}%</strong>
+      <span class="merge-line-title" title="กลุ่มบิลที่ยังจับคู่ 3 ฝั่งไม่ครบ — กดเพื่อไปแก้">${totalGap ? `ยังไม่ครบ <strong>${number(totalGap)}</strong> รายการ` : "สถานะจับคู่ 3 ฝั่ง"}</span>
+      ${totalGap
+        ? gaps.map((gap) => `<button type="button" class="gap-chip ${gap.tone}${state.activeStatus === gap.status ? " active" : ""}" data-gap-status="${htmlEscape(gap.status)}" title="กดเพื่อกรองดูเฉพาะกลุ่มนี้">${htmlEscape(gap.label)} <strong>${number(gap.value)}</strong></button>`).join("")
+        : '<span class="gap-all-clear"><i class="fa-solid fa-circle-check"></i> ครบทุกฝั่ง</span>'}
     </div>
   `;
 }
@@ -6472,6 +6457,15 @@ elements.targetDate.addEventListener("keydown", (event) => {
   if (event.key === "Enter") showTargetDate();
 });
 elements.clearFiltersBtn.addEventListener("click", clearFilters);
+// แถบ "ยังไม่ครบ": กด chip = กรองไปที่กลุ่มนั้น (สลับกลับเป็น ทั้งหมด ถ้ากดซ้ำ)
+elements.mergeAssistant?.addEventListener("click", (event) => {
+  const chip = event.target.closest("[data-gap-status]");
+  if (!chip) return;
+  const status = chip.dataset.gapStatus;
+  setActiveStatus(state.activeStatus === status ? "all" : status);
+  renderMergeAssistant();
+  elements.billTableBody?.closest("table")?.scrollIntoView({ block: "start", behavior: "smooth" });
+});
 document.addEventListener("click", (event) => {
   const card = event.target.closest("[data-summary-card]");
   if (!card) return;
