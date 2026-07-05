@@ -733,10 +733,11 @@ function billRefLine(bill) {
   return parts.join(" · ");
 }
 
-function deriveBillingStage(status, caseType, billedAmount, billingNo) {
+function deriveBillingStage(status, caseType, barNo, creditNos) {
   if (status === "billing-only") return { billingStage: "billing-only", billingStageSource: "auto-status" };
   if (status === "clicknic-only") return { billingStage: "no-mlp", billingStageSource: "auto-status" };
-  if (toNumeric(billedAmount) > 0 || clean(billingNo)) return { billingStage: "billed", billingStageSource: "auto-billing" };
+  // วางบิลแล้ว (auto): ต้องมีทั้งเลขใบวางบิล (BAR) และเลขที่เครดิต (AR) ครบก่อน — เลือกมือได้เสมอ
+  if (clean(barNo) && clean(creditNos)) return { billingStage: "billed", billingStageSource: "auto-billing" };
   if (caseType === "insurance") return { billingStage: "insurance-review", billingStageSource: "auto-case-type" };
   if (caseType === "nhso") return { billingStage: "nhso-pending", billingStageSource: "auto-case-type" };
   if (caseType === "general") return { billingStage: "general-pending", billingStageSource: "auto-case-type" };
@@ -1325,7 +1326,7 @@ function buildBills() {
       billSale = NHSO_DEFAULT_SALE;
       billCost = 0;
     }
-    const billingStageDetection = deriveBillingStage(status, caseType, billedAmount, billingNo);
+    const billingStageDetection = deriveBillingStage(status, caseType, barNo, creditNos);
     const bill = applyBillOverride({
       billKey: billKeyForOrder(key),
       status,
@@ -1379,7 +1380,7 @@ function buildBills() {
     const key = `${row.sourceName}:${row.sheetName}:${row.rowNumber}`;
     if (usedBillingRows.has(key)) return;
     const caseDetection = detectCaseType(row.rawText);
-    const billingStageDetection = deriveBillingStage("billing-only", caseDetection.caseType, row.amount, row.ar);
+    const billingStageDetection = deriveBillingStage("billing-only", caseDetection.caseType, row.bar, row.ar);
     const bill = applyBillOverride({
       billKey: `billing:${key}`,
       status: "billing-only",
@@ -3374,7 +3375,7 @@ function mergeManualBillGroup(members) {
     merged.billingStage = manualStage.billingStage;
     merged.billingStageSource = "manual";
   } else {
-    const stage = deriveBillingStage(merged.status, merged.caseType || "unknown", merged.billedAmount, merged.billingNo);
+    const stage = deriveBillingStage(merged.status, merged.caseType || "unknown", merged.barNo, merged.creditNos);
     merged.billingStage = stage.billingStage;
     merged.billingStageSource = stage.billingStageSource;
   }
@@ -5606,7 +5607,7 @@ function applyPasteAnalyzeToBill() {
   const existing = state.billOverrides[bill.billKey] || {};
   // เปลี่ยนประเภทเคสแล้ว งานวางบิลที่ไม่ได้แก้มือ ให้คำนวณใหม่ตามประเภทเคส (เหมือน quickUpdateCaseType)
   if (values.caseType && (existing.values?.billingStageSource || bill.billingStageSource) !== "manual") {
-    const stageDetection = deriveBillingStage(bill.status, values.caseType, bill.billedAmount, bill.billingNo);
+    const stageDetection = deriveBillingStage(bill.status, values.caseType, bill.barNo, bill.creditNos);
     values.billingStage = stageDetection.billingStage;
     values.billingStageSource = stageDetection.billingStageSource;
   }
@@ -5729,7 +5730,7 @@ function quickUpdateCaseType(billKey, caseType) {
   const existing = state.billOverrides[bill.billKey] || {};
   const currentCaseType = existing.values?.caseType || bill.caseType || "unknown";
   if (currentCaseType === caseType) return;
-  const stageDetection = deriveBillingStage(bill.status, caseType, bill.billedAmount, bill.billingNo);
+  const stageDetection = deriveBillingStage(bill.status, caseType, bill.barNo, bill.creditNos);
   const shouldUpdateStage = (existing.values?.billingStageSource || bill.billingStageSource) !== "manual";
   state.billOverrides[bill.billKey] = {
     ...existing,
@@ -5842,23 +5843,11 @@ function quickUpdateInlineField(billKey, field, rawValue, type) {
     : (Object.prototype.hasOwnProperty.call(existing.values || {}, field) ? existing.values[field] : bill[field]);
   if (!inlineValueChanged(currentValue, value, type)) return;
   const fieldPatch = isTotalCost ? { cost: value, mlpCost: 0 } : { [field]: value };
-  const stagePatch = {};
-  if (field === "billedAmount" && (existing.values?.billingStageSource || bill.billingStageSource) !== "manual") {
-    const stageDetection = deriveBillingStage(
-      existing.values?.status || bill.status,
-      existing.values?.caseType || bill.caseType || "unknown",
-      value,
-      existing.values?.billingNo || bill.billingNo,
-    );
-    stagePatch.billingStage = stageDetection.billingStage;
-    stagePatch.billingStageSource = stageDetection.billingStageSource;
-  }
   state.billOverrides[bill.billKey] = {
     ...existing,
     values: {
       ...(existing.values || {}),
       ...fieldPatch,
-      ...stagePatch,
     },
     note: existing.note || "แก้ข้อมูลจากตาราง",
     updatedAt: new Date().toISOString(),
@@ -5944,7 +5933,7 @@ function saveBillOverride() {
     values.medicinesText = drawerMeds.map((item) => `${item.medicine} x${number(item.qty)}`).join(", ");
   }
   if (values.billingStageSource !== "manual") {
-    const stageDetection = deriveBillingStage(values.status, values.caseType, values.billedAmount, values.barNo || values.creditNos || bill.billingNo);
+    const stageDetection = deriveBillingStage(values.status, values.caseType, values.barNo, values.creditNos);
     values.billingStage = stageDetection.billingStage;
     values.billingStageSource = stageDetection.billingStageSource;
   }
@@ -6459,7 +6448,7 @@ function applyBulkBarNo() {
   applyBulkOverride((bill, existing) => {
     const values = { barNo: barValue };
     if ((existing.values?.billingStageSource || bill.billingStageSource) !== "manual") {
-      const stage = deriveBillingStage(bill.status, bill.caseType || "unknown", bill.billedAmount, barValue);
+      const stage = deriveBillingStage(bill.status, bill.caseType || "unknown", barValue, existing.values?.creditNos || bill.creditNos);
       values.billingStage = stage.billingStage;
       values.billingStageSource = stage.billingStageSource;
     }
