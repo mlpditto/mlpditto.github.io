@@ -1346,6 +1346,17 @@ th.th-center {
   color: var(--muted);
 }
 
+/* ตารางต้นทุน สปสช/ประกัน — ค่าเป็นเงิน (กว้างกว่า count) จัดชิดขวา ตัวเลขเรียง */
+.cost-by-month .monthly-cases-row {
+  grid-template-columns: minmax(28px, 0.7fr) minmax(0, 1fr) minmax(0, 1fr);
+  font-size: 10.5px;
+}
+
+.cost-by-month .monthly-cases-row span:not(:first-child) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 /* chip เลขลำดับเคสต่อเดือน (สปสช/ประกัน) — โทนสีเดียวกับประเภทเคส คลิกเพื่อแก้เลขได้ */
 .case-seq-chip {
   display: inline-block;

@@ -1640,6 +1640,37 @@ function renderMonthlyCases() {
   body.innerHTML = `<div class="monthly-cases-row head"><span></span><span>สปสช</span><span>ประกัน</span></div>${rows}`;
 }
 
+// ต้นทุน สปสช/ประกัน 3 เดือนล่าสุด ใต้การ์ดต้นทุน (นับทุกบิลบนจอ ไม่ขึ้นกับตัวกรอง) — กดแถวกรองเดือนได้
+function renderCostByMonth() {
+  const body = $("costByMonthBody");
+  if (!body) return;
+  const byMonth = new Map();
+  activeBills().forEach((bill) => {
+    if (!caseSeqNames[bill.caseType]) return; // เฉพาะ สปสช/ประกัน
+    const month = (dateKey(bill.clicknicDate || bill.mlpDate) || "").slice(0, 7);
+    if (!month) return;
+    const entry = byMonth.get(month) || { nhso: 0, insurance: 0 };
+    entry[bill.caseType] += toNumeric(bill.cost) + toNumeric(bill.mlpCost);
+    byMonth.set(month, entry);
+  });
+  const months = [...byMonth.keys()].sort().slice(-3); // 3 เดือนล่าสุด
+  if (!months.length) {
+    body.innerHTML = '<div class="monthly-cases-empty">ยังไม่มีต้นทุน สปสช/ประกัน</div>';
+    return;
+  }
+  const rows = months.map((month) => {
+    const entry = byMonth.get(month);
+    const [year, monthNum] = month.split("-").map(Number);
+    const monthShort = new Date(Date.UTC(year, monthNum - 1, 1)).toLocaleDateString("th-TH", { month: "short", timeZone: "UTC" });
+    const range = monthRangeOf(month);
+    const isActive = elements.dateFrom.value === range.from && elements.dateTo.value === range.to;
+    return `<button type="button" class="monthly-cases-row${isActive ? " active" : ""}" data-month-filter="${month}" title="${isActive ? "กดอีกครั้งเพื่อยกเลิกกรอง" : `กรองทั้งจอเป็นเดือน ${htmlEscape(monthChipLabel(month))}`}">
+      <span>${htmlEscape(monthShort)}</span><span>${entry.nhso ? money(entry.nhso) : "—"}</span><span>${entry.insurance ? money(entry.insurance) : "—"}</span>
+    </button>`;
+  }).join("");
+  body.innerHTML = `<div class="monthly-cases-row head"><span></span><span>สปสช</span><span>ประกัน</span></div>${rows}`;
+}
+
 function toggleMonthFilter(month) {
   const range = monthRangeOf(month);
   const alreadyActive = elements.dateFrom.value === range.from && elements.dateTo.value === range.to;
@@ -1657,6 +1688,7 @@ function toggleMonthFilter(month) {
 function renderMetrics() {
   updateEmptyState();
   renderMonthlyCases();
+  renderCostByMonth();
   const metrics = calculateMetrics();
   Object.entries(metricIds).forEach(([key, id]) => {
     const el = $(id);
@@ -6493,6 +6525,11 @@ function showTargetDate() {
 }
 
 $("monthlyCasesBody")?.addEventListener("click", (event) => {
+  const row = event.target.closest("[data-month-filter]");
+  if (!row) return;
+  toggleMonthFilter(row.dataset.monthFilter);
+});
+$("costByMonthBody")?.addEventListener("click", (event) => {
   const row = event.target.closest("[data-month-filter]");
   if (!row) return;
   toggleMonthFilter(row.dataset.monthFilter);
