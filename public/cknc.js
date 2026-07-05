@@ -3250,7 +3250,10 @@ function renderCaseSeqModal() {
             <td><span class="case-seq-chip case-${htmlEscape(caseType)} case-seq-bar-chip" style="border-color:${barColor}" title="${htmlEscape(barTitle)}">${htmlEscape(caseSeqCode(caseType, item.caseSeq, monthNo))}${manual ? "*" : ""}</span></td>
             <td class="case-seq-date">${htmlEscape(formatDisplayDate(item.clicknicDate || item.mlpDate) || "-")}</td>
             <td class="case-seq-bill">
-              <button type="button" class="case-seq-bill-link" data-seq-open="${htmlEscape(item.billKey)}" title="เปิดรายละเอียด / แก้ไขบิลนี้">${htmlEscape(item.orderId || item.orw || "-")}</button>
+              <span class="case-seq-bill-line">
+                <button type="button" class="case-seq-bill-link" data-seq-open="${htmlEscape(item.billKey)}" title="เปิดรายละเอียด / แก้ไขบิลนี้">${htmlEscape(item.orderId || item.orw || "-")}</button>
+                ${clean(item.orderId || item.orw) ? `<button type="button" class="copy-ref-btn" data-copy-text="${htmlEscape(clean(item.orderId || item.orw))}" title="คัดลอกเลขที่ออเดอร์" aria-label="คัดลอกเลขที่ออเดอร์"><i class="fa-regular fa-copy"></i></button>` : ""}
+              </span>
               <span class="case-seq-patient">${htmlEscape(item.patient || "-")}</span>
             </td>
             <td class="act-col"><button type="button" class="row-action icon-action" data-seq-open="${htmlEscape(item.billKey)}" title="รายละเอียด / แก้ไข" aria-label="รายละเอียด / แก้ไข"><i class="fa-solid fa-pen-to-square"></i></button></td>
@@ -6442,6 +6445,17 @@ elements.caseSeqSearch?.addEventListener("keydown", (event) => {
   if (event.key === "Enter") event.preventDefault();
 });
 elements.caseSeqModalBody?.addEventListener("click", (event) => {
+  const copyBtn = event.target.closest("[data-copy-text]");
+  if (copyBtn) {
+    navigator.clipboard?.writeText(copyBtn.dataset.copyText).then(() => {
+      const icon = copyBtn.querySelector("i");
+      if (icon) {
+        icon.className = "fa-solid fa-check";
+        setTimeout(() => { icon.className = "fa-regular fa-copy"; }, 1200);
+      }
+    }).catch(() => {});
+    return;
+  }
   const openBtn = event.target.closest("[data-seq-open]");
   if (!openBtn) return;
   elements.caseSeqModal?.close();

@@ -2254,8 +2254,13 @@ html.dark .case-seq-search {
   font-variant-numeric: tabular-nums;
 }
 
+.case-seq-bill-line {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .case-seq-bill-link {
-  display: block;
   padding: 0;
   border: none;
   background: none;
