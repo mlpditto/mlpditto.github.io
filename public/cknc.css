@@ -3698,19 +3698,19 @@ button {
   display: none;
 }
 
-/* การ์ด WARN คู่บิลซ้ำ — กดกาง/หุบแผงรายการคู่ */
+/* การ์ด WARN คู่บิลซ้ำ — กดเปิด popup รายการคู่ */
 .merge-warn-card {
   cursor: pointer;
   border-left-color: #f59e0b;
 }
 
-.merge-warn-card.merge-warn-open {
-  background: var(--amber-soft, #fdf3d8);
-  box-shadow: var(--shadow-hover);
+.merge-warn-names {
+  font-weight: 800;
 }
 
-html.dark .merge-warn-card.merge-warn-open {
-  background: rgba(245, 158, 11, 0.14);
+.merge-warn-reasons {
+  color: var(--muted);
+  font-size: 11.5px;
 }
 
 html.dark .metric.mini.warning strong {

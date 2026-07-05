@@ -22,8 +22,6 @@ const state = {
   deletedBillKeys: [],
   // คู่แนะนำรวมบิลที่ผู้ใช้ยืนยันแล้วว่า "ไม่ใช่บิลเดียวกัน" — ซ่อนถาวร ติดไปกับ session/autosave
   dismissedSuggestions: [],
-  // แผงรายการคู่แนะนำ กาง/หุบจากการ์ด WARN (ค่าเริ่มต้น: หุบ)
-  showMergeSuggestPanel: false,
   mergeSuggestions: [],
   mergeSuggestCacheRef: null,
   topMeds: [],
@@ -155,6 +153,10 @@ const elements = {
   suggestPairMerge: $("suggestPairMerge"),
   mergeWarnCard: $("mergeWarnCard"),
   metricMergeWarn: $("metricMergeWarn"),
+  mergeWarnModal: $("mergeWarnModal"),
+  mergeWarnTitle: $("mergeWarnTitle"),
+  mergeWarnBody: $("mergeWarnBody"),
+  mergeWarnClose: $("mergeWarnClose"),
   editClicknicDate: $("editClicknicDate"),
   editMlpDate: $("editMlpDate"),
   editBillingDueDate: $("editBillingDueDate"),
@@ -194,7 +196,6 @@ const elements = {
   cancelBulkMoney: $("cancelBulkMoney"),
   applyBulkMoney: $("applyBulkMoney"),
   bulkApplyBarNo: $("bulkApplyBarNo"),
-  mergeSuggestBar: $("mergeSuggestBar"),
   bulkMergeBills: $("bulkMergeBills"),
   bulkDeleteBills: $("bulkDeleteBills"),
   bulkExclude: $("bulkExclude"),
@@ -3737,35 +3738,52 @@ function computeMergeSuggestions() {
 }
 
 function renderMergeSuggestions() {
-  if (!elements.mergeSuggestBar) return;
   // คำนวณใหม่เฉพาะเมื่อชุดบิลเปลี่ยน (state.bills ถูกสร้างใหม่ทุกครั้งที่ rebuild) — พิมพ์ค้นหาไม่ต้องคิดซ้ำ
   if (state.mergeSuggestCacheRef !== state.bills) {
     state.mergeSuggestCacheRef = state.bills;
     state.mergeSuggestions = computeMergeSuggestions();
   }
   const suggestions = state.mergeSuggestions;
-  // การ์ด WARN ในแถวการ์ดเล็ก = ตัวเปิด/ปิดแผงรายการคู่ (ไม่มีคู่ = ซ่อนทั้งการ์ดและแผง)
+  // การ์ด WARN ในแถวการ์ดเล็ก — กดแล้วเปิด popup รายการคู่ (ไม่มีคู่ = ซ่อนการ์ด)
   if (elements.mergeWarnCard) {
     elements.mergeWarnCard.hidden = !suggestions.length;
-    elements.mergeWarnCard.classList.toggle("merge-warn-open", Boolean(suggestions.length && state.showMergeSuggestPanel));
     if (elements.metricMergeWarn) elements.metricMergeWarn.textContent = number(suggestions.length);
   }
-  elements.mergeSuggestBar.hidden = !suggestions.length || !state.showMergeSuggestPanel;
-  if (!suggestions.length) {
-    elements.mergeSuggestBar.innerHTML = "";
-    return;
+  // popup เปิดค้างอยู่ → ตามข้อมูลล่าสุด (คู่หมดแล้วปิดเอง)
+  if (elements.mergeWarnModal?.open) {
+    if (!suggestions.length) elements.mergeWarnModal.close();
+    else renderMergeWarnBody();
   }
-  elements.mergeSuggestBar.innerHTML = `
-    <strong class="merge-suggest-title"><i class="fa-solid fa-object-group"></i> น่าจะเป็นบิลเดียวกัน ${number(suggestions.length)} คู่</strong>
-    ${suggestions.map((item, index) => `
-      <span class="merge-suggest-item" title="เหตุผล: ${htmlEscape(item.reasons.join(" + "))}">
-        <span class="merge-suggest-score">${item.score}%</span>
-        <span class="merge-suggest-names">${htmlEscape(item.aLabel)} ↔ ${htmlEscape(item.bLabel)}</span>
-        <button class="ghost small" type="button" data-suggest-select="${index}" title="ติ๊กเลือกสองบิลนี้ในตาราง">เลือก</button>
-        <button class="ghost small" type="button" data-suggest-merge="${index}" title="รวมสองบิลนี้ (มีสรุปให้ยืนยันก่อน)">รวม</button>
-      </span>
-    `).join("")}
+}
+
+function renderMergeWarnBody() {
+  const suggestions = state.mergeSuggestions;
+  if (elements.mergeWarnTitle) elements.mergeWarnTitle.textContent = `น่าจะเป็นบิลเดียวกัน ${number(suggestions.length)} คู่`;
+  if (!elements.mergeWarnBody) return;
+  elements.mergeWarnBody.innerHTML = `
+    <table class="case-seq-table">
+      <thead><tr><th>%</th><th>คู่บิล</th><th>เหตุผล</th><th class="act-col">จัดการ</th></tr></thead>
+      <tbody>
+        ${suggestions.map((item, index) => `
+        <tr>
+          <td><span class="merge-suggest-score">${item.score}%</span></td>
+          <td class="merge-warn-names">${htmlEscape(item.aLabel)} ↔ ${htmlEscape(item.bLabel)}</td>
+          <td class="merge-warn-reasons">${htmlEscape(item.reasons.join(" + "))}</td>
+          <td class="act-col">
+            <button class="ghost small" type="button" data-warn-compare="${index}" title="เปิดตารางเทียบสองบิล">เทียบ</button>
+            <button class="ghost small" type="button" data-warn-merge="${index}" title="รวมสองบิลนี้ (มีสรุปให้ยืนยันก่อน)">รวม</button>
+          </td>
+        </tr>`).join("")}
+      </tbody>
+    </table>
+    <p class="case-seq-hint">เทียบ = เปิดตารางเทียบสองบิล (มีปุ่มรวม/ซ่อนคู่พร้อมเหตุผลในนั้น) · รวม = เข้าขั้นตอนรวมบิล มีสรุปให้ยืนยันก่อนเสมอ</p>
   `;
+}
+
+function openMergeWarnModal() {
+  if (!elements.mergeWarnModal || !state.mergeSuggestions.length) return;
+  renderMergeWarnBody();
+  if (!elements.mergeWarnModal.open) elements.mergeWarnModal.showModal();
 }
 
 // เลือก/รวมจากแผงแนะนำ — "รวม" วิ่งเข้าปุ่มรวมบิลเดิม (มี confirm สรุปก่อนเสมอ)
@@ -6832,33 +6850,30 @@ elements.applyBulkMoney?.addEventListener("click", applyBulkMoneyEdit);
 elements.bulkMoneyCostMode?.addEventListener("change", renderBulkMoneyPreview);
 elements.bulkMergeBills?.addEventListener("click", mergeSelectedBills);
 elements.bulkDeleteBills?.addEventListener("click", deleteSelectedBills);
-elements.mergeSuggestBar?.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-suggest-select], [data-suggest-merge]");
+elements.mergeWarnCard?.addEventListener("click", openMergeWarnModal);
+elements.mergeWarnCard?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    openMergeWarnModal();
+  }
+});
+elements.mergeWarnClose?.addEventListener("click", () => elements.mergeWarnModal?.close());
+elements.mergeWarnModal?.addEventListener("click", (event) => {
+  if (event.target === elements.mergeWarnModal) elements.mergeWarnModal.close();
+});
+elements.mergeWarnBody?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-warn-compare], [data-warn-merge]");
   if (!button) return;
-  const isMerge = button.hasAttribute("data-suggest-merge");
-  const index = Number(isMerge ? button.dataset.suggestMerge : button.dataset.suggestSelect);
-  const item = state.mergeSuggestions[index];
+  const isMerge = button.hasAttribute("data-warn-merge");
+  const item = state.mergeSuggestions[Number(isMerge ? button.dataset.warnMerge : button.dataset.warnCompare)];
   if (!item) return;
   applySuggestionSelection(item);
+  elements.mergeWarnModal?.close();
   if (isMerge) {
     mergeSelectedBills();
     return;
   }
   openSuggestPairModal(item);
-});
-const toggleMergeSuggestPanel = () => {
-  state.showMergeSuggestPanel = !state.showMergeSuggestPanel;
-  renderMergeSuggestions();
-  if (state.showMergeSuggestPanel && elements.mergeSuggestBar && !elements.mergeSuggestBar.hidden) {
-    elements.mergeSuggestBar.scrollIntoView({ block: "center", behavior: "smooth" });
-  }
-};
-elements.mergeWarnCard?.addEventListener("click", toggleMergeSuggestPanel);
-elements.mergeWarnCard?.addEventListener("keydown", (event) => {
-  if (event.key === "Enter" || event.key === " ") {
-    event.preventDefault();
-    toggleMergeSuggestPanel();
-  }
 });
 elements.suggestPairClose?.addEventListener("click", () => elements.suggestPairModal?.close());
 elements.suggestPairCancel?.addEventListener("click", () => elements.suggestPairModal?.close());
