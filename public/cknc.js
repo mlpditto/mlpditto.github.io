@@ -153,6 +153,12 @@ const elements = {
   suggestPairCancel: $("suggestPairCancel"),
   suggestPairDismiss: $("suggestPairDismiss"),
   suggestPairMerge: $("suggestPairMerge"),
+  dismissReasonModal: $("dismissReasonModal"),
+  dismissReasonChips: $("dismissReasonChips"),
+  dismissReasonText: $("dismissReasonText"),
+  dismissReasonClose: $("dismissReasonClose"),
+  dismissReasonCancel: $("dismissReasonCancel"),
+  dismissReasonConfirm: $("dismissReasonConfirm"),
   mergeWarnCard: $("mergeWarnCard"),
   metricMergeWarn: $("metricMergeWarn"),
   mergeWarnModal: $("mergeWarnModal"),
@@ -6916,11 +6922,37 @@ elements.suggestPairBody?.addEventListener("click", (event) => {
   elements.suggestPairModal?.close();
   openDetailDrawer(openBtn.dataset.pairOpen);
 });
+// คู่ที่กำลังจะซ่อน (เก็บไว้ระหว่างเปิด modal ระบุเหตุผล — suggestPairContext อาจเปลี่ยนถ้าเปิด popup อื่น)
+let pendingDismissItem = null;
 elements.suggestPairDismiss?.addEventListener("click", () => {
-  if (!suggestPairContext) return;
-  const reason = prompt("ยืนยันว่าไม่ใช่บิลเดียวกัน — ระบุเหตุผล (บันทึกลง audit trail)", "");
-  if (reason === null) return; // กดยกเลิก = ไม่ทำอะไร
-  dismissSuggestionPair(suggestPairContext, clean(reason) || "-");
+  if (!suggestPairContext || !elements.dismissReasonModal) return;
+  pendingDismissItem = suggestPairContext;
+  elements.dismissReasonText.value = "";
+  if (!elements.dismissReasonModal.open) elements.dismissReasonModal.showModal();
+  elements.dismissReasonText.focus();
+});
+elements.dismissReasonChips?.addEventListener("click", (event) => {
+  const chip = event.target.closest("[data-reason]");
+  if (!chip) return;
+  // กดปุ่มเหตุผลสำเร็จรูป: เติมต่อท้าย (คั่นด้วย ", ") เผื่อเลือกหลายเหตุผล
+  const current = clean(elements.dismissReasonText.value);
+  const picked = chip.dataset.reason;
+  const parts = current ? current.split(",").map(clean).filter(Boolean) : [];
+  if (!parts.includes(picked)) parts.push(picked);
+  elements.dismissReasonText.value = parts.join(", ");
+  elements.dismissReasonText.focus();
+});
+elements.dismissReasonClose?.addEventListener("click", () => elements.dismissReasonModal?.close());
+elements.dismissReasonCancel?.addEventListener("click", () => elements.dismissReasonModal?.close());
+elements.dismissReasonModal?.addEventListener("click", (event) => {
+  if (event.target === elements.dismissReasonModal) elements.dismissReasonModal.close();
+});
+elements.dismissReasonConfirm?.addEventListener("click", () => {
+  if (!pendingDismissItem) return;
+  const reason = clean(elements.dismissReasonText.value) || "-";
+  elements.dismissReasonModal?.close();
+  dismissSuggestionPair(pendingDismissItem, reason);
+  pendingDismissItem = null;
 });
 elements.suggestPairMerge?.addEventListener("click", () => {
   elements.suggestPairModal?.close();

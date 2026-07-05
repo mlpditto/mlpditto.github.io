@@ -3738,6 +3738,39 @@ button {
   border-left-color: #f59e0b;
 }
 
+.dismiss-reason-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 18px 4px;
+}
+
+.dismiss-reason-chip {
+  padding: 5px 12px;
+  border: 1px solid rgba(15, 55, 40, 0.16);
+  border-radius: 999px;
+  background: var(--panel, #f4f7f5);
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.dismiss-reason-chip:hover {
+  border-color: #f0d6a4;
+  background: var(--amber-soft, #fdf3d8);
+}
+
+html.dark .dismiss-reason-chip {
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+html.dark .dismiss-reason-chip:hover {
+  background: rgba(245, 158, 11, 0.14);
+  border-color: #7a5a1e;
+}
+
 .merge-warn-names {
   font-weight: 800;
 }

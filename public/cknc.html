@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="./cknc.css?v=20260706110000" />
+    <link rel="stylesheet" href="./cknc.css?v=20260706120000" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -651,6 +651,34 @@
       </form>
     </dialog>
 
+    <dialog id="dismissReasonModal" class="clipboard-modal">
+      <form method="dialog" class="clipboard-card import-mode-card">
+        <div class="modal-head">
+          <div>
+            <p class="eyebrow">ไม่ใช่บิลเดียวกัน</p>
+            <h2>ระบุเหตุผล</h2>
+          </div>
+          <button id="dismissReasonClose" class="icon-button" type="button" aria-label="ปิด">×</button>
+        </div>
+        <p class="import-mode-summary">เลือกเหตุผลสำเร็จรูป หรือพิมพ์เอง (บันทึกลง audit trail)</p>
+        <div id="dismissReasonChips" class="dismiss-reason-chips">
+          <button type="button" class="dismiss-reason-chip" data-reason="เจ็บป่วยคนละอาการ">เจ็บป่วยคนละอาการ</button>
+          <button type="button" class="dismiss-reason-chip" data-reason="คนละครั้งที่มารับบริการ">คนละครั้งที่มารับบริการ</button>
+          <button type="button" class="dismiss-reason-chip" data-reason="คนละวันที่">คนละวันที่</button>
+          <button type="button" class="dismiss-reason-chip" data-reason="ชื่อซ้ำ คนละคน">ชื่อซ้ำ คนละคน</button>
+          <button type="button" class="dismiss-reason-chip" data-reason="ตรวจสอบแล้วเป็นคนละออเดอร์">ตรวจสอบแล้วเป็นคนละออเดอร์</button>
+        </div>
+        <label class="drawer-note">
+          เหตุผล
+          <textarea id="dismissReasonText" rows="2" placeholder="พิมพ์เหตุผล หรือกดปุ่มด้านบน"></textarea>
+        </label>
+        <div class="modal-actions">
+          <button id="dismissReasonCancel" class="ghost" type="button">ยกเลิก</button>
+          <button id="dismissReasonConfirm" class="ghost danger" type="button">ยืนยันซ่อนคู่นี้</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog id="bulkMoneyModal" class="clipboard-modal">
       <form method="dialog" class="clipboard-card bulk-money-card">
         <div class="modal-head">
@@ -912,7 +940,7 @@
       </div>
     </dialog>
 
-    <script src="./cknc.js?v=20260706110000"></script>
+    <script src="./cknc.js?v=20260706120000"></script>
     <script>
       (function () {
         const btn = document.getElementById("themeToggleBtn");
