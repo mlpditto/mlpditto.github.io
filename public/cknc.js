@@ -138,6 +138,10 @@ const elements = {
   editInvoice: $("editInvoice"),
   editBarNo: $("editBarNo"),
   editCreditNos: $("editCreditNos"),
+  caseSeqModal: $("caseSeqModal"),
+  caseSeqModalTitle: $("caseSeqModalTitle"),
+  caseSeqModalBody: $("caseSeqModalBody"),
+  caseSeqModalClose: $("caseSeqModalClose"),
   editClicknicDate: $("editClicknicDate"),
   editMlpDate: $("editMlpDate"),
   editBillingDueDate: $("editBillingDueDate"),
@@ -3086,6 +3090,12 @@ function renderSnapshot() {
 // เลขลำดับเคสต่อเดือน (สปสช/ประกัน) ไว้ช่วยนับยอดส่งเบิก — เรียงตามวันที่ CLICKNIC (ไม่มีใช้ MLP)
 // เลขคำนวณใหม่ทุกครั้งที่ rebuild; แก้มือทับรายบิลได้ผ่าน override caseSeqManual (0/ว่าง = อัตโนมัติ)
 const caseSeqNames = { nhso: "สปสช", insurance: "ประกัน" };
+const caseSeqCodes = { nhso: "NHSO", insurance: "INS" };
+
+// โค้ดลำดับเคส เช่น NHSO-006-06 (ลำดับ 3 หลัก - เลขเดือน 2 หลัก)
+function caseSeqCode(caseType, seq, monthNo) {
+  return `${caseSeqCodes[caseType] || ""}-${String(Math.max(0, Math.round(toNumeric(seq)))).padStart(3, "0")}-${String(monthNo).padStart(2, "0")}`;
+}
 
 function caseSeqDate(bill) {
   return dateKey(bill.clicknicDate || bill.mlpDate);
@@ -3114,56 +3124,62 @@ function assignCaseSequences() {
 
 function caseSeqChipHtml(bill) {
   if (!bill.caseSeq || !caseSeqNames[bill.caseType] || !bill.caseSeqMonth) return "";
-  const [year, month] = bill.caseSeqMonth.split("-").map(Number);
-  const monthShort = new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString("th-TH", { month: "short", timeZone: "UTC" });
+  const monthNo = Number(bill.caseSeqMonth.split("-")[1]);
   const manual = toNumeric(bill.caseSeqManual) > 0;
-  const title = `เคส${caseSeqNames[bill.caseType]} ลำดับที่ ${number(bill.caseSeq)} ของเดือน ${monthChipLabel(bill.caseSeqMonth)}${manual ? " (กำหนดเลขเอง)" : ""} — คลิกเพื่อแก้เลขลำดับ`;
-  return `<button type="button" class="case-seq-chip case-${bill.caseType}" data-seq-edit="${htmlEscape(bill.billKey)}" title="${htmlEscape(title)}">${caseSeqNames[bill.caseType]} #${number(bill.caseSeq)}·${htmlEscape(monthShort)}${manual ? "*" : ""}</button>`;
+  const title = `เคส${caseSeqNames[bill.caseType]} ลำดับที่ ${number(bill.caseSeq)} ของเดือน ${monthChipLabel(bill.caseSeqMonth)}${manual ? " (กำหนดเลขเอง)" : ""} — คลิกดูตารางลำดับทั้งเดือน / แก้เลขได้`;
+  return `<button type="button" class="case-seq-chip case-${bill.caseType}" data-seq-edit="${htmlEscape(bill.billKey)}" title="${htmlEscape(title)}">${caseSeqCode(bill.caseType, bill.caseSeq, monthNo)}${manual ? "*" : ""}</button>`;
 }
 
-// คลิก chip ลำดับเคส = แก้เลขตรงนั้นเลย (Enter บันทึก / Esc ยกเลิก / ว่าง = กลับไปนับอัตโนมัติ)
-function openCaseSeqEditor(chip) {
-  const billKey = chip.dataset.seqEdit;
+// คลิก chip ลำดับเคส = เปิด popup ตารางลำดับทั้งเดือนของประเภทนั้น — แก้เลขได้ในช่องลำดับ
+let caseSeqModalContext = null;
+
+function openCaseSeqTable(chip) {
+  const bill = state.bills.find((item) => item.billKey === chip.dataset.seqEdit);
+  if (!bill || !caseSeqNames[bill.caseType] || !bill.caseSeqMonth) return;
+  caseSeqModalContext = { caseType: bill.caseType, month: bill.caseSeqMonth, activeKey: bill.billKey };
+  renderCaseSeqModal();
+  if (elements.caseSeqModal && !elements.caseSeqModal.open) elements.caseSeqModal.showModal();
+}
+
+function renderCaseSeqModal() {
+  if (!caseSeqModalContext || !elements.caseSeqModal) return;
+  const { caseType, month, activeKey } = caseSeqModalContext;
+  const rows = state.bills
+    .filter((item) => item.caseType === caseType && item.caseSeqMonth === month && item.caseSeq)
+    .sort((a, b) => a.caseSeq - b.caseSeq || caseSeqDate(a).localeCompare(caseSeqDate(b)));
+  const monthNo = Number(month.split("-")[1]);
+  elements.caseSeqModalTitle.textContent = `ลำดับเคส${caseSeqNames[caseType]} · ${monthChipLabel(month)} (${number(rows.length)} เคส)`;
+  elements.caseSeqModalBody.innerHTML = rows.length ? `
+    <table class="case-seq-table">
+      <thead><tr><th>ลำดับ</th><th>โค้ด</th><th>วันที่ CKNC</th><th>บิล / ผู้รับบริการ</th></tr></thead>
+      <tbody>
+        ${rows.map((item) => {
+    const manual = toNumeric(item.caseSeqManual) > 0;
+    return `<tr class="${item.billKey === activeKey ? "case-seq-row-active" : ""}">
+            <td><input type="text" inputmode="numeric" class="inline-cell-input case-seq-input" data-seq-row="${htmlEscape(item.billKey)}" value="${item.caseSeq}" title="เลขลำดับเคส — ว่าง = กลับไปนับอัตโนมัติ" aria-label="เลขลำดับเคส" /></td>
+            <td class="case-seq-code">${htmlEscape(caseSeqCode(caseType, item.caseSeq, monthNo))}${manual ? "*" : ""}</td>
+            <td>${htmlEscape(formatDisplayDate(item.clicknicDate || item.mlpDate) || "-")}</td>
+            <td>${htmlEscape(item.orderId || item.orw || "-")}<br /><span class="case-seq-patient">${htmlEscape(item.patient || "-")}</span></td>
+          </tr>`;
+  }).join("")}
+      </tbody>
+    </table>
+    <p class="case-seq-hint">แก้เลขในช่องลำดับ (Enter บันทึก · เว้นว่าง = กลับไปนับอัตโนมัติ · * = กำหนดเลขเอง)</p>
+  ` : '<p class="case-seq-hint">ไม่มีเคสในเดือนนี้</p>';
+}
+
+function commitCaseSeqRow(input) {
+  if (input.dataset.done) return;
+  const billKey = input.dataset.seqRow;
   const bill = state.bills.find((item) => item.billKey === billKey);
   if (!bill) return;
   const currentManual = Math.max(0, Math.round(toNumeric(bill.caseSeqManual)));
-  const input = document.createElement("input");
-  input.type = "text";
-  input.inputMode = "numeric";
-  input.className = "inline-cell-input case-seq-input";
-  input.value = currentManual > 0 ? currentManual : (bill.caseSeq || "");
-  input.title = "เลขลำดับเคส — ว่าง = กลับไปนับอัตโนมัติ";
-  input.setAttribute("aria-label", "เลขลำดับเคส");
-  chip.replaceWith(input);
-  input.focus();
-  input.select();
-  let done = false;
-  const restore = () => {
-    if (done) return;
-    done = true;
-    input.replaceWith(chip);
-  };
-  const commit = () => {
-    if (done) return;
-    const manual = Math.max(0, Math.round(toNumeric(input.value)));
-    // ไม่ได้แก้อะไร (ค่าเดิม หรือพิมพ์เลข auto เดิมทั้งที่ไม่เคยตอกเอง) = คืน chip เฉย ๆ
-    if (manual === currentManual || (currentManual === 0 && manual === (bill.caseSeq || 0))) {
-      restore();
-      return;
-    }
-    done = true;
-    quickUpdateCaseSeq(billKey, manual);
-  };
-  input.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      commit();
-    } else if (event.key === "Escape") {
-      event.preventDefault();
-      restore();
-    }
-  });
-  input.addEventListener("blur", commit);
+  const manual = Math.max(0, Math.round(toNumeric(input.value)));
+  // ไม่ได้แก้อะไร (ค่าเดิม หรือพิมพ์เลข auto เดิมทั้งที่ไม่เคยตอกเอง) = ไม่บันทึก
+  if (manual === currentManual || (currentManual === 0 && manual === (bill.caseSeq || 0))) return;
+  input.dataset.done = "1";
+  quickUpdateCaseSeq(billKey, manual);
+  renderCaseSeqModal();
 }
 
 function quickUpdateCaseSeq(billKey, manual) {
@@ -6163,12 +6179,32 @@ elements.cardDetailModal?.addEventListener("change", (event) => {
   quickUpdateCaseType(select.dataset.cardCaseKey, select.value);
   refreshCardDetail();
 });
+elements.caseSeqModalClose?.addEventListener("click", () => elements.caseSeqModal?.close());
+elements.caseSeqModal?.addEventListener("click", (event) => {
+  if (event.target === elements.caseSeqModal) elements.caseSeqModal.close();
+});
+elements.caseSeqModalBody?.addEventListener("keydown", (event) => {
+  const input = event.target.closest("[data-seq-row]");
+  if (!input) return;
+  if (event.key === "Enter") {
+    event.preventDefault();
+    commitCaseSeqRow(input);
+  } else if (event.key === "Escape") {
+    // คืนค่าเดิมทั้งตาราง (กัน Esc เผลอปิด dialog ทั้งบาน)
+    event.preventDefault();
+    renderCaseSeqModal();
+  }
+});
+elements.caseSeqModalBody?.addEventListener("focusout", (event) => {
+  const input = event.target.closest("[data-seq-row]");
+  if (input) commitCaseSeqRow(input);
+});
 elements.closeCardDetailModal?.addEventListener("click", closeCardDetail);
 elements.cardDetailModal?.addEventListener("click", (event) => {
   if (event.target === elements.cardDetailModal) closeCardDetail();
   const seqChip = event.target.closest("[data-seq-edit]");
   if (seqChip) {
-    openCaseSeqEditor(seqChip);
+    openCaseSeqTable(seqChip);
     return;
   }
   const copyBtn = event.target.closest("[data-copy-text]");
@@ -6321,7 +6357,7 @@ elements.billTableBody.addEventListener("click", (event) => {
   }
   const seqChip = event.target.closest("[data-seq-edit]");
   if (seqChip) {
-    openCaseSeqEditor(seqChip);
+    openCaseSeqTable(seqChip);
     return;
   }
   const addMedBtn = event.target.closest("[data-med-add]");
