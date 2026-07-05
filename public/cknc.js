@@ -150,6 +150,8 @@ const elements = {
   editPhone: $("editPhone"),
   editAddress: $("editAddress"),
   editExpectedClaim: $("editExpectedClaim"),
+  editExpectedClaimLabel: $("editExpectedClaimLabel"),
+  editMlpCost: $("editMlpCost"),
   editBillingStage: $("editBillingStage"),
   editCaseSeq: $("editCaseSeq"),
   editCost: $("editCost"),
@@ -1276,7 +1278,7 @@ function validationRulesForBill(bill) {
   }
   if (toNumeric(bill.expectedClaim) > 0 && toNumeric(bill.billedAmount) > 0
     && moneyDiff(bill.expectedClaim, bill.billedAmount) > billingAmountTolerance()) {
-    pushIssue(issues, "info", "EXPECTED_CLAIM_MISMATCH", `ยอดใบวางบิลไม่ตรงยอดเรียกเก็บประกัน CKNC-P ${money(bill.expectedClaim)}`);
+    pushIssue(issues, "info", "EXPECTED_CLAIM_MISMATCH", `ยอดใบวางบิลไม่ตรงยอดเรียกเก็บ CKNC-INS/NHSO ${money(bill.expectedClaim)}`);
   }
   return issues;
 }
@@ -4069,7 +4071,7 @@ const issueChipDefs = {
   MISSING_BAR: { code: "NBR", label: "ไม่มีเลข BAR", tone: "amber" },
   BILLED_AMOUNT_EXPECTED_MISMATCH: { code: "BEM", label: "ยอดวางบิลไม่ตรงคาด", tone: "gray" },
   BILLED_AMOUNT_MLP_COST_MISMATCH: { code: "BCM", label: "ยอดไม่ตรง MLP", tone: "gray" },
-  EXPECTED_CLAIM_MISMATCH: { code: "ECM", label: "ไม่ตรง CKNC-P", tone: "gray" },
+  EXPECTED_CLAIM_MISMATCH: { code: "ECM", label: "ไม่ตรง CKNC-INS/NHSO", tone: "gray" },
   EXCLUDED: { code: "EXC", label: "ไม่นับคำนวณ", tone: "gray" },
 };
 
@@ -5337,7 +5339,7 @@ function updateEditProfitPreview() {
   if (!elements.editProfit) return;
   const bill = currentDetailBill();
   const totalCost = elements.editCost
-    ? toNumeric(elements.editCost.value)
+    ? toNumeric(elements.editCost.value) + toNumeric(elements.editMlpCost?.value)
     : toNumeric(bill?.cost) + toNumeric(bill?.mlpCost);
   const profit = toNumeric(elements.editSale.value) - totalCost;
   elements.editProfit.value = money(profit);
@@ -5365,6 +5367,11 @@ function openDetailDrawer(billKey) {
   if (elements.editPhone) elements.editPhone.value = bill.phone || "";
   if (elements.editAddress) elements.editAddress.value = bill.address || "";
   if (elements.editExpectedClaim) elements.editExpectedClaim.value = bill.expectedClaim || 0;
+  if (elements.editExpectedClaimLabel) {
+    // label ตามประเภทเคส: สปสช = CKNC-NHSO, ประกัน = CKNC-INS, อื่น ๆ = รวม
+    const claimCode = bill.caseType === "nhso" ? "CKNC-NHSO" : bill.caseType === "insurance" ? "CKNC-INS" : "CKNC-INS/NHSO";
+    elements.editExpectedClaimLabel.textContent = `ยอดเรียกเก็บ (${claimCode})`;
+  }
   elements.editOrw.value = bill.orw || "";
   elements.editInvoice.value = bill.invoice || "";
   if (elements.editBarNo) elements.editBarNo.value = bill.barNo || "";
@@ -5376,7 +5383,8 @@ function openDetailDrawer(billKey) {
   elements.editClicknicDate.value = formatDisplayDate(bill.clicknicDate);
   elements.editMlpDate.value = formatDisplayDate(bill.mlpDate);
   elements.editBillingDueDate.value = formatDisplayDate(bill.billingDueDate);
-  if (elements.editCost) elements.editCost.value = Math.round((toNumeric(bill.cost) + toNumeric(bill.mlpCost)) * 100) / 100;
+  if (elements.editCost) elements.editCost.value = Math.round(toNumeric(bill.cost) * 100) / 100;
+  if (elements.editMlpCost) elements.editMlpCost.value = Math.round(toNumeric(bill.mlpCost) * 100) / 100;
   elements.editSale.value = bill.sale || 0;
   elements.editBilledAmount.value = bill.billedAmount || 0;
   updateEditProfitPreview();
@@ -5433,7 +5441,7 @@ const pasteAnalyzeFieldDefs = [
   { key: "refId", label: "Ref-ID", type: "text" },
   { key: "phone", label: "เบอร์โทร", type: "text" },
   { key: "address", label: "ที่อยู่", type: "text" },
-  { key: "expectedClaim", label: "ยอดเรียกเก็บประกัน (CKNC-P)", type: "number" },
+  { key: "expectedClaim", label: "ยอดเรียกเก็บ (CKNC-INS/NHSO)", type: "number" },
   { key: "sale", label: "ยอดขายยา (MLP เรียกเก็บ)", type: "number" },
 ];
 
@@ -5970,14 +5978,8 @@ function saveBillOverride() {
     clicknicDate: dateKey(elements.editClicknicDate.value),
     mlpDate: dateKey(elements.editMlpDate.value),
     billingDueDate: dateKey(elements.editBillingDueDate.value),
-    ...(() => {
-      // ต้นทุนช่องเดียว: ถ้าไม่ได้แก้ คงการแยก ต้นทุนยา/MLP เดิมไว้; ถ้าแก้ เก็บรวมที่ cost และล้าง mlpCost
-      const originalCombined = toNumeric(bill.cost) + toNumeric(bill.mlpCost);
-      const combined = elements.editCost ? toNumeric(elements.editCost.value) : originalCombined;
-      return moneyDiff(combined, originalCombined) < 0.005
-        ? { cost: toNumeric(bill.cost), mlpCost: toNumeric(bill.mlpCost) }
-        : { cost: combined, mlpCost: 0 };
-    })(),
+    cost: elements.editCost ? toNumeric(elements.editCost.value) : toNumeric(bill.cost),
+    mlpCost: elements.editMlpCost ? toNumeric(elements.editMlpCost.value) : toNumeric(bill.mlpCost),
     sale: toNumeric(elements.editSale.value),
     billedAmount: toNumeric(elements.editBilledAmount.value),
     excluded: Boolean(elements.editExcluded.checked),
@@ -6481,6 +6483,7 @@ elements.detailDrawer.addEventListener("close", () => {
 elements.saveOverrideBtn.addEventListener("click", saveBillOverride);
 elements.editSale?.addEventListener("input", updateEditProfitPreview);
 elements.editCost?.addEventListener("input", updateEditProfitPreview);
+elements.editMlpCost?.addEventListener("input", updateEditProfitPreview);
 if (elements.editBillingStage) {
   elements.editBillingStage.innerHTML = billingStageOptions
     .map(([value, label]) => `<option value="${value}">${label}</option>`)
