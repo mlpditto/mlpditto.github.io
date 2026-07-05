@@ -647,6 +647,11 @@ function toNumeric(value) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+// ค่าเงินในช่องกรอก drawer แสดงทศนิยม 2 ตำแหน่งเสมอ (ไม่ใส่ลูกน้ำ กันแก้ไขยาก — toNumeric ตัดลูกน้ำอยู่แล้ว)
+function fixed2(value) {
+  return toNumeric(value).toFixed(2);
+}
+
 function parseDateValue(value) {
   const text = clean(value);
   if (!text) return null;
@@ -5574,7 +5579,7 @@ function updateEditProfitPreview() {
     ? toNumeric(elements.editCost.value) + toNumeric(elements.editMlpCost?.value)
     : toNumeric(bill?.cost) + toNumeric(bill?.mlpCost);
   const profit = toNumeric(elements.editSale.value) - totalCost;
-  elements.editProfit.value = money(profit);
+  elements.editProfit.value = Number(profit).toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   elements.editProfit.classList.toggle("profit-negative", profit < 0);
 }
 
@@ -5604,7 +5609,7 @@ function openDetailDrawer(billKey) {
   if (elements.editRefId) elements.editRefId.value = bill.refId || "";
   if (elements.editPhone) elements.editPhone.value = bill.phone || "";
   if (elements.editAddress) elements.editAddress.value = bill.address || "";
-  if (elements.editExpectedClaim) elements.editExpectedClaim.value = bill.expectedClaim || 0;
+  if (elements.editExpectedClaim) elements.editExpectedClaim.value = fixed2(bill.expectedClaim);
   if (elements.editExpectedClaimLabel) {
     // label ตามประเภทเคส: สปสช = CKNC-NHSO, ประกัน = CKNC-INS, อื่น ๆ = รวม
     const claimCode = bill.caseType === "nhso" ? "CKNC-NHSO" : bill.caseType === "insurance" ? "CKNC-INS" : "CKNC-INS/NHSO";
@@ -5624,10 +5629,10 @@ function openDetailDrawer(billKey) {
   elements.editClicknicDate.value = formatDisplayDate(bill.clicknicDate);
   elements.editMlpDate.value = formatDisplayDate(bill.mlpDate);
   elements.editBillingDueDate.value = formatDisplayDate(bill.billingDueDate);
-  if (elements.editCost) elements.editCost.value = Math.round(toNumeric(bill.cost) * 100) / 100;
-  if (elements.editMlpCost) elements.editMlpCost.value = Math.round(toNumeric(bill.mlpCost) * 100) / 100;
-  elements.editSale.value = bill.sale || 0;
-  elements.editBilledAmount.value = bill.billedAmount || 0;
+  if (elements.editCost) elements.editCost.value = fixed2(bill.cost);
+  if (elements.editMlpCost) elements.editMlpCost.value = fixed2(bill.mlpCost);
+  elements.editSale.value = fixed2(bill.sale);
+  elements.editBilledAmount.value = fixed2(bill.billedAmount);
   updateEditProfitPreview();
   elements.editExcluded.checked = Boolean(bill.excluded);
   elements.editExcludeReason.value = bill.excludeReason || "";
@@ -6682,7 +6687,7 @@ elements.drawerMedicines.addEventListener("change", (event) => {
   const newSale = round2(lines.reduce((sum, item) => sum + toNumeric(item.sale), 0));
   // ยังไม่เคยกรอกราคาเลย: แก้จำนวนอย่างเดียวไม่ทับยอดขายเดิมของบิล
   if (pricedBefore || field === "unitPrice" || newSale > 0) {
-    elements.editSale.value = newSale;
+    elements.editSale.value = fixed2(newSale);
   }
   renderDrawerMedicines(currentDetailBill());
   updateEditProfitPreview();
@@ -6705,7 +6710,7 @@ elements.drawerMedicines.addEventListener("click", (event) => {
   const pricedBefore = lines.some((item) => toNumeric(item.sale) > 0);
   lines.splice(index, 1);
   if (pricedBefore) {
-    elements.editSale.value = Math.round(lines.reduce((sum, item) => sum + toNumeric(item.sale), 0) * 100) / 100;
+    elements.editSale.value = fixed2(lines.reduce((sum, item) => sum + toNumeric(item.sale), 0));
   }
   renderDrawerMedicines(currentDetailBill());
   updateEditProfitPreview();
