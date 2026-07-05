@@ -3897,7 +3897,7 @@ function openSuggestPairModal(item) {
   elements.suggestPairTitle.textContent = item.titleText || `น่าจะเป็นบิลเดียวกัน (${item.score}%)`;
   const fields = [
     ["ผู้รับบริการ", (bill) => bill.patient || "-"],
-    ["เลขที่ออเดอร์", (bill) => bill.orderId || "-"],
+    ["เลขที่ออเดอร์", (bill) => bill.orderId || "-", true],
     ["ORW", (bill) => bill.orw || "-"],
     ["สถานะ", (bill) => statusLabel(bill.status)],
     ["งานวางบิล", (bill) => billingStageLabel(bill.billingStage)],
@@ -3926,14 +3926,20 @@ function openSuggestPairModal(item) {
         </tr>
       </thead>
       <tbody>
-        ${fields.map(([label, pick]) => {
+        ${fields.map(([label, pick, copyable]) => {
     const valueA = pick(billA);
     const valueB = pick(billB);
     const diff = valueA !== valueB;
+    const cell = (value) => {
+      const copyBtn = (copyable && value && value !== "-")
+        ? ` <button type="button" class="copy-ref-btn" data-copy-text="${htmlEscape(value)}" title="คัดลอกเลขที่ออเดอร์" aria-label="คัดลอกเลขที่ออเดอร์"><i class="fa-regular fa-copy"></i></button>`
+        : "";
+      return `${htmlEscape(value)}${copyBtn}`;
+    };
     return `<tr>
             <th>${htmlEscape(label)}</th>
-            <td class="${diff ? "pair-diff" : ""}">${htmlEscape(valueA)}</td>
-            <td class="${diff ? "pair-diff" : ""}">${htmlEscape(valueB)}</td>
+            <td class="${diff ? "pair-diff" : ""}">${cell(valueA)}</td>
+            <td class="${diff ? "pair-diff" : ""}">${cell(valueB)}</td>
           </tr>`;
   }).join("")}
       </tbody>
@@ -7255,6 +7261,17 @@ elements.suggestPairModal?.addEventListener("click", (event) => {
   if (event.target === elements.suggestPairModal) elements.suggestPairModal.close();
 });
 elements.suggestPairBody?.addEventListener("click", (event) => {
+  const copyBtn = event.target.closest("[data-copy-text]");
+  if (copyBtn) {
+    navigator.clipboard?.writeText(copyBtn.dataset.copyText).then(() => {
+      const icon = copyBtn.querySelector("i");
+      if (icon) {
+        icon.className = "fa-solid fa-check";
+        setTimeout(() => { icon.className = "fa-regular fa-copy"; }, 1200);
+      }
+    }).catch(() => {});
+    return;
+  }
   const openBtn = event.target.closest("[data-pair-open]");
   if (!openBtn) return;
   elements.suggestPairModal?.close();
