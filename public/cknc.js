@@ -2094,7 +2094,10 @@ function renderTabs() {
     if (target) target.textContent = number(counts[status] || 0);
   });
   document.querySelectorAll("[data-status-tab]").forEach((button) => {
-    button.classList.toggle("active", button.dataset.statusTab === state.activeStatus);
+    const status = button.dataset.statusTab;
+    button.classList.toggle("active", status === state.activeStatus);
+    // แท็บค่า 0 ซ่อนอัตโนมัติ — คง "ทั้งหมด" และแท็บที่เปิดอยู่ไว้เสมอ (สลับออกได้ ไม่หายคามือ)
+    button.hidden = status !== "all" && status !== state.activeStatus && !(counts[status] || 0);
   });
 }
 
