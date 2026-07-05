@@ -3153,20 +3153,24 @@ function renderCaseSeqModal() {
   elements.caseSeqModalTitle.textContent = `ลำดับเคส${caseSeqNames[caseType]} · ${monthChipLabel(month)} (${number(rows.length)} เคส)`;
   elements.caseSeqModalBody.innerHTML = rows.length ? `
     <table class="case-seq-table">
-      <thead><tr><th>ลำดับ</th><th>โค้ด</th><th>วันที่ CKNC</th><th>บิล / ผู้รับบริการ</th></tr></thead>
+      <thead><tr><th class="seq-col">ลำดับ</th><th>โค้ด</th><th>วันที่ CKNC</th><th>บิล / ผู้รับบริการ</th><th class="act-col">จัดการ</th></tr></thead>
       <tbody>
         ${rows.map((item) => {
     const manual = toNumeric(item.caseSeqManual) > 0;
     return `<tr class="${item.billKey === activeKey ? "case-seq-row-active" : ""}">
-            <td><input type="text" inputmode="numeric" class="inline-cell-input case-seq-input" data-seq-row="${htmlEscape(item.billKey)}" value="${item.caseSeq}" title="เลขลำดับเคส — ว่าง = กลับไปนับอัตโนมัติ" aria-label="เลขลำดับเคส" /></td>
-            <td class="case-seq-code">${htmlEscape(caseSeqCode(caseType, item.caseSeq, monthNo))}${manual ? "*" : ""}</td>
-            <td>${htmlEscape(formatDisplayDate(item.clicknicDate || item.mlpDate) || "-")}</td>
-            <td>${htmlEscape(item.orderId || item.orw || "-")}<br /><span class="case-seq-patient">${htmlEscape(item.patient || "-")}</span></td>
+            <td class="seq-col"><input type="text" inputmode="numeric" class="inline-cell-input case-seq-input" data-seq-row="${htmlEscape(item.billKey)}" value="${item.caseSeq}" title="เลขลำดับเคส — ว่าง = กลับไปนับอัตโนมัติ" aria-label="เลขลำดับเคส" /></td>
+            <td><span class="case-seq-chip case-${htmlEscape(caseType)}">${htmlEscape(caseSeqCode(caseType, item.caseSeq, monthNo))}${manual ? "*" : ""}</span></td>
+            <td class="case-seq-date">${htmlEscape(formatDisplayDate(item.clicknicDate || item.mlpDate) || "-")}</td>
+            <td class="case-seq-bill">
+              <button type="button" class="case-seq-bill-link" data-seq-open="${htmlEscape(item.billKey)}" title="เปิดรายละเอียด / แก้ไขบิลนี้">${htmlEscape(item.orderId || item.orw || "-")}</button>
+              <span class="case-seq-patient">${htmlEscape(item.patient || "-")}</span>
+            </td>
+            <td class="act-col"><button type="button" class="row-action icon-action" data-seq-open="${htmlEscape(item.billKey)}" title="รายละเอียด / แก้ไข" aria-label="รายละเอียด / แก้ไข"><i class="fa-solid fa-pen-to-square"></i></button></td>
           </tr>`;
   }).join("")}
       </tbody>
     </table>
-    <p class="case-seq-hint">แก้เลขในช่องลำดับ (Enter บันทึก · เว้นว่าง = กลับไปนับอัตโนมัติ · * = กำหนดเลขเอง)</p>
+    <p class="case-seq-hint">แก้เลขในช่องลำดับ (Enter บันทึก · เว้นว่าง = กลับไปนับอัตโนมัติ · * = กำหนดเลขเอง) · กดเลขบิลหรือปุ่มดินสอเพื่อเปิดแก้ไขรายละเอียด</p>
   ` : '<p class="case-seq-hint">ไม่มีเคสในเดือนนี้</p>';
 }
 
@@ -6184,6 +6188,12 @@ elements.cardDetailModal?.addEventListener("change", (event) => {
 elements.caseSeqModalClose?.addEventListener("click", () => elements.caseSeqModal?.close());
 elements.caseSeqModal?.addEventListener("click", (event) => {
   if (event.target === elements.caseSeqModal) elements.caseSeqModal.close();
+});
+elements.caseSeqModalBody?.addEventListener("click", (event) => {
+  const openBtn = event.target.closest("[data-seq-open]");
+  if (!openBtn) return;
+  elements.caseSeqModal?.close();
+  openDetailDrawer(openBtn.dataset.seqOpen);
 });
 elements.caseSeqModalBody?.addEventListener("keydown", (event) => {
   const input = event.target.closest("[data-seq-row]");
