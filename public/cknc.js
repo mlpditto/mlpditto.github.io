@@ -316,7 +316,6 @@ const metricIds = {
   sale: "metricSale",
   totalCost: "metricTotalCost",
   billingRows: "metricBillingRows",
-  mlpNoBilling: "metricMlpNoBilling",
   billingOnly: "metricBillingOnly",
   profit: "metricProfit",
   caseUnknown: "metricCaseUnknown",
@@ -1640,8 +1639,10 @@ function renderMetrics() {
   renderMonthlyCases();
   const metrics = calculateMetrics();
   Object.entries(metricIds).forEach(([key, id]) => {
-    $(id).textContent = ["sale", "totalCost", "profit"].includes(key) ? money(metrics[key]) : number(metrics[key]);
-    const card = $(id)?.closest(".metric");
+    const el = $(id);
+    if (!el) return; // การ์ดถูกเอาออกจากหน้า (เช่น MLP รอใบวางบิล) — ข้ามไป
+    el.textContent = ["sale", "totalCost", "profit"].includes(key) ? money(metrics[key]) : number(metrics[key]);
+    const card = el.closest(".metric");
     if (card) {
       card.dataset.summaryCard = key;
       card.tabIndex = 0;
