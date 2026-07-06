@@ -1450,6 +1450,22 @@ th.th-center {
   color: var(--muted);
 }
 
+/* chip ตัวเลขในตารางย่อยของการ์ด — กดเปิด popup บิลของช่องนั้น (เดือน × สปสช/ประกัน) */
+.month-drill-chip {
+  display: inline-block;
+  padding: 0 5px;
+  border-radius: 999px;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.month-drill-chip:hover {
+  background: var(--green);
+  color: #fff;
+  text-decoration: none;
+}
+
 /* ตารางต้นทุน สปสช/ประกัน — ค่าเป็นเงิน (กว้างกว่า count) จัดชิดขวา ตัวเลขเรียง */
 .cost-by-month .monthly-cases-row {
   grid-template-columns: minmax(28px, 0.7fr) minmax(0, 1fr) minmax(0, 1fr);
