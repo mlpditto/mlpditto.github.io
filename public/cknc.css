@@ -4312,9 +4312,16 @@ html.dark .profit-breakdown-chip.case-other {
   border-left-color: #f59e0b;
 }
 
-/* ห่อเนื้อหากลางเป็น body เดียว = การ์ด clipboard-card เหลือ 3 แถว (head/body/actions) ไม่ให้ grid ดันเพี้ยน */
+/* modal นี้เนื้อหาสั้น ไม่ให้ body (แถว 1fr ของ clipboard-card) ยืดเต็ม card
+   จน textarea ลอยไปติดขอบล่าง → ใช้ flex-column ให้ทุกส่วนสูงตามเนื้อหา */
+#dismissReasonModal .clipboard-card {
+  display: flex;
+  flex-direction: column;
+}
+
 .dismiss-reason-body {
   min-height: 0;
+  flex: 0 1 auto;
   overflow-y: auto;
   padding-top: 4px;
 }
