@@ -280,15 +280,13 @@ const elements = {
   ruleSuggestions: $("ruleSuggestions"),
 };
 
+// แท็บ = หมวดมุมมองหลักเท่านั้น — สถานะปัญหา (mlp-only/clicknic-only/billing-only) กรองจาก chip แถบ "ต้องจัดการ" ที่เดียว (ตัดแท็บที่ซ้ำออก)
 const tabCountIds = {
   all: "tabCountAll",
   matched: "tabCountMatched",
   paid: "tabCountPaid",
   "case-insurance": "tabCountCaseInsurance",
   "case-nhso": "tabCountCaseNhso",
-  "mlp-only": "tabCountMlpOnly",
-  "clicknic-only": "tabCountClickOnly",
-  "billing-only": "tabCountBillingOnly",
   excluded: "tabCountExcluded",
 };
 
