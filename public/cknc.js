@@ -2577,7 +2577,21 @@ function renderTable() {
     : "ยังไม่มีข้อมูล";
 
   if (!rows.length) {
-    elements.billTableBody.innerHTML = `<tr><td colspan="7" class="empty">ไม่พบข้อมูลตามตัวกรอง</td></tr>`;
+    // บอกว่าติดตัวกรองไหนอยู่ + ปุ่มล้างในตัว — กันงงเวลาแท็บนับได้แต่ตารางว่าง (แท็บไม่นับ dropdown งานวางบิล/ค้นหา)
+    const activeFilters = [];
+    if (state.activeStatus !== "all") {
+      activeFilters.push(`แท็บ: ${state.activeStatus === "excluded" ? "Exclude" : state.activeStatus === "paid" ? "PAID" : state.activeStatus === "case-insurance" ? "ประกัน" : state.activeStatus === "case-nhso" ? "สปสช" : statusLabel(state.activeStatus)}`);
+    }
+    const caseTypeValue = elements.caseTypeFilter?.value || "all";
+    if (caseTypeValue !== "all") activeFilters.push(`ประเภทเคส: ${caseTypeLabel(caseTypeValue)}`);
+    const stageValue = elements.billingStageFilter?.value || "all";
+    if (stageValue !== "all") activeFilters.push(`งานวางบิล: ${billingStageLabel(stageValue)}`);
+    const query = clean(elements.searchInput.value);
+    if (query) activeFilters.push(`ค้นหา "${query}"`);
+    if (activePeriodLabel()) activeFilters.push(`ช่วง ${activePeriodLabel()}`);
+    elements.billTableBody.innerHTML = `<tr><td colspan="7" class="empty">ไม่พบข้อมูลตามตัวกรอง${activeFilters.length
+      ? `<span class="empty-filter-note">ตัวกรองที่ทำงาน: ${activeFilters.map(htmlEscape).join(" · ")}</span><button class="ghost small" type="button" data-clear-filters>ล้างตัวกรอง</button>`
+      : ""}</td></tr>`;
     return;
   }
 
@@ -7127,6 +7141,11 @@ elements.billTableBody.addEventListener("input", (event) => {
   line.classList.toggle("profit-nhso", Math.abs(profit - 10) < 0.005);
 });
 elements.billTableBody.addEventListener("click", (event) => {
+  // ปุ่มล้างตัวกรองในแถวว่าง "ไม่พบข้อมูลตามตัวกรอง"
+  if (event.target.closest("[data-clear-filters]")) {
+    clearFilters();
+    return;
+  }
   const copyBtn = event.target.closest("[data-copy-text]");
   if (copyBtn) {
     navigator.clipboard?.writeText(copyBtn.dataset.copyText).then(() => {

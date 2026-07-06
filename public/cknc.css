@@ -704,6 +704,15 @@ html.dark .card-quick-chip.active {
   color: #fff;
 }
 
+/* แถวว่าง "ไม่พบข้อมูลตามตัวกรอง" — แสดงตัวกรองที่ทำงาน + ปุ่มล้างในตัว */
+.empty .empty-filter-note {
+  display: block;
+  margin: 8px 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
 /* ป้าย "ดูเฉพาะ:" หน้า chip กรองเคสในแถบ bulk ของ Card Detail */
 .bulk-view-note {
   margin-left: auto;
