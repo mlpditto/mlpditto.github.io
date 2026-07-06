@@ -14,6 +14,10 @@ const state = {
   clicknicRows: [],
   manualClicknicRows: [],
   clicknicImportSummary: { rawRows: 0, uniqueRows: 0, duplicateRows: 0 },
+  // ประวัติการโหลดต่อ step (เวลา/ไฟล์/จำนวนแถว) — ติดไปกับ session/autosave ให้การ์ด STEP บอกที่มาได้หลังกู้คืน
+  sourceMeta: { clicknic: null, mlp: null, billing: null },
+  // ที่มาของข้อมูลที่กู้คืน (autosave/session + เวลาบันทึก) — ใช้เป็น fallback เมื่อ payload เก่าไม่มี sourceMeta
+  restoredInfo: null,
   mlpRows: [],
   billingRows: [],
   bills: [],
@@ -1587,18 +1591,78 @@ function updateEmptyState() {
   document.body.classList.toggle("cknc-has-data", state.bills.length > 0);
 }
 
-function setStepStatus(el, count) {
+// อัปเดตประวัติการโหลดของ step หลัง import สำเร็จ — rows นับจาก state ปัจจุบัน (หลัง dedupe แล้ว)
+function updateSourceMeta(kind, fileNames = []) {
+  const rows = kind === "clicknic" ? state.clicknicRows.length + state.manualClicknicRows.length
+    : kind === "mlp" ? state.mlpRows.length
+      : state.billingRows.length;
+  const previous = state.sourceMeta?.[kind];
+  const files = [...new Set([...(previous?.files || []), ...fileNames.map(clean).filter(Boolean)])];
+  state.sourceMeta = { ...state.sourceMeta, [kind]: { lastLoadedAt: new Date().toISOString(), files, rows } };
+}
+
+function resetSourceMeta() {
+  state.sourceMeta = { clicknic: null, mlp: null, billing: null };
+}
+
+function formatThaiDateTime(iso) {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("th-TH", { day: "numeric", month: "short", year: "2-digit", hour: "2-digit", minute: "2-digit" });
+}
+
+// บรรทัดเล็กใต้สถานะการ์ด: เวลาอัปโหลด/ไฟล์/แถวจาก sourceMeta หรือ fallback เป็นเวลา autosave/session ที่กู้คืน
+function stepMetaLine(meta) {
+  if (meta?.lastLoadedAt) {
+    const parts = [`อัปโหลดล่าสุด ${formatThaiDateTime(meta.lastLoadedAt)}`];
+    if (meta.files?.length) parts.push(`${number(meta.files.length)} ไฟล์`);
+    if (meta.rows) parts.push(`${number(meta.rows)} แถว`);
+    return parts.join(" • ");
+  }
+  if (state.snapshotMode && state.restoredInfo?.savedAtIso) {
+    return `ข้อมูล ณ ${formatThaiDateTime(state.restoredInfo.savedAtIso)} (${state.restoredInfo.source === "autosave" ? "autosave" : "session"})`;
+  }
+  return "";
+}
+
+function setStepStatus(el, count, meta, restoredText) {
   if (!el) return;
-  el.innerHTML = count
-    ? `<i class="fa-solid fa-circle-check"></i> โหลดแล้ว ${number(count)} รายการ`
-    : "ยังไม่ได้โหลด";
-  el.classList.toggle("loaded", count > 0);
+  const restored = Boolean(restoredText && count);
+  const main = !count ? "ยังไม่ได้โหลด"
+    : restored ? `<i class="fa-solid fa-clock-rotate-left"></i> กู้คืนแล้ว — ${restoredText}`
+      : `<i class="fa-solid fa-circle-check"></i> โหลดแล้ว ${number(count)} รายการ`;
+  const metaLine = count ? stepMetaLine(meta) : "";
+  el.innerHTML = metaLine ? `${main}<span class="drop-status-meta">${htmlEscape(metaLine)}</span>` : main;
+  el.classList.toggle("loaded", count > 0 && !restored);
+  el.classList.toggle("restored", restored);
+}
+
+// snapshot ที่กู้คืนไม่มี source rows — นับข้อมูลแต่ละฝั่งจากตัวบิลแทน
+function restoredStepCounts() {
+  const bills = state.bills;
+  const medBills = bills.filter((bill) => (bill.medicines || []).length);
+  const medLines = medBills.reduce((sum, bill) => sum + bill.medicines.length, 0);
+  const mlpBills = bills.filter((bill) => bill.status !== "clicknic-only" && bill.status !== "billing-only").length;
+  const billingBills = bills.filter((bill) => bill.barNo || bill.creditNos || bill.billingNo || bill.billedAmount).length;
+  const barCount = new Set(bills.flatMap((bill) => clean(bill.barNo).split(/\s*,\s*/).filter(Boolean))).size;
+  return { medBills: medBills.length, medLines, mlpBills, billingBills, barCount };
 }
 
 function renderStepStatuses() {
-  setStepStatus(elements.clicknicStatus, state.clicknicRows.length + state.manualClicknicRows.length);
-  setStepStatus(elements.mlpStatus, state.mlpRows.length);
-  setStepStatus(elements.billingStatus, state.billingRows.length);
+  if (state.snapshotMode && state.bills.length) {
+    const counts = restoredStepCounts();
+    setStepStatus(elements.clicknicStatus, counts.medBills, state.sourceMeta?.clicknic,
+      `${number(counts.medBills)} บิลมีรายการยา (${number(counts.medLines)} รายการ)`);
+    setStepStatus(elements.mlpStatus, counts.mlpBills, state.sourceMeta?.mlp,
+      `${number(counts.mlpBills)} บิล MLP`);
+    setStepStatus(elements.billingStatus, counts.billingBills, state.sourceMeta?.billing,
+      `${number(counts.billingBills)} บิลมีใบวางบิล${counts.barCount ? ` (BAR ${number(counts.barCount)} เลข)` : ""}`);
+    return;
+  }
+  setStepStatus(elements.clicknicStatus, state.clicknicRows.length + state.manualClicknicRows.length, state.sourceMeta?.clicknic);
+  setStepStatus(elements.mlpStatus, state.mlpRows.length, state.sourceMeta?.mlp);
+  setStepStatus(elements.billingStatus, state.billingRows.length, state.sourceMeta?.billing);
 }
 
 function allStepsLoaded() {
@@ -3578,6 +3642,8 @@ async function importClipboardText(kind, text) {
   } else {
     state.activeSessionId = "";
     state.snapshotMode = false;
+    state.restoredInfo = null;
+    resetSourceMeta();
     if (kind === "clicknic") {
       state.clicknicRows = dedupeClicknicRows(parsed);
     } else if (kind === "mlp") {
@@ -3586,6 +3652,8 @@ async function importClipboardText(kind, text) {
       state.billingRows = parsed;
     }
   }
+
+  if (parsed.length) updateSourceMeta(kind, [sourceName]);
 
   renderAll();
   scheduleAutosave(`clipboard-${kind}`);
@@ -4287,7 +4355,13 @@ async function handleFiles() {
       state.activeSessionId = "";
       state.snapshotMode = false;
       state.allStepsComplete = false;
+      state.restoredInfo = null;
+      resetSourceMeta();
     }
+
+    if (clicknicImportedRows.length) updateSourceMeta("clicknic", clickFiles.map((file) => file.name));
+    if (mlpImportedRows.length) updateSourceMeta("mlp", mlpFiles.map((file) => file.name));
+    if (billingImportedRows.length) updateSourceMeta("billing", billingFiles.map((file) => file.name));
 
     renderAll();
     scheduleAutosave("file-import");
@@ -4311,6 +4385,8 @@ async function loadSampleFiles() {
     state.activeSessionId = "";
     state.snapshotMode = false;
     state.allStepsComplete = false;
+    state.restoredInfo = null;
+    resetSourceMeta();
     const clicknicImportedRows = [];
     for (const path of SAMPLE_FILES.clicknic) {
       const workbook = await readWorkbookFromPath(path);
@@ -4323,6 +4399,9 @@ async function loadSampleFiles() {
       const workbook = await readWorkbookFromPath(path);
       state.billingRows.push(...parseBillingWorkbook(workbook, path));
     }
+    updateSourceMeta("clicknic", SAMPLE_FILES.clicknic);
+    updateSourceMeta("mlp", [SAMPLE_FILES.mlp]);
+    updateSourceMeta("billing", SAMPLE_FILES.billing);
     renderAll();
     scheduleAutosave("sample-import");
   } catch (error) {
@@ -5238,6 +5317,7 @@ function makeSessionPayload(name) {
       topMeds: state.topMeds,
       ruleConfig: state.ruleConfig,
       clicknicImportSummary: state.clicknicImportSummary,
+      sourceMeta: state.sourceMeta,
     },
   });
 }
@@ -5337,7 +5417,15 @@ function combineSessionPayloads(sessions) {
   const mergeGroups = [];
   const deletedKeys = new Set();
   const dismissedByKey = new Map();
+  let sourceMeta = { clicknic: null, mlp: null, billing: null };
   sorted.forEach((session) => {
+    // เรียงเก่า → ใหม่: meta ของถังที่อัปเดตหลังสุดชนะ
+    const meta = session.payload?.sourceMeta || {};
+    sourceMeta = {
+      clicknic: meta.clicknic || sourceMeta.clicknic,
+      mlp: meta.mlp || sourceMeta.mlp,
+      billing: meta.billing || sourceMeta.billing,
+    };
     (session.payload?.bills || []).forEach((bill) => {
       const existing = billMap.get(bill.billKey);
       billMap.set(bill.billKey, existing ? mergeBillRecords(bill, existing) : bill);
@@ -5365,7 +5453,7 @@ function combineSessionPayloads(sessions) {
     medicines: (bill.medicines && bill.medicines.length) ? bill.medicines : parseMedicinesTextLines(bill.medicinesText),
     validationIssues: validationRulesForBill(bill),
   }));
-  return { bills, overrides, mergeGroups, deletedKeys: [...deletedKeys], dismissed: [...dismissedByKey.values()], audit };
+  return { bills, overrides, mergeGroups, deletedKeys: [...deletedKeys], dismissed: [...dismissedByKey.values()], audit, sourceMeta };
 }
 
 async function restoreLatestSnapshotOnStartup() {
@@ -5405,6 +5493,7 @@ async function restoreLatestSnapshotOnStartup() {
             deletedBillKeys: combined.deletedKeys,
             dismissedSuggestions: combined.dismissed,
             auditTrail: combined.audit,
+            sourceMeta: combined.sourceMeta,
             topMeds: [],
           },
         };
@@ -5453,6 +5542,12 @@ async function applySessionSnapshot(session) {
     applyDeletedBills();
     const auditIds = new Set(state.auditTrail.map((entry) => entry.id));
     state.auditTrail = [...state.auditTrail, ...(payload.auditTrail || []).filter((entry) => !auditIds.has(entry.id))];
+    // ประวัติโหลดต่อ step: ของบนจอชนะ ช่องว่างเติมจาก session
+    state.sourceMeta = {
+      clicknic: state.sourceMeta?.clicknic || payload.sourceMeta?.clicknic || null,
+      mlp: state.sourceMeta?.mlp || payload.sourceMeta?.mlp || null,
+      billing: state.sourceMeta?.billing || payload.sourceMeta?.billing || null,
+    };
     state.snapshotMode = true;
     state.activeSessionId = "";
     renderSnapshot();
@@ -5486,6 +5581,16 @@ async function applySessionSnapshot(session) {
   state.auditTrail = payload.auditTrail || [];
   state.topMeds = payload.topMeds || [];
   state.clicknicImportSummary = payload.clicknicImportSummary || session.importSummary || { rawRows: 0, uniqueRows: 0, duplicateRows: 0 };
+  state.sourceMeta = {
+    clicknic: payload.sourceMeta?.clicknic || null,
+    mlp: payload.sourceMeta?.mlp || null,
+    billing: payload.sourceMeta?.billing || null,
+  };
+  // เก็บที่มา/เวลาบันทึกของชุดที่กู้คืน — การ์ด STEP ใช้เป็น fallback เมื่อ payload เก่าไม่มี sourceMeta
+  state.restoredInfo = {
+    source: session.source === "autosave" ? "autosave" : "session",
+    savedAtIso: session.updatedAt?.toDate?.()?.toISOString?.() || session.updatedAtIso || payload.updatedAtIso || "",
+  };
   state.clicknicRows = [];
   state.manualClicknicRows = [];
   state.mlpRows = [];
