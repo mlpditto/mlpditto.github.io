@@ -525,6 +525,33 @@ button:not(:disabled):hover {
   box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.12) inset;
 }
 
+/* เส้นคั่นเบา ๆ ระหว่างกลุ่ม chip ในแถบต้องจัดการ */
+.gap-divider {
+  display: inline-block;
+  width: 1px;
+  align-self: stretch;
+  min-height: 20px;
+  margin: 0 4px;
+  background: rgba(15, 55, 40, 0.16);
+}
+
+html.dark .gap-divider {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+/* chip WARN — โทนส้มเข้มกว่า เตือนชัด */
+.gap-chip.gap-warn {
+  background: #fde9cf;
+  border-color: #e0a94e;
+  color: #92600b;
+}
+
+html.dark .gap-chip.gap-warn {
+  background: rgba(245, 158, 11, 0.22);
+  border-color: #7a5a1e;
+  color: #fbbf24;
+}
+
 .gap-all-clear {
   display: inline-flex;
   align-items: center;

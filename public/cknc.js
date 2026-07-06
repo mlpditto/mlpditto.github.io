@@ -1850,24 +1850,72 @@ function renderQuickDateFilters() {
 }
 
 // แถบ "ยังไม่ครบ" — โชว์เฉพาะกลุ่มที่ยัง match ไม่ครบ (กด chip = กรองไปที่กลุ่มนั้น) นับตามช่วงวันที่ที่กรอง
+// แถบ "ต้องจัดการ" รวมทุก chip เตือนไว้จุดเดียว — กด chip = กรองตาราง (WARN เปิด popup)
 function renderMergeAssistant() {
   if (!elements.mergeAssistant) return;
   const counts = statusCounts();
-  const gaps = [
-    { status: "clicknic-only", label: "รายการยาไม่มี MLP", value: counts["clicknic-only"] || 0, tone: "danger" },
-    { status: "mlp-only", label: "ไม่พบรายการยา", value: counts["mlp-only"] || 0, tone: "warning" },
-    { status: "billing-only", label: "ใบวางบิลไม่เจอ MLP", value: counts["billing-only"] || 0, tone: "danger" },
-    { status: "pending-billing", label: "รอใบวางบิล", value: counts["pending-billing"] || 0, tone: "warning" },
-  ].filter((gap) => gap.value > 0);
-  const totalGap = gaps.reduce((sum, gap) => sum + gap.value, 0);
+  const metrics = calculateMetrics();
+  const bs = elements.billingStageFilter?.value || "all";
+  const ct = elements.caseTypeFilter?.value || "all";
+  const chipHtml = (chip) => {
+    const attr = chip.status ? `data-gap-status="${htmlEscape(chip.status)}"`
+      : chip.billingStage ? `data-gap-billing="${htmlEscape(chip.billingStage)}"`
+        : chip.caseType ? `data-gap-case="${htmlEscape(chip.caseType)}"` : "";
+    return `<button type="button" class="gap-chip ${chip.tone}${chip.active ? " active" : ""}" ${attr} title="กดเพื่อกรองดูเฉพาะกลุ่มนี้">${htmlEscape(chip.label)} <strong>${number(chip.value)}</strong></button>`;
+  };
+  // กลุ่ม 1: จับคู่ 3 ฝั่ง (กรองด้วยสถานะ)
+  const matchGroup = [
+    { status: "mlp-only", label: "ไม่พบรายการยา", value: counts["mlp-only"] || 0, tone: "warning", active: state.activeStatus === "mlp-only" },
+    { status: "clicknic-only", label: "รายการยาไม่มี MLP", value: counts["clicknic-only"] || 0, tone: "danger", active: state.activeStatus === "clicknic-only" },
+    { status: "billing-only", label: "ใบวางบิลไม่เจอ MLP", value: counts["billing-only"] || 0, tone: "danger", active: state.activeStatus === "billing-only" },
+    { status: "pending-billing", label: "รอใบวางบิล", value: counts["pending-billing"] || 0, tone: "warning", active: state.activeStatus === "pending-billing" },
+  ].filter((chip) => chip.value > 0);
+  // กลุ่ม 2: งานวางบิลค้าง (กรองด้วยงานวางบิล)
+  const billingGroup = [
+    { billingStage: "insurance-review", label: "ประกันรอเอกสาร", value: metrics.billingInsurancePending || 0, tone: "warning", active: bs === "insurance-review" },
+    { billingStage: "nhso-pending", label: "สปสชรอวางบิล", value: metrics.billingNhsoPending || 0, tone: "warning", active: bs === "nhso-pending" },
+    { billingStage: "pending-review", label: "รอตรวจสอบวางบิล", value: metrics.billingReviewPending || 0, tone: "warning", active: bs === "pending-review" },
+  ].filter((chip) => chip.value > 0);
+  // กลุ่ม 3: ประเภทเคส (กรองด้วยประเภทเคส)
+  const caseGroup = [
+    { caseType: "unknown", label: "ยังไม่ทราบประเภท", value: metrics.caseUnknown || 0, tone: "warning", active: ct === "unknown" },
+  ].filter((chip) => chip.value > 0);
+  // กลุ่ม 4: WARN (เปิด popup)
+  const warnCount = warnTotalCount();
+  const warnHtml = warnCount > 0
+    ? `<button type="button" class="gap-chip warning gap-warn" data-gap-warn="1" title="คู่บิลที่น่าจะซ้ำ + สปสชต้นทุนผิด — กดดูรายละเอียด"><i class="fa-solid fa-triangle-exclamation"></i> WARN <strong>${number(warnCount)}</strong></button>`
+    : "";
+  const groups = [
+    matchGroup.map(chipHtml).join(""),
+    billingGroup.map(chipHtml).join(""),
+    caseGroup.map(chipHtml).join(""),
+    warnHtml,
+  ].filter(Boolean);
   elements.mergeAssistant.innerHTML = `
     <div class="merge-line">
-      <span class="merge-line-title" title="กลุ่มบิลที่ยังจับคู่ 3 ฝั่งไม่ครบ — กดเพื่อไปแก้">${totalGap ? `ยังไม่ครบ <strong>${number(totalGap)}</strong> รายการ` : "สถานะจับคู่ 3 ฝั่ง"}</span>
-      ${totalGap
-        ? gaps.map((gap) => `<button type="button" class="gap-chip ${gap.tone}${state.activeStatus === gap.status ? " active" : ""}" data-gap-status="${htmlEscape(gap.status)}" title="กดเพื่อกรองดูเฉพาะกลุ่มนี้">${htmlEscape(gap.label)} <strong>${number(gap.value)}</strong></button>`).join("")
-        : '<span class="gap-all-clear"><i class="fa-solid fa-circle-check"></i> ครบทุกฝั่ง</span>'}
+      <span class="merge-line-title" title="กลุ่มบิลที่ต้องจัดการ — กด chip เพื่อกรองดู">${groups.length ? "ต้องจัดการ" : "สถานะข้อมูล"}</span>
+      ${groups.length
+        ? groups.join('<span class="gap-divider" aria-hidden="true"></span>')
+        : '<span class="gap-all-clear"><i class="fa-solid fa-circle-check"></i> ครบทุกอย่าง</span>'}
     </div>
   `;
+}
+
+// กด chip ในแถบต้องจัดการ — ตั้งตัวกรองมิติเดียว (รีเซ็ตมิติอื่น) กดซ้ำ = ยกเลิก
+function applyGapFilter({ status, billingStage, caseType }) {
+  const isSame = (status && state.activeStatus === status && (elements.billingStageFilter?.value || "all") === "all" && (elements.caseTypeFilter?.value || "all") === "all")
+    || (billingStage && elements.billingStageFilter?.value === billingStage)
+    || (caseType && elements.caseTypeFilter?.value === caseType);
+  state.activeStatus = "all";
+  if (elements.billingStageFilter) elements.billingStageFilter.value = "all";
+  if (elements.caseTypeFilter) elements.caseTypeFilter.value = "all";
+  if (!isSame) {
+    if (status) state.activeStatus = status;
+    if (billingStage && elements.billingStageFilter) elements.billingStageFilter.value = billingStage;
+    if (caseType && elements.caseTypeFilter) elements.caseTypeFilter.value = caseType;
+  }
+  renderTabs();
+  renderTable(); // renderTable → renderMergeSuggestions → renderMergeAssistant (อัปเดต active)
 }
 
 const cardDetailConfigs = {
@@ -3943,15 +3991,11 @@ function renderMergeSuggestions() {
     state.mergeSuggestCacheRef = state.bills;
     state.mergeSuggestions = computeMergeSuggestions();
   }
-  const warnCount = warnTotalCount();
-  // การ์ด WARN ในแถวการ์ดเล็ก — กดแล้วเปิด popup (ไม่มีอะไรเตือน = ซ่อนการ์ด)
-  if (elements.mergeWarnCard) {
-    elements.mergeWarnCard.hidden = warnCount === 0;
-    if (elements.metricMergeWarn) elements.metricMergeWarn.textContent = number(warnCount);
-  }
+  // WARN ย้ายไปเป็น chip ในแถบ "ต้องจัดการ" แล้ว — อัปเดตแถบนั้น
+  renderMergeAssistant();
   // popup เปิดค้างอยู่ → ตามข้อมูลล่าสุด (เตือนหมดแล้วปิดเอง)
   if (elements.mergeWarnModal?.open) {
-    if (warnCount === 0) elements.mergeWarnModal.close();
+    if (warnTotalCount() === 0) elements.mergeWarnModal.close();
     else renderMergeWarnBody();
   }
 }
@@ -6625,11 +6669,13 @@ elements.targetDate.addEventListener("keydown", (event) => {
 elements.clearFiltersBtn.addEventListener("click", clearFilters);
 // แถบ "ยังไม่ครบ": กด chip = กรองไปที่กลุ่มนั้น (สลับกลับเป็น ทั้งหมด ถ้ากดซ้ำ)
 elements.mergeAssistant?.addEventListener("click", (event) => {
-  const chip = event.target.closest("[data-gap-status]");
+  if (event.target.closest("[data-gap-warn]")) {
+    openMergeWarnModal();
+    return;
+  }
+  const chip = event.target.closest("[data-gap-status], [data-gap-billing], [data-gap-case]");
   if (!chip) return;
-  const status = chip.dataset.gapStatus;
-  setActiveStatus(state.activeStatus === status ? "all" : status);
-  renderMergeAssistant();
+  applyGapFilter({ status: chip.dataset.gapStatus, billingStage: chip.dataset.gapBilling, caseType: chip.dataset.gapCase });
   elements.billTableBody?.closest("table")?.scrollIntoView({ block: "start", behavior: "smooth" });
 });
 document.addEventListener("click", (event) => {

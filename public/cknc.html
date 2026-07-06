@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="./cknc.css?v=20260706440000" />
+    <link rel="stylesheet" href="./cknc.css?v=20260706450000" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -159,49 +159,6 @@
           </article>
         </div>
 
-        <!-- การ์ดเล็กชุดเดียว (ตัวเลขรองทุกกลุ่ม) — การ์ดค่า 0 ถูกซ่อนอัตโนมัติใน renderMetrics -->
-        <div class="metric-mini-row">
-          <article class="metric mini" title="การจับคู่ 3 ฝั่ง: บิลที่มีเลขที่ออเดอร์จาก CLICKNIC (STEP 1)">
-            <span>บิล CLICKNIC</span>
-            <strong id="metricClickOrders">0</strong>
-          </article>
-          <article class="metric mini warning" title="การจับคู่ 3 ฝั่ง: รายการ MLP (STEP 2) ที่หาเลขที่ออเดอร์จาก CLICKNIC (STEP 1) ไม่เจอ">
-            <span>ไม่พบรายการยา</span>
-            <strong id="metricMlpOnly">0</strong>
-          </article>
-          <article class="metric mini danger" title="การจับคู่ 3 ฝั่ง: บิล CLICKNIC (STEP 1) ที่ยังไม่มีรายการ MLP (STEP 2) มาจับคู่">
-            <span>รายการยาไม่มี MLP</span>
-            <strong id="metricClickOnly">0</strong>
-          </article>
-          <article class="metric mini" title="งานวางบิล: จำนวนแถวใบวางบิลที่โหลด (STEP 3)">
-            <span>ใบวางบิล</span>
-            <strong id="metricBillingRows">0</strong>
-          </article>
-          <article class="metric mini danger" title="งานวางบิล: ใบวางบิลที่หา MLP มาจับคู่ไม่เจอ">
-            <span>ใบวางบิลไม่เจอ MLP</span>
-            <strong id="metricBillingOnly">0</strong>
-          </article>
-          <article class="metric mini warning" title="งานวางบิล: เคสประกันที่รอเอกสาร/อนุมัติ">
-            <span>ประกันรอเอกสาร</span>
-            <strong id="metricBillingInsurancePending">0</strong>
-          </article>
-          <article class="metric mini warning" title="งานวางบิล: เคส สปสช ที่รอวางบิล">
-            <span>สปสชรอวางบิล</span>
-            <strong id="metricBillingNhsoPending">0</strong>
-          </article>
-          <article id="mergeWarnCard" class="metric mini warning merge-warn-card" role="button" tabindex="0" title="WARN: คู่บิลที่น่าจะเป็นบิลเดียวกัน — กดเพื่อกาง/ซ่อนรายการคู่" hidden>
-            <span>WARN</span>
-            <strong id="metricMergeWarn">0</strong>
-          </article>
-          <article class="metric mini warning" title="งานวางบิล: รอตรวจสอบวางบิล">
-            <span>รอตรวจสอบวางบิล</span>
-            <strong id="metricBillingReviewPending">0</strong>
-          </article>
-          <article class="metric mini warning" title="ประเภทเคส: ยังไม่ทราบประเภท">
-            <span>ยังไม่ทราบประเภท</span>
-            <strong id="metricCaseUnknown">0</strong>
-          </article>
-        </div>
       </section>
 
       <dialog id="cardDetailModal" class="modal card-detail-modal">
@@ -993,7 +950,7 @@
       </div>
     </dialog>
 
-    <script src="./cknc.js?v=20260706440000"></script>
+    <script src="./cknc.js?v=20260706450000"></script>
     <script>
       (function () {
         const btn = document.getElementById("themeToggleBtn");
