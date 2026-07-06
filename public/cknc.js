@@ -330,7 +330,6 @@ const DEFAULT_RULE_CONFIG = {
 
 const metricIds = {
   clickOrders: "metricClickOrders",
-  matched: "metricMatched",
   mlpOnly: "metricMlpOnly",
   clickOnly: "metricClickOnly",
   sale: "metricSale",
