@@ -1308,7 +1308,8 @@ function validationRulesForBill(bill) {
   if (bill.clicknicDate && bill.mlpDate && dateKey(bill.clicknicDate) !== dateKey(bill.mlpDate)) {
     pushIssue(issues, "info", "DATE_MISMATCH", `วันที่ CKNC (${formatDisplayDate(bill.clicknicDate)}) ไม่ตรงกับ MLP (${formatDisplayDate(bill.mlpDate)})`);
   }
-  if ((bill.status === "matched" || bill.status === "pending-billing") && toNumeric(bill.cost) + toNumeric(bill.mlpCost) <= 0) {
+  // สปสช ต้นทุนปกติ = 0 (CLICKNIC ส่งยาให้ฟรี) → ต้นทุน 0 ไม่ใช่เรื่องผิด ไม่ต้องเตือน NCO
+  if ((bill.status === "matched" || bill.status === "pending-billing") && bill.caseType !== "nhso" && toNumeric(bill.cost) + toNumeric(bill.mlpCost) <= 0) {
     pushIssue(issues, "warn", "MISSING_MLP_COST", "ไม่มีต้นทุน");
   }
   if (bill.status === "matched" && toNumeric(bill.billedAmount) <= 0 && state.billingRows.length) {
