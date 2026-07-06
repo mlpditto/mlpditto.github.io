@@ -105,6 +105,8 @@ const elements = {
   cardDetailModal: $("cardDetailModal"),
   cardQuickFilters: $("cardQuickFilters"),
   cardDetailBulkBar: $("cardDetailBulkBar"),
+  cardBulkViewNhso: $("cardBulkViewNhso"),
+  cardBulkViewInsurance: $("cardBulkViewInsurance"),
   cardBulkCount: $("cardBulkCount"),
   cardBulkBillingStage: $("cardBulkBillingStage"),
   cardBulkCaseType: $("cardBulkCaseType"),
@@ -2316,6 +2318,9 @@ function renderCardBulkBar() {
   const count = cardBulkSelected.size;
   elements.cardDetailBulkBar.hidden = count === 0;
   if (elements.cardBulkCount) elements.cardBulkCount.textContent = `เลือก ${number(count)} บิล`;
+  // chip ดูเฉพาะ สปสช/ประกัน ในแถบ — ใช้ตัวกรองด่วนชุดเดียวกับปุ่มด้านบน
+  elements.cardBulkViewNhso?.classList.toggle("active", cardQuickFilter === "nhso");
+  elements.cardBulkViewInsurance?.classList.toggle("active", cardQuickFilter === "insurance");
   // sync select-all ตามสถานะแถวที่แสดง
   const picks = elements.cardDetailBody?.querySelectorAll(".card-row-pick") || [];
   const selectAll = elements.cardDetailBody?.closest(".modal-card")?.querySelector("#cardSelectAll") || document.getElementById("cardSelectAll");
@@ -6974,7 +6979,9 @@ elements.cardDetailModal?.addEventListener("click", (event) => {
   if (event.target === elements.cardDetailModal) closeCardDetail();
   const quickChip = event.target.closest("[data-card-quick]");
   if (quickChip) {
-    cardQuickFilter = quickChip.dataset.cardQuick;
+    // กดตัวกรองที่เปิดอยู่ซ้ำ = ยกเลิก กลับมาดูทั้งหมด
+    const key = quickChip.dataset.cardQuick;
+    cardQuickFilter = key === cardQuickFilter && key !== "all" ? "all" : key;
     if (state.currentCardKey) openCardDetail(state.currentCardKey);
     return;
   }
