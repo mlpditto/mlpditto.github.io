@@ -613,8 +613,51 @@ html.dark .gap-chip.danger {
 
 .card-detail-actions {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   padding: 0 18px 12px;
+}
+
+/* ปุ่ม one-click กรองดูข้อมูลใน Card Detail */
+.card-quick-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.card-quick-chip {
+  padding: 4px 12px;
+  border: 1px solid #cfe0d8;
+  border-radius: 999px;
+  background: #fff;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--green-dark);
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.card-quick-chip:hover {
+  border-color: var(--green);
+}
+
+.card-quick-chip.active {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+
+html.dark .card-quick-chip {
+  background: #1e293b;
+  border-color: #2f6b52;
+  color: #bbf7d0;
+}
+
+html.dark .card-quick-chip.active {
+  background: var(--green);
+  color: #fff;
 }
 
 .card-detail-chips {

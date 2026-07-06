@@ -99,6 +99,7 @@ const elements = {
   quickDateFilters: $("quickDateFilters"),
   mergeAssistant: $("mergeAssistant"),
   cardDetailModal: $("cardDetailModal"),
+  cardQuickFilters: $("cardQuickFilters"),
   cardDetailBulkBar: $("cardDetailBulkBar"),
   cardBulkCount: $("cardBulkCount"),
   cardBulkBillingStage: $("cardBulkBillingStage"),
@@ -2000,6 +2001,15 @@ function statusBadgesHtml(bill) {
 // บิลที่ติ๊กเลือกในหน้า Card Detail สำหรับแก้แบบ bulk ในตัว (แยกจาก state.selectedBillKeys ของตารางหลัก)
 const cardBulkSelected = new Set();
 
+// ปุ่ม one-click กรองดูข้อมูลในหน้า Card Detail (ไม่มีแท็บเหมือนตารางหลัก)
+let cardQuickFilter = "all";
+const cardQuickFilterDefs = [
+  { key: "all", label: "ทั้งหมด", test: () => true },
+  { key: "paid-nobar", label: "PAID woBAR", test: (bill) => (bill.billingStage === "paid" || bill.billingStage === "billed") && !clean(bill.barNo) },
+  { key: "insurance", label: "ประกัน", test: (bill) => bill.caseType === "insurance" },
+  { key: "nhso", label: "สปสช", test: (bill) => bill.caseType === "nhso" },
+];
+
 const cardDetailColumns = [
   {
     label: "จัดการ",
@@ -2147,15 +2157,23 @@ function openCardDetail(cardKey) {
   if (!config || !elements.cardDetailModal) return;
   const cardChanged = state.currentCardKey !== cardKey;
   state.currentCardKey = cardKey;
-  if (cardChanged) cardBulkSelected.clear();
-  const rows = config.rows();
-  // ตัดคีย์ที่เลือกไว้แต่ไม่อยู่ในกลุ่มนี้แล้ว (เช่นเปลี่ยนประเภทเคสแล้วบิลหลุดออกจากการ์ด)
-  const rowKeys = new Set(rows.map((bill) => bill.billKey));
+  if (cardChanged) {
+    cardBulkSelected.clear();
+    cardQuickFilter = "all"; // เปลี่ยนการ์ด = รีเซ็ตตัวกรองด่วน
+  }
+  const allRows = config.rows();
+  // ตัดคีย์ที่เลือกไว้แต่ไม่อยู่ในกลุ่มนี้แล้ว (เช่นเปลี่ยนประเภทเคสแล้วบิลหลุดออกจากการ์ด) — ยึดชุดเต็มของการ์ด
+  const rowKeys = new Set(allRows.map((bill) => bill.billKey));
   [...cardBulkSelected].forEach((key) => { if (!rowKeys.has(key)) cardBulkSelected.delete(key); });
+  // ตัวกรองด่วน (one-click) กรองเฉพาะที่แสดง — การเลือก bulk ยังยึดชุดเต็ม
+  const quickDef = cardQuickFilterDefs.find((def) => def.key === cardQuickFilter) || cardQuickFilterDefs[0];
+  const rows = allRows.filter(quickDef.test);
   const shownRows = rows.slice(0, 80);
   const { columns, chips } = visibleCardColumns(shownRows);
   elements.cardDetailTitle.textContent = config.title;
-  elements.cardDetailSummary.textContent = `${activePeriodLabel() ? `${activePeriodLabel()} | ` : ""}${summarizeCardRows(rows)}${rows.length > 80 ? ` | แสดง 80 แถวแรก` : ""}`;
+  const filterNote = cardQuickFilter !== "all" ? ` · กรอง: ${quickDef.label}` : "";
+  elements.cardDetailSummary.textContent = `${activePeriodLabel() ? `${activePeriodLabel()} | ` : ""}${summarizeCardRows(rows)}${rows.length > 80 ? ` | แสดง 80 แถวแรก` : ""}${filterNote}`;
+  renderCardQuickFilters();
   elements.cardDetailHeadRow.innerHTML = columns
     .map((column) => `<th class="${cardColumnClass(column, false)}">${column.headHtml ? column.headHtml() : htmlEscape(column.label)}</th>`)
     .join("");
@@ -2170,6 +2188,14 @@ function openCardDetail(cardKey) {
   elements.cardDetailFilterBtn.onclick = () => applyCardFilter(config);
   renderCardBulkBar();
   if (!elements.cardDetailModal.open) elements.cardDetailModal.showModal();
+}
+
+// ปุ่ม one-click กรองดูข้อมูลในหน้า Card Detail
+function renderCardQuickFilters() {
+  if (!elements.cardQuickFilters) return;
+  elements.cardQuickFilters.innerHTML = cardQuickFilterDefs
+    .map((def) => `<button type="button" class="card-quick-chip${cardQuickFilter === def.key ? " active" : ""}" data-card-quick="${def.key}">${htmlEscape(def.label)}</button>`)
+    .join("");
 }
 
 // แถบแก้ bulk ในหน้า Card Detail — โผล่เมื่อมีบิลติ๊กเลือก
@@ -6779,6 +6805,12 @@ elements.caseSeqModalBody?.addEventListener("focusout", (event) => {
 elements.closeCardDetailModal?.addEventListener("click", closeCardDetail);
 elements.cardDetailModal?.addEventListener("click", (event) => {
   if (event.target === elements.cardDetailModal) closeCardDetail();
+  const quickChip = event.target.closest("[data-card-quick]");
+  if (quickChip) {
+    cardQuickFilter = quickChip.dataset.cardQuick;
+    if (state.currentCardKey) openCardDetail(state.currentCardKey);
+    return;
+  }
   const seqChip = event.target.closest("[data-seq-edit]");
   if (seqChip) {
     openCaseSeqTable(seqChip);
