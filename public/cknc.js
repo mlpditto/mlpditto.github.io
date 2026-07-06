@@ -1656,23 +1656,23 @@ function renderMonthlyCases() {
   body.innerHTML = `<div class="monthly-cases-row head"><span></span><span>สปสช</span><span>ประกัน</span></div>${rows}`;
 }
 
-// ต้นทุน สปสช/ประกัน 3 เดือนล่าสุด ใต้การ์ดต้นทุน (นับทุกบิลบนจอ ไม่ขึ้นกับตัวกรอง) — กดแถวกรองเดือนได้
-function renderCostByMonth() {
-  const body = $("costByMonthBody");
+// การ์ดยอดขาย/ต้นทุน/กำไร: ตารางย่อ สปสช/ประกัน 3 เดือนล่าสุด (นับเฉพาะบิลที่เข้ารายได้ ไม่ขึ้นกับตัวกรอง) — กดแถวกรองเดือน
+function renderMoneyByMonth(bodyId, valueFn, emptyLabel) {
+  const body = $(bodyId);
   if (!body) return;
   const byMonth = new Map();
   activeBills().forEach((bill) => {
     if (!caseSeqNames[bill.caseType]) return; // เฉพาะ สปสช/ประกัน
-    if (!countsInRevenue(bill)) return; // เฉพาะ PAID / วางบิลแล้วมี BAR (ให้ตรงกับการ์ดต้นทุน)
+    if (!countsInRevenue(bill)) return; // เฉพาะ PAID / วางบิลแล้วมี BAR (ให้ตรงกับการ์ด)
     const month = (primaryBillDate(bill) || "").slice(0, 7);
     if (!month) return;
     const entry = byMonth.get(month) || { nhso: 0, insurance: 0 };
-    entry[bill.caseType] += toNumeric(bill.cost) + toNumeric(bill.mlpCost);
+    entry[bill.caseType] += valueFn(bill);
     byMonth.set(month, entry);
   });
   const months = [...byMonth.keys()].sort().slice(-3); // 3 เดือนล่าสุด
   if (!months.length) {
-    body.innerHTML = '<div class="monthly-cases-empty">ยังไม่มีต้นทุน สปสช/ประกัน</div>';
+    body.innerHTML = `<div class="monthly-cases-empty">${htmlEscape(emptyLabel)}</div>`;
     return;
   }
   const rows = months.map((month) => {
@@ -1706,7 +1706,9 @@ function toggleMonthFilter(month) {
 function renderMetrics() {
   updateEmptyState();
   renderMonthlyCases();
-  renderCostByMonth();
+  renderMoneyByMonth("saleByMonthBody", (bill) => toNumeric(bill.sale), "ยังไม่มียอดขาย สปสช/ประกัน");
+  renderMoneyByMonth("costByMonthBody", (bill) => toNumeric(bill.cost) + toNumeric(bill.mlpCost), "ยังไม่มีต้นทุน สปสช/ประกัน");
+  renderMoneyByMonth("profitByMonthBody", (bill) => toNumeric(bill.profit), "ยังไม่มีกำไร สปสช/ประกัน");
   const metrics = calculateMetrics();
   Object.entries(metricIds).forEach(([key, id]) => {
     const el = $(id);
@@ -6548,10 +6550,12 @@ $("monthlyCasesBody")?.addEventListener("click", (event) => {
   if (!row) return;
   toggleMonthFilter(row.dataset.monthFilter);
 });
-$("costByMonthBody")?.addEventListener("click", (event) => {
-  const row = event.target.closest("[data-month-filter]");
-  if (!row) return;
-  toggleMonthFilter(row.dataset.monthFilter);
+["costByMonthBody", "saleByMonthBody", "profitByMonthBody"].forEach((id) => {
+  $(id)?.addEventListener("click", (event) => {
+    const row = event.target.closest("[data-month-filter]");
+    if (!row) return;
+    toggleMonthFilter(row.dataset.monthFilter);
+  });
 });
 elements.clicknicFiles.addEventListener("change", handleFiles);
 elements.mlpFile.addEventListener("change", handleFiles);
