@@ -648,6 +648,33 @@ html.dark .gap-chip.danger {
   overflow: hidden;
 }
 
+/* การ์ดนี้มีลูก 6 ชิ้น (head / chips กรอง / bulk bar / chips ค่าซ้ำ / ตาราง / pager) — grid 3 แถวของ
+   .modal-card จะจับแถวกลางใส่ 1fr แล้วบีบเหลือ 0 เมื่อเนื้อหาสูงเกิน ทำ UI ซ้อนกัน
+   เปลี่ยนเป็น flex column: ทุกส่วนสูงตามเนื้อหา ส่วนตารางเป็นตัวยืด/scroll (ต้องเจาะจง .modal-card
+   ให้ชนะ display:grid ที่ประกาศทีหลังในไฟล์) */
+.modal-card.card-detail-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-card.card-detail-card > * {
+  flex: 0 0 auto;
+}
+
+.modal-card.card-detail-card > .card-detail-table {
+  flex: 1 1 auto;
+  /* จอแคบมาก: ส่วนหัว/แถบต่าง ๆ wrap จนสูง — กันตารางถูกบีบจนหายทั้งแถบ */
+  min-height: 120px;
+  max-height: none;
+}
+
+/* จอเล็ก: ส่วนหัว/แถบ wrap สูงจนเกิน max-height ของการ์ด — ให้การ์ดทั้งใบ scroll แทนการตัดทิ้ง */
+@media (max-width: 640px) {
+  .modal-card.card-detail-card {
+    overflow-y: auto;
+  }
+}
+
 .card-detail-summary {
   margin: 3px 0 0;
   color: var(--muted);
