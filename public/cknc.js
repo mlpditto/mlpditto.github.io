@@ -2467,13 +2467,29 @@ function renderTable() {
   const rows = filteredBills();
   // ยอดรวมของชุดที่กรองอยู่ (ไม่นับบิล Exclude ยกเว้นกำลังดูแท็บ Exclude)
   const summaryRows = rows.filter((bill) => state.activeStatus === "excluded" || !bill.excluded);
-  const totals = summaryRows.reduce((acc, bill) => {
+  // เงิน ขาย/ต้นทุน/กำไร ในบรรทัดสรุป นับเฉพาะบิลรายได้จริง (PAID/วางบิลมี BAR) ให้ตรงกับการ์ด KPI
+  const revenueRows = summaryRows.filter(countsInRevenue);
+  const totals = revenueRows.reduce((acc, bill) => {
     acc.sale += toNumeric(bill.sale);
     acc.cost += toNumeric(bill.cost) + toNumeric(bill.mlpCost);
     acc.profit += toNumeric(bill.profit);
-    acc.billed += toNumeric(bill.billedAmount);
     return acc;
-  }, { sale: 0, cost: 0, profit: 0, billed: 0 });
+  }, { sale: 0, cost: 0, profit: 0 });
+  // กำไรแยกตามประเภทเคส (เฉพาะรายได้จริง เช่นเดียวกับการ์ดกำไร)
+  const profitByCase = revenueRows.reduce((acc, bill) => {
+    const key = bill.caseType || "unknown";
+    acc[key] = (acc[key] || 0) + toNumeric(bill.profit);
+    return acc;
+  }, {});
+  const md = (v) => (Math.abs(v) < 0.005 ? "—" : money(v));
+  const profitSplit = [
+    `สปสช ${md(profitByCase.nhso || 0)}`,
+    `ประกัน ${md(profitByCase.insurance || 0)}`,
+    Math.abs(profitByCase.general || 0) >= 0.005 ? `ทั่วไป ${md(profitByCase.general)}` : "",
+    Math.abs(profitByCase.unknown || 0) >= 0.005 ? `ไม่ทราบ ${md(profitByCase.unknown)}` : "",
+  ].filter(Boolean).join(" · ");
+  // ยอดวางบิล (billedAmount) นับทุกบิลที่แสดง — เป็นความคืบหน้าการวางบิล ไม่ใช่รายได้
+  const billedTotal = summaryRows.reduce((sum, bill) => sum + toNumeric(bill.billedAmount), 0);
   // นับประเภทเคสของชุดที่กรองอยู่ + ป้ายช่วงวันที่ ให้เลขอ่านสอดคล้องกับตัวกรอง
   const caseCounts = summaryRows.reduce((acc, bill) => {
     const key = bill.caseType || "unknown";
@@ -2488,7 +2504,7 @@ function renderTable() {
   ].filter(Boolean).join(" · ");
   const periodLabel = activePeriodLabel();
   elements.tableSummary.textContent = state.bills.length
-    ? `${periodLabel ? `${periodLabel}: ` : ""}แสดง ${number(rows.length)} จาก ${number(state.bills.length)} บิล · ขาย ${money(totals.sale)} · ต้นทุน ${money(totals.cost)} · กำไร ${money(totals.profit)} · วางบิล ${money(totals.billed)}${caseText ? ` · ${caseText}` : ""}`
+    ? `${periodLabel ? `${periodLabel}: ` : ""}แสดง ${number(rows.length)} จาก ${number(state.bills.length)} บิล · รายได้จริง: ขาย ${money(totals.sale)} · ต้นทุน ${money(totals.cost)} · กำไร ${money(totals.profit)} (${profitSplit}) · วางบิล ${money(billedTotal)}${caseText ? ` · ${caseText}` : ""}`
     : "ยังไม่มีข้อมูล";
 
   if (!rows.length) {
