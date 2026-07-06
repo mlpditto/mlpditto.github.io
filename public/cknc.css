@@ -682,12 +682,17 @@ html.dark .gap-chip.danger {
   font-weight: 800;
 }
 
+/* แถวเดียวรวม: chips กรองด่วน + ส่วน bulk (โผล่เมื่อเลือกบิล) + ปุ่มกรองตารางชิดขวา */
 .card-detail-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 8px 12px;
   padding: 0 18px 12px;
+}
+
+.card-detail-actions .card-filter-btn {
+  margin-left: auto;
 }
 
 /* ปุ่ม one-click กรองดูข้อมูลใน Card Detail */
@@ -738,14 +743,6 @@ html.dark .card-quick-chip.active {
   font-size: 12px;
   font-weight: 600;
   color: var(--muted);
-}
-
-/* ป้าย "ดูเฉพาะ:" หน้า chip กรองเคสในแถบ bulk ของ Card Detail */
-.bulk-view-note {
-  margin-left: auto;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 800;
 }
 
 .card-detail-chips {
@@ -954,8 +951,52 @@ html.dark .card-detail-table tr.row-selected td.col-action {
   background: #17362a;
 }
 
-.card-detail-bulk-bar {
-  margin: 4px 0 10px;
+/* ส่วน bulk แบบ inline ในแถว card-detail-actions — พื้นอ่อนแยกโซนจาก chips กรอง */
+.card-detail-bulk-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  padding: 4px 10px;
+  border: 1px solid #bdd5cc;
+  border-radius: 10px;
+  background: #f3faf7;
+  font-size: 12.5px;
+}
+
+html.dark .card-detail-bulk-inline {
+  background: rgba(0, 177, 79, 0.08);
+  border-color: #2f6b52;
+}
+
+/* เมนู ⋯ (Exclude/ยกเลิก Exclude/ล้างการเลือก) — dropdown ใต้ปุ่ม */
+.bulk-more-wrap {
+  position: relative;
+}
+
+.bulk-more-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(17, 29, 40, 0.16);
+}
+
+.bulk-more-menu button {
+  justify-content: flex-start;
+  white-space: nowrap;
+}
+
+html.dark .bulk-more-menu {
+  background: #1e293b;
+  border-color: #334155;
 }
 
 .metric span {
@@ -3147,7 +3188,9 @@ html.dark .merge-suggest-score {
 }
 
 .bulk-bar select,
-.bulk-bar input {
+.bulk-bar input,
+.card-detail-bulk-inline select,
+.card-detail-bulk-inline input {
   min-height: 30px;
   padding: 4px 8px;
   border: 1px solid var(--line);
@@ -3222,7 +3265,9 @@ html.dark .bulk-bar {
 }
 
 html.dark .bulk-bar select,
-html.dark .bulk-bar input {
+html.dark .bulk-bar input,
+html.dark .card-detail-bulk-inline select,
+html.dark .card-detail-bulk-inline input {
   background: #0f172a;
   border-color: #334155;
 }

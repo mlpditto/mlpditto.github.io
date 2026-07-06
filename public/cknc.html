@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="./cknc.css?v=20260706540000" />
+    <link rel="stylesheet" href="./cknc.css?v=20260706550000" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -176,22 +176,24 @@
           </div>
           <div class="card-detail-actions">
             <div id="cardQuickFilters" class="card-quick-filters"></div>
-            <button id="cardDetailFilterBtn" class="primary small" type="button" hidden>กรองตารางตามนี้</button>
-          </div>
-          <div id="cardDetailBulkBar" class="bulk-bar card-detail-bulk-bar" hidden>
-            <strong id="cardBulkCount">เลือก 0 บิล</strong>
-            <select id="cardBulkBillingStage" aria-label="ตั้งงานวางบิลให้บิลที่เลือก"></select>
-            <select id="cardBulkCaseType" aria-label="ตั้งประเภทเคสให้บิลที่เลือก"></select>
-            <span class="bulk-bar-field">
-              <input id="cardBulkBarNo" type="text" placeholder="BAR-..." aria-label="เลขใบวางบิล (BAR)" />
-              <button id="cardBulkApplyBar" class="ghost small" type="button">ใส่ BAR</button>
-            </span>
-            <button id="cardBulkExclude" class="ghost small" type="button">Exclude</button>
-            <button id="cardBulkInclude" class="ghost small" type="button">ยกเลิก Exclude</button>
-            <button id="cardBulkClear" class="ghost small" type="button">ล้างการเลือก</button>
-            <span class="bulk-view-note">ดูเฉพาะ:</span>
-            <button id="cardBulkViewNhso" class="card-quick-chip" type="button" data-card-quick="nhso" title="ดูเฉพาะเคส สปสช (กดซ้ำ = ดูทั้งหมด)">สปสช</button>
-            <button id="cardBulkViewInsurance" class="card-quick-chip" type="button" data-card-quick="insurance" title="ดูเฉพาะเคสประกัน (กดซ้ำ = ดูทั้งหมด)">ประกัน</button>
+            <div id="cardDetailBulkBar" class="card-detail-bulk-inline" hidden>
+              <strong id="cardBulkCount">เลือก 0 บิล</strong>
+              <select id="cardBulkBillingStage" aria-label="ตั้งงานวางบิลให้บิลที่เลือก"></select>
+              <select id="cardBulkCaseType" aria-label="ตั้งประเภทเคสให้บิลที่เลือก"></select>
+              <span class="bulk-bar-field">
+                <input id="cardBulkBarNo" type="text" placeholder="BAR-..." aria-label="เลขใบวางบิล (BAR)" />
+                <button id="cardBulkApplyBar" class="ghost small" type="button">ใส่ BAR</button>
+              </span>
+              <span class="bulk-more-wrap">
+                <button id="cardBulkMoreBtn" class="ghost small" type="button" aria-haspopup="true" aria-expanded="false" title="คำสั่งเพิ่มเติม">⋯</button>
+                <div id="cardBulkMoreMenu" class="bulk-more-menu" hidden>
+                  <button id="cardBulkExclude" class="ghost small" type="button">Exclude</button>
+                  <button id="cardBulkInclude" class="ghost small" type="button">ยกเลิก Exclude</button>
+                  <button id="cardBulkClear" class="ghost small" type="button">ล้างการเลือก</button>
+                </div>
+              </span>
+            </div>
+            <button id="cardDetailFilterBtn" class="primary small card-filter-btn" type="button" hidden>กรองตารางตามนี้</button>
           </div>
           <div id="cardDetailChips" class="card-detail-chips" hidden></div>
           <div class="card-detail-table">
@@ -958,7 +960,7 @@
       </div>
     </dialog>
 
-    <script src="./cknc.js?v=20260706540000"></script>
+    <script src="./cknc.js?v=20260706550000"></script>
     <script>
       (function () {
         const btn = document.getElementById("themeToggleBtn");
