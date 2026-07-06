@@ -1048,6 +1048,16 @@ function dedupeBillingRows(rows) {
   });
 }
 
+// STEP 2 (MLP) นำเข้าเฉพาะรายการของ บริษัท คลิกนิก เฮลท์ จำกัด — รายงาน MLP รวมทุกช่องทาง
+// (AMED / LINEMAN / เงินสด / บริษัทอื่น) ซึ่งไม่ใช่บิลของบอร์ดนี้ จะกลายเป็นบิล "ไม่พบรายการยา" ปลอม
+// แถวที่ช่องบริษัทว่าง (เช่นบรรทัดต่อของ detail) ให้ผ่าน เพื่อไม่ตัดข้อมูลแถว Clicknic ที่ wrap หลายบรรทัด
+const MLP_IMPORT_COMPANY = /คลิกนิก\s*เฮลท์/;
+
+function mlpCompanyImportable(company) {
+  const value = clean(company);
+  return !value || MLP_IMPORT_COMPANY.test(value);
+}
+
 function parseMlpWorkbook(workbook, sourceName) {
   const rows = sheetToRows(workbook);
   return rows.map((row, index) => {
@@ -1075,7 +1085,7 @@ function parseMlpWorkbook(workbook, sourceName) {
       sourceName,
       rowNumber: index + 1,
     };
-  }).filter((row) => row && (row.orderId || row.orw || row.detail));
+  }).filter((row) => row && (row.orderId || row.orw || row.detail) && mlpCompanyImportable(row.company));
 }
 
 function billingDueDateFromCells(cells) {
@@ -3699,9 +3709,13 @@ function clipboardKindLabel(kind) {
 
 function previewClipboardText(text) {
   const rows = clipboardTextToRows(text);
-  elements.confirmClipboardImport.disabled = !rows.length;
+  // MLP: บอกจำนวนที่จะนำเข้าจริงหลังกรองเฉพาะ คลิกนิก เฮลท์ ให้เห็นก่อนกด Import
+  const mlpImportable = state.activeClipboardKind === "mlp"
+    ? rows.filter((row) => mlpCompanyImportable(row[3])).length
+    : -1;
+  elements.confirmClipboardImport.disabled = !rows.length || mlpImportable === 0;
   elements.clipboardSummary.textContent = rows.length
-    ? `${number(rows.length)} rows, ${number(Math.max(...rows.map((row) => row.length)))} columns`
+    ? `${number(rows.length)} rows, ${number(Math.max(...rows.map((row) => row.length)))} columns${mlpImportable >= 0 ? ` — จะนำเข้าเฉพาะ คลิกนิก เฮลท์ ${number(mlpImportable)} แถว` : ""}`
     : "No clipboard data yet";
   if (!rows.length) {
     elements.clipboardPreviewHead.innerHTML = "";
