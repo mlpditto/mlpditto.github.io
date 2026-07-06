@@ -3475,11 +3475,8 @@ async function importClipboardText(kind, text) {
     : kind === "mlp" ? parseMlpWorkbook(workbook, sourceName)
       : parseBillingWorkbook(workbook, sourceName);
 
-  let mode = "replace";
-  if (state.bills.length) {
-    mode = await askImportMode(`ข้อมูลบนจอมี ${number(state.bills.length)} บิล — clipboard (${clipboardKindLabel(kind)}) มี ${number(parsed.length)} แถวข้อมูล (โหมดเพิ่ม: แถวซ้ำถูกตัดอัตโนมัติ และค่าที่แก้มือไว้คงอยู่)`);
-    if (!mode) return false;
-  }
+  // มีข้อมูลอยู่แล้ว = เพิ่มเข้าข้อมูลเดิมเสมอ (แถวซ้ำถูกตัดอัตโนมัติ ค่าที่แก้มือคงอยู่) — ไม่ถามโหมด
+  const mode = state.bills.length ? "append" : "replace";
 
   if (mode === "append") {
     mergeImportedIntoState({
@@ -4181,15 +4178,8 @@ async function handleFiles() {
       billingImportedRows.push(...parseBillingWorkbook(workbook, file.name));
     }
 
-    let mode = "replace";
-    if (state.bills.length) {
-      const importedCount = clicknicImportedRows.length + mlpImportedRows.length + billingImportedRows.length;
-      mode = await askImportMode(`ข้อมูลบนจอมี ${number(state.bills.length)} บิล — ไฟล์ที่เลือกมี ${number(importedCount)} แถวข้อมูล (โหมดเพิ่ม: แถวซ้ำถูกตัดอัตโนมัติ และค่าที่แก้มือไว้คงอยู่)`);
-      if (!mode) {
-        elements.statusText.textContent = "ยกเลิกการนำเข้า — ข้อมูลเดิมคงอยู่";
-        return;
-      }
-    }
+    // มีข้อมูลอยู่แล้ว = เพิ่มเข้าข้อมูลเดิมเสมอ (แถวซ้ำถูกตัดอัตโนมัติ ค่าที่แก้มือคงอยู่) — ไม่ถามโหมด
+    const mode = state.bills.length ? "append" : "replace";
 
     if (mode === "append") {
       mergeImportedIntoState({
