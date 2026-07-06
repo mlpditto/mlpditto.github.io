@@ -1450,20 +1450,25 @@ th.th-center {
   color: var(--muted);
 }
 
-/* chip ตัวเลขในตารางย่อยของการ์ด — กดเปิด popup บิลของช่องนั้น (เดือน × สปสช/ประกัน) */
-.month-drill-chip {
-  display: inline-block;
-  padding: 0 5px;
-  border-radius: 999px;
+/* chip ตัวเลขในตารางย่อยของการ์ด — กดเปิด popup บิลของช่องนั้น (เดือน × สปสช/ประกัน)
+   selector ต้องชนะ .metric span (display:block) และ span:first-child (ชิดซ้าย/สี muted) ไม่งั้นตัวเลขเลื่อนตำแหน่ง */
+.monthly-cases-row span > .month-drill-chip {
+  display: inline;
+  padding: 0;
+  color: inherit;
+  font-weight: inherit;
+  text-align: inherit;
+  border-radius: 4px;
   text-decoration: underline dotted;
   text-underline-offset: 3px;
   cursor: pointer;
 }
 
-.month-drill-chip:hover {
-  background: var(--green);
-  color: #fff;
-  text-decoration: none;
+.monthly-cases-row span > .month-drill-chip:hover {
+  background: var(--mint);
+  box-shadow: 0 0 0 3px var(--mint);
+  color: var(--green-dark);
+  text-decoration-style: solid;
 }
 
 /* ตารางต้นทุน สปสช/ประกัน — ค่าเป็นเงิน (กว้างกว่า count) จัดชิดขวา ตัวเลขเรียง */
