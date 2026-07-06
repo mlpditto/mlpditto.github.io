@@ -729,6 +729,12 @@ function primaryBillDate(bill) {
   return dateKey(bill.clicknicDate || bill.mlpDate || bill.billingDueDate);
 }
 
+// นับเข้ายอดขาย/ต้นทุน/กำไร เฉพาะบิลที่ PAID หรือ วางบิลแล้วและมีเลข BAR (รายได้ที่เกิดขึ้นจริง)
+function countsInRevenue(bill) {
+  const stage = bill.billingStage || "";
+  return stage === "paid" || (stage === "billed" && Boolean(clean(bill.barNo)));
+}
+
 function isWithinDateRange(bill) {
   const from = elements.dateFrom.value;
   const to = elements.dateTo.value;
@@ -1552,19 +1558,20 @@ function calculateMetrics() {
   const billingRows = state.billingRows.length;
   const mlpNoBilling = bills.filter((bill) => bill.status === "pending-billing").length;
   const billingOnly = bills.filter((bill) => bill.status === "billing-only").length;
-  const sale = bills.reduce((sum, bill) => sum + bill.sale, 0);
-  // แยกยอดขายตามประเภทเคส (ตามช่วงวันที่ที่กรองอยู่) — สปสช / ประกัน / อื่น ๆ
-  const saleNhso = bills.filter((bill) => bill.caseType === "nhso").reduce((sum, bill) => sum + bill.sale, 0);
-  const saleInsurance = bills.filter((bill) => bill.caseType === "insurance").reduce((sum, bill) => sum + bill.sale, 0);
+  // ยอดขาย/ต้นทุน/กำไร นับเฉพาะบิลที่ PAID หรือ วางบิลแล้วมีเลข BAR (รายได้ที่เกิดจริง)
+  const revenueBills = bills.filter(countsInRevenue);
+  const sale = revenueBills.reduce((sum, bill) => sum + bill.sale, 0);
+  // แยกยอดขายตามประเภทเคส — สปสช / ประกัน / อื่น ๆ
+  const saleNhso = revenueBills.filter((bill) => bill.caseType === "nhso").reduce((sum, bill) => sum + bill.sale, 0);
+  const saleInsurance = revenueBills.filter((bill) => bill.caseType === "insurance").reduce((sum, bill) => sum + bill.sale, 0);
   const saleOther = sale - saleNhso - saleInsurance;
-  const cost = bills.reduce((sum, bill) => sum + bill.cost, 0);
-  const mlpCost = bills.reduce((sum, bill) => sum + bill.mlpCost, 0);
+  const cost = revenueBills.reduce((sum, bill) => sum + bill.cost, 0);
+  const mlpCost = revenueBills.reduce((sum, bill) => sum + bill.mlpCost, 0);
   const totalCost = cost + mlpCost;
-  const profitBills = bills.filter((bill) => bill.status === "matched" || bill.status === "pending-billing");
-  const profit = profitBills.reduce((sum, bill) => sum + bill.profit, 0);
-  // แยกกำไรตามประเภทเคส (ตามช่วงวันที่ที่กรองอยู่) — สปสช / ประกัน / อื่น ๆ
-  const profitNhso = profitBills.filter((bill) => bill.caseType === "nhso").reduce((sum, bill) => sum + bill.profit, 0);
-  const profitInsurance = profitBills.filter((bill) => bill.caseType === "insurance").reduce((sum, bill) => sum + bill.profit, 0);
+  const profit = revenueBills.reduce((sum, bill) => sum + bill.profit, 0);
+  // แยกกำไรตามประเภทเคส — สปสช / ประกัน / อื่น ๆ
+  const profitNhso = revenueBills.filter((bill) => bill.caseType === "nhso").reduce((sum, bill) => sum + bill.profit, 0);
+  const profitInsurance = revenueBills.filter((bill) => bill.caseType === "insurance").reduce((sum, bill) => sum + bill.profit, 0);
   const profitOther = profit - profitNhso - profitInsurance;
   const caseInsurance = bills.filter((bill) => bill.caseType === "insurance").length;
   const caseNhso = bills.filter((bill) => bill.caseType === "nhso").length;
@@ -1656,6 +1663,7 @@ function renderCostByMonth() {
   const byMonth = new Map();
   activeBills().forEach((bill) => {
     if (!caseSeqNames[bill.caseType]) return; // เฉพาะ สปสช/ประกัน
+    if (!countsInRevenue(bill)) return; // เฉพาะ PAID / วางบิลแล้วมี BAR (ให้ตรงกับการ์ดต้นทุน)
     const month = (primaryBillDate(bill) || "").slice(0, 7);
     if (!month) return;
     const entry = byMonth.get(month) || { nhso: 0, insurance: 0 };
