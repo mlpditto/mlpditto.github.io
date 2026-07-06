@@ -5007,11 +5007,30 @@ html.dark .panel-head p {
   align-items: flex-start;
   justify-content: space-between;
   gap: 6px;
+  /* ชื่อยาว: ให้ phone/ปุ่ม wand ตกบรรทัดใหม่แทนการบีบชื่อจนเหลือคอลัมน์แคบ ๆ */
+  flex-wrap: wrap;
 }
 
 .bill-patient-row .bill-patient {
   flex: 1;
-  min-width: 0;
+  min-width: 110px;
+}
+
+.bill-patient-phone {
+  flex: none;
+  align-self: center;
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+/* ก้อนอ้างอิงที่อยู่ร่วมบรรทัด (ออเดอร์+refId / AR+BAR) — ขึ้นบรรทัดใหม่ทั้งก้อนเมื่อที่ไม่พอ */
+.bill-ref-part {
+  display: inline-block;
+}
+
+.bill-ref-part + .bill-ref-part {
+  margin-left: 8px;
 }
 
 .bill-analyze-btn {

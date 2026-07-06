@@ -819,17 +819,19 @@ function barCreditCountMap() {
 
 // บรรทัดอ้างอิงใต้ ORW: เครดิต (AR) ก่อน แล้ว ใบวางบิล (BAR) พร้อมจำนวนเครดิตที่เกาะ BAR เดียวกัน
 function billRefLinesHtml(bill, barCredits) {
-  const lines = [];
-  if (clean(bill.creditNos)) lines.push(`เครดิต ${bill.creditNos}`);
+  const parts = [];
+  if (clean(bill.creditNos)) parts.push(`เครดิต ${bill.creditNos}`);
   if (clean(bill.barNo)) {
     const bars = clean(bill.barNo).split(",").map(clean).filter(Boolean);
     const count = bars.reduce((sum, bar) => sum + (barCredits?.get(bar)?.size || 0), 0);
-    lines.push(`ใบวางบิล ${bill.barNo}${count ? ` (${number(count)} เครดิต)` : ""}`);
+    parts.push(`ใบวางบิล ${bill.barNo}${count ? ` (${number(count)} เครดิต)` : ""}`);
   } else if (!clean(bill.creditNos) && clean(bill.billingNo)) {
     // snapshot เก่าไม่มี barNo/creditNos: แสดง billingNo เดิมไว้ก่อน
-    lines.push(`ใบวางบิล ${bill.billingNo}`);
+    parts.push(`ใบวางบิล ${bill.billingNo}`);
   }
-  return lines.map((line) => `<span class="bill-ref">${htmlEscape(line)}</span>`).join("");
+  if (!parts.length) return "";
+  // AR + BAR อยู่บรรทัดเดียวกัน — แต่ละก้อนเป็น inline-block จะได้ขึ้นบรรทัดใหม่ทั้งก้อนเมื่อที่ไม่พอ
+  return `<span class="bill-ref">${parts.map((part) => `<span class="bill-ref-part">${htmlEscape(part)}</span>`).join(" ")}</span>`;
 }
 
 function deriveBillingStage(status, caseType, barNo, creditNos) {
@@ -2695,12 +2697,12 @@ function renderTable() {
       <td class="bill-cell">
         <span class="bill-patient-row">
           <strong class="bill-patient">${htmlEscape(bill.patient || "-")}</strong>
+          ${clean(bill.phone) ? `<span class="bill-patient-phone">${htmlEscape(bill.phone)}</span>` : ""}
           <button class="bill-analyze-btn" type="button" data-paste-analyze="${htmlEscape(bill.billKey)}" title="แก้ไขจากข้อความ paste (วิเคราะห์อัตโนมัติ)" aria-label="แก้ไขจากข้อความ paste"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
         </span>
-        <span class="bill-ref">${bill.orderId ? `${bill.orderId} <button class="copy-ref-btn" type="button" data-copy-text="${htmlEscape(bill.orderId)}" title="คัดลอกเลขที่ออเดอร์" aria-label="คัดลอกเลขที่ออเดอร์"><i class="fa-regular fa-copy"></i></button>` : "-"}</span>
+        <span class="bill-ref">${bill.orderId ? `<span class="bill-ref-part">${bill.orderId} <button class="copy-ref-btn" type="button" data-copy-text="${htmlEscape(bill.orderId)}" title="คัดลอกเลขที่ออเดอร์" aria-label="คัดลอกเลขที่ออเดอร์"><i class="fa-regular fa-copy"></i></button></span>` : "-"}${clean(bill.refId) ? ` <span class="bill-ref-part">${htmlEscape(bill.refId)} <button class="copy-ref-btn" type="button" data-copy-text="${htmlEscape(clean(bill.refId))}" title="คัดลอก Ref ID" aria-label="คัดลอก Ref ID"><i class="fa-regular fa-copy"></i></button></span>` : ""}</span>
         <span class="bill-ref">${htmlEscape(bill.orw || "ORW -")}${clean(bill.orw) ? ` <button class="copy-ref-btn" type="button" data-copy-text="${htmlEscape(clean(bill.orw.split(",")[0]))}" title="คัดลอก ORW" aria-label="คัดลอก ORW"><i class="fa-regular fa-copy"></i></button>` : ""}${caseSeqChipHtml(bill) ? ` ${caseSeqChipHtml(bill)}` : ""}</span>
         ${billRefLinesHtml(bill, barCredits)}
-        ${bill.refId || bill.phone ? `<span class="bill-ref bill-contact">${htmlEscape([bill.refId, bill.phone].filter(Boolean).join(" · "))}</span>` : ""}
       </td>
       <td class="stack-cell">
         ${bill.status === "matched" ? "" : renderStatusSelect(bill)}
