@@ -734,6 +734,15 @@ function isWithinDateRange(bill) {
   const to = elements.dateTo.value;
   if (!from && !to) return true;
 
+  // "primary" = วันบิลหลัก (CLICKNIC ถ้าไม่มีใช้ MLP) — ให้ตรงกับการนับเดือนในการ์ด
+  if (elements.dateField.value === "primary") {
+    const key = primaryBillDate(bill);
+    if (!key) return false;
+    if (from && key < from) return false;
+    if (to && key > to) return false;
+    return true;
+  }
+
   const fields = elements.dateField.value === "any"
     ? ["clicknicDate", "mlpDate", "billingDueDate"]
     : [elements.dateField.value];
@@ -1616,7 +1625,7 @@ function renderMonthlyCases() {
   const byMonth = new Map();
   activeBills().forEach((bill) => {
     if (!caseSeqNames[bill.caseType]) return;
-    const month = (dateKey(bill.clicknicDate || bill.mlpDate) || "").slice(0, 7);
+    const month = (primaryBillDate(bill) || "").slice(0, 7);
     if (!month || Number(month.slice(0, 4)) !== yearNow) return;
     const entry = byMonth.get(month) || { nhso: 0, insurance: 0 };
     entry[bill.caseType] += 1;
@@ -1647,7 +1656,7 @@ function renderCostByMonth() {
   const byMonth = new Map();
   activeBills().forEach((bill) => {
     if (!caseSeqNames[bill.caseType]) return; // เฉพาะ สปสช/ประกัน
-    const month = (dateKey(bill.clicknicDate || bill.mlpDate) || "").slice(0, 7);
+    const month = (primaryBillDate(bill) || "").slice(0, 7);
     if (!month) return;
     const entry = byMonth.get(month) || { nhso: 0, insurance: 0 };
     entry[bill.caseType] += toNumeric(bill.cost) + toNumeric(bill.mlpCost);
@@ -1674,7 +1683,8 @@ function renderCostByMonth() {
 function toggleMonthFilter(month) {
   const range = monthRangeOf(month);
   const alreadyActive = elements.dateFrom.value === range.from && elements.dateTo.value === range.to;
-  elements.dateField.value = "clicknicDate";
+  // กรองด้วยวันบิลหลัก (CLICKNIC→MLP) ให้ตรงกับการนับเดือนในการ์ด
+  elements.dateField.value = "primary";
   elements.dateFrom.value = alreadyActive ? "" : range.from;
   elements.dateTo.value = alreadyActive ? "" : range.to;
   elements.targetDate.value = "";
@@ -4392,6 +4402,7 @@ function reportFileStamp() {
 function reportScopeLabel() {
   const dateFieldLabel = {
     any: "ทุกชนิดวันที่",
+    primary: "วันบิลหลัก (CLICKNIC→MLP)",
     clicknicDate: "วันที่ CLICKNIC",
     mlpDate: "วันที่ MLP",
     billingDueDate: "ครบกำหนดใบวางบิล",
