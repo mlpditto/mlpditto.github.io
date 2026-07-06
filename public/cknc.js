@@ -2155,6 +2155,9 @@ const cardBulkSelected = new Set();
 
 // ปุ่ม one-click กรองดูข้อมูลในหน้า Card Detail (ไม่มีแท็บเหมือนตารางหลัก)
 let cardQuickFilter = "all";
+// แบ่งหน้าในตาราง Card Detail — รีเซ็ตเมื่อเปลี่ยนการ์ด/ตัวกรองด่วน
+const CARD_DETAIL_PAGE_SIZE = 50;
+let cardDetailPage = 1;
 const cardQuickFilterDefs = [
   { key: "all", label: "ทั้งหมด", test: () => true },
   { key: "paid-nobar", label: "PAID woBAR", test: (bill) => (bill.billingStage === "paid" || bill.billingStage === "billed") && !clean(bill.barNo) },
@@ -2322,6 +2325,7 @@ function openCardDetail(cardKey) {
   if (cardChanged) {
     cardBulkSelected.clear();
     cardQuickFilter = "all"; // เปลี่ยนการ์ด = รีเซ็ตตัวกรองด่วน
+    cardDetailPage = 1;
   }
   const allRows = config.rows();
   // ตัดคีย์ที่เลือกไว้แต่ไม่อยู่ในกลุ่มนี้แล้ว (เช่นเปลี่ยนประเภทเคสแล้วบิลหลุดออกจากการ์ด) — ยึดชุดเต็มของการ์ด
@@ -2330,11 +2334,16 @@ function openCardDetail(cardKey) {
   // ตัวกรองด่วน (one-click) กรองเฉพาะที่แสดง — การเลือก bulk ยังยึดชุดเต็ม
   const quickDef = cardQuickFilterDefs.find((def) => def.key === cardQuickFilter) || cardQuickFilterDefs[0];
   const rows = allRows.filter(quickDef.test);
-  const shownRows = rows.slice(0, 80);
+  // แบ่งหน้า สูงสุด 50 แถว/หน้า — clamp เผื่อจำนวนแถวลดลงหลังแก้ข้อมูล/เปลี่ยนตัวกรอง
+  const totalPages = Math.max(1, Math.ceil(rows.length / CARD_DETAIL_PAGE_SIZE));
+  cardDetailPage = Math.min(Math.max(1, cardDetailPage), totalPages);
+  const shownRows = rows.slice((cardDetailPage - 1) * CARD_DETAIL_PAGE_SIZE, cardDetailPage * CARD_DETAIL_PAGE_SIZE);
   const { columns, chips } = visibleCardColumns(shownRows);
   elements.cardDetailTitle.textContent = config.title;
   const filterNote = cardQuickFilter !== "all" ? ` · กรอง: ${quickDef.label}` : "";
-  elements.cardDetailSummary.textContent = `${activePeriodLabel() ? `${activePeriodLabel()} | ` : ""}${summarizeCardRows(rows)}${rows.length > 80 ? ` | แสดง 80 แถวแรก` : ""}${filterNote}`;
+  const pageNote = totalPages > 1 ? ` | หน้า ${number(cardDetailPage)}/${number(totalPages)}` : "";
+  elements.cardDetailSummary.textContent = `${activePeriodLabel() ? `${activePeriodLabel()} | ` : ""}${summarizeCardRows(rows)}${pageNote}${filterNote}`;
+  renderCardPager(rows.length, totalPages);
   renderCardQuickFilters();
   elements.cardDetailHeadRow.innerHTML = columns
     .map((column) => `<th class="${cardColumnClass(column, false)}">${column.headHtml ? column.headHtml() : htmlEscape(column.label)}</th>`)
@@ -2350,6 +2359,22 @@ function openCardDetail(cardKey) {
   elements.cardDetailFilterBtn.onclick = () => applyCardFilter(config);
   renderCardBulkBar();
   if (!elements.cardDetailModal.open) elements.cardDetailModal.showModal();
+}
+
+// แถบแบ่งหน้าใต้ตาราง Card Detail — โผล่เมื่อข้อมูลเกิน 1 หน้า
+function renderCardPager(totalRows, totalPages) {
+  const pager = $("cardDetailPager");
+  if (!pager) return;
+  pager.hidden = totalPages <= 1;
+  if (pager.hidden) return;
+  const info = $("cardPageInfo");
+  if (info) {
+    const from = (cardDetailPage - 1) * CARD_DETAIL_PAGE_SIZE + 1;
+    const to = Math.min(cardDetailPage * CARD_DETAIL_PAGE_SIZE, totalRows);
+    info.textContent = `${number(from)}–${number(to)} จาก ${number(totalRows)} บิล · หน้า ${number(cardDetailPage)}/${number(totalPages)}`;
+  }
+  pager.querySelector('[data-card-page="prev"]').disabled = cardDetailPage <= 1;
+  pager.querySelector('[data-card-page="next"]').disabled = cardDetailPage >= totalPages;
 }
 
 // ปุ่ม one-click กรองดูข้อมูลในหน้า Card Detail
@@ -7042,11 +7067,22 @@ elements.caseSeqModalBody?.addEventListener("focusout", (event) => {
 elements.closeCardDetailModal?.addEventListener("click", closeCardDetail);
 elements.cardDetailModal?.addEventListener("click", (event) => {
   if (event.target === elements.cardDetailModal) closeCardDetail();
+  const pageBtn = event.target.closest("[data-card-page]");
+  if (pageBtn) {
+    cardDetailPage += pageBtn.dataset.cardPage === "next" ? 1 : -1;
+    if (state.currentCardKey) {
+      openCardDetail(state.currentCardKey);
+      // เปลี่ยนหน้าแล้วเลื่อนกลับไปหัวตาราง
+      elements.cardDetailBody?.closest(".card-detail-table")?.scrollTo({ top: 0 });
+    }
+    return;
+  }
   const quickChip = event.target.closest("[data-card-quick]");
   if (quickChip) {
     // กดตัวกรองที่เปิดอยู่ซ้ำ = ยกเลิก กลับมาดูทั้งหมด
     const key = quickChip.dataset.cardQuick;
     cardQuickFilter = key === cardQuickFilter && key !== "all" ? "all" : key;
+    cardDetailPage = 1; // เปลี่ยนตัวกรอง = กลับหน้าแรก
     if (state.currentCardKey) openCardDetail(state.currentCardKey);
     return;
   }

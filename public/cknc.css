@@ -729,6 +729,26 @@ html.dark .card-quick-chip.active {
   padding: 0 18px 10px;
 }
 
+/* แถบแบ่งหน้าใต้ตาราง Card Detail */
+.card-detail-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 10px 18px 14px;
+}
+
+.card-detail-pager span {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.card-detail-pager button[disabled] {
+  opacity: 0.45;
+  cursor: default;
+}
+
 .card-detail-chips .chip-note {
   color: var(--muted);
   font-size: 11px;
