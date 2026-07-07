@@ -1473,6 +1473,7 @@
                 </td>
                 <td class="p-2">
                     <input type="number" value="${item.price}" step="0.01" class="${inputClass} text-right" oninput="calculateTotalFromItems('${containerId}', '${isEdit ? 'e-grossAmount' : 'grossAmount'}')">
+                    <div class="item-net-hint text-[9px] font-bold text-amber-600 dark:text-amber-400 text-right mt-0.5 whitespace-nowrap"></div>
                 </td>
                 <td class="p-2 text-center">
                     <button type="button" onclick="this.closest('tr').remove(); calculateTotalFromItems('${containerId}', '${isEdit ? 'e-grossAmount' : 'grossAmount'}'); ${isEdit ? 'updateEditItemCount()' : ''}" class="text-rose-400 hover:text-rose-600 transition-colors">
@@ -1633,6 +1634,37 @@
             return document.getElementById(`${p}isGp35`)?.checked ? GP_RATE_ALT : GP_RATE;
         }
 
+        // บรรทัดเล็กใต้ช่องราคาแต่ละแถว: ราคารับจริงต่อชิ้นหลังหัก GP — คิดจากสัดส่วน NET ÷ GROSS ของทั้งบิล
+        // จึงถูกอัตโนมัติทุกโหมด (30% / -35% / NO FEE / MANUAL NET กระจายตามสัดส่วน); ไม่มีการหัก (ratio = 1) ไม่ต้องแสดง
+        function updateItemNetHints(containerId = 'items-container') {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            const p = containerId.startsWith('e-') ? 'e-' : '';
+            const gross = parseFloat(document.getElementById(`${p}grossAmount`)?.value) || 0;
+            const isManual = document.getElementById(`${p}isManualNet`)?.checked;
+            let net;
+            if (isManual) {
+                net = parseFloat(document.getElementById(`${p}manualNet`)?.value) || 0;
+            } else if (document.getElementById(`${p}isNoFee`)?.checked) {
+                net = gross;
+            } else {
+                net = gross * (1 - (document.getElementById(`${p}isGp35`)?.checked ? GP_RATE_ALT : GP_RATE));
+            }
+            const ratio = gross > 0 ? net / gross : 0;
+            const money = (v) => `฿${v.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+            container.querySelectorAll('tr').forEach(row => {
+                const hint = row.querySelector('.item-net-hint');
+                if (!hint) return;
+                const qty = parseFloat(row.querySelector('td:nth-child(2) input')?.value) || 0;
+                const price = parseFloat(row.querySelector('td:nth-child(3) input')?.value) || 0;
+                if (!(price > 0) || ratio <= 0 || ratio >= 0.9999) { hint.textContent = ''; return; }
+                const unitNet = price * ratio;
+                hint.textContent = qty > 1
+                    ? `→ รับจริง ${money(unitNet)} ×${qty} = ${money(unitNet * qty)}`
+                    : `→ รับจริง ${money(unitNet)}`;
+            });
+        }
+
         function calculateNet() {
             const gross = parseFloat(document.getElementById('grossAmount').value) || 0;
             const isManual = document.getElementById('isManualNet').checked;
@@ -1660,6 +1692,8 @@
                 profitEl.innerHTML = `<span class="${pColor}">฿${profit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span> <span class="${rColor}">(${profitRate.toFixed(1)}%)</span>`;
                 profitEl.className = "text-xl font-black italic";
             }
+
+            updateItemNetHints('items-container');
         }
 
         function initDefaults() {
@@ -3024,6 +3058,8 @@
                 profitEl.innerHTML = `<span class="${pColor}">฿${profit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span> <span class="${rColor}">(${profitRate.toFixed(1)}%)</span>`;
                 profitEl.className = "text-xl font-black italic";
             }
+
+            updateItemNetHints('e-items-container');
         }
 
         function cancelEdit() {
