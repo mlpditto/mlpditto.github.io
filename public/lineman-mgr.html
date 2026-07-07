@@ -762,10 +762,18 @@
                         <div class="flex flex-wrap gap-3 mb-6">
                             <label
                                 class="flex items-center gap-3 p-3 px-4 bg-slate-100 dark:bg-slate-800 rounded-2xl cursor-pointer hover:bg-slate-200 transition-all border border-transparent has-[:checked]:border-rose-500/50 has-[:checked]:bg-rose-50/50">
-                                <input type="checkbox" id="isNoFee" onchange="calculateNet()"
+                                <input type="checkbox" id="isNoFee" onchange="gpExclusive('nofee')"
                                     class="w-5 h-5 rounded-lg border-2 border-slate-300 text-rose-600 focus:ring-rose-500">
                                 <span class="text-[11px] font-black uppercase tracking-tighter"><i
                                         class="fas fa-bolt text-rose-500 mr-1"></i> NO FEE</span>
+                            </label>
+
+                            <label
+                                class="flex items-center gap-3 p-3 px-4 bg-slate-100 dark:bg-slate-800 rounded-2xl cursor-pointer hover:bg-slate-200 transition-all border border-transparent has-[:checked]:border-amber-500/50 has-[:checked]:bg-amber-50/50">
+                                <input type="checkbox" id="isGp35" onchange="gpExclusive('gp35')"
+                                    class="w-5 h-5 rounded-lg border-2 border-slate-300 text-amber-600 focus:ring-amber-500">
+                                <span class="text-[11px] font-black uppercase tracking-tighter"><i
+                                        class="fas fa-percent text-amber-500 mr-1"></i> -35%</span>
                             </label>
 
                             <label
@@ -1071,12 +1079,24 @@
                             <div class="flex flex-wrap gap-3 mb-6">
                                 <label
                                     class="flex items-center gap-3 p-3 px-4 bg-slate-100 dark:bg-slate-800 rounded-2xl cursor-pointer hover:bg-slate-200 transition-all border border-transparent has-[:checked]:border-rose-500/50 has-[:checked]:bg-rose-50/50">
-                                    <input type="checkbox" id="e-isNoFee" onchange="calculateNetPopup()"
+                                    <input type="checkbox" id="e-isNoFee" onchange="gpExclusive('nofee', 'edit')"
                                         class="w-5 h-5 rounded-lg border-2 border-slate-300 text-rose-600 focus:ring-rose-500">
                                     <div class="flex flex-col">
                                         <span
                                             class="text-[11px] font-black uppercase tracking-tighter flex items-center gap-2 m-0 p-0 transform -translate-y-0.5">
                                             <i class="fas fa-bolt text-rose-500"></i> NO FEE (0%)
+                                        </span>
+                                    </div>
+                                </label>
+
+                                <label
+                                    class="flex items-center gap-3 p-3 px-4 bg-slate-100 dark:bg-slate-800 rounded-2xl cursor-pointer hover:bg-slate-200 transition-all border border-transparent has-[:checked]:border-amber-500/50 has-[:checked]:bg-amber-50/50">
+                                    <input type="checkbox" id="e-isGp35" onchange="gpExclusive('gp35', 'edit')"
+                                        class="w-5 h-5 rounded-lg border-2 border-slate-300 text-amber-600 focus:ring-amber-500">
+                                    <div class="flex flex-col">
+                                        <span
+                                            class="text-[11px] font-black uppercase tracking-tighter flex items-center gap-2 m-0 p-0 transform -translate-y-0.5">
+                                            <i class="fas fa-percent text-amber-500"></i> -35%
                                         </span>
                                     </div>
                                 </label>
@@ -1287,6 +1307,7 @@
         let editingUid = null;
         let currentSelectedDate = null; // null means "All" or "Default to Today"
         const GP_RATE = 0.30; // GP 30% รวม VAT
+        const GP_RATE_ALT = 0.35; // GP ทางเลือก 35% — ติ๊ก "-35%" ในฟอร์ม (record.isGp35)
 
         let currentStore = 'lineman_sales';
         let currentMonth = new Date().toISOString().slice(0, 7);
@@ -1597,6 +1618,21 @@
             });
         }
 
+        // NO FEE กับ -35% เลือกได้อย่างเดียว — ติ๊กอันหนึ่งจะปลดอีกอันอัตโนมัติ
+        function gpExclusive(source, mode) {
+            const p = mode === 'edit' ? 'e-' : '';
+            const noFee = document.getElementById(`${p}isNoFee`);
+            const gp35 = document.getElementById(`${p}isGp35`);
+            if (source === 'nofee' && noFee?.checked && gp35) gp35.checked = false;
+            if (source === 'gp35' && gp35?.checked && noFee) noFee.checked = false;
+            if (mode === 'edit') calculateNetPopup(); else calculateNet();
+        }
+
+        function activeGpRate(mode) {
+            const p = mode === 'edit' ? 'e-' : '';
+            return document.getElementById(`${p}isGp35`)?.checked ? GP_RATE_ALT : GP_RATE;
+        }
+
         function calculateNet() {
             const gross = parseFloat(document.getElementById('grossAmount').value) || 0;
             const isManual = document.getElementById('isManualNet').checked;
@@ -1604,7 +1640,7 @@
             const manual = parseFloat(document.getElementById('manualNet').value) || 0;
             const cost = parseFloat(document.getElementById('orderCost').value) || 0;
 
-            let gp = isNoFee ? 0 : gross * GP_RATE;
+            let gp = isNoFee ? 0 : gross * activeGpRate();
             let net = gross - gp;
 
             if (isManual) {
@@ -2379,7 +2415,7 @@
                         </td>
                         <td class="p-4 text-right">
                             <div class="text-[10px] ${(record.isNoFee) ? 'text-slate-300' : 'text-rose-400'} font-bold">
-                                ${record.isNoFee ? '<span class="bg-rose-50 px-1 rounded text-[8px]">NO FEE</span>' : `-฿${(record.gp || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
+                                ${record.isNoFee ? '<span class="bg-rose-50 px-1 rounded text-[8px]">NO FEE</span>' : `-฿${(record.gp || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}${record.isGp35 ? ' <span class="bg-amber-50 text-amber-600 px-1 rounded text-[8px] font-black">35%</span>' : ''}`}
                             </div>
                             <div class="font-bold text-slate-400">฿${(record.gross || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                         </td>
@@ -2544,7 +2580,8 @@
                 }
 
                 const gross = parseFloat(grossVal) || 0;
-                let gp = isNoFee ? 0 : gross * GP_RATE;
+                const isGp35 = document.getElementById('isGp35')?.checked || false;
+                let gp = isNoFee ? 0 : gross * (isGp35 ? GP_RATE_ALT : GP_RATE);
                 let net = gross - gp;
 
                 if (isManual) {
@@ -2581,6 +2618,7 @@
                     cost: cost,
                     isManualNet: isManual,
                     isNoFee: isNoFee,
+                    isGp35: isGp35,
                     isPaid: isPaid,
                     paidDate: paidDate,
                     paidTime: isPaid ? `${tHH}:${tMM}` : '',
@@ -2676,10 +2714,11 @@
 
                 const gross = parseFloat(grossVal) || 0;
                 const isNoFee = document.getElementById('e-isNoFee')?.checked || false;
+                const isGp35 = document.getElementById('e-isGp35')?.checked || false;
                 const isManual = document.getElementById('e-isManualNet')?.checked || false;
                 const manual = parseFloat(document.getElementById('e-manualNet')?.value || 0) || 0;
 
-                let gp = isNoFee ? 0 : gross * GP_RATE;
+                let gp = isNoFee ? 0 : gross * (isGp35 ? GP_RATE_ALT : GP_RATE);
                 let net = gross - gp;
                 if (isManual) {
                     net = manual;
@@ -2714,6 +2753,7 @@
                     net: net,
                     cost: cost,
                     isNoFee: isNoFee,
+                    isGp35: isGp35,
                     isManualNet: isManual,
                     isPaid: isPaid,
                     paidDate: pDate,
@@ -2906,6 +2946,7 @@
             }
 
             document.getElementById('e-isNoFee').checked = record.isNoFee;
+            document.getElementById('e-isGp35').checked = record.isGp35 || false;
             document.getElementById('e-isManualNet').checked = record.isManualNet;
             document.getElementById('e-manualNet').value = record.net || record.gross;
             document.getElementById('e-ref1').value = record.ref1 || '';
@@ -2950,7 +2991,7 @@
             if (isManual) {
                 net = manual;
             } else {
-                let gp = isNoFee ? 0 : gross * GP_RATE;
+                let gp = isNoFee ? 0 : gross * activeGpRate('edit');
                 net = gross - gp;
             }
 
@@ -3010,9 +3051,11 @@
                 if (targetIdx !== -1) {
                     const r = monthRecs[targetIdx];
                     r.isNoFee = newIsNoFee;
+                    // NO FEE กับ -35% เลือกได้อย่างเดียว: เปิด NO FEE = ล้างธง 35%, ปิด = กลับ GP ปกติ 30%
+                    if (newIsNoFee) r.isGp35 = false;
                     // Reset manual net flag if toggling via quick action to ensure correct recalc
                     r.isManualNet = false;
-                    r.gp = newIsNoFee ? 0 : (r.gross || 0) * GP_RATE;
+                    r.gp = newIsNoFee ? 0 : (r.gross || 0) * (r.isGp35 ? GP_RATE_ALT : GP_RATE);
                     r.net = (r.gross || 0) - r.gp;
 
                     await saveMonthRecords(recMonth, monthRecs);
