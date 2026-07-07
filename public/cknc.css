@@ -400,7 +400,6 @@ button:not(:disabled):hover {
 
 .status-panel,
 .workflow-panel,
-.merge-assistant,
 .metric,
 .workspace-panel,
 .insight,
@@ -447,99 +446,91 @@ button:not(:disabled):hover {
   margin-bottom: 12px;
 }
 
+/* แถบ "ต้องจัดการ" ต่อท้ายแถวแท็บ — ไม่มีกรอบ panel ของตัวเอง คั่นจากแท็บด้วยเส้น ::before */
 .merge-assistant {
-  padding: 9px 16px;
-  margin-bottom: 12px;
-}
-
-.merge-line {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 2px;
   flex-wrap: wrap;
 }
 
-.merge-line-title {
-  font-size: 13px;
-  font-weight: 850;
-  cursor: help;
+.merge-assistant::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 1px;
+  align-self: stretch;
+  min-height: 20px;
+  margin: 0 6px;
+  background: rgba(15, 55, 40, 0.16);
 }
 
-.merge-step {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 4px 12px;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  background: var(--mint);
-  color: var(--green-dark);
-  font-size: 12px;
-  font-weight: 800;
-  cursor: pointer;
+.merge-assistant:empty::before {
+  content: none;
 }
 
-.merge-step strong {
-  font-size: 14px;
+html.dark .merge-assistant::before {
+  background: rgba(255, 255, 255, 0.16);
 }
 
-.merge-step:hover,
-.merge-step:focus-visible {
-  border-color: var(--green);
-  outline: none;
-}
-
-.merge-step-arrow {
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.merge-confidence {
-  margin-left: auto;
-  padding: 3px 12px;
-  border-radius: 999px;
-  background: var(--mint);
-  color: var(--green-dark);
-  font-size: 14px;
-}
-
-/* แถบ "ยังไม่ครบ" — chip กลุ่มที่ยัง match ไม่ครบ กดกรองได้ */
+/* chip แถบ "ต้องจัดการ" — พื้นใส จุดสีบอกระดับ (เหลือง = รอ, แดง = ปัญหา) ตัวเลขสีเข้ม กดกรองแล้วค่อยเป็นพื้นเต็ม */
 .gap-chip {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 4px 12px;
+  padding: 4px 10px;
   border: 1px solid transparent;
   border-radius: 999px;
+  background: transparent;
   font: inherit;
   font-size: 12.5px;
   font-weight: 800;
+  color: var(--muted);
   cursor: pointer;
-  transition: filter 0.12s ease, box-shadow 0.12s ease;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.gap-chip::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
 }
 
 .gap-chip strong {
   font-weight: 900;
 }
 
-.gap-chip.warning {
+.gap-chip.warning::before {
+  background: #d97706;
+}
+
+.gap-chip.warning strong {
+  color: #92600b;
+}
+
+.gap-chip.danger::before {
+  background: #dc2626;
+}
+
+.gap-chip.danger strong {
+  color: #a12626;
+}
+
+.gap-chip:hover {
+  background: rgba(15, 55, 40, 0.06);
+}
+
+.gap-chip.warning.active {
   background: var(--amber-soft, #fdf3d8);
   border-color: #f0d6a4;
   color: #92600b;
 }
 
-.gap-chip.danger {
+.gap-chip.danger.active {
   background: #fdecec;
   border-color: #e5a3a3;
   color: #a12626;
-}
-
-.gap-chip:hover {
-  filter: brightness(0.97);
-}
-
-.gap-chip.active {
-  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.12) inset;
 }
 
 /* เส้นคั่นเบา ๆ ระหว่างกลุ่ม chip ในแถบต้องจัดการ */
@@ -556,11 +547,19 @@ html.dark .gap-divider {
   background: rgba(255, 255, 255, 0.16);
 }
 
-/* chip WARN — โทนส้มเข้มกว่า เตือนชัด */
+/* chip WARN — ตัวเดียวที่คงพื้นเต็มตลอด (จุดโฟกัสของแถบ) ไม่ต้องมีจุดสี */
 .gap-chip.gap-warn {
   background: #fde9cf;
   border-color: #e0a94e;
   color: #92600b;
+}
+
+.gap-chip.gap-warn::before {
+  content: none;
+}
+
+.gap-chip.gap-warn strong {
+  color: inherit;
 }
 
 html.dark .gap-chip.gap-warn {
@@ -581,13 +580,33 @@ html.dark .gap-chip.gap-warn {
   font-weight: 800;
 }
 
-html.dark .gap-chip.warning {
+html.dark .gap-chip:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+html.dark .gap-chip.warning::before {
+  background: #fbbf24;
+}
+
+html.dark .gap-chip.warning strong {
+  color: #fbbf24;
+}
+
+html.dark .gap-chip.danger::before {
+  background: #f87171;
+}
+
+html.dark .gap-chip.danger strong {
+  color: #f8b4b4;
+}
+
+html.dark .gap-chip.warning.active {
   background: rgba(245, 158, 11, 0.16);
   border-color: #7a5a1e;
   color: #fbbf24;
 }
 
-html.dark .gap-chip.danger {
+html.dark .gap-chip.danger.active {
   background: rgba(220, 38, 38, 0.16);
   border-color: #7a2e2e;
   color: #f8b4b4;
@@ -1036,22 +1055,30 @@ html.dark .bulk-more-menu {
   overflow: hidden;
 }
 
+/* แถวบนสุดของ workspace-panel: แท็บมุมมอง (ซ้าย) + chip ต้องจัดการ (ต่อท้าย) wrap ได้ */
+.tabs-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 12px 12px 0;
+}
+
 .tabs {
   display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding: 12px 12px 0;
-  scrollbar-width: thin;
+  gap: 4px;
+  flex-wrap: wrap;
 }
 
 .tab-button {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex: 0 0 auto;
-  min-height: 42px;
+  min-height: 32px;
+  padding: 0 12px;
   border-color: transparent;
-  background: #eef4f1;
+  background: transparent;
   color: #394854;
   font-weight: 800;
 }
@@ -1062,26 +1089,25 @@ html.dark .bulk-more-menu {
 }
 
 .tab-button span {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 26px;
-  height: 24px;
-  padding-inline: 8px;
-  border-radius: 999px;
-  background: #fff;
-  color: var(--green-dark);
+  color: var(--muted);
   font-size: 12px;
+  font-weight: 800;
 }
 
-.tab-button.active {
-  background: var(--green);
-  color: #fff;
+.tab-button:not(:disabled):hover {
+  transform: none;
+  box-shadow: none;
+  background: #eef4f1;
+}
+
+.tab-button.active,
+.tab-button.active:hover {
+  background: var(--mint);
+  color: var(--green-dark);
 }
 
 .tab-button.active span {
-  background: rgba(255, 255, 255, 0.18);
-  color: #fff;
+  color: var(--green-dark);
 }
 
 .date-chip-bar {
@@ -4151,7 +4177,6 @@ body {
 /* --- Surfaces --------------------------------------------------------- */
 .status-panel,
 .workflow-panel,
-.merge-assistant,
 .metric,
 .workspace-panel,
 .insight,
@@ -4666,14 +4691,13 @@ html.dark .metric.mini.danger strong {
 
 /* --- Tabs ------------------------------------------------------------- */
 .tab-button {
-  border-radius: 14px;
-  background: #eef2f7;
+  border-radius: 10px;
   font-weight: 800;
 }
 
 .tab-button.active {
-  background: linear-gradient(135deg, #00c259, #00984a);
-  box-shadow: 0 10px 22px rgba(0, 177, 79, 0.3);
+  background: var(--mint);
+  box-shadow: none;
 }
 
 .date-chip,
@@ -4885,13 +4909,26 @@ html.dark th {
 }
 
 html.dark .tab-button {
-  background: #1e293b;
+  background: transparent;
   color: #cbd5e1;
 }
 
 html.dark .tab-button span {
-  background: #0f172a;
-  color: #e2e8f0;
+  color: #94a3b8;
+}
+
+html.dark .tab-button:not(:disabled):hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+html.dark .tab-button.active,
+html.dark .tab-button.active:hover {
+  background: var(--mint);
+  color: var(--green-dark);
+}
+
+html.dark .tab-button.active span {
+  color: var(--green-dark);
 }
 
 html.dark .workflow-step.muted {

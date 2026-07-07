@@ -1932,7 +1932,7 @@ function renderQuickDateFilters() {
 }
 
 // แถบ "ยังไม่ครบ" — โชว์เฉพาะกลุ่มที่ยัง match ไม่ครบ (กด chip = กรองไปที่กลุ่มนั้น) นับตามช่วงวันที่ที่กรอง
-// แถบ "ต้องจัดการ" รวมทุก chip เตือนไว้จุดเดียว — กด chip = กรองตาราง (WARN เปิด popup)
+// แถบ "ต้องจัดการ" รวมทุก chip เตือนไว้จุดเดียว ต่อท้ายแถวแท็บ — กด chip = กรองตาราง (WARN เปิด popup)
 function renderMergeAssistant() {
   if (!elements.mergeAssistant) return;
   const counts = statusCounts();
@@ -1973,14 +1973,9 @@ function renderMergeAssistant() {
     caseGroup.map(chipHtml).join(""),
     warnHtml,
   ].filter(Boolean);
-  elements.mergeAssistant.innerHTML = `
-    <div class="merge-line">
-      <span class="merge-line-title" title="กลุ่มบิลที่ต้องจัดการ — กด chip เพื่อกรองดู">${groups.length ? "ต้องจัดการ" : "สถานะข้อมูล"}</span>
-      ${groups.length
-        ? groups.join('<span class="gap-divider" aria-hidden="true"></span>')
-        : '<span class="gap-all-clear"><i class="fa-solid fa-circle-check"></i> ครบทุกอย่าง</span>'}
-    </div>
-  `;
+  elements.mergeAssistant.innerHTML = groups.length
+    ? groups.join('<span class="gap-divider" aria-hidden="true"></span>')
+    : '<span class="gap-all-clear" title="ไม่มีงานค้าง"><i class="fa-solid fa-circle-check"></i> ครบทุกอย่าง</span>';
 }
 
 // กด chip ในแถบต้องจัดการ — ตั้งตัวกรองมิติเดียว (รีเซ็ตมิติอื่น) กดซ้ำ = ยกเลิก
