@@ -2000,11 +2000,17 @@ function renderMergeAssistant() {
   const warnHtml = warnCount > 0
     ? `<button type="button" class="gap-chip warning gap-warn" data-gap-warn="1" title="คู่บิลที่น่าจะซ้ำ + สปสชต้นทุนผิด — กดดูรายละเอียด"><i class="fa-solid fa-triangle-exclamation"></i> WARN <strong>${number(warnCount)}</strong></button>`
     : "";
+  // กลุ่ม 5: ลูกค้ามาหลายครั้ง — ข้อมูลดูแลลูกค้าประจำ ไม่ใช่งานค้าง (โทนม่วง) กด = กรองดูบิลของกลุ่มนี้
+  const repeatCount = repeatCustomerCount();
+  const repeatHtml = repeatCount > 0
+    ? `<button type="button" class="gap-chip repeat${state.activeStatus === "repeat-customers" ? " active" : ""}" data-gap-status="repeat-customers" title="ลูกค้า ${number(repeatCount)} คนมารับบริการหลายครั้ง (นับคนละวัน ข้ามเดือนได้) — กดกรองดูบิลทั้งหมดของกลุ่มนี้"><i class="fa-solid fa-repeat"></i> มาหลายครั้ง <strong>${number(repeatCount)}</strong></button>`
+    : "";
   const groups = [
     matchGroup.map(chipHtml).join(""),
     billingGroup.map(chipHtml).join(""),
     caseGroup.map(chipHtml).join(""),
     warnHtml,
+    repeatHtml,
   ].filter(Boolean);
   elements.mergeAssistant.innerHTML = groups.length
     ? groups.join('<span class="gap-divider" aria-hidden="true"></span>')
@@ -2205,6 +2211,20 @@ const cardQuickFilterDefs = [
   { key: "nhso", label: "สปสช", test: (bill) => bill.caseType === "nhso" },
 ];
 
+// validation ที่แค่ทวนสถานะเดิม (สถานะ → โค้ด issue ที่ยิงจากสถานะนั้นตรง ๆ)
+const STATUS_ECHO_ISSUE = {
+  "mlp-only": "MLP_NO_MEDICINE",
+  "pending-billing": "PENDING_BILLING",
+  "billing-only": "BILLING_NOT_IN_MLP",
+  "clicknic-only": "CLICKNIC_NOT_IN_MLP",
+};
+
+// คอลัมน์ "ตรวจสอบ" ในการ์ด popup ตัด issue ที่แค่ทวนสถานะออก — chip สถานะบอกอยู่แล้ว ไม่ต้องซ้ำ
+function cardIssuesForBill(bill) {
+  const echo = STATUS_ECHO_ISSUE[bill.status];
+  return (bill.validationIssues || []).filter((issue) => issue.code !== echo);
+}
+
 const cardDetailColumns = [
   {
     label: "จัดการ",
@@ -2288,9 +2308,10 @@ const cardDetailColumns = [
     col: "col-issue",
     cellClass: "card-issue-cell",
     hideable: true,
-    text: (bill) => (bill.validationIssues || []).map(issueChipShortText).join(", ") || "-",
+    hideChipIfEmpty: true,
+    text: (bill) => cardIssuesForBill(bill).map(issueChipShortText).join(", ") || "-",
     html: (bill) => {
-      const issues = bill.validationIssues || [];
+      const issues = cardIssuesForBill(bill);
       if (!issues.length) return "-";
       return `<div class="issue-chip-list">${issues.map(issueChipHtml).join("")}</div>`;
     },
@@ -2596,7 +2617,8 @@ function filteredBills() {
         : status === "paid" ? (bill.billingStage || "") === "paid"
           : status === "case-insurance" ? (bill.caseType || "unknown") === "insurance"
             : status === "case-nhso" ? (bill.caseType || "unknown") === "nhso"
-              : bill.status === status);
+              : status === "repeat-customers" ? (bill.customerVisitCount >= 2 && !bill.excluded)
+                : bill.status === status);
     const matchesCaseType = caseType === "all" || (bill.caseType || "unknown") === caseType;
     const matchesBillingStage = billingStage === "all" || (bill.billingStage || "pending-review") === billingStage;
     const haystack = [
@@ -2614,6 +2636,7 @@ function filteredBills() {
       bill.medicinesText,
       bill.medicineRawText,
       bill.patient,
+      bill.phone,
     ].join(" ").toLowerCase();
     return matchesStatus && matchesCaseType && matchesBillingStage && isWithinDateRange(bill) && (!query || haystack.includes(query));
   });
@@ -2681,9 +2704,23 @@ function renderTable() {
     caseCounts.general ? `ทั่วไป ${number(caseCounts.general)} เคส` : "",
     caseCounts.unknown ? `ไม่ทราบ ${number(caseCounts.unknown)} เคส` : "",
   ].filter(Boolean).join(" · ");
+  // นับลูกค้าไม่ซ้ำในชุดที่แสดง (คีย์เบอร์/ชื่อ) + บิลไม่มีตัวตนนับเป็นรายคน; "มาซ้ำ" = ลูกค้าที่มี ≥2 ครั้ง
+  const customerKeys = new Set();
+  const repeatKeys = new Set();
+  let unidentified = 0;
+  summaryRows.forEach((bill) => {
+    if (bill.customerKey) {
+      customerKeys.add(bill.customerKey);
+      if (bill.customerVisitCount >= 2) repeatKeys.add(bill.customerKey);
+    } else {
+      unidentified += 1;
+    }
+  });
+  const customerCount = customerKeys.size + unidentified;
+  const customerText = `${number(customerCount)} ลูกค้า${repeatKeys.size ? ` · ${number(repeatKeys.size)} คนมาซ้ำ` : ""}`;
   const periodLabel = activePeriodLabel();
   elements.tableSummary.textContent = state.bills.length
-    ? `${periodLabel ? `${periodLabel}: ` : ""}แสดง ${number(rows.length)} จาก ${number(state.bills.length)} บิล · รายได้จริง: ขาย ${money(totals.sale)} · ต้นทุน ${money(totals.cost)} · กำไร ${money(totals.profit)} (${profitSplit}) · วางบิล ${money(billedTotal)}${caseText ? ` · ${caseText}` : ""}`
+    ? `${periodLabel ? `${periodLabel}: ` : ""}แสดง ${number(rows.length)} จาก ${number(state.bills.length)} บิล · ${customerText} · รายได้จริง: ขาย ${money(totals.sale)} · ต้นทุน ${money(totals.cost)} · กำไร ${money(totals.profit)} (${profitSplit}) · วางบิล ${money(billedTotal)}${caseText ? ` · ${caseText}` : ""}`
     : "ยังไม่มีข้อมูล";
 
   if (!rows.length) {
@@ -2719,6 +2756,7 @@ function renderTable() {
         <span class="bill-patient-row">
           <strong class="bill-patient">${htmlEscape(bill.patient || "-")}</strong>
           ${clean(bill.phone) ? `<span class="bill-patient-phone">${htmlEscape(bill.phone)}</span>` : ""}
+          ${repeatVisitBadgeHtml(bill)}
           <button class="bill-analyze-btn" type="button" data-paste-analyze="${htmlEscape(bill.billKey)}" title="แก้ไขจากข้อความ paste (วิเคราะห์อัตโนมัติ)" aria-label="แก้ไขจากข้อความ paste"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
         </span>
         <span class="bill-ref">${bill.orderId ? `<span class="bill-ref-part">${bill.orderId} <button class="copy-ref-btn" type="button" data-copy-text="${htmlEscape(bill.orderId)}" title="คัดลอกเลขที่ออเดอร์" aria-label="คัดลอกเลขที่ออเดอร์"><i class="fa-regular fa-copy"></i></button></span>` : "-"}${clean(bill.refId) ? ` <span class="bill-ref-part">${htmlEscape(bill.refId)} <button class="copy-ref-btn" type="button" data-copy-text="${htmlEscape(clean(bill.refId))}" title="คัดลอก Ref ID" aria-label="คัดลอก Ref ID"><i class="fa-regular fa-copy"></i></button></span>` : ""}</span>
@@ -3053,6 +3091,14 @@ function quickAddMedicineLine(billKey, medicine, qty, unitPrice, mlpUnitPrice = 
   renderTable();
   renderAuditTrail();
   scheduleAutosave("medicine-line-add");
+}
+
+// ป้ายลูกค้ามาซ้ำใต้ชื่อ — กดแล้วค้นทุกครั้งที่มาของลูกค้าคนนี้ (เบอร์ก่อน ไม่มีค่อยใช้ชื่อ)
+function repeatVisitBadgeHtml(bill) {
+  if (!(bill.customerVisitCount >= 2)) return "";
+  const term = clean(bill.phone) || clean(bill.patient);
+  const title = `ลูกค้าเดิม มารับบริการ ${number(bill.customerVisitCount)} ครั้ง (นับคนละวัน) — ครั้งนี้เป็นครั้งที่ ${number(bill.customerVisitIndex)} · กดดูทุกครั้งที่มา`;
+  return `<button type="button" class="repeat-visit-badge" data-customer-visits="${htmlEscape(term)}" title="${htmlEscape(title)}"><i class="fa-solid fa-repeat"></i> ครั้งที่ ${number(bill.customerVisitIndex)}/${number(bill.customerVisitCount)}</button>`;
 }
 
 function renderCheckCell(bill) {
@@ -3605,6 +3651,8 @@ function assignCaseSequences() {
       // บิลที่ตอกเลขเองยังกินลำดับ auto ของตัวเองไว้ เลขบิลอื่นจะได้ไม่ขยับ
       bill.caseSeq = toNumeric(bill.caseSeqManual) > 0 ? Math.round(toNumeric(bill.caseSeqManual)) : next;
     });
+  // ทุก pipeline finalize บิลผ่านที่นี่ (rebuild ทั้ง 2 โหมด + renderSnapshot) — คำนวณรอบการมาของลูกค้าที่เดียว
+  annotateCustomerVisits(state.bills);
 }
 
 function caseSeqChipHtml(bill) {
@@ -4143,6 +4191,51 @@ function normalizedPatientKey(name) {
     .replace(/\s+/g, "");
 }
 
+// คีย์ตัวตนลูกค้า: เบอร์โทรก่อน (แม่นสุด) ไม่มีเบอร์ค่อย fallback ชื่อ normalize ที่ยาวพอ; ระบุตัวไม่ได้ = ""
+function customerIdentityKey(bill) {
+  const phone = clean(bill.phone).replace(/\D/g, "");
+  if (phone.length >= 9) return `phone:${phone}`;
+  const name = normalizedPatientKey(bill.patient);
+  if (name.length > 3) return `name:${name}`;
+  return "";
+}
+
+// นับจำนวนครั้งที่ลูกค้าคนเดียวกันมารับบริการ — คนละวัน = คนละครั้ง (ข้ามเดือนได้); วันเดียวกันถือเป็นครั้งเดียว
+// เพื่อกันชนกับ merge-suggestion ที่จับบิล CKNC/MLP ของการมาครั้งเดียวที่ถูกแยกเป็นคนละบิล
+// ติดค่า customerKey / customerVisitCount / customerVisitIndex ให้แต่ละบิลไว้ใช้ทั้งป้าย chip และตัวนับ
+function annotateCustomerVisits(bills) {
+  const groups = new Map();
+  bills.forEach((bill) => {
+    bill.customerKey = "";
+    bill.customerVisitCount = 0;
+    bill.customerVisitIndex = 0;
+    if (bill.excluded) return;
+    const key = customerIdentityKey(bill);
+    if (!key) return;
+    bill.customerKey = key;
+    const arr = groups.get(key) || [];
+    arr.push(bill);
+    groups.set(key, arr);
+  });
+  groups.forEach((arr) => {
+    const dates = [...new Set(arr.map((bill) => primaryBillDate(bill)).filter(Boolean))].sort();
+    arr.forEach((bill) => {
+      bill.customerVisitCount = dates.length;
+      const date = primaryBillDate(bill);
+      bill.customerVisitIndex = date ? dates.indexOf(date) + 1 : 0;
+    });
+  });
+}
+
+// จำนวน "ลูกค้า" (ไม่ใช่บิล) ที่มารับบริการหลายครั้ง ภายในชุดที่กรองช่วงวันอยู่ — ตรงกับ chip/บรรทัดสรุป
+function repeatCustomerCount() {
+  const keys = new Set();
+  dateFilteredBills().forEach((bill) => {
+    if (!bill.excluded && bill.customerKey && bill.customerVisitCount >= 2) keys.add(bill.customerKey);
+  });
+  return keys.size;
+}
+
 // เลข ORW ทั้งหมดของบิล (จากช่อง orw และเลขที่ออเดอร์ที่เป็นรูปแบบ ORW)
 function billOrwRefs(bill) {
   const refs = new Set();
@@ -4271,7 +4364,7 @@ function renderMergeWarnBody() {
   if (!elements.mergeWarnBody) return;
   const pairSection = suggestions.length ? `
     <h3 class="warn-section-title">น่าจะเป็นบิลเดียวกัน ${number(suggestions.length)} คู่</h3>
-    <table class="case-seq-table">
+    <table class="case-seq-table merge-pair-table">
       <thead><tr><th>%</th><th>คู่บิล</th><th>เหตุผล</th><th class="act-col">จัดการ</th></tr></thead>
       <tbody>
         ${suggestions.map((item, index) => `
@@ -7390,6 +7483,15 @@ elements.billTableBody.addEventListener("click", (event) => {
   const pasteAnalyzeButton = event.target.closest("[data-paste-analyze]");
   if (pasteAnalyzeButton) {
     openPasteAnalyze(pasteAnalyzeButton.dataset.pasteAnalyze);
+    return;
+  }
+  // กดป้าย "มาซ้ำ" = ค้นด้วยเบอร์/ชื่อลูกค้า + ล้างตัวกรองสถานะ ให้เห็นทุกครั้งที่มา
+  const repeatBadge = event.target.closest("[data-customer-visits]");
+  if (repeatBadge) {
+    elements.searchInput.value = repeatBadge.dataset.customerVisits;
+    state.activeStatus = "all";
+    renderTabs();
+    renderTable();
     return;
   }
   const detailButton = event.target.closest("[data-detail-key]");

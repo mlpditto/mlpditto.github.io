@@ -568,6 +568,36 @@ html.dark .gap-chip.gap-warn {
   color: #fbbf24;
 }
 
+/* chip ลูกค้ามาหลายครั้ง — โทนม่วง (ข้อมูลดูแลลูกค้าประจำ ไม่ใช่งานเตือน) */
+.gap-chip.repeat {
+  background: #f0ebff;
+  border-color: #cbb9f5;
+  color: #5a45b8;
+}
+
+.gap-chip.repeat::before {
+  background: #7a5fd0;
+}
+
+.gap-chip.repeat strong {
+  color: #5a45b8;
+}
+
+.gap-chip.repeat.active {
+  background: #e4dbfb;
+  border-color: #a98fe8;
+}
+
+html.dark .gap-chip.repeat {
+  background: rgba(122, 95, 208, 0.22);
+  border-color: #5d4f97;
+  color: #c3b4f5;
+}
+
+html.dark .gap-chip.repeat strong {
+  color: #c3b4f5;
+}
+
 .gap-all-clear {
   display: inline-flex;
   align-items: center;
@@ -4616,6 +4646,40 @@ html.dark .dismiss-reason-chip:hover {
   font-size: 11.5px;
 }
 
+/* popup "รายการที่ต้องตรวจ" — ขยายให้กว้างขึ้น + ให้คอลัมน์ข้อความตัดบรรทัดแทนดันตารางกว้าง (ลด scroll แนวนอน) */
+#mergeWarnModal {
+  width: min(1320px, calc(100vw - 28px));
+}
+
+#mergeWarnModal .case-seq-modal-body {
+  max-height: min(74vh, 760px);
+  overflow-x: hidden;
+}
+
+.merge-pair-table {
+  table-layout: fixed;
+}
+
+.merge-pair-table th:first-child,
+.merge-pair-table td:first-child {
+  width: 54px;
+}
+
+.merge-pair-table .merge-warn-names {
+  width: 42%;
+}
+
+.merge-pair-table .act-col {
+  width: 150px;
+}
+
+.merge-pair-table .merge-warn-names,
+.merge-pair-table .merge-warn-reasons {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+
 html.dark .metric.mini.warning strong {
   color: #fbbf24;
 }
@@ -5105,6 +5169,39 @@ html.dark .panel-head p {
   color: var(--muted);
   font-size: 11.5px;
   font-weight: 700;
+}
+
+/* ป้ายลูกค้ามาหลายครั้ง — โทนม่วง กดค้นทุกครั้งที่มา */
+.repeat-visit-badge {
+  flex: none;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 0;
+  padding: 1px 8px;
+  border: 1px solid #cbb9f5;
+  border-radius: 999px;
+  background: #f0ebff;
+  color: #5a45b8;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.5;
+  cursor: pointer;
+  transform: none;
+}
+
+.repeat-visit-badge:hover {
+  background: #e4dbfb;
+  border-color: #a98fe8;
+  box-shadow: none;
+  transform: none;
+}
+
+html.dark .repeat-visit-badge {
+  background: rgba(122, 95, 208, 0.22);
+  border-color: #5d4f97;
+  color: #c3b4f5;
 }
 
 /* ก้อนอ้างอิงที่อยู่ร่วมบรรทัด (ออเดอร์+refId / AR+BAR) — ขึ้นบรรทัดใหม่ทั้งก้อนเมื่อที่ไม่พอ */
