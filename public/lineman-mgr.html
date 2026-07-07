@@ -1689,7 +1689,7 @@
             if (profitEl) {
                 const pColor = profit < 0 ? 'text-rose-500' : 'text-emerald-600';
                 const rColor = profit < 0 ? 'text-rose-500/70' : 'text-emerald-600/70';
-                profitEl.innerHTML = `<span class="${pColor}">฿${profit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span> <span class="${rColor}">(${profitRate.toFixed(1)}%)</span>`;
+                profitEl.innerHTML = `<span class="${pColor}">฿${profit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span> <span class="${rColor}">(${profitRate.toFixed(2)}%)</span>`;
                 profitEl.className = "text-xl font-black italic";
             }
 
@@ -2264,7 +2264,7 @@
                 safeSetText('summary-profit', `฿${totalProfitMonth.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
 
                 const profitPercent = netPaidMonth > 0 ? (totalProfitMonth / netPaidMonth * 100) : 0;
-                safeSetText('summary-profit-percent', `${profitPercent.toFixed(1)} % เปอร์เซ็นต์กำไร`);
+                safeSetText('summary-profit-percent', `${profitPercent.toFixed(2)} % เปอร์เซ็นต์กำไร`);
 
                 safeSetClass('summary-profit', `text-xl font-black ${totalProfitMonth < 0 ? 'text-rose-600' : 'text-emerald-600'}`);
                 safeSetClass('summary-profit-percent', `text-[9px] font-bold leading-none ${totalProfitMonth < 0 ? 'text-rose-500/60' : 'text-emerald-600/60'}`);
@@ -2467,7 +2467,7 @@
                                 const rate = netVal > 0 ? (pft / netVal) * 100 : 0;
                                 const pColor = pft < 0 ? 'text-rose-500' : 'text-emerald-600';
                                 const pRateColor = pft < 0 ? 'text-rose-500/70' : 'text-emerald-600/70';
-                                return `<div class="text-[10px] font-black"><span class="${pColor}">กำไร: ฿${pft.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span> <span class="${pRateColor}">(${rate.toFixed(1)}%)</span></div>`;
+                                return `<div class="text-[10px] font-black"><span class="${pColor}">กำไร: ฿${pft.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span> <span class="${pRateColor}">(${rate.toFixed(2)}%)</span></div>`;
                             })()}
                         </td>
                         <td class="p-4 text-center relative max-w-[120px]">
@@ -3055,7 +3055,7 @@
             if (profitEl) {
                 const pColor = profit < 0 ? 'text-rose-500' : 'text-emerald-600';
                 const rColor = profit < 0 ? 'text-rose-500/70' : 'text-emerald-600/70';
-                profitEl.innerHTML = `<span class="${pColor}">฿${profit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span> <span class="${rColor}">(${profitRate.toFixed(1)}%)</span>`;
+                profitEl.innerHTML = `<span class="${pColor}">฿${profit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span> <span class="${rColor}">(${profitRate.toFixed(2)}%)</span>`;
                 profitEl.className = "text-xl font-black italic";
             }
 
