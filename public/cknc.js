@@ -5592,6 +5592,23 @@ function combineSessionPayloads(sessions) {
   return { bills, overrides, mergeGroups, deletedKeys: [...deletedKeys], dismissed: [...dismissedByKey.values()], audit, sourceMeta };
 }
 
+// ย่อรายชื่อเดือน autosave เป็นช่วงไทยสั้น ๆ: ["2026-01","2026-05","2026-06","2026-07"] → "ม.ค. + พ.ค.–ก.ค. 69" (ปีตาม BE/CE)
+function shortMonthsLabel(months) {
+  const names = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+  const sorted = [...new Set(months)].sort();
+  const order = (key) => { const [y, m] = key.split("-").map(Number); return y * 12 + m; };
+  const monthName = (key) => names[Number(key.slice(5)) - 1] || key;
+  const runs = [];
+  sorted.forEach((key) => {
+    const run = runs[runs.length - 1];
+    if (run && order(key) === order(run[run.length - 1]) + 1) run.push(key);
+    else runs.push([key]);
+  });
+  const parts = runs.map((run) => (run.length > 1 ? `${monthName(run[0])}–${monthName(run[run.length - 1])}` : monthName(run[0])));
+  const years = [...new Set(sorted.map((key) => key.slice(0, 4)))].map((y) => String(Number(y) + (yearEra === "be" ? 543 : 0)).slice(-2));
+  return `${parts.join(" + ")} ${years.join("/")}`;
+}
+
 async function restoreLatestSnapshotOnStartup() {
   if (!canPersistSessions() || state.bills.length) return;
   autosaveStatusText("Autosave: กำลังหา session ล่าสุด...");
@@ -5636,8 +5653,12 @@ async function restoreLatestSnapshotOnStartup() {
       }
     }
     await applySessionSnapshot(latest);
-    elements.statusText.textContent = `กู้คืนอัตโนมัติหลังเปิดหน้า: ${latest.name || latest.id} (${number(state.bills.length)} บิล)`;
-    autosaveStatusText(`Autosave: กู้คืน${latest.source === "autosave" ? " autosave" : " session"} ล่าสุดให้แล้ว`);
+    // ข้อความกู้คืนแบบย่อ ให้พอดีบรรทัดสถานะเล็กใน topbar
+    const restoredLabel = latest.source === "autosave" && Array.isArray(latest.months) && latest.months.length
+      ? `กู้คืน autosave ล่าสุด · ${shortMonthsLabel(latest.months)}`
+      : `กู้คืน${latest.source === "autosave" ? " autosave" : " session"}: ${latest.name || latest.id}`;
+    elements.statusText.textContent = `${restoredLabel} · ${number(state.bills.length)} บิล`;
+    autosaveStatusText("Autosave: กู้คืนให้แล้วหลังเปิดหน้า");
   } catch (error) {
     console.error(error);
     setSessionButtons();
