@@ -1272,12 +1272,18 @@ function billKeyForOrder(key) {
   return `order:${key}`;
 }
 
+// รายการยามีจริง → สถานะ "ไม่พบรายการยา" (mlp-only) ไม่เป็นจริง ถือว่าจับคู่ได้
+// invariant นี้ต้องบังคับทุก pipeline (build / override / กู้คืน session / รวมถัง) ไม่ผูกกับการมี override
+function reconcileMedicineStatus(bill) {
+  if (bill.status === "mlp-only" && bill.medicines?.length) bill.status = "matched";
+  return bill;
+}
+
 function applyBillOverride(bill) {
   const override = state.billOverrides[bill.billKey];
-  if (!override) return bill;
+  if (!override) return reconcileMedicineStatus(bill);
   const merged = { ...bill, ...override.values, hasOverride: true, overrideNote: override.note || "" };
-  // เพิ่มรายการยาเองใน drawer แล้ว: สถานะ "ไม่พบรายการยา" ไม่เป็นจริงอีกต่อไป → ถือว่าจับคู่ได้
-  if (merged.status === "mlp-only" && merged.medicines?.length) merged.status = "matched";
+  reconcileMedicineStatus(merged);
   merged.profit = (merged.sale || 0) - (merged.cost || 0) - (merged.mlpCost || 0);
   return merged;
 }
@@ -3883,6 +3889,14 @@ async function confirmClipboardImport() {
 }
 
 // รวมบิลสองเวอร์ชันแบบ "ข้อมูลมากที่สุด": ตัวใหม่ชนะเมื่อมีค่า ช่องว่าง/ศูนย์เติมจากตัวเก่า รายการยาเอาชุดที่ยาวกว่า
+// บิลจาก session/รวมถัง (ไม่มี override): เติม medicines จาก text, ยืนยัน invariant สถานะ แล้วค่อยคำนวณ validation
+function finalizeRestoredBill(bill) {
+  const medicines = (bill.medicines && bill.medicines.length) ? bill.medicines : parseMedicinesTextLines(bill.medicinesText);
+  const normalized = reconcileMedicineStatus({ ...bill, medicines });
+  normalized.validationIssues = validationRulesForBill(normalized);
+  return normalized;
+}
+
 function mergeBillRecords(newerBill, olderBill) {
   const merged = { ...olderBill, ...newerBill };
   Object.keys(merged).forEach((key) => {
@@ -3905,6 +3919,8 @@ function mergeBillRecords(newerBill, olderBill) {
       merged.medicinesText = merged.medicines.map((item) => `${item.medicine} x${number(item.qty)}`).join(", ");
     }
   }
+  // รวมบิลข้ามถัง: ฝั่งใหม่อาจสถานะ mlp-only (ยังไม่เจอยา) ฝั่งเก่ามีรายการยา → status ต้องไม่ค้าง "ไม่พบรายการยา"
+  reconcileMedicineStatus(merged);
   merged.profit = toNumeric(merged.sale) - toNumeric(merged.cost) - toNumeric(merged.mlpCost);
   return merged;
 }
@@ -5612,11 +5628,7 @@ function combineSessionPayloads(sessions) {
       audit.push(entry);
     });
   });
-  const bills = [...billMap.values()].map((bill) => ({
-    ...bill,
-    medicines: (bill.medicines && bill.medicines.length) ? bill.medicines : parseMedicinesTextLines(bill.medicinesText),
-    validationIssues: validationRulesForBill(bill),
-  }));
+  const bills = [...billMap.values()].map(finalizeRestoredBill);
   return { bills, overrides, mergeGroups, deletedKeys: [...deletedKeys], dismissed: [...dismissedByKey.values()], audit, sourceMeta };
 }
 
@@ -5713,11 +5725,7 @@ async function applySessionSnapshot(session) {
     const currentKeys = new Set(state.bills.map((bill) => bill.billKey));
     const loadedBills = (payload.bills || [])
       .filter((bill) => !currentKeys.has(bill.billKey))
-      .map((bill) => ({
-        ...bill,
-        medicines: (bill.medicines && bill.medicines.length) ? bill.medicines : parseMedicinesTextLines(bill.medicinesText),
-        validationIssues: validationRulesForBill(bill),
-      }));
+      .map(finalizeRestoredBill);
     state.bills = [...state.bills, ...loadedBills];
     state.billOverrides = mergeOverrideMaps(state.billOverrides, payload.billOverrides || {});
     mergeBillMergeGroupsInto(payload.billMergeGroups);
@@ -5751,11 +5759,7 @@ async function applySessionSnapshot(session) {
   elements.dateTo.value = session.filters?.dateTo || "";
   elements.sortBy.value = session.filters?.sortBy || "profitAsc";
   elements.expectedBillingAmount.value = session.filters?.expectedBillingAmount || "";
-  state.bills = (payload.bills || []).map((bill) => ({
-    ...bill,
-    medicines: (bill.medicines && bill.medicines.length) ? bill.medicines : parseMedicinesTextLines(bill.medicinesText),
-    validationIssues: validationRulesForBill(bill),
-  }));
+  state.bills = (payload.bills || []).map(finalizeRestoredBill);
   state.billOverrides = payload.billOverrides || {};
   state.billMergeGroups = payload.billMergeGroups || [];
   state.deletedBillKeys = payload.deletedBillKeys || [];
