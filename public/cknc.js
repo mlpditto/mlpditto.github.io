@@ -1701,7 +1701,7 @@ function maybeAutosaveOnComplete() {
 
 // ช่องตัวเลขในตารางย่อยของการ์ด = chip กดได้ เปิด popup บิลของช่องนั้น (กดแถว = กรองเดือนทั้งจอเหมือนเดิม)
 function monthDrillCell(metric, caseType, month, text) {
-  return `<span class="month-drill-chip" data-month-drill="${metric}:${caseType}:${month}" title="ดูบิล${monthDrillMetrics[metric]?.label || ""} ${caseSeqNames[caseType] || ""} ${htmlEscape(monthChipLabel(month))}">${text}</span>`;
+  return `<span class="month-drill-chip" data-month-drill="${metric}:${caseType}:${month}" title="ดูบิล${monthDrillMetrics[metric]?.label || ""} ${caseFocusNames[caseType] || ""} ${htmlEscape(monthChipLabel(month))}">${text}</span>`;
 }
 
 // การ์ดเคสรายเดือนของปีปัจจุบัน — นับจากบิลทั้งหมดบนจอ (ไม่ตามตัวกรอง) กดแถวเดือน = กรอง/ยกเลิกกรอง
@@ -1739,23 +1739,31 @@ function renderMonthlyCases() {
 }
 
 // การ์ดยอดขาย/ต้นทุน/กำไร: ตารางย่อ สปสช/ประกัน 3 เดือนล่าสุด (นับเฉพาะบิลที่เข้ารายได้ ไม่ขึ้นกับตัวกรอง) — กดแถวกรองเดือน
+// โฟกัสประเภทจาก chip บนการ์ด: เหลือคอลัมน์เดียวของประเภทนั้น (รวม "อื่น ๆ" ที่ปกติไม่มีคอลัมน์)
 function renderMoneyByMonth(bodyId, valueFn, emptyLabel) {
   const body = $(bodyId);
   if (!body) return;
   const metricKey = bodyId === "saleByMonthBody" ? "sale" : bodyId === "costByMonthBody" ? "cost" : "profit";
+  const focus = caseFocus[metricKey] || "";
+  const columns = focus ? [focus] : ["nhso", "insurance"];
+  const inColumns = (bill) => (focus === "other" ? !caseSeqNames[bill.caseType]
+    : focus ? bill.caseType === focus : Boolean(caseSeqNames[bill.caseType]));
   const byMonth = new Map();
   activeBills().forEach((bill) => {
-    if (!caseSeqNames[bill.caseType]) return; // เฉพาะ สปสช/ประกัน
+    if (!inColumns(bill)) return;
     if (!countsInRevenue(bill)) return; // เฉพาะ PAID / วางบิลแล้วมี BAR (ให้ตรงกับการ์ด)
     const month = (primaryBillDate(bill) || "").slice(0, 7);
     if (!month) return;
-    const entry = byMonth.get(month) || { nhso: 0, insurance: 0 };
-    entry[bill.caseType] += valueFn(bill);
+    const entry = byMonth.get(month) || { nhso: 0, insurance: 0, other: 0, counts: { nhso: 0, insurance: 0, other: 0 } };
+    const colKey = focus || bill.caseType;
+    entry[colKey] += valueFn(bill);
+    entry.counts[colKey] += 1; // นับบิลแยกจากยอด — ยอด 0 แต่มีบิล (เช่นต้นทุนสปสช) ต้องโชว์ 0 ไม่ใช่ —
     byMonth.set(month, entry);
   });
+  body.classList.toggle("focus-one", Boolean(focus));
   const months = [...byMonth.keys()].sort().slice(-3); // 3 เดือนล่าสุด
   if (!months.length) {
-    body.innerHTML = `<div class="monthly-cases-empty">${htmlEscape(emptyLabel)}</div>`;
+    body.innerHTML = `<div class="monthly-cases-empty">${htmlEscape(focus ? `ยังไม่มี${monthDrillMetrics[metricKey]?.label || ""} ${caseFocusNames[focus]}` : emptyLabel)}</div>`;
     return;
   }
   const rows = months.map((month) => {
@@ -1764,11 +1772,12 @@ function renderMoneyByMonth(bodyId, valueFn, emptyLabel) {
     const monthShort = new Date(Date.UTC(year, monthNum - 1, 1)).toLocaleDateString("th-TH", { month: "short", timeZone: "UTC" });
     const range = monthRangeOf(month);
     const isActive = elements.dateFrom.value === range.from && elements.dateTo.value === range.to;
+    const cells = columns.map((col) => `<span>${entry.counts[col] ? monthDrillCell(metricKey, col, month, money(entry[col])) : "—"}</span>`).join("");
     return `<button type="button" class="monthly-cases-row${isActive ? " active" : ""}" data-month-filter="${month}" title="${isActive ? "กดอีกครั้งเพื่อยกเลิกกรอง" : `กรองทั้งจอเป็นเดือน ${htmlEscape(monthChipLabel(month))}`}">
-      <span>${htmlEscape(monthShort)}</span><span>${entry.nhso ? monthDrillCell(metricKey, "nhso", month, money(entry.nhso)) : "—"}</span><span>${entry.insurance ? monthDrillCell(metricKey, "insurance", month, money(entry.insurance)) : "—"}</span>
+      <span>${htmlEscape(monthShort)}</span>${cells}
     </button>`;
   }).join("");
-  body.innerHTML = `<div class="monthly-cases-row head"><span></span><span>สปสช</span><span>ประกัน</span></div>${rows}`;
+  body.innerHTML = `<div class="monthly-cases-row head"><span></span>${columns.map((col) => `<span>${caseFocusNames[col]}</span>`).join("")}</div>${rows}`;
 }
 
 function toggleMonthFilter(month) {
@@ -1786,17 +1795,28 @@ function toggleMonthFilter(month) {
   renderQuickDateFilters();
 }
 
+// โฟกัสการ์ดยอดขาย/กำไรตาม chip ประเภทเคส — สถานะบนจอชั่วคราว ไม่บันทึกลง session
+const caseFocus = { sale: "", profit: "" };
+const caseFocusSuffix = { nhso: "Nhso", insurance: "Insurance", other: "Other" };
+const caseFocusNames = { nhso: "สปสช", insurance: "ประกัน", other: "อื่น ๆ" };
+
 function renderMetrics() {
   updateEmptyState();
+  const metrics = calculateMetrics();
+  // ประเภทที่โฟกัสไว้ไม่มียอดในช่วงนี้แล้ว (chip จะหายจากการ์ด) — กลับมุมมองรวม กันโฟกัสค้าง
+  ["sale", "profit"].forEach((key) => {
+    if (caseFocus[key] && Math.abs(toNumeric(metrics[key + caseFocusSuffix[caseFocus[key]]])) < 0.005) caseFocus[key] = "";
+  });
   renderMonthlyCases();
   renderMoneyByMonth("saleByMonthBody", (bill) => toNumeric(bill.sale), "ยังไม่มียอดขาย สปสช/ประกัน");
   renderMoneyByMonth("costByMonthBody", (bill) => toNumeric(bill.cost) + toNumeric(bill.mlpCost), "ยังไม่มีต้นทุน สปสช/ประกัน");
   renderMoneyByMonth("profitByMonthBody", (bill) => toNumeric(bill.profit), "ยังไม่มีกำไร สปสช/ประกัน");
-  const metrics = calculateMetrics();
   Object.entries(metricIds).forEach(([key, id]) => {
     const el = $(id);
     if (!el) return; // การ์ดถูกเอาออกจากหน้า (เช่น MLP รอใบวางบิล) — ข้ามไป
-    el.textContent = ["sale", "totalCost", "profit"].includes(key) ? money(metrics[key]) : number(metrics[key]);
+    // การ์ดที่โฟกัสประเภทเคสอยู่ — เลขใหญ่แสดงเฉพาะประเภทนั้น
+    const metricKey = caseFocus[key] ? key + caseFocusSuffix[caseFocus[key]] : key;
+    el.textContent = ["sale", "totalCost", "profit"].includes(key) ? money(metrics[metricKey]) : number(metrics[metricKey]);
     const card = el.closest(".metric");
     if (card) {
       card.dataset.summaryCard = key;
@@ -1808,20 +1828,22 @@ function renderMetrics() {
   });
   const period = activePeriodLabel();
   // การ์ดกำไร + ยอดขาย: ป้ายช่วงเวลา + chip แยก สปสช/ประกัน/อื่น ๆ ตามช่วงวันที่ที่กรองอยู่
-  renderCaseBreakdown(elements.metricProfitPeriod, elements.metricProfitBreakdown, period, metrics.profitNhso, metrics.profitInsurance, metrics.profitOther);
-  renderCaseBreakdown(elements.metricSalePeriod, elements.metricSaleBreakdown, period, metrics.saleNhso, metrics.saleInsurance, metrics.saleOther);
+  renderCaseBreakdown(elements.metricProfitPeriod, elements.metricProfitBreakdown, period, metrics.profitNhso, metrics.profitInsurance, metrics.profitOther, "profit");
+  renderCaseBreakdown(elements.metricSalePeriod, elements.metricSaleBreakdown, period, metrics.saleNhso, metrics.saleInsurance, metrics.saleOther, "sale");
 }
 
-function renderCaseBreakdown(periodEl, breakdownEl, period, nhso, insurance, other) {
-  if (periodEl) periodEl.textContent = period ? `· ${period}` : "";
+// chip แยกประเภทเคสบนการ์ด — กดเพื่อโฟกัสการ์ดเฉพาะประเภทนั้น (เลขใหญ่ + ตารางรายเดือน) กดซ้ำ = มุมมองรวม
+function renderCaseBreakdown(periodEl, breakdownEl, period, nhso, insurance, other, cardKey) {
+  const focus = caseFocus[cardKey] || "";
+  if (periodEl) periodEl.textContent = [caseFocusNames[focus], period].filter(Boolean).map((part) => `· ${part}`).join(" ");
   if (!breakdownEl) return;
   const parts = [
-    { label: "สปสช", value: nhso, cls: "case-nhso" },
-    { label: "ประกัน", value: insurance, cls: "case-insurance" },
-    { label: "อื่น ๆ", value: other, cls: "case-other" },
+    { key: "nhso", label: "สปสช", value: nhso, cls: "case-nhso" },
+    { key: "insurance", label: "ประกัน", value: insurance, cls: "case-insurance" },
+    { key: "other", label: "อื่น ๆ", value: other, cls: "case-other" },
   ].filter((part) => Math.abs(toNumeric(part.value)) >= 0.005);
   breakdownEl.innerHTML = parts
-    .map((part) => `<span class="profit-breakdown-chip ${part.cls}"><em>${htmlEscape(part.label)}</em> ${money(part.value)}</span>`)
+    .map((part) => `<button type="button" class="profit-breakdown-chip ${part.cls}${focus === part.key ? " active" : ""}" data-case-focus="${cardKey}:${part.key}" aria-pressed="${focus === part.key}" title="${focus === part.key ? "กดอีกครั้งเพื่อกลับมุมมองรวม" : `ดูเฉพาะ${part.label} — เลขใหญ่ + ตารางรายเดือน`}"><em>${htmlEscape(part.label)}</em> ${money(part.value)}</button>`)
     .join("");
 }
 
@@ -2007,7 +2029,8 @@ function monthDrillRows() {
   const drill = state.monthDrill || {};
   const metric = monthDrillMetrics[drill.metric] || monthDrillMetrics.cases;
   // เงื่อนไขเดียวกับตัวเลขในการ์ด: เฉพาะประเภทเคส + เดือนนั้น (การ์ดเงินนับเฉพาะบิลรายได้จริง)
-  return activeBills().filter((bill) => bill.caseType === drill.caseType
+  // "other" = ทุกประเภทที่ไม่ใช่ สปสช/ประกัน (จากคอลัมน์โฟกัส อื่น ๆ)
+  return activeBills().filter((bill) => (drill.caseType === "other" ? !caseSeqNames[bill.caseType] : bill.caseType === drill.caseType)
     && (primaryBillDate(bill) || "").slice(0, 7) === drill.month
     && (!metric.revenueOnly || countsInRevenue(bill)));
 }
@@ -2023,10 +2046,11 @@ const cardDetailConfigs = {
     get title() {
       const drill = state.monthDrill || {};
       const metricLabel = monthDrillMetrics[drill.metric]?.label || "";
-      return `${metricLabel} ${caseSeqNames[drill.caseType] || ""} · ${drill.month ? monthChipLabel(drill.month) : ""}`.trim();
+      return `${metricLabel} ${caseFocusNames[drill.caseType] || ""} · ${drill.month ? monthChipLabel(drill.month) : ""}`.trim();
     },
     rows: monthDrillRows,
-    apply: () => ({ caseType: state.monthDrill?.caseType, month: state.monthDrill?.month }),
+    // "other" ไม่มีค่าใน dropdown ประเภทเคส — ใช้ตัวกรองนี้จะได้เฉพาะเดือน (ประเภทเป็นทุกประเภท)
+    apply: () => ({ caseType: caseSeqNames[state.monthDrill?.caseType] ? state.monthDrill.caseType : "", month: state.monthDrill?.month }),
   },
   clickOrders: {
     title: "บิล CLICKNIC",
@@ -6846,6 +6870,16 @@ function handleMonthTableClick(event) {
 ["monthlyCasesBody", "costByMonthBody", "saleByMonthBody", "profitByMonthBody"].forEach((id) => {
   $(id)?.addEventListener("click", handleMonthTableClick);
 });
+// กด chip ประเภทเคสบนการ์ดยอดขาย/กำไร = โฟกัสการ์ดเฉพาะประเภทนั้น กดซ้ำ = กลับมุมมองรวม
+[elements.metricSaleBreakdown, elements.metricProfitBreakdown].forEach((el) => {
+  el?.addEventListener("click", (event) => {
+    const chip = event.target.closest("[data-case-focus]");
+    if (!chip) return;
+    const [cardKey, caseKey] = chip.dataset.caseFocus.split(":");
+    caseFocus[cardKey] = caseFocus[cardKey] === caseKey ? "" : caseKey;
+    renderMetrics();
+  });
+});
 elements.clicknicFiles.addEventListener("change", handleFiles);
 elements.mlpFile.addEventListener("change", handleFiles);
 elements.billingFiles.addEventListener("change", handleFiles);
@@ -6917,6 +6951,8 @@ document.addEventListener("keydown", (event) => {
   if (!["Enter", " "].includes(event.key)) return;
   const card = event.target.closest?.("[data-summary-card]");
   if (!card) return;
+  // ปุ่มภายในการ์ด (chip ประเภทเคส/แถวเดือน) มี action ของตัวเอง — อย่าเปิด popup ซ้อน
+  if (event.target.closest("button, input, select, textarea, a")) return;
   event.preventDefault();
   openCardDetail(card.dataset.summaryCard);
 });

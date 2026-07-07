@@ -1591,6 +1591,11 @@ th.th-center {
   font-size: 10.5px;
 }
 
+/* โฟกัสประเภทเดียวจาก chip — ตารางรายเดือนเหลือคอลัมน์เดียว */
+.monthly-cases-body.focus-one .monthly-cases-row {
+  grid-template-columns: minmax(28px, 0.7fr) minmax(0, 1.6fr);
+}
+
 .cost-by-month .monthly-cases-row span:not(:first-child) {
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -4383,7 +4388,9 @@ button {
   display: none;
 }
 
+/* chip เป็นปุ่มโฟกัสประเภทเคส — ล้างสไตล์ปุ่ม generic (สูง 40px/เงา hover) ให้คงหน้าตา chip เดิม */
 .profit-breakdown-chip {
+  min-height: 0;
   padding: 1px 8px;
   border: 1px solid transparent;
   border-radius: 999px;
@@ -4391,6 +4398,23 @@ button {
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  cursor: pointer;
+}
+
+.profit-breakdown-chip:not(:disabled):hover {
+  transform: none;
+  box-shadow: none;
+  filter: brightness(0.96);
+}
+
+/* chip ที่โฟกัสอยู่ — ขอบสีเดียวกับตัวหนังสือให้เห็นว่ากดค้าง */
+.profit-breakdown-chip.active {
+  border-color: currentColor;
+  box-shadow: 0 0 0 1px currentColor inset;
+}
+
+.profit-breakdown-chip.active:not(:disabled):hover {
+  box-shadow: 0 0 0 1px currentColor inset;
 }
 
 .profit-breakdown-chip em {
