@@ -100,9 +100,15 @@ const mk = (caseType, month, sale, cost) => ({
   clicknicDate: '2026-' + month + '-15', items: [], drugName: 'ยา' + n,
 });
 state.bills = [ mk('nhso','06',10,0), mk('insurance','05',700,499.67), /* ... */ ];
+state.billOverrides = {};
+state.snapshotMode = true; // สำคัญ: ไม่ตั้ง = rebuildBillsForCurrentMode() เรียก buildBills() จาก raw rows แล้ว mock หายทันทีที่แก้อะไรในตาราง
 document.querySelectorAll('.view-panel').forEach(p => p.hidden = p.id !== 'viewAnalyze');
 renderMetrics(); renderTabs(); renderTable();
 ```
+
+Note: autosave-restore เป็น async — inject mock + จำลอง event + assert ให้จบใน eval เดียว
+(state.bills อาจถูก restore ทับระหว่าง eval สองครั้ง). Bills ที่มี `medicines` ให้ใส่
+`{ medicine, qty, sale, cost }` ต่อบรรทัด (sale = ราคา CKNC เรียกประกัน, cost = ราคา MLP คิด CKNC).
 
 Key facts for building mocks:
 - Revenue counting (`countsInRevenue`): `billingStage === "paid"` OR

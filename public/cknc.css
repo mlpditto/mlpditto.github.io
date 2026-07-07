@@ -1753,7 +1753,7 @@ th.th-center {
 }
 
 .meds-cell {
-  min-width: 300px;
+  min-width: 380px;
   white-space: normal;
   line-height: 1.42;
 }
@@ -1991,7 +1991,51 @@ th.th-center {
 }
 
 .med-input.med-price {
-  width: 74px;
+  width: 62px;
+}
+
+/* ป้ายกำกับราคา 2 ฝั่งต่อบรรทัดยา: CKNC เรียกประกัน (เขียว) / MLP คิด CKNC (ม่วง) */
+.med-tag {
+  flex: 0 0 auto;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+
+.med-tag-ck {
+  color: var(--green-dark);
+}
+
+.med-tag-mlp,
+.med-mlp-val,
+.med-sum-mlp {
+  color: #7a5fd0;
+}
+
+html.dark .med-tag-mlp,
+html.dark .med-mlp-val,
+html.dark .med-sum-mlp {
+  color: #b3a6f0;
+}
+
+.med-price-mlp {
+  border-color: #cec2f2;
+}
+
+html.dark .inline-cell-input.med-price-mlp {
+  border-color: #5d4f97;
+}
+
+/* สรุปรวมสองฝั่งท้ายเซลล์ยา */
+.med-sum-note {
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+.med-sum-ck {
+  color: var(--green-dark);
 }
 
 /* ช่องชื่อยา (แก้ได้ใน drawer) + ปุ่มลบรายบรรทัด */

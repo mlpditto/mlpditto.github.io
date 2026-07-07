@@ -2834,6 +2834,8 @@ function parseMedicinesTextLines(medicinesText) {
   }).filter((line) => line.medicine);
 }
 
+// ราคา 2 ฝั่งต่อบรรทัด: line.sale = CKNC เรียกประกัน (หลังบวก%), line.cost = MLP คิด CKNC (ก่อนบวก%)
+// ยอดขายของบิล (MLP เรียกเก็บ) ตามผลรวมฝั่ง MLP เมื่อมีการกรอก — ฝั่ง CKNC เป็นตัวเลขอ้างอิงเทียบยอดเคลม
 function renderMedsCell(bill) {
   const lines = (bill.medicines && bill.medicines.length) ? bill.medicines : parseMedicinesTextLines(bill.medicinesText);
   const addBtn = `<button class="med-add-btn" type="button" data-med-add="${htmlEscape(bill.billKey)}" title="เพิ่มรายการยาในบิลนี้">+ เพิ่มยา</button>`;
@@ -2841,23 +2843,39 @@ function renderMedsCell(bill) {
   const rowsHtml = lines.map((line, index) => {
     const qty = toNumeric(line.qty);
     const sale = toNumeric(line.sale);
+    const mlp = toNumeric(line.cost);
     const unit = qty > 0 ? Math.round((sale / qty) * 100) / 100 : Math.round(sale * 100) / 100;
+    const mlpUnit = qty > 0 ? Math.round((mlp / qty) * 100) / 100 : Math.round(mlp * 100) / 100;
     const name = htmlEscape(line.medicine || "-");
     return `
       <div class="med-line">
         <span class="med-name" title="${name}">${name}</span>
         <input class="inline-cell-input med-input" type="text" inputmode="decimal" value="${qty}" data-med-key="${htmlEscape(bill.billKey)}" data-med-index="${index}" data-med-field="qty" aria-label="จำนวน ${name}" title="จำนวน" />
         <span class="med-x">×</span>
-        <input class="inline-cell-input med-input med-price" type="text" inputmode="decimal" value="${unit > 0 ? unit : ""}" placeholder="ราคา" data-med-key="${htmlEscape(bill.billKey)}" data-med-index="${index}" data-med-field="unitPrice" aria-label="ราคาต่อหน่วย ${name}" title="ราคาต่อหน่วย" />
-        <span class="med-line-total" title="ยอดขายบรรทัดนี้">${sale > 0 ? `= ${money(sale)}` : "= —"}</span>
+        <span class="med-tag med-tag-ck" title="ราคาที่ CKNC เรียกจากประกัน">CKNC</span>
+        <input class="inline-cell-input med-input med-price" type="text" inputmode="decimal" value="${unit > 0 ? unit : ""}" placeholder="ราคา" data-med-key="${htmlEscape(bill.billKey)}" data-med-index="${index}" data-med-field="unitPrice" aria-label="ราคา CKNC ต่อหน่วย ${name}" title="ราคา CKNC เรียกประกัน (ต่อหน่วย)" />
+        <span class="med-tag med-tag-mlp" title="ราคาที่ MLP คิดกับ CKNC">MLP</span>
+        <input class="inline-cell-input med-input med-price med-price-mlp" type="text" inputmode="decimal" value="${mlpUnit > 0 ? mlpUnit : ""}" placeholder="ราคา" data-med-key="${htmlEscape(bill.billKey)}" data-med-index="${index}" data-med-field="mlpUnitPrice" aria-label="ราคา MLP ต่อหน่วย ${name}" title="ราคา MLP คิด CKNC (ต่อหน่วย)" />
+        <span class="med-line-total" title="รวมบรรทัดนี้ CKNC / MLP">= ${sale > 0 ? money(sale) : "—"}${mlp > 0 ? ` <span class="med-mlp-val">/ ${money(mlp)}</span>` : ""}</span>
       </div>
     `;
   }).join("");
   const collapsible = lines.length > 3;
   const fullLabel = `ดูทั้งหมด (${number(lines.length)} รายการ)`;
+  const round2 = (value) => Math.round(value * 100) / 100;
+  const totalCk = round2(lines.reduce((sum, line) => sum + toNumeric(line.sale), 0));
+  const totalMlp = round2(lines.reduce((sum, line) => sum + toNumeric(line.cost), 0));
+  const sumParts = [];
+  if (totalCk > 0) sumParts.push(`<span class="med-sum-ck">CKNC ${money(totalCk)}</span>`);
+  if (totalMlp > 0) sumParts.push(`<span class="med-sum-mlp">MLP ${money(totalMlp)}</span>`);
+  if (totalCk > 0 && totalMlp > 0) sumParts.push(`ส่วนต่าง ${money(round2(totalCk - totalMlp))}`);
+  const sumNote = sumParts.length
+    ? `<div class="med-sum-note" title="รวมฝั่ง CKNC เรียกประกัน / ฝั่ง MLP คิด CKNC">${sumParts.join(" · ")}</div>`
+    : "";
   return `
     <div class="med-lines${collapsible ? " collapsible" : ""}" data-meds-body>${rowsHtml}</div>
     ${collapsible ? `<button class="meds-toggle" type="button" data-meds-toggle data-label-full="${fullLabel}">${fullLabel}</button>` : ""}
+    ${sumNote}
     ${addBtn}
   `;
 }
@@ -2878,20 +2896,28 @@ function quickUpdateMedicineLine(billKey, index, field, rawValue) {
   const line = lines[index];
   const originalQty = line.qty;
   const originalSale = line.sale;
+  const originalMlp = line.cost;
   const prevUnit = originalQty > 0 ? originalSale / originalQty : 0;
+  const prevMlpUnit = originalQty > 0 ? originalMlp / originalQty : 0;
   const value = Math.max(0, toNumeric(rawValue));
   if (field === "qty") {
     line.qty = value;
     line.sale = round2(value * prevUnit);
+    line.cost = round2(value * prevMlpUnit);
   } else if (field === "unitPrice") {
     line.sale = round2((originalQty || 1) * value);
+  } else if (field === "mlpUnitPrice") {
+    line.cost = round2((originalQty || 1) * value);
   } else {
     return;
   }
-  if (line.qty === originalQty && line.sale === originalSale) return;
+  if (line.qty === originalQty && line.sale === originalSale && line.cost === originalMlp) return;
   const newSale = round2(lines.reduce((sum, item) => sum + toNumeric(item.sale), 0));
-  // บิลจาก session เก่าที่ยังไม่มีราคาต่อหน่วยเลย: แก้จำนวนอย่างเดียวต้องไม่ทับยอดขายเดิมของบิล
-  const shouldSetSale = pricedBefore || field === "unitPrice" || newSale > 0;
+  const newMlpTotal = round2(lines.reduce((sum, item) => sum + toNumeric(item.cost), 0));
+  // ยอดขายบิล = ยอดที่ MLP เรียกเก็บ: ถ้ามีราคา MLP ต่อบรรทัด ให้ตามผลรวมฝั่ง MLP ก่อนเสมอ
+  // ไม่มีราคา MLP เลย → พฤติกรรมเดิม (ตามฝั่ง CKNC) และกันการทับยอดเดิมของบิลจาก session เก่า
+  const shouldSetSale = newMlpTotal > 0 || pricedBefore || field === "unitPrice" || newSale > 0;
+  const billSaleValue = newMlpTotal > 0 ? newMlpTotal : newSale;
   const existing = state.billOverrides[bill.billKey] || {};
   state.billOverrides[bill.billKey] = {
     ...existing,
@@ -2900,12 +2926,16 @@ function quickUpdateMedicineLine(billKey, index, field, rawValue) {
       medicines: lines,
       medicineCount: lines.length,
       medicinesText: lines.map((item) => `${item.medicine} x${number(item.qty)}`).join(", "),
-      ...(shouldSetSale ? { sale: newSale } : {}),
+      ...(shouldSetSale ? { sale: billSaleValue } : {}),
     },
     note: existing.note || "แก้รายการยาจากตาราง",
     updatedAt: new Date().toISOString(),
   };
   const afterUnit = line.qty > 0 ? round2(line.sale / line.qty) : line.sale;
+  const afterMlpUnit = line.qty > 0 ? round2(line.cost / line.qty) : line.cost;
+  const noteText = field === "mlpUnitPrice"
+    ? `${line.medicine}: MLP @${money(round2(prevMlpUnit))} -> @${money(afterMlpUnit)}`
+    : `${line.medicine}: x${number(originalQty)} @${money(round2(prevUnit))} -> x${number(line.qty)} @${money(afterUnit)}`;
   state.auditTrail.unshift({
     id: makeAuditId(),
     action: "edit_medicine_line",
@@ -2915,11 +2945,11 @@ function quickUpdateMedicineLine(billKey, index, field, rawValue) {
     invoice: bill.invoice,
     date: bill.clicknicDate || bill.mlpDate,
     lineCount: lines.length,
-    totalSale: newSale,
+    totalSale: billSaleValue,
     totalCost: bill.cost,
     screenshotName: "summary-table",
     replacedLineCount: 0,
-    note: `${line.medicine}: x${number(originalQty)} @${money(round2(prevUnit))} -> x${number(line.qty)} @${money(afterUnit)}`,
+    note: noteText,
     medicines: [{ medicine: line.medicine, qty: line.qty, sale: line.sale, cost: line.cost }],
   });
   rebuildBillsForCurrentMode();
@@ -2946,7 +2976,10 @@ function openInlineMedForm(addBtn) {
     <input class="inline-cell-input med-name-input" type="text" placeholder="ชื่อยา" data-new-med-field="medicine" aria-label="ชื่อยาใหม่" />
     <input class="inline-cell-input med-input" type="text" inputmode="decimal" value="1" data-new-med-field="qty" aria-label="จำนวน" title="จำนวน" />
     <span class="med-x">×</span>
-    <input class="inline-cell-input med-input med-price" type="text" inputmode="decimal" placeholder="ราคา" data-new-med-field="unitPrice" aria-label="ราคาต่อหน่วย" title="ราคาต่อหน่วย" />
+    <span class="med-tag med-tag-ck" title="ราคาที่ CKNC เรียกจากประกัน">CKNC</span>
+    <input class="inline-cell-input med-input med-price" type="text" inputmode="decimal" placeholder="ราคา" data-new-med-field="unitPrice" aria-label="ราคา CKNC ต่อหน่วย" title="ราคา CKNC เรียกประกัน (ต่อหน่วย)" />
+    <span class="med-tag med-tag-mlp" title="ราคาที่ MLP คิดกับ CKNC">MLP</span>
+    <input class="inline-cell-input med-input med-price med-price-mlp" type="text" inputmode="decimal" placeholder="ราคา" data-new-med-field="mlpUnitPrice" aria-label="ราคา MLP ต่อหน่วย" title="ราคา MLP คิด CKNC (ต่อหน่วย)" />
     <button class="icon-button med-confirm-btn" type="button" data-new-med-confirm title="บันทึก (Enter)" aria-label="บันทึกรายการยาใหม่">✓</button>
     <button class="icon-button med-remove-btn" type="button" data-new-med-cancel title="ยกเลิก (Esc)" aria-label="ยกเลิกรายการยาใหม่">×</button>
   `;
@@ -2964,10 +2997,11 @@ function commitInlineMedForm(form) {
   }
   const qty = Math.max(0, toNumeric(form.querySelector('[data-new-med-field="qty"]')?.value)) || 1;
   const unitPrice = Math.max(0, toNumeric(form.querySelector('[data-new-med-field="unitPrice"]')?.value));
-  quickAddMedicineLine(form.dataset.newMedForm, medicine, qty, unitPrice);
+  const mlpUnitPrice = Math.max(0, toNumeric(form.querySelector('[data-new-med-field="mlpUnitPrice"]')?.value));
+  quickAddMedicineLine(form.dataset.newMedForm, medicine, qty, unitPrice, mlpUnitPrice);
 }
 
-function quickAddMedicineLine(billKey, medicine, qty, unitPrice) {
+function quickAddMedicineLine(billKey, medicine, qty, unitPrice, mlpUnitPrice = 0) {
   const bill = state.bills.find((item) => item.billKey === billKey);
   if (!bill) return;
   const round2 = (value) => Math.round(value * 100) / 100;
@@ -2979,11 +3013,14 @@ function quickAddMedicineLine(billKey, medicine, qty, unitPrice) {
     cost: toNumeric(line.cost),
   }));
   const pricedBefore = lines.some((line) => line.sale > 0);
-  const newLine = { medicine, qty, sale: round2(qty * unitPrice), cost: 0 };
+  const newLine = { medicine, qty, sale: round2(qty * unitPrice), cost: round2(qty * mlpUnitPrice) };
   lines.push(newLine);
   const newSale = round2(lines.reduce((sum, item) => sum + toNumeric(item.sale), 0));
+  const newMlpTotal = round2(lines.reduce((sum, item) => sum + toNumeric(item.cost), 0));
+  // ยอดขายบิล = ยอด MLP เรียกเก็บ: มีราคา MLP → ตามผลรวม MLP; ไม่มี → พฤติกรรมเดิมฝั่ง CKNC
   // บิลเก่าที่ไม่มีราคาต่อหน่วยเลยและไม่ได้ใส่ราคา: อย่าทับยอดขายเดิมของบิล
-  const shouldSetSale = pricedBefore || unitPrice > 0;
+  const shouldSetSale = newMlpTotal > 0 || pricedBefore || unitPrice > 0;
+  const billSaleValue = newMlpTotal > 0 ? newMlpTotal : newSale;
   const existing = state.billOverrides[bill.billKey] || {};
   state.billOverrides[bill.billKey] = {
     ...existing,
@@ -2992,7 +3029,7 @@ function quickAddMedicineLine(billKey, medicine, qty, unitPrice) {
       medicines: lines,
       medicineCount: lines.length,
       medicinesText: lines.map((item) => `${item.medicine} x${number(item.qty)}`).join(", "),
-      ...(shouldSetSale ? { sale: newSale } : {}),
+      ...(shouldSetSale ? { sale: billSaleValue } : {}),
     },
     note: existing.note || "เพิ่มรายการยาจากตาราง",
     updatedAt: new Date().toISOString(),
@@ -3006,11 +3043,11 @@ function quickAddMedicineLine(billKey, medicine, qty, unitPrice) {
     invoice: bill.invoice,
     date: bill.clicknicDate || bill.mlpDate,
     lineCount: lines.length,
-    totalSale: newSale,
+    totalSale: billSaleValue,
     totalCost: bill.cost,
     screenshotName: "summary-table",
     replacedLineCount: 0,
-    note: `เพิ่ม ${medicine}: x${number(qty)}${unitPrice > 0 ? ` @${money(unitPrice)}` : ""}`,
+    note: `เพิ่ม ${medicine}: x${number(qty)}${unitPrice > 0 ? ` @${money(unitPrice)}` : ""}${mlpUnitPrice > 0 ? ` MLP@${money(mlpUnitPrice)}` : ""}`,
     medicines: [newLine],
   });
   rebuildBillsForCurrentMode();
@@ -6197,15 +6234,20 @@ function renderDrawerMedicines(bill) {
   elements.drawerMedicines.innerHTML = lines.map((line, index) => {
     const qty = toNumeric(line.qty);
     const sale = toNumeric(line.sale);
+    const mlp = toNumeric(line.cost);
     const unit = qty > 0 ? Math.round((sale / qty) * 100) / 100 : Math.round(sale * 100) / 100;
+    const mlpUnit = qty > 0 ? Math.round((mlp / qty) * 100) / 100 : Math.round(mlp * 100) / 100;
     const name = htmlEscape(line.medicine || "");
     return `
     <div class="drawer-list-item med-line" title="${source}">
       <input class="inline-cell-input med-name-input" type="text" value="${name}" placeholder="ชื่อยา" data-drawer-med-index="${index}" data-drawer-med-field="medicine" aria-label="ชื่อยา" />
       <input class="inline-cell-input med-input" type="text" inputmode="decimal" value="${qty}" data-drawer-med-index="${index}" data-drawer-med-field="qty" aria-label="จำนวน ${name || "ยาใหม่"}" title="จำนวน" />
       <span class="med-x">×</span>
-      <input class="inline-cell-input med-input med-price" type="text" inputmode="decimal" value="${unit > 0 ? unit : ""}" placeholder="ราคา" data-drawer-med-index="${index}" data-drawer-med-field="unitPrice" aria-label="ราคาต่อหน่วย ${name || "ยาใหม่"}" title="ราคาต่อหน่วย" />
-      <span class="med-line-total" title="ยอดขายบรรทัดนี้">${sale > 0 ? `= ${money(sale)}` : "= —"}</span>
+      <span class="med-tag med-tag-ck" title="ราคาที่ CKNC เรียกจากประกัน">CKNC</span>
+      <input class="inline-cell-input med-input med-price" type="text" inputmode="decimal" value="${unit > 0 ? unit : ""}" placeholder="ราคา" data-drawer-med-index="${index}" data-drawer-med-field="unitPrice" aria-label="ราคา CKNC ต่อหน่วย ${name || "ยาใหม่"}" title="ราคา CKNC เรียกประกัน (ต่อหน่วย)" />
+      <span class="med-tag med-tag-mlp" title="ราคาที่ MLP คิดกับ CKNC">MLP</span>
+      <input class="inline-cell-input med-input med-price med-price-mlp" type="text" inputmode="decimal" value="${mlpUnit > 0 ? mlpUnit : ""}" placeholder="ราคา" data-drawer-med-index="${index}" data-drawer-med-field="mlpUnitPrice" aria-label="ราคา MLP ต่อหน่วย ${name || "ยาใหม่"}" title="ราคา MLP คิด CKNC (ต่อหน่วย)" />
+      <span class="med-line-total" title="รวมบรรทัดนี้ CKNC / MLP">= ${sale > 0 ? money(sale) : "—"}${mlp > 0 ? ` <span class="med-mlp-val">/ ${money(mlp)}</span>` : ""}</span>
       <button class="icon-button med-remove-btn" type="button" data-drawer-med-remove="${index}" title="ลบรายการนี้" aria-label="ลบ ${name || "ยาใหม่"}">×</button>
     </div>`;
   }).join("");
@@ -7391,17 +7433,25 @@ elements.drawerMedicines.addEventListener("change", (event) => {
   const field = input.dataset.drawerMedField;
   const value = Math.max(0, toNumeric(input.value));
   const prevUnit = line.qty > 0 ? line.sale / line.qty : 0;
+  const prevMlpUnit = line.qty > 0 ? line.cost / line.qty : 0;
   if (field === "qty") {
     line.qty = value;
     line.sale = round2(value * prevUnit);
+    line.cost = round2(value * prevMlpUnit);
   } else if (field === "unitPrice") {
     line.sale = round2((line.qty || 1) * value);
+  } else if (field === "mlpUnitPrice") {
+    line.cost = round2((line.qty || 1) * value);
   } else {
     return;
   }
   const newSale = round2(lines.reduce((sum, item) => sum + toNumeric(item.sale), 0));
+  const newMlpTotal = round2(lines.reduce((sum, item) => sum + toNumeric(item.cost), 0));
+  // ยอดขายบิล = ยอด MLP เรียกเก็บ: มีราคา MLP → ตามผลรวม MLP; ไม่มี → ตามฝั่ง CKNC (เดิม)
   // ยังไม่เคยกรอกราคาเลย: แก้จำนวนอย่างเดียวไม่ทับยอดขายเดิมของบิล
-  if (pricedBefore || field === "unitPrice" || newSale > 0) {
+  if (newMlpTotal > 0) {
+    elements.editSale.value = fixed2(newMlpTotal);
+  } else if (pricedBefore || field === "unitPrice" || newSale > 0) {
     elements.editSale.value = fixed2(newSale);
   }
   renderDrawerMedicines(currentDetailBill());
@@ -7423,8 +7473,13 @@ elements.drawerMedicines.addEventListener("click", (event) => {
   const index = Number(removeBtn.dataset.drawerMedRemove);
   if (!lines[index]) return;
   const pricedBefore = lines.some((item) => toNumeric(item.sale) > 0);
+  const mlpPricedBefore = lines.some((item) => toNumeric(item.cost) > 0);
   lines.splice(index, 1);
-  if (pricedBefore) {
+  const newMlpTotal = lines.reduce((sum, item) => sum + toNumeric(item.cost), 0);
+  // ลบบรรทัด: ยอดขายตามฝั่ง MLP ก่อนถ้าเคยมีราคา MLP ไม่งั้นตามฝั่ง CKNC (เดิม)
+  if (mlpPricedBefore) {
+    elements.editSale.value = fixed2(newMlpTotal);
+  } else if (pricedBefore) {
     elements.editSale.value = fixed2(lines.reduce((sum, item) => sum + toNumeric(item.sale), 0));
   }
   renderDrawerMedicines(currentDetailBill());
