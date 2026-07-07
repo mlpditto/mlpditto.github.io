@@ -2437,9 +2437,12 @@
                             
                             <div class="space-y-1">
                                 ${(record.items || []).map(i => `
-                                    <div class="flex justify-between text-[10px]">
+                                    <div class="flex justify-between items-center gap-1 text-[10px]">
                                         <span class="text-slate-500">${i.name} x${i.qty}</span>
-                                        <span class="font-bold text-slate-400">฿${(i.qty * i.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                        <span class="flex items-center gap-1.5 flex-shrink-0">
+                                            <span class="font-bold text-slate-400">฿${(i.qty * i.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                            <button onclick="openMasterEditFromBill(this)" data-item-name="${String(i.name || '').replace(/"/g, '&quot;')}" data-bill-uid="${record.recordedAt}" tabindex="-1" title="แก้ข้อมูล MASTER ของสินค้านี้ (ราคา/ต้นทุน)" class="text-slate-300 hover:text-blue-500 transition-colors"><i class="fas fa-info-circle"></i></button>
+                                        </span>
                                     </div>
                                 `).join('')}
                             </div>
@@ -3590,7 +3593,84 @@
         }
     </script>
     <script>
-        async function openMasterEdit(name) {
+        // แบบ B: เปิด MASTER จากรายการสินค้าในตารางประวัติ — จำ uid บิลไว้ หลังบันทึกจะถามอัปเดตต้นทุนบิลนั้นต่อ
+        let masterEditBillUid = null;
+
+        function openMasterEditFromBill(btn) {
+            openMasterEdit(btn.dataset.itemName, Number(btn.dataset.billUid));
+        }
+
+        // รวมต้นทุนจาก MASTER ของทุกรายการในบิล + รายชื่อตัวที่ยังไม่มีทุน
+        function masterCostForItems(items) {
+            let total = 0;
+            const missing = [];
+            (items || []).forEach(it => {
+                const qty = parseFloat(it.qty) || 1;
+                const m = findMasterProductByName(it.name);
+                const mc = m ? (m.cost || (m.prices && m.prices['COST']) || 0) : 0;
+                if (mc > 0) total += qty * mc; else missing.push(it.name || '(ไม่มีชื่อ)');
+            });
+            return { total, missing };
+        }
+
+        // ถามอัปเดตต้นทุนบิลหลังบันทึก MASTER — โชว์ทุนเก่า/ใหม่+กำไรใหม่ก่อนยืนยัน กันเขียนทับเงียบ ๆ
+        async function offerApplyMasterCost(uid) {
+            try {
+                const record = salesData.find(r => r.recordedAt === uid);
+                if (!record) return;
+                const { total, missing } = masterCostForItems(record.items);
+                if (!(total > 0)) return; // ยังไม่มีทุนใน MASTER สักตัว — ไม่มีอะไรให้อัปเดต
+                const oldCost = record.cost || 0;
+                if (Math.abs(total - oldCost) < 0.005) return; // เท่าเดิม ไม่ต้องถาม
+                const money = (v) => `฿${(v || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+                const net = record.net || 0;
+                const missingHtml = missing.length
+                    ? `<div class="text-left text-[11px] text-amber-600 bg-amber-50 rounded-lg p-2 mt-2"><b>ยังไม่มีทุนใน MASTER (ไม่ถูกนับ):</b><br>${missing.map(n => `• ${n}`).join('<br>')}</div>`
+                    : '';
+                const res = await Swal.fire({
+                    title: 'อัปเดตต้นทุนบิลนี้เลยไหม?',
+                    html: `
+                        <div class="text-sm text-left space-y-1">
+                            <div class="flex justify-between"><span>บิล:</span> <b>${record.orderId || ''} · ${record.customerName || 'ลูกค้าทั่วไป'}</b></div>
+                            <div class="flex justify-between"><span>ต้นทุนปัจจุบัน:</span> <b class="text-rose-500">${money(oldCost)}</b></div>
+                            <div class="flex justify-between"><span>ต้นทุนจาก MASTER:</span> <b class="text-emerald-600">${money(total)}</b></div>
+                            <div class="flex justify-between border-t pt-1"><span>กำไรใหม่:</span> <b>${money(net - total)} (${net > 0 ? (((net - total) / net) * 100).toFixed(2) : '0.00'}%)</b></div>
+                            ${missingHtml}
+                        </div>`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'อัปเดตต้นทุน',
+                    cancelButtonText: 'ไม่ต้อง',
+                    confirmButtonColor: '#00B14F'
+                });
+                if (!res.isConfirmed) return;
+
+                showLoading(true);
+                const recMonth = String(record.date || '').slice(0, 7) || currentMonth;
+                const monthRecs = await getMonthRecords(recMonth);
+                const t = monthRecs.findIndex(r => r.recordedAt === uid);
+                if (t !== -1) {
+                    const r = monthRecs[t];
+                    r.cost = total;
+                    // เก็บทุนต่อชิ้นใน items ด้วย (โครงเดียวกับ CSV import)
+                    (r.items || []).forEach(it => {
+                        const m = findMasterProductByName(it.name);
+                        const mc = m ? (m.cost || (m.prices && m.prices['COST']) || 0) : 0;
+                        if (mc > 0) it.cost = mc;
+                    });
+                    await saveMonthRecords(recMonth, monthRecs);
+                    Swal.fire({ icon: 'success', title: 'อัปเดตต้นทุนแล้ว', toast: true, position: 'top-end', timer: 1500, showConfirmButton: false });
+                }
+                showLoading(false);
+            } catch (e) {
+                showLoading(false);
+                console.error('offerApplyMasterCost:', e);
+                Swal.fire('Error', e.message, 'error');
+            }
+        }
+
+        async function openMasterEdit(name, fromBillUid = null) {
+            masterEditBillUid = fromBillUid; // เปิดจากฟอร์ม = null (รีเซ็ต context เก่าทิ้ง)
             name = name ? name.trim() : '';
             if (!name) return Swal.fire({ icon: 'info', title: 'ระบุชื่อสินค้า', text: 'กรุณากรอกชื่อสินค้าก่อนระบุข้อมูลหลัก', timer: 1500, showConfirmButton: false });
 
@@ -3660,7 +3740,13 @@
                 document.getElementById('masterModal').classList.add('hidden');
                 const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 1500, timerProgressBar: true });
                 Toast.fire({ icon: 'success', title: 'Saved Master Data' });
-                syncMasterData();
+                await syncMasterData(); // ให้ master ชุดใหม่พร้อมก่อนคำนวณต้นทุนบิล
+                // เปิดมาจากบิลในตารางประวัติ → ถามอัปเดตต้นทุนบิลนั้นต่อ (แบบ B)
+                if (masterEditBillUid !== null) {
+                    const uid = masterEditBillUid;
+                    masterEditBillUid = null;
+                    await offerApplyMasterCost(uid);
+                }
             } catch (e) {
                 console.error(e);
                 Swal.fire('Error', e.message, 'error');
