@@ -1826,6 +1826,13 @@ function renderMetrics() {
       if (card.classList.contains("mini")) card.classList.toggle("is-zero", !toNumeric(metrics[key]));
     }
   });
+  // ต่อท้ายเลขใหญ่การ์ดกำไรด้วย (% กำไรต่อยอดขาย 2 ตำแหน่ง) — คิดตามประเภทเคสที่โฟกัสอยู่
+  const profitEl = $(metricIds.profit);
+  if (profitEl) {
+    const focusSuffix = caseFocus.profit ? caseFocusSuffix[caseFocus.profit] : "";
+    const saleBase = toNumeric(metrics["sale" + focusSuffix]);
+    if (saleBase) profitEl.insertAdjacentHTML("beforeend", ` <small class="profit-pct">(${((toNumeric(metrics["profit" + focusSuffix]) / saleBase) * 100).toFixed(2)}%)</small>`);
+  }
   const period = activePeriodLabel();
   // การ์ดกำไร + ยอดขาย: ป้ายช่วงเวลา + chip แยก สปสช/ประกัน/อื่น ๆ ตามช่วงวันที่ที่กรองอยู่
   renderCaseBreakdown(elements.metricProfitPeriod, elements.metricProfitBreakdown, period, metrics.profitNhso, metrics.profitInsurance, metrics.profitOther, "profit");

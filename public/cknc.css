@@ -1033,6 +1033,14 @@ html.dark .bulk-more-menu {
   letter-spacing: 0;
 }
 
+/* (% กำไรต่อยอดขาย) ต่อท้ายเลขใหญ่การ์ดกำไร — เล็กและจาง ไม่แย่งซีนตัวเลขหลัก */
+.metric strong .profit-pct {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0;
+}
+
 .compact-metric {
   display: none;
 }
