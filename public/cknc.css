@@ -970,9 +970,11 @@ html.dark .card-detail-table tr.row-selected td.col-action {
   background: #17362a;
 }
 
-/* ส่วน bulk แบบ inline ในแถว card-detail-actions — พื้นอ่อนแยกโซนจาก chips กรอง */
+/* ส่วน bulk แบบ inline ในแถว card-detail-actions — พื้นอ่อนแยกโซนจาก chips กรอง
+   flex:1 = ยืดเต็มพื้นที่ที่เหลือของแถวจนสุดขอบ popup ไม่จบแค่ความกว้างเนื้อหา */
 .card-detail-bulk-inline {
   display: flex;
+  flex: 1 1 auto;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 8px;
