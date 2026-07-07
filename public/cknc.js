@@ -105,8 +105,6 @@ const elements = {
   cardDetailModal: $("cardDetailModal"),
   cardQuickFilters: $("cardQuickFilters"),
   cardDetailBulkBar: $("cardDetailBulkBar"),
-  cardBulkMoreBtn: $("cardBulkMoreBtn"),
-  cardBulkMoreMenu: $("cardBulkMoreMenu"),
   cardBulkCount: $("cardBulkCount"),
   cardBulkBillingStage: $("cardBulkBillingStage"),
   cardBulkCaseType: $("cardBulkCaseType"),
@@ -2427,19 +2425,12 @@ function renderCardBulkBar() {
   const count = cardBulkSelected.size;
   elements.cardDetailBulkBar.hidden = count === 0;
   if (elements.cardBulkCount) elements.cardBulkCount.textContent = `เลือก ${number(count)} บิล`;
-  closeCardBulkMoreMenu(); // re-render/เปลี่ยนการเลือก = ปิดเมนู ⋯ กันเมนูค้าง
   // sync select-all ตามสถานะแถวที่แสดง
   const picks = elements.cardDetailBody?.querySelectorAll(".card-row-pick") || [];
   const selectAll = elements.cardDetailBody?.closest(".modal-card")?.querySelector("#cardSelectAll") || document.getElementById("cardSelectAll");
   if (selectAll && picks.length) {
     selectAll.checked = [...picks].every((pick) => pick.checked);
   }
-}
-
-// เมนู ⋯ ในแถบ bulk (Exclude/ยกเลิก Exclude/ล้างการเลือก) — ปุ่มรองที่ใช้ไม่บ่อย ยุบเก็บให้แถวสั้น
-function closeCardBulkMoreMenu() {
-  if (elements.cardBulkMoreMenu) elements.cardBulkMoreMenu.hidden = true;
-  elements.cardBulkMoreBtn?.setAttribute("aria-expanded", "false");
 }
 
 // แก้ bulk จากหน้า Card Detail: apply ผ่าน applyBulkOverride (key set ของ Card Detail) แล้ว refresh
@@ -7101,12 +7092,6 @@ function applyCardBulkBarNo() {
   if (elements.cardBulkBarNo) elements.cardBulkBarNo.value = "";
 }
 elements.cardBulkApplyBar?.addEventListener("click", applyCardBulkBarNo);
-elements.cardBulkMoreBtn?.addEventListener("click", (event) => {
-  event.stopPropagation();
-  if (!elements.cardBulkMoreMenu) return;
-  elements.cardBulkMoreMenu.hidden = !elements.cardBulkMoreMenu.hidden;
-  elements.cardBulkMoreBtn.setAttribute("aria-expanded", String(!elements.cardBulkMoreMenu.hidden));
-});
 elements.cardBulkBarNo?.addEventListener("keydown", (event) => {
   if (event.key !== "Enter") return;
   event.preventDefault();
@@ -7192,8 +7177,6 @@ elements.caseSeqModalBody?.addEventListener("focusout", (event) => {
 elements.closeCardDetailModal?.addEventListener("click", closeCardDetail);
 elements.cardDetailModal?.addEventListener("click", (event) => {
   if (event.target === elements.cardDetailModal) closeCardDetail();
-  // คลิกนอกเมนู ⋯ = ปิดเมนู (ไม่ block handler อื่น)
-  if (!event.target.closest(".bulk-more-wrap")) closeCardBulkMoreMenu();
   const pageBtn = event.target.closest("[data-card-page]");
   if (pageBtn) {
     cardDetailPage += pageBtn.dataset.cardPage === "next" ? 1 : -1;

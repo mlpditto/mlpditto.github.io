@@ -990,36 +990,6 @@ html.dark .card-detail-bulk-inline {
   border-color: #2f6b52;
 }
 
-/* เมนู ⋯ (Exclude/ยกเลิก Exclude/ล้างการเลือก) — dropdown ใต้ปุ่ม */
-.bulk-more-wrap {
-  position: relative;
-}
-
-.bulk-more-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  z-index: 30;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 6px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: #fff;
-  box-shadow: 0 10px 28px rgba(17, 29, 40, 0.16);
-}
-
-.bulk-more-menu button {
-  justify-content: flex-start;
-  white-space: nowrap;
-}
-
-html.dark .bulk-more-menu {
-  background: #1e293b;
-  border-color: #334155;
-}
-
 .metric span {
   display: block;
   margin-bottom: 8px;
