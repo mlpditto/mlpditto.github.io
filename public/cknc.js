@@ -4444,6 +4444,9 @@ function openSuggestPairModal(item) {
     ["เลขที่เครดิต (AR)", (bill) => bill.creditNos || "-"],
     ["เบอร์โทร", (bill) => bill.phone || "-"],
   ];
+  // ผลลัพธ์ที่จะได้หลังกดรวม — คำนวณแบบเดียวกับตอนรวมจริง (บิลข้อมูลเยอะสุดเป็นหลัก) ไว้ให้ดูก่อนยืนยัน
+  const ordered = [billA, billB].sort((a, b) => billRichness(b) - billRichness(a));
+  const mergedBill = mergeManualBillGroup(ordered);
   elements.suggestPairBody.innerHTML = `
     <p class="suggest-pair-reasons">เหตุผลที่จับคู่: ${htmlEscape(item.reasons.join(" + "))}</p>
     <table class="suggest-pair-table">
@@ -4452,12 +4455,14 @@ function openSuggestPairModal(item) {
           <th></th>
           <th>บิล 1 <button type="button" class="ghost small" data-pair-open="${htmlEscape(billA.billKey)}">ดูรายละเอียด</button></th>
           <th>บิล 2 <button type="button" class="ghost small" data-pair-open="${htmlEscape(billB.billKey)}">ดูรายละเอียด</button></th>
+          <th class="pair-merged-head">ผลรวม (หลังรวม)</th>
         </tr>
       </thead>
       <tbody>
         ${fields.map(([label, pick, copyable]) => {
     const valueA = pick(billA);
     const valueB = pick(billB);
+    const valueM = pick(mergedBill);
     const diff = valueA !== valueB;
     const cell = (value) => {
       const copyBtn = (copyable && value && value !== "-")
@@ -4469,11 +4474,12 @@ function openSuggestPairModal(item) {
             <th>${htmlEscape(label)}</th>
             <td class="${diff ? "pair-diff" : ""}">${cell(valueA)}</td>
             <td class="${diff ? "pair-diff" : ""}">${cell(valueB)}</td>
+            <td class="pair-merged">${cell(valueM)}</td>
           </tr>`;
   }).join("")}
       </tbody>
     </table>
-    <p class="case-seq-hint">ช่องพื้นเหลือง = ค่าสองฝั่งไม่ตรงกัน · สองบิลนี้ถูกติ๊กเลือกในตารางให้แล้ว · กด "รวมบิล" มีสรุปผลรวมให้ตรวจก่อนยืนยันเสมอ</p>
+    <p class="case-seq-hint">ช่องพื้นเหลือง = ค่าสองฝั่งไม่ตรงกัน · คอลัมน์ <b>ผลรวม</b> = ค่าที่จะได้หลังกดรวม (บิลข้อมูลเยอะสุดเป็นหลัก ช่องว่างเติมจากอีกใบ รายการยาเอาชุดยาวกว่า) · สองบิลนี้ถูกติ๊กเลือกในตารางให้แล้ว · กด "รวมบิล" ยังมี confirm สรุปก่อนยืนยันอีกชั้น</p>
   `;
   if (!elements.suggestPairModal.open) elements.suggestPairModal.showModal();
 }

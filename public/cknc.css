@@ -2523,7 +2523,7 @@ html.dark .bar-pick-nobar {
 }
 
 #suggestPairModal {
-  width: min(760px, calc(100vw - 28px));
+  width: min(940px, calc(100vw - 28px));
 }
 
 .suggest-pair-body {
@@ -2591,6 +2591,30 @@ html.dark .bar-pick-nobar {
 
 .suggest-pair-table td.pair-diff {
   background: var(--amber-soft, #fdf3d8);
+}
+
+/* คอลัมน์ "ผลรวม (หลังรวม)" — เน้นเขียวว่าเป็นผลลัพธ์ */
+.suggest-pair-table thead th.pair-merged-head {
+  background: #e7f4ee;
+  color: var(--green-dark, #12603a);
+  border-left: 2px solid #bfe0cf;
+}
+
+.suggest-pair-table td.pair-merged {
+  background: #f2faf6;
+  border-left: 2px solid #bfe0cf;
+  font-weight: 700;
+}
+
+html.dark .suggest-pair-table thead th.pair-merged-head {
+  background: rgba(74, 222, 128, 0.16);
+  color: #4ade80;
+  border-left-color: #2f6b52;
+}
+
+html.dark .suggest-pair-table td.pair-merged {
+  background: rgba(74, 222, 128, 0.08);
+  border-left-color: #2f6b52;
 }
 
 html.dark .suggest-pair-table {
