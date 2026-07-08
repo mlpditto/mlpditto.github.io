@@ -807,6 +807,11 @@ function caseTypeLabel(value) {
   return caseTypeOptions.find(([key]) => key === value)?.[1] || "ไม่ทราบ";
 }
 
+// ป้ายประเภทเคสในไทม์ไลน์: สปสช อ่านยากในบรรทัดเดียวกับวันที่ → ใช้ NHSO ที่สั้นกว่า
+function caseTypeChipLabel(value) {
+  return value === "nhso" ? "NHSO" : caseTypeLabel(value);
+}
+
 function billingStageLabel(value) {
   return billingStageOptions.find(([key]) => key === value)?.[1] || "รอตรวจสอบ";
 }
@@ -3312,7 +3317,7 @@ function renderVisitTimeline() {
           <span class="visit-index">${number(index + 1)}</span>
           <span class="visit-date">${htmlEscape(formatDisplayDate(visit.date) || "ไม่มีวันที่")}</span>
           <span class="visit-gap${soon ? " soon" : ""}">${htmlEscape(gapText)}</span>
-          <span class="visit-case">${htmlEscape(caseTypeLabel(visit.bills[0].caseType))}</span>
+          <span class="visit-case case-${htmlEscape(visit.bills[0].caseType || "unknown")}">${htmlEscape(caseTypeChipLabel(visit.bills[0].caseType))}</span>
         </div>
         ${visit.bills.map((bill) => `
           <div class="visit-bill${bill.billKey === anchor.billKey ? " visit-bill-active" : ""}">
