@@ -1026,10 +1026,17 @@ function extractPatientFromMemo(value) {
   return candidate || "";
 }
 
+// คีย์เทียบซ้ำต่อชนิดข้อมูล — ใช้ทั้ง dedupe และนับสถิติ import ให้ตรงกันเสมอ
+function duplicateKeyForKind(kind, row) {
+  if (kind === "clicknic") return clicknicDuplicateKey(row);
+  if (kind === "mlp") return [row.referenceNo, row.invoice, Number(row.mlpCost || 0).toFixed(4), row.detail].join("|");
+  return [row.bar, row.ar, row.orw, row.inv, Number(row.amount || 0).toFixed(2), row.dueDate].join("|");
+}
+
 function dedupeMlpRows(rows) {
   const seen = new Set();
   return rows.filter((row) => {
-    const key = [row.referenceNo, row.invoice, Number(row.mlpCost || 0).toFixed(4), row.detail].join("|");
+    const key = duplicateKeyForKind("mlp", row);
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -1039,11 +1046,67 @@ function dedupeMlpRows(rows) {
 function dedupeBillingRows(rows) {
   const seen = new Set();
   return rows.filter((row) => {
-    const key = [row.bar, row.ar, row.orw, row.inv, Number(row.amount || 0).toFixed(2), row.dueDate].join("|");
+    const key = duplicateKeyForKind("billing", row);
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
+}
+
+// ---- สถิติ/เตือน การนำเข้าซ้ำ (STEP 1/2/3) --------------------------------
+const DUP_WARN_RATIO = 0.8;      // ซ้ำ ≥ 80% ของไฟล์ = น่าจะเผลออัปไฟล์เดิม → เตือน
+const DUP_WARN_MIN_ROWS = 5;     // ไฟล์เล็กกว่านี้ไม่เตือน (กันสัญญาณหลอกจากไฟล์ 1-2 แถว)
+const IMPORT_KIND_LABEL = { clicknic: "CLICKNIC", mlp: "MLP", billing: "BILLING" };
+
+// raw = แถวที่อ่านได้, added = แถวใหม่ที่ยังไม่มี, dup = ซ้ำ (ในไฟล์เอง + ซ้ำกับของเดิม)
+function computeImportStats(kind, existingRows, importedRows) {
+  const existingKeys = new Set((existingRows || []).map((row) => duplicateKeyForKind(kind, row)));
+  const seen = new Set();
+  let added = 0;
+  (importedRows || []).forEach((row) => {
+    const key = duplicateKeyForKind(kind, row);
+    if (existingKeys.has(key) || seen.has(key)) return;
+    seen.add(key);
+    added += 1;
+  });
+  const raw = (importedRows || []).length;
+  return { raw, added, dup: raw - added };
+}
+
+function importStatsFor(existing, imported) {
+  return {
+    clicknic: computeImportStats("clicknic", existing.clicknic, imported.clicknicRows),
+    mlp: computeImportStats("mlp", existing.mlp, imported.mlpRows),
+    billing: computeImportStats("billing", existing.billing, imported.billingRows),
+  };
+}
+
+// ข้อความสรุป toast: "CLICKNIC: +380 ใหม่ · ตัดซ้ำ 16  ·  MLP: +120" (เฉพาะ STEP ที่มีแถว)
+function importSummaryText(stats) {
+  return ["clicknic", "mlp", "billing"]
+    .filter((kind) => stats[kind] && stats[kind].raw > 0)
+    .map((kind) => {
+      const s = stats[kind];
+      return `${IMPORT_KIND_LABEL[kind]}: +${number(s.added)} ใหม่${s.dup ? ` · ตัดซ้ำ ${number(s.dup)}` : ""}`;
+    })
+    .join("  ·  ");
+}
+
+// STEP ที่ซ้ำเกินเกณฑ์ → ถ้ามี ถามยืนยันก่อนนำเข้า (คืน true = ไปต่อ, false = ยกเลิก)
+function confirmIfMostlyDuplicate(stats) {
+  const flagged = ["clicknic", "mlp", "billing"]
+    .map((kind) => ({ label: IMPORT_KIND_LABEL[kind], s: stats[kind] }))
+    .filter(({ s }) => s && s.raw >= DUP_WARN_MIN_ROWS && s.dup / s.raw >= DUP_WARN_RATIO);
+  if (!flagged.length) return true;
+  const lines = flagged.map(({ label, s }) =>
+    `- ${label}: ซ้ำ ${Math.round((s.dup / s.raw) * 100)}% (${number(s.dup)}/${number(s.raw)} แถวมีอยู่แล้ว) → เพิ่มของใหม่ ${number(s.added)} แถว`);
+  return confirm([
+    "ไฟล์ที่อัปโหลดซ้ำกับข้อมูลเดิมเป็นส่วนใหญ่ — อาจเผลออัปไฟล์เดิมซ้ำ",
+    "",
+    ...lines,
+    "",
+    "กด OK เพื่อนำเข้าเฉพาะแถวใหม่ (แถวซ้ำถูกตัดอัตโนมัติอยู่แล้ว) · Cancel เพื่อยกเลิกทั้งหมด",
+  ].join("\n"));
 }
 
 // STEP 2 (MLP) นำเข้าเฉพาะรายการของ บริษัท คลิกนิก เฮลท์ จำกัด — รายงาน MLP รวมทุกช่องทาง
@@ -3851,13 +3914,18 @@ async function importClipboardText(kind, text) {
 
   // มีข้อมูลอยู่แล้ว = เพิ่มเข้าข้อมูลเดิมเสมอ (แถวซ้ำถูกตัดอัตโนมัติ ค่าที่แก้มือคงอยู่) — ไม่ถามโหมด
   const mode = state.bills.length ? "append" : "replace";
+  const imported = { clicknicRows: kind === "clicknic" ? parsed : [], mlpRows: kind === "mlp" ? parsed : [], billingRows: kind === "billing" ? parsed : [] };
+  const importStats = importStatsFor(
+    mode === "append" ? { clicknic: state.clicknicRows, mlp: state.mlpRows, billing: state.billingRows } : { clicknic: [], mlp: [], billing: [] },
+    imported,
+  );
+  if (mode === "append" && !confirmIfMostlyDuplicate(importStats)) {
+    elements.statusText.textContent = "ยกเลิกการนำเข้า (ข้อมูลซ้ำกับของเดิมเป็นส่วนใหญ่)";
+    return false;
+  }
 
   if (mode === "append") {
-    mergeImportedIntoState({
-      clicknicRows: kind === "clicknic" ? parsed : [],
-      mlpRows: kind === "mlp" ? parsed : [],
-      billingRows: kind === "billing" ? parsed : [],
-    });
+    mergeImportedIntoState(imported);
   } else {
     state.activeSessionId = "";
     state.snapshotMode = false;
@@ -3877,6 +3945,8 @@ async function importClipboardText(kind, text) {
   renderAll();
   scheduleAutosave(`clipboard-${kind}`);
   elements.statusText.textContent = `Imported ${clipboardKindLabel(kind)} from clipboard`;
+  const summary = importSummaryText(importStats);
+  if (summary) showToast(`วางข้อมูลแล้ว — ${summary}`);
   return true;
 }
 
@@ -4189,6 +4259,7 @@ function mergeSelectedBills(skipConfirm = false) {
   scheduleAutosave("merge-bills");
   elements.statusText.textContent = `รวม ${number(ordered.length)} บิลเป็นบิลเดียว: ${label(ordered[0])}`;
   showUndoToast(`รวม ${number(ordered.length)} บิลเป็นบิลเดียวแล้ว`, () => unmergeGroup(groupId, originalMembers));
+  return ordered[0].billKey; // คีย์บิลที่รวมแล้ว (บิลหลัก) — ให้ผู้เรียกเปิด drawer แก้ต่อได้
 }
 
 // เลิกรวมบิล — เอาบิลต้นฉบับกลับเข้า state.bills แล้ว rebuild (undo ชั่วคราวจาก toast เท่านั้น ไม่เก็บลง session)
@@ -4226,9 +4297,9 @@ function unmergeGroup(groupId, originalMembers) {
   elements.statusText.textContent = `เลิกรวม ${number(originalMembers.length)} บิลแล้ว`;
 }
 
-// toast "เลิกรวม" — สร้าง element ครั้งเดียว, ซ่อนอัตโนมัติใน 9 วิ
-let undoToastTimer = null;
-function showUndoToast(message, onUndo) {
+// toast แจ้งเตือนมุมล่าง — สร้าง element ครั้งเดียว, ซ่อนอัตโนมัติ; actionLabel = ปุ่มลัดเสริม (เช่น "เลิกรวม")
+let ckncToastTimer = null;
+function showToast(message, { actionLabel = "", onAction = null, duration = 9000 } = {}) {
   let toast = document.getElementById("ckncUndoToast");
   if (!toast) {
     toast = document.createElement("div");
@@ -4236,17 +4307,21 @@ function showUndoToast(message, onUndo) {
     toast.className = "cknc-undo-toast";
     document.body.appendChild(toast);
   }
-  toast.innerHTML = `
-    <span class="cknc-undo-msg">${htmlEscape(message)}</span>
-    <button type="button" class="cknc-undo-btn" data-undo-action>เลิกรวม</button>
-    <button type="button" class="cknc-undo-close" data-undo-close aria-label="ปิด">×</button>
-  `;
+  const actionHtml = actionLabel
+    ? `<button type="button" class="cknc-undo-btn" data-toast-action>${htmlEscape(actionLabel)}</button>`
+    : "";
+  toast.innerHTML = `<span class="cknc-undo-msg">${htmlEscape(message)}</span>${actionHtml}<button type="button" class="cknc-undo-close" data-toast-close aria-label="ปิด">×</button>`;
   toast.hidden = false;
-  clearTimeout(undoToastTimer);
+  clearTimeout(ckncToastTimer);
   const hide = () => { toast.hidden = true; };
-  undoToastTimer = setTimeout(hide, 9000);
-  toast.querySelector("[data-undo-action]").onclick = () => { hide(); onUndo(); };
-  toast.querySelector("[data-undo-close]").onclick = hide;
+  ckncToastTimer = setTimeout(hide, duration);
+  const actionBtn = toast.querySelector("[data-toast-action]");
+  if (actionBtn) actionBtn.onclick = () => { hide(); onAction?.(); };
+  toast.querySelector("[data-toast-close]").onclick = hide;
+}
+
+function showUndoToast(message, onUndo) {
+  showToast(message, { actionLabel: "เลิกรวม", onAction: onUndo });
 }
 
 // ---- ระบบแนะนำคู่บิลที่น่าจะรวมกัน (merge suggestions) --------------------
@@ -4467,7 +4542,10 @@ function renderMergeWarnBody() {
 }
 
 function openMergeWarnModal() {
-  if (!elements.mergeWarnModal || warnTotalCount() === 0) return;
+  if (!elements.mergeWarnModal) return;
+  // คำนวณคู่แนะนำใหม่ให้สดก่อนเปิดเสมอ — กันรายการค้างที่อ้างบิลซึ่งถูกรวม/แก้/หายไปแล้ว
+  renderMergeSuggestions();
+  if (warnTotalCount() === 0) return;
   renderMergeWarnBody();
   if (!elements.mergeWarnModal.open) elements.mergeWarnModal.showModal();
 }
@@ -4486,13 +4564,13 @@ let suggestPairContext = null;
 // ที่มาของ popup เทียบคู่บิล ("warn" = เปิดจากรายการ WARN, ""/"caseseq" = จากที่อื่น)
 // ใช้ตัดสินใจว่าหลังรวม/ซ่อนคู่เสร็จ ควรเด้งกลับไปที่ WARN popup ให้ไล่ตรวจคู่ที่เหลือต่อไหม
 let suggestPairOrigin = "";
-// กด "ดูรายละเอียด" ในป๊อปอัพเทียบ → เปิด drawer แล้วจำคู่ไว้ ปิด drawer จะเด้งกลับป๊อปอัพเทียบ (รีเฟรชค่าล่าสุด)
-let pendingReopenCompare = null;
+// ปิด drawer ที่เปิดจากป๊อปอัพเทียบ → รันงานต่อ 1 ครั้ง (กลับป๊อปอัพเทียบ / กลับ WARN) แล้วเคลียร์
+let drawerCloseCallback = null;
 
 function openSuggestPairModal(item, origin = "") {
   const billA = state.bills.find((bill) => bill.billKey === item.aKey);
   const billB = state.bills.find((bill) => bill.billKey === item.bKey);
-  if (!billA || !billB || !elements.suggestPairModal) return;
+  if (!billA || !billB || !elements.suggestPairModal) return false;
   suggestPairContext = item;
   suggestPairOrigin = origin;
   elements.suggestPairTitle.textContent = item.titleText || `น่าจะเป็นบิลเดียวกัน (${item.score}%)`;
@@ -4554,6 +4632,7 @@ function openSuggestPairModal(item, origin = "") {
     <p class="case-seq-hint">ช่องพื้นเหลือง = ค่าสองฝั่งไม่ตรงกัน · คอลัมน์ <b>ผลรวม</b> = ค่าที่จะได้หลังกดรวม (บิลข้อมูลเยอะสุดเป็นหลัก ช่องว่างเติมจากอีกใบ รายการยาเอาชุดยาวกว่า) · กด "รวมบิล" = รวมทันทีตามนี้ มีปุ่ม "เลิกรวม" ให้กดกลับได้ · แก้รายช่องได้ในตารางหลังรวม</p>
   `;
   if (!elements.suggestPairModal.open) elements.suggestPairModal.showModal();
+  return true;
 }
 
 // ยืนยันว่า "ไม่ใช่บิลเดียวกัน" — ซ่อนคู่นี้ถาวรพร้อมเหตุผล (ติดไปกับ session/autosave + audit trail)
@@ -4686,13 +4765,19 @@ async function handleFiles() {
 
     // มีข้อมูลอยู่แล้ว = เพิ่มเข้าข้อมูลเดิมเสมอ (แถวซ้ำถูกตัดอัตโนมัติ ค่าที่แก้มือคงอยู่) — ไม่ถามโหมด
     const mode = state.bills.length ? "append" : "replace";
+    const imported = { clicknicRows: clicknicImportedRows, mlpRows: mlpImportedRows, billingRows: billingImportedRows };
+    const importStats = importStatsFor(
+      mode === "append" ? { clicknic: state.clicknicRows, mlp: state.mlpRows, billing: state.billingRows } : { clicknic: [], mlp: [], billing: [] },
+      imported,
+    );
+    // ซ้ำเกินเกณฑ์ (น่าจะอัปไฟล์เดิม) → ถามยืนยันก่อน; ยกเลิก = ไม่แตะข้อมูลเดิม
+    if (mode === "append" && !confirmIfMostlyDuplicate(importStats)) {
+      elements.statusText.textContent = "ยกเลิกการนำเข้า (ไฟล์ซ้ำกับข้อมูลเดิมเป็นส่วนใหญ่)";
+      return;
+    }
 
     if (mode === "append") {
-      mergeImportedIntoState({
-        clicknicRows: clicknicImportedRows,
-        mlpRows: mlpImportedRows,
-        billingRows: billingImportedRows,
-      });
+      mergeImportedIntoState(imported);
     } else {
       state.clicknicRows = dedupeClicknicRows(clicknicImportedRows);
       state.manualClicknicRows = [];
@@ -4716,6 +4801,8 @@ async function handleFiles() {
 
     renderAll();
     scheduleAutosave("file-import");
+    const summary = importSummaryText(importStats);
+    if (summary) showToast(`นำเข้าไฟล์แล้ว — ${summary}`);
   } catch (error) {
     console.error(error);
     elements.statusText.textContent = error.message || "อ่านไฟล์ไม่สำเร็จ";
@@ -7705,12 +7792,10 @@ elements.detailDrawer.addEventListener("click", (event) => {
 });
 elements.detailDrawer.addEventListener("close", () => {
   state.currentDetailKey = "";
-  // เปิด drawer มาจากป๊อปอัพเทียบ → เด้งกลับไปเทียบต่อ (openSuggestPairModal อ่าน state.bills ใหม่ = ค่าล่าสุด)
-  if (pendingReopenCompare) {
-    const { item, origin } = pendingReopenCompare;
-    pendingReopenCompare = null;
-    openSuggestPairModal(item, origin);
-  }
+  // เปิด drawer มาจากป๊อปอัพเทียบ (ดูรายละเอียด/รวมบิล) → รันงานต่อ 1 ครั้ง เช่นกลับป๊อปอัพเทียบหรือกลับ WARN
+  const cb = drawerCloseCallback;
+  drawerCloseCallback = null;
+  if (cb) cb();
 });
 elements.saveOverrideBtn.addEventListener("click", saveBillOverride);
 elements.editSale?.addEventListener("input", updateEditProfitPreview);
@@ -8063,13 +8148,23 @@ elements.mergeWarnBody?.addEventListener("click", (event) => {
   const isMerge = button.hasAttribute("data-warn-merge");
   const item = state.mergeSuggestions[Number(isMerge ? button.dataset.warnMerge : button.dataset.warnCompare)];
   if (!item) return;
+  // คู่นี้อ้างบิลที่ไม่มีในจอแล้ว (ข้อมูลเปลี่ยนหลังคำนวณ) → รีเฟรชรายการ WARN คงเปิดไว้ ไม่ปิดหมด
+  const billsExist = state.bills.some((bill) => bill.billKey === item.aKey) && state.bills.some((bill) => bill.billKey === item.bKey);
+  if (!billsExist) {
+    state.mergeSuggestCacheRef = null;
+    renderMergeSuggestions();
+    if (warnTotalCount() === 0) elements.mergeWarnModal?.close();
+    else renderMergeWarnBody();
+    return;
+  }
   applySuggestionSelection(item);
-  elements.mergeWarnModal?.close();
   if (isMerge) {
+    elements.mergeWarnModal?.close();
     mergeSelectedBills();
     return;
   }
-  openSuggestPairModal(item, "warn");
+  // ปิด WARN เฉพาะเมื่อ popup เทียบเปิดได้จริง — กันกรณีเปิดไม่สำเร็จแล้วเหลือปิดหมด
+  if (openSuggestPairModal(item, "warn")) elements.mergeWarnModal?.close();
 });
 elements.suggestPairClose?.addEventListener("click", () => elements.suggestPairModal?.close());
 elements.suggestPairCancel?.addEventListener("click", () => elements.suggestPairModal?.close());
@@ -8090,8 +8185,10 @@ elements.suggestPairBody?.addEventListener("click", (event) => {
   }
   const openBtn = event.target.closest("[data-pair-open]");
   if (!openBtn) return;
-  // จำคู่ + ที่มาไว้ ปิด drawer แล้วเด้งกลับป๊อปอัพเทียบพร้อมค่าล่าสุด (เผื่อแก้ใน drawer)
-  pendingReopenCompare = { item: suggestPairContext, origin: suggestPairOrigin };
+  // ปิด drawer แล้วเด้งกลับป๊อปอัพเทียบพร้อมค่าล่าสุด (เผื่อแก้ใน drawer)
+  const item = suggestPairContext;
+  const origin = suggestPairOrigin;
+  drawerCloseCallback = () => openSuggestPairModal(item, origin);
   elements.suggestPairModal?.close();
   openDetailDrawer(openBtn.dataset.pairOpen);
 });
@@ -8130,11 +8227,17 @@ elements.dismissReasonConfirm?.addEventListener("click", () => {
   if (suggestPairOrigin === "warn") openMergeWarnModal();
 });
 elements.suggestPairMerge?.addEventListener("click", () => {
+  const origin = suggestPairOrigin;
   elements.suggestPairModal?.close();
   // คอลัมน์ "ผลรวม" ในป๊อปอัพยืนยันให้ดูแล้ว → รวมทันทีไม่ต้อง confirm ซ้ำ (มีปุ่มเลิกรวมกันพลาด)
-  mergeSelectedBills(true);
-  // มาจากรายการ WARN → เด้งกลับไปไล่ตรวจคู่ที่เหลือต่อ (ปิดเองถ้าไม่มี WARN แล้ว)
-  if (suggestPairOrigin === "warn") openMergeWarnModal();
+  const mergedKey = mergeSelectedBills(true);
+  if (mergedKey) {
+    // เปิด drawer บิลที่รวมให้แก้รายช่องต่อทันที ปิด drawer แล้วค่อยกลับ WARN (ถ้ามาจากรายการ WARN)
+    drawerCloseCallback = origin === "warn" ? () => openMergeWarnModal() : null;
+    openDetailDrawer(mergedKey);
+  } else if (origin === "warn") {
+    openMergeWarnModal();
+  }
 });
 elements.bulkExclude?.addEventListener("click", () => {
   applyBulkOverride(() => ({ excluded: true }), "Exclude");
