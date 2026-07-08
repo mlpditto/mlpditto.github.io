@@ -2619,6 +2619,14 @@ function renderCaseTypeSelect(bill) {
   `;
 }
 
+// งานวางบิลที่แค่ทวนสถานะ (ระบบเดาให้ ไม่ได้แก้มือ) — ไม่ต้องโชว์ dropdown ซ้ำกับ dropdown สถานะ
+// billing-only → "ใบวางบิลไม่เจอ MLP" (ซ้ำเป๊ะ) · clicknic-only → "ยังไม่มี MLP" (ทวนความหมายเดียวกัน)
+function billingStageEchoesStatus(bill) {
+  if ((bill.billingStageSource || "") === "manual") return false;
+  return (bill.status === "billing-only" && bill.billingStage === "billing-only")
+    || (bill.status === "clicknic-only" && bill.billingStage === "no-mlp");
+}
+
 function renderBillingStageSelect(bill) {
   const value = bill.billingStage || "pending-review";
   return `
@@ -2828,7 +2836,7 @@ function renderTable() {
       </td>
       <td class="stack-cell">
         ${bill.status === "matched" ? "" : renderStatusSelect(bill)}
-        ${renderBillingStageSelect(bill)}
+        ${billingStageEchoesStatus(bill) ? "" : renderBillingStageSelect(bill)}
         ${renderCaseTypeSelect(bill)}
       </td>
       <td class="dates-cell">
