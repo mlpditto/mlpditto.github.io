@@ -2439,7 +2439,8 @@ button.ghost.danger:hover {
 }
 
 #importModeModal,
-#mergeResultModal {
+#mergeResultModal,
+#dismissReasonModal {
   width: min(520px, calc(100vw - 28px));
 }
 
@@ -2591,6 +2592,64 @@ html.dark .bar-pick-nobar {
 
 .suggest-pair-table td.pair-diff {
   background: var(--amber-soft, #fdf3d8);
+}
+
+/* toast เลิกรวม — โผล่มุมล่างกลางจอ พื้นเข้ม อ่านได้ทั้ง light/dark */
+.cknc-undo-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(100vw - 32px);
+  padding: 9px 10px 9px 16px;
+  border-radius: 12px;
+  background: #10261c;
+  color: #eaf4ee;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.3);
+  font-size: 13px;
+}
+
+.cknc-undo-msg {
+  font-weight: 800;
+}
+
+.cknc-undo-toast .cknc-undo-btn {
+  min-height: 0;
+  padding: 5px 13px;
+  border: 0;
+  border-radius: 8px;
+  background: #1f7a4d;
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.cknc-undo-toast .cknc-undo-btn:hover {
+  background: #24905b;
+  transform: none;
+  box-shadow: none;
+}
+
+.cknc-undo-toast .cknc-undo-close {
+  min-height: 0;
+  padding: 2px 6px;
+  border: 0;
+  background: none;
+  color: #9fc4b2;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.cknc-undo-toast .cknc-undo-close:hover {
+  color: #eaf4ee;
+  transform: none;
+  box-shadow: none;
 }
 
 /* คอลัมน์ "ผลรวม (หลังรวม)" — เน้นเขียวว่าเป็นผลลัพธ์ */

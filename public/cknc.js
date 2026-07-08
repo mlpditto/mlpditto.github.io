@@ -3193,6 +3193,7 @@ function auditActionLabel(action) {
   if (action === "suggestion_dismiss") return "ซ่อนคู่แนะนำรวมบิล";
   if (action === "paste_analyze_apply") return "แก้ข้อมูลจากข้อความ paste";
   if (action === "merge_bills") return "รวมบิลเป็นใบเดียว";
+  if (action === "unmerge_bills") return "เลิกรวมบิล";
   if (action === "delete_bills") return "ลบบิลออกจากงานบนจอ";
   return action;
 }
@@ -4136,24 +4137,30 @@ function mergeBillMergeGroupsInto(groups) {
 }
 
 // รวมบิลที่ติ๊กเลือกเป็นบิลเดียวแบบ "ข้อมูลมากที่สุด" — บิลที่ข้อมูลเยอะสุดเป็นบิลหลัก
-function mergeSelectedBills() {
+// skipConfirm = ข้าม confirm (ใช้จากป๊อปอัพเทียบที่มีคอลัมน์ "ผลรวม" ให้ดูก่อนแล้ว) — มีปุ่มเลิกรวมกันพลาด
+function mergeSelectedBills(skipConfirm = false) {
   const members = state.bills.filter((bill) => state.selectedBillKeys.has(bill.billKey));
   if (members.length < 2) return;
   const ordered = [...members].sort((a, b) => billRichness(b) - billRichness(a));
   const label = (bill) => [bill.orderId || bill.orw || bill.billingNo || "(ไม่มีเลขที่)", bill.patient]
     .map(clean).filter(Boolean).join(" · ");
-  const ok = confirm([
-    `รวม ${number(ordered.length)} บิลเป็นบิลเดียว?`,
-    "",
-    `บิลหลัก (ข้อมูลเยอะสุด): ${label(ordered[0])}`,
-    `รวมกับ:`,
-    ...ordered.slice(1).map((bill) => `- ${label(bill)}`),
-    "",
-    "กติกา: บิลหลักชนะรายฟิลด์ ช่องว่าง/ศูนย์เติมจากบิลอื่น รายการยาเอาชุดที่ยาวกว่า (ข้อมูลใน session/ไฟล์ต้นทางไม่ถูกแก้)",
-  ].join("\n"));
-  if (!ok) return;
+  if (!skipConfirm) {
+    const ok = confirm([
+      `รวม ${number(ordered.length)} บิลเป็นบิลเดียว?`,
+      "",
+      `บิลหลัก (ข้อมูลเยอะสุด): ${label(ordered[0])}`,
+      `รวมกับ:`,
+      ...ordered.slice(1).map((bill) => `- ${label(bill)}`),
+      "",
+      "กติกา: บิลหลักชนะรายฟิลด์ ช่องว่าง/ศูนย์เติมจากบิลอื่น รายการยาเอาชุดที่ยาวกว่า (ข้อมูลใน session/ไฟล์ต้นทางไม่ถูกแก้)",
+    ].join("\n"));
+    if (!ok) return;
+  }
+  // สำเนาบิลต้นฉบับก่อนรวม ไว้ให้ปุ่ม "เลิกรวม" ดึงกลับได้ (โดยเฉพาะโหมด snapshot ที่ rebuild ไม่สร้างบิลใหม่จาก source)
+  const originalMembers = ordered.map((bill) => ({ ...bill }));
+  const groupId = `merge-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
   state.billMergeGroups.push({
-    id: `merge-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: groupId,
     memberKeys: ordered.map((bill) => bill.billKey),
     createdAt: new Date().toISOString(),
   });
@@ -4169,7 +4176,7 @@ function mergeSelectedBills() {
     lineCount: 0,
     totalSale: 0,
     totalCost: 0,
-    screenshotName: "bulk-bar",
+    screenshotName: skipConfirm ? "compare-popup" : "bulk-bar",
     replacedLineCount: 0,
     note: `รวมบิล ${number(ordered.length)} ใบ → ${label(ordered[0])}`,
     medicines: [],
@@ -4181,6 +4188,65 @@ function mergeSelectedBills() {
   renderAuditTrail();
   scheduleAutosave("merge-bills");
   elements.statusText.textContent = `รวม ${number(ordered.length)} บิลเป็นบิลเดียว: ${label(ordered[0])}`;
+  showUndoToast(`รวม ${number(ordered.length)} บิลเป็นบิลเดียวแล้ว`, () => unmergeGroup(groupId, originalMembers));
+}
+
+// เลิกรวมบิล — เอาบิลต้นฉบับกลับเข้า state.bills แล้ว rebuild (undo ชั่วคราวจาก toast เท่านั้น ไม่เก็บลง session)
+function unmergeGroup(groupId, originalMembers) {
+  state.billMergeGroups = (state.billMergeGroups || []).filter((group) => group.id !== groupId);
+  const primaryKey = originalMembers[0]?.billKey;
+  const idx = state.bills.findIndex((bill) => bill.billKey === primaryKey);
+  const rest = state.bills.filter((bill) => bill.billKey !== primaryKey);
+  const restored = originalMembers.map((bill) => ({ ...bill }));
+  if (idx >= 0) rest.splice(idx, 0, ...restored);
+  else rest.push(...restored);
+  state.bills = rest;
+  state.auditTrail.unshift({
+    id: makeAuditId(),
+    action: "unmerge_bills",
+    createdAt: new Date().toISOString(),
+    orderId: originalMembers[0]?.orderId || "",
+    orw: originalMembers[0]?.orw || "",
+    invoice: "",
+    date: "",
+    lineCount: 0,
+    totalSale: 0,
+    totalCost: 0,
+    screenshotName: "undo-toast",
+    replacedLineCount: 0,
+    note: `เลิกรวม ${number(originalMembers.length)} บิล`,
+    medicines: [],
+  });
+  rebuildBillsForCurrentMode();
+  renderMetrics();
+  renderTabs();
+  renderTable();
+  renderAuditTrail();
+  scheduleAutosave("unmerge-bills");
+  elements.statusText.textContent = `เลิกรวม ${number(originalMembers.length)} บิลแล้ว`;
+}
+
+// toast "เลิกรวม" — สร้าง element ครั้งเดียว, ซ่อนอัตโนมัติใน 9 วิ
+let undoToastTimer = null;
+function showUndoToast(message, onUndo) {
+  let toast = document.getElementById("ckncUndoToast");
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "ckncUndoToast";
+    toast.className = "cknc-undo-toast";
+    document.body.appendChild(toast);
+  }
+  toast.innerHTML = `
+    <span class="cknc-undo-msg">${htmlEscape(message)}</span>
+    <button type="button" class="cknc-undo-btn" data-undo-action>เลิกรวม</button>
+    <button type="button" class="cknc-undo-close" data-undo-close aria-label="ปิด">×</button>
+  `;
+  toast.hidden = false;
+  clearTimeout(undoToastTimer);
+  const hide = () => { toast.hidden = true; };
+  undoToastTimer = setTimeout(hide, 9000);
+  toast.querySelector("[data-undo-action]").onclick = () => { hide(); onUndo(); };
+  toast.querySelector("[data-undo-close]").onclick = hide;
 }
 
 // ---- ระบบแนะนำคู่บิลที่น่าจะรวมกัน (merge suggestions) --------------------
@@ -4417,12 +4483,16 @@ function applySuggestionSelection(item) {
 // "เลือก" เปิด popup เทียบสองบิลข้าง ๆ กัน พร้อมปุ่ม action ต่อ (รวม/เปิดรายละเอียด/ไม่ใช่คู่เดียวกัน)
 // — บิลอาจถูกตัวกรอง/ค้นหาซ่อนอยู่ในตาราง popup ทำให้เห็นคู่เสมอ
 let suggestPairContext = null;
+// ที่มาของ popup เทียบคู่บิล ("warn" = เปิดจากรายการ WARN, ""/"caseseq" = จากที่อื่น)
+// ใช้ตัดสินใจว่าหลังรวม/ซ่อนคู่เสร็จ ควรเด้งกลับไปที่ WARN popup ให้ไล่ตรวจคู่ที่เหลือต่อไหม
+let suggestPairOrigin = "";
 
-function openSuggestPairModal(item) {
+function openSuggestPairModal(item, origin = "") {
   const billA = state.bills.find((bill) => bill.billKey === item.aKey);
   const billB = state.bills.find((bill) => bill.billKey === item.bKey);
   if (!billA || !billB || !elements.suggestPairModal) return;
   suggestPairContext = item;
+  suggestPairOrigin = origin;
   elements.suggestPairTitle.textContent = item.titleText || `น่าจะเป็นบิลเดียวกัน (${item.score}%)`;
   const fields = [
     ["ผู้รับบริการ", (bill) => bill.patient || "-"],
@@ -4479,7 +4549,7 @@ function openSuggestPairModal(item) {
   }).join("")}
       </tbody>
     </table>
-    <p class="case-seq-hint">ช่องพื้นเหลือง = ค่าสองฝั่งไม่ตรงกัน · คอลัมน์ <b>ผลรวม</b> = ค่าที่จะได้หลังกดรวม (บิลข้อมูลเยอะสุดเป็นหลัก ช่องว่างเติมจากอีกใบ รายการยาเอาชุดยาวกว่า) · สองบิลนี้ถูกติ๊กเลือกในตารางให้แล้ว · กด "รวมบิล" ยังมี confirm สรุปก่อนยืนยันอีกชั้น</p>
+    <p class="case-seq-hint">ช่องพื้นเหลือง = ค่าสองฝั่งไม่ตรงกัน · คอลัมน์ <b>ผลรวม</b> = ค่าที่จะได้หลังกดรวม (บิลข้อมูลเยอะสุดเป็นหลัก ช่องว่างเติมจากอีกใบ รายการยาเอาชุดยาวกว่า) · กด "รวมบิล" = รวมทันทีตามนี้ มีปุ่ม "เลิกรวม" ให้กดกลับได้ · แก้รายช่องได้ในตารางหลังรวม</p>
   `;
   if (!elements.suggestPairModal.open) elements.suggestPairModal.showModal();
 }
@@ -7628,7 +7698,7 @@ elements.detailDrawer.addEventListener("click", (event) => {
       bLabel: mergeSuggestBillLabel(other),
       reasons: [`ลำดับเคส #${number(bill.caseSeq)} ซ้ำกัน`],
       titleText: `เทียบข้อมูลบิล — ลำดับ #${number(bill.caseSeq)} ซ้ำกัน`,
-    });
+    }, "caseseq");
   }
 });
 elements.detailDrawer.addEventListener("close", () => {
@@ -7991,7 +8061,7 @@ elements.mergeWarnBody?.addEventListener("click", (event) => {
     mergeSelectedBills();
     return;
   }
-  openSuggestPairModal(item);
+  openSuggestPairModal(item, "warn");
 });
 elements.suggestPairClose?.addEventListener("click", () => elements.suggestPairModal?.close());
 elements.suggestPairCancel?.addEventListener("click", () => elements.suggestPairModal?.close());
@@ -8046,11 +8116,15 @@ elements.dismissReasonConfirm?.addEventListener("click", () => {
   elements.dismissReasonModal?.close();
   dismissSuggestionPair(pendingDismissItem, reason);
   pendingDismissItem = null;
+  // มาจากรายการ WARN → เด้งกลับไปไล่ตรวจคู่ที่เหลือต่อ (ปิดเองถ้าไม่มี WARN แล้ว)
+  if (suggestPairOrigin === "warn") openMergeWarnModal();
 });
 elements.suggestPairMerge?.addEventListener("click", () => {
   elements.suggestPairModal?.close();
-  // สองบิลถูกติ๊กเลือกไว้แล้วตอนเปิด popup — วิ่งเข้า flow รวมบิลเดิม (มี confirm สรุปก่อน)
-  mergeSelectedBills();
+  // คอลัมน์ "ผลรวม" ในป๊อปอัพยืนยันให้ดูแล้ว → รวมทันทีไม่ต้อง confirm ซ้ำ (มีปุ่มเลิกรวมกันพลาด)
+  mergeSelectedBills(true);
+  // มาจากรายการ WARN → เด้งกลับไปไล่ตรวจคู่ที่เหลือต่อ (ปิดเองถ้าไม่มี WARN แล้ว)
+  if (suggestPairOrigin === "warn") openMergeWarnModal();
 });
 elements.bulkExclude?.addEventListener("click", () => {
   applyBulkOverride(() => ({ excluded: true }), "Exclude");
