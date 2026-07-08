@@ -807,9 +807,11 @@ function caseTypeLabel(value) {
   return caseTypeOptions.find(([key]) => key === value)?.[1] || "ไม่ทราบ";
 }
 
-// ป้ายประเภทเคสในไทม์ไลน์: สปสช อ่านยากในบรรทัดเดียวกับวันที่ → ใช้ NHSO ที่สั้นกว่า
+// ป้ายประเภทเคสในไทม์ไลน์: ใช้ชื่ออังกฤษที่สั้น/อ่านง่ายกว่าในบรรทัดเดียวกับวันที่
+const caseTypeChipLabels = { nhso: "NHSO", insurance: "Insurance" };
+
 function caseTypeChipLabel(value) {
-  return value === "nhso" ? "NHSO" : caseTypeLabel(value);
+  return caseTypeChipLabels[value] || caseTypeLabel(value);
 }
 
 function billingStageLabel(value) {
