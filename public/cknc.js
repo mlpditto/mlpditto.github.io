@@ -4486,6 +4486,8 @@ let suggestPairContext = null;
 // ที่มาของ popup เทียบคู่บิล ("warn" = เปิดจากรายการ WARN, ""/"caseseq" = จากที่อื่น)
 // ใช้ตัดสินใจว่าหลังรวม/ซ่อนคู่เสร็จ ควรเด้งกลับไปที่ WARN popup ให้ไล่ตรวจคู่ที่เหลือต่อไหม
 let suggestPairOrigin = "";
+// กด "ดูรายละเอียด" ในป๊อปอัพเทียบ → เปิด drawer แล้วจำคู่ไว้ ปิด drawer จะเด้งกลับป๊อปอัพเทียบ (รีเฟรชค่าล่าสุด)
+let pendingReopenCompare = null;
 
 function openSuggestPairModal(item, origin = "") {
   const billA = state.bills.find((bill) => bill.billKey === item.aKey);
@@ -7703,6 +7705,12 @@ elements.detailDrawer.addEventListener("click", (event) => {
 });
 elements.detailDrawer.addEventListener("close", () => {
   state.currentDetailKey = "";
+  // เปิด drawer มาจากป๊อปอัพเทียบ → เด้งกลับไปเทียบต่อ (openSuggestPairModal อ่าน state.bills ใหม่ = ค่าล่าสุด)
+  if (pendingReopenCompare) {
+    const { item, origin } = pendingReopenCompare;
+    pendingReopenCompare = null;
+    openSuggestPairModal(item, origin);
+  }
 });
 elements.saveOverrideBtn.addEventListener("click", saveBillOverride);
 elements.editSale?.addEventListener("input", updateEditProfitPreview);
@@ -8082,6 +8090,8 @@ elements.suggestPairBody?.addEventListener("click", (event) => {
   }
   const openBtn = event.target.closest("[data-pair-open]");
   if (!openBtn) return;
+  // จำคู่ + ที่มาไว้ ปิด drawer แล้วเด้งกลับป๊อปอัพเทียบพร้อมค่าล่าสุด (เผื่อแก้ใน drawer)
+  pendingReopenCompare = { item: suggestPairContext, origin: suggestPairOrigin };
   elements.suggestPairModal?.close();
   openDetailDrawer(openBtn.dataset.pairOpen);
 });
