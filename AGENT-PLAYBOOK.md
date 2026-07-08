@@ -123,6 +123,25 @@ the interaction (on AND off states, toggling, keyboard), check dark + light and 
 (1600px) + default viewport. `preview_screenshot` is flaky/hangs — when it times out,
 verify via DOM/`getComputedStyle` inspection instead and say you did.
 
+**Preview tooling traps** (both cost a wrong conclusion once — 10 Jul 2026):
+- `preview_click` delivers *nothing* into an open `<dialog>` (top layer): zero `mousedown`/
+  `click` events fire, yet the tool reports "Successfully clicked". A no-op looks exactly
+  like a reproduced bug. Sanity-check with a capture-phase `document.addEventListener('click')`
+  counter before trusting a negative result; otherwise dispatch synthetic events yourself.
+- `preview_eval('location.assign(...)')` after editing a file: the *first* reload can still
+  run the old script. Confirm the new code is live (e.g. assert on a new symbol/behavior)
+  before concluding a fix didn't work.
+- `:focus` does not match while the browser window is unfocused (headless preview) —
+  use `document.activeElement` in both test code and production code.
+
+**DOM pitfall — re-render during `mousedown` swallows the `click`**: the visit-timeline Dx
+inputs commit on `focusout`, and `quickUpdateDiagnosis()` ends with `renderVisitTimeline()`
+which rewrites `innerHTML`. Pressing any button in that modal while a Dx input holds focus
+destroyed the button between `mousedown` and `mouseup`, so Chrome never dispatched `click`
+and the modal appeared frozen. Fix pattern: `preventDefault()` the button's `mousedown`
+(blocks the focus shift), then commit the pending input explicitly inside the `click`
+handler. Applies to any handler that re-renders a container on blur.
+
 ## 5. Communication contract (this user)
 
 - **Thai** for all user-facing text; code comments in the repo are Thai — match them.
