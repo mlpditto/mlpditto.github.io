@@ -7716,11 +7716,22 @@ elements.visitTimelineSearch?.addEventListener("click", () => {
   renderTabs();
   renderTable();
 });
+// mousedown บนปุ่มเลขที่บิลจะดึงโฟกัสออกจากช่อง Dx → focusout → บันทึก → renderVisitTimeline()
+// เขียน innerHTML ใหม่ → ปุ่มที่กำลังกดหายไปก่อน click จะยิง → ป๊อปอัพค้างไม่ปิด
+// กันด้วยการบล็อกการย้ายโฟกัส แล้วค่อยบันทึก Dx เองใน click ตามลำดับที่คุมได้
+elements.visitTimelineBody?.addEventListener("mousedown", (event) => {
+  if (event.target.closest("[data-visit-open]")) event.preventDefault();
+});
 elements.visitTimelineBody?.addEventListener("click", (event) => {
   const openBtn = event.target.closest("[data-visit-open]");
   if (!openBtn) return;
+  const billKey = openBtn.dataset.visitOpen; // อ่านก่อน — commit ด้านล่างอาจวาดปุ่มนี้ทิ้ง
+  // ใช้ activeElement ไม่ใช่ :focus — :focus ไม่ match ตอนหน้าต่างเบราว์เซอร์ไม่ได้โฟกัส
+  const active = document.activeElement;
+  const pendingDx = active?.matches?.("[data-dx-input]") && elements.visitTimelineBody.contains(active) ? active : null;
+  if (pendingDx) commitVisitDxInput(pendingDx);
   elements.visitTimelineModal?.close();
-  openDetailDrawer(openBtn.dataset.visitOpen);
+  openDetailDrawer(billKey);
 });
 // Enter บันทึกทันที (กัน Enter ไป submit form dialog แล้วปิด popup) · blur ก็บันทึก
 elements.visitTimelineBody?.addEventListener("keydown", (event) => {
