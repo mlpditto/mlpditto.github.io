@@ -144,13 +144,33 @@ verify via DOM/`getComputedStyle` inspection instead and say you did.
 - NHSO (สปสช) economics: default sale 10/bill, cost usually 0 — this is why
   zero-vs-absent display distinctions matter.
 
-## 7. Deploy workflow ("Go Online")
+## 7. Deploy workflow
+
+Always the same three steps, in this order:
 
 1. Bump `?v=` cache-busters in `public/cknc.html` (both the CSS link and JS script tag)
-   with every behavioral change — format `yyyymmddHHMMSS`-ish.
+   with every behavioral change — format `yyyymmddHHMMSS`-ish, always greater than the
+   previous value.
 2. `firebase deploy --only hosting` (project: fkb-front-kanban).
-3. `git commit` + `git push` ONLY when the user says **"Go Online"** — deploy and push
-   happen together at that point, not before.
+3. `git commit` + `git push` — together with the deploy, never split across turns.
+
+**When you may run this without asking** (all three must hold):
+
+- the user asked for the change *in this turn* (not something you decided to add), and
+- you verified it by running it in the browser (not by re-reading the code), and
+- it does not touch the data model or the money math.
+
+**When you must propose and wait for a go-ahead** — these corrupt previously-saved
+sessions/autosaves if wrong, so the user's review is the last line of defence:
+
+- `state.billOverrides` — adding, renaming, or removing any field inside `values`
+- profit / claim-amount math, `countsInRevenue`
+- session payload (`makeSessionPayload` and every restore path)
+- bill deletion or merging (`billMergeGroups`, `deletedBillKeys`)
+
+Report the outcome with the live URL and the commit hash. This replaced the older rule
+requiring the user to type "Go Online" every single time (agreed 8 Jul 2026) — that gate
+was right for risky work and pure friction for a tooltip typo.
 
 ## 8. Anti-patterns observed to avoid
 
