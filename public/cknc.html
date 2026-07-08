@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="./cknc.css?v=20260709123000" />
+    <link rel="stylesheet" href="./cknc.css?v=20260710090000" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -398,6 +398,7 @@
             <label>ส่วนต่างวางบิลที่ยอมรับได้ <input id="ruleBillingTolerance" type="number" min="0" step="0.01" /></label>
             <label>กำไรติดลบเกิน <input id="ruleProfitTolerance" type="number" min="0" step="0.01" /></label>
             <label>MLP cost เกินยอดขายยา <input id="ruleCostOverSaleBuffer" type="number" min="0" step="0.01" /></label>
+            <label>เตือนมาซ้ำเร็วกว่า (วัน) <input id="ruleRepeatVisitDays" type="number" min="0" step="1" /></label>
           </div>
           <h3>คำแนะนำจากเคส unknown</h3>
           <div id="ruleSuggestions" class="rule-suggestions"></div>
@@ -587,6 +588,23 @@
           <input id="caseSeqSearch" type="text" placeholder="ค้นหาเลขที่ออเดอร์ / ORW / ชื่อผู้รับบริการ" aria-label="ค้นหาเลขที่ออเดอร์" autocomplete="off" />
         </div>
         <div id="caseSeqModalBody" class="case-seq-modal-body"></div>
+      </form>
+    </dialog>
+
+    <dialog id="visitTimelineModal" class="clipboard-modal">
+      <form method="dialog" class="clipboard-card visit-timeline-card">
+        <div class="modal-head">
+          <div>
+            <p class="eyebrow">Visit timeline</p>
+            <h2 id="visitTimelineTitle">ไทม์ไลน์การมารับบริการ</h2>
+          </div>
+          <button id="visitTimelineClose" class="icon-button" type="button" aria-label="ปิด">×</button>
+        </div>
+        <div class="visit-timeline-sub">
+          <span id="visitTimelineSummary"></span>
+          <button id="visitTimelineSearch" class="ghost small" type="button">ค้นหาทุกบิลของคนนี้ในตาราง</button>
+        </div>
+        <div id="visitTimelineBody" class="case-seq-modal-body visit-timeline-body"></div>
       </form>
     </dialog>
 
@@ -830,6 +848,10 @@
                 ที่อยู่ผู้รับบริการ
                 <textarea id="editAddress" rows="2" placeholder="ที่อยู่จัดส่ง/ที่อยู่ผู้รับบริการ"></textarea>
               </label>
+              <label class="drawer-note">
+                คำวินิจฉัยการมารับบริการครั้งนี้
+                <textarea id="editDiagnosis" rows="2" placeholder="เช่น ไข้หวัด เจ็บคอ / ปวดกล้ามเนื้อ"></textarea>
+              </label>
             </div>
             <div class="edit-group">
               <h4 class="edit-group-title"><i class="fa-solid fa-file-lines"></i> เอกสารอ้างอิง</h4>
@@ -950,7 +972,7 @@
       </div>
     </dialog>
 
-    <script src="./cknc.js?v=20260709123000"></script>
+    <script src="./cknc.js?v=20260710090000"></script>
     <script>
       (function () {
         const btn = document.getElementById("themeToggleBtn");

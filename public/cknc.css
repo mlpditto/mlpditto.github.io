@@ -5453,3 +5453,258 @@ html.dark .paste-field select {
   border-color: #334155;
   color: var(--ink);
 }
+
+/* --- คำวินิจฉัย + ไทม์ไลน์การมารับบริการ --- */
+
+.bill-dx-row {
+  display: flex;
+  margin-top: 3px;
+}
+
+.dx-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 0;
+  max-width: 100%;
+  padding: 1px 8px;
+  border: 1px solid #bcd9f2;
+  border-radius: 999px;
+  background: #eaf3fb;
+  color: #1a5b8f;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.6;
+  text-align: left;
+  cursor: pointer;
+  transform: none;
+}
+
+.dx-chip:hover {
+  background: #dbe9f7;
+  border-color: #8fbde4;
+  box-shadow: none;
+  transform: none;
+}
+
+.dx-chip.dx-empty {
+  border-style: dashed;
+  border-color: var(--line, #d7e0da);
+  background: transparent;
+  color: var(--muted, #6d7c74);
+  font-weight: 600;
+}
+
+.visit-gap-chip {
+  flex: none;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 0;
+  padding: 1px 8px;
+  border: 1px solid var(--line, #d7e0da);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted, #6d7c74);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.5;
+  cursor: pointer;
+  transform: none;
+}
+
+.visit-gap-chip:hover {
+  border-color: #a8b6ae;
+  box-shadow: none;
+  transform: none;
+}
+
+/* มาซ้ำเร็วกว่าเกณฑ์ = จุดเดียวที่ต้องดังในบรรทัดนี้ */
+.visit-gap-chip.soon {
+  border-color: #edc373;
+  background: #fdf3e0;
+  color: #92600c;
+}
+
+.visit-gap-chip.soon:hover {
+  background: #fbe9c9;
+  border-color: #dfa93f;
+}
+
+/* .clipboard-card เป็น grid 3 แถวตายตัว — การ์ดนี้มี 3 ลูกพอดี แต่บังคับ flex กันพลาดเวลาเพิ่มลูก */
+.visit-timeline-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: none;
+}
+
+.visit-timeline-sub {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 0 18px;
+  color: var(--muted, #6d7c74);
+  font-size: 12.5px;
+}
+
+.visit-timeline-body {
+  padding: 4px 0;
+}
+
+.visit-entry {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line, #e4eae6);
+}
+
+.visit-entry:last-child {
+  border-bottom: 0;
+}
+
+.visit-entry-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.visit-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--panel, #eef2f0);
+  color: var(--muted, #6d7c74);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.visit-date {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text, #16241d);
+}
+
+.visit-gap {
+  font-size: 11.5px;
+  color: var(--muted, #6d7c74);
+}
+
+.visit-gap.soon {
+  color: #92600c;
+  font-weight: 700;
+}
+
+.visit-entry-soon {
+  background: rgba(247, 191, 92, 0.08);
+}
+
+.visit-case {
+  margin-left: auto;
+  font-size: 11.5px;
+  color: var(--muted, #6d7c74);
+}
+
+.visit-bill {
+  margin: 6px 0 0 32px;
+}
+
+.visit-bill-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.visit-meds {
+  font-size: 12px;
+  color: var(--muted, #6d7c74);
+}
+
+.visit-bill-active .visit-meds {
+  color: var(--text, #16241d);
+}
+
+.visit-dx {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+}
+
+.visit-dx-tag {
+  flex: none;
+  font-size: 11px;
+  font-weight: 700;
+  color: #1a5b8f;
+}
+
+.visit-dx .inline-cell-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.visit-warn {
+  margin: 8px 0 0 32px;
+  color: #92600c;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+html.dark .dx-chip {
+  background: rgba(59, 130, 246, 0.16);
+  border-color: #3c5b80;
+  color: #a8cdf2;
+}
+
+html.dark .dx-chip:hover {
+  background: rgba(59, 130, 246, 0.26);
+  border-color: #5a82ad;
+}
+
+html.dark .dx-chip.dx-empty {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.18);
+  color: var(--muted);
+}
+
+html.dark .visit-gap-chip {
+  border-color: rgba(255, 255, 255, 0.18);
+  color: var(--muted);
+}
+
+html.dark .visit-gap-chip.soon {
+  background: rgba(245, 158, 11, 0.18);
+  border-color: #8a6520;
+  color: #f2c879;
+}
+
+html.dark .visit-gap-chip.soon:hover {
+  background: rgba(245, 158, 11, 0.28);
+}
+
+html.dark .visit-entry {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+html.dark .visit-entry-soon {
+  background: rgba(245, 158, 11, 0.1);
+}
+
+html.dark .visit-index {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+html.dark .visit-gap.soon,
+html.dark .visit-warn {
+  color: #f2c879;
+}
+
+html.dark .visit-dx-tag {
+  color: #a8cdf2;
+}
