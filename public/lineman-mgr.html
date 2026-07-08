@@ -1206,23 +1206,57 @@
                     <div class="grid grid-cols-2 gap-3 mb-2">
                         <div>
                             <label class="vibrant-label !text-rose-500">ราคาทุน (Cost)</label>
-                            <input type="number" id="m-cost" class="minimal-input" placeholder="0.00">
+                            <input type="number" id="m-cost" class="minimal-input" placeholder="0.00"
+                                oninput="updateMasterProfit()">
                         </div>
                         <div>
                             <label class="vibrant-label !text-blue-500">ราคาขาย (LINE MAN)</label>
-                            <input type="number" id="m-price" class="minimal-input" placeholder="0.00">
+                            <input type="number" id="m-price" class="minimal-input" placeholder="0.00"
+                                oninput="updateMasterProfit()">
                         </div>
                     </div>
                     <div class="grid grid-cols-2 gap-3 mb-2">
                         <div>
                             <label class="vibrant-label !text-emerald-600">ราคาปลีก (Retail)</label>
-                            <input type="number" id="m-retail" class="minimal-input" placeholder="0.00">
+                            <input type="number" id="m-retail" class="minimal-input" placeholder="0.00"
+                                oninput="updateMasterProfit()">
                         </div>
                         <div>
                             <label class="vibrant-label !text-purple-600">ราคาส่ง (Wholesale)</label>
-                            <input type="number" id="m-wholesale" class="minimal-input" placeholder="0.00">
+                            <input type="number" id="m-wholesale" class="minimal-input" placeholder="0.00"
+                                oninput="updateMasterProfit()">
                         </div>
                     </div>
+
+                    <!-- คาดการณ์กำไร: เทียบทุกช่องทาง + ราคาขั้นต่ำ/ราคาเป้า — คำนวณสด ไม่แตะ Firestore -->
+                    <div class="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-3 mb-2">
+                        <div class="flex items-baseline justify-between mb-2">
+                            <span class="vibrant-label !mb-0 !ml-0 !text-slate-500">คาดการณ์กำไร</span>
+                            <span class="text-[9px] font-bold text-slate-400 dark:text-slate-500">% = กำไร ÷ รับจริง</span>
+                        </div>
+                        <div id="m-profit-empty"
+                            class="text-xs font-bold text-slate-400 dark:text-slate-500 text-center py-3">
+                            ใส่ราคาทุนเพื่อดูกำไร
+                        </div>
+                        <div id="m-profit-body" class="hidden">
+                            <table class="w-full text-xs">
+                                <thead>
+                                    <tr class="text-[9px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                                        <th class="text-left font-black pb-1">ช่องทาง</th>
+                                        <th class="text-right font-black pb-1">ราคา</th>
+                                        <th class="text-right font-black pb-1">รับจริง</th>
+                                        <th class="text-right font-black pb-1">กำไร</th>
+                                        <th class="text-right font-black pb-1 pl-2">%</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="m-profit-rows"></tbody>
+                            </table>
+                            <div id="m-profit-breakeven"
+                                class="mt-2 pt-2 border-t border-slate-200 dark:border-slate-700 text-[10px] font-bold leading-relaxed">
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="mb-2">
                         <label class="vibrant-label">หน่วยสินค้า</label>
                         <input type="text" id="m-unit" class="minimal-input" placeholder="เช่น กล่อง">
@@ -3669,6 +3703,83 @@
             }
         }
 
+        const MASTER_TARGET_MARGIN = 0.30; // เป้ากำไร 30% ของยอดรับจริง — ใช้คำนวณ "ราคาเป้า" ในบรรทัดล่างตาราง
+
+        // ตารางคาดการณ์กำไรในโมดัล Master: เทียบทุกช่องทางบนฐานเงินสดเดียวกัน (กำไร ÷ รับจริง)
+        // ปลีก/ส่ง ไม่มี GP → รับจริง = ราคาขาย; LINE MAN หัก GP ตาม GP_RATE / GP_RATE_ALT / NO FEE
+        function updateMasterProfit() {
+            const num = (id) => parseFloat(document.getElementById(id)?.value) || 0;
+            const emptyEl = document.getElementById('m-profit-empty');
+            const bodyEl = document.getElementById('m-profit-body');
+            const rowsEl = document.getElementById('m-profit-rows');
+            const beEl = document.getElementById('m-profit-breakeven');
+            if (!emptyEl || !bodyEl) return;
+
+            const cost = num('m-cost');
+            const lm = num('m-price');
+            const retail = num('m-retail');
+            const wholesale = num('m-wholesale');
+
+            const show = (msg) => {
+                emptyEl.textContent = msg;
+                emptyEl.classList.remove('hidden');
+                bodyEl.classList.add('hidden');
+            };
+            if (!(cost > 0)) return show('ใส่ราคาทุนเพื่อดูกำไร');
+            if (!(lm > 0 || retail > 0 || wholesale > 0)) return show('ใส่ราคาขายเพื่อดูกำไร');
+
+            const rows = [
+                { label: `LINE MAN (GP ${GP_RATE * 100}%)`, price: lm, net: lm * (1 - GP_RATE) },
+                { label: `LINE MAN (GP ${GP_RATE_ALT * 100}%)`, price: lm, net: lm * (1 - GP_RATE_ALT) },
+                { label: 'LINE MAN (NO FEE)', price: lm, net: lm },
+                { label: 'ปลีก', price: retail, net: retail },
+                { label: 'ส่ง', price: wholesale, net: wholesale },
+            ].filter(r => r.price > 0).map(r => ({ ...r, profit: r.net - cost }));
+
+            const best = Math.max(...rows.map(r => r.profit));
+            const money = (v) => v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            rowsEl.innerHTML = rows.map(r => {
+                const loss = r.profit < 0;
+                const isBest = !loss && r.profit === best && rows.length > 1;
+                const margin = r.net > 0 ? (r.profit / r.net) * 100 : 0;
+                const bg = loss ? 'bg-rose-50 dark:bg-rose-900/20'
+                    : isBest ? 'bg-emerald-50 dark:bg-emerald-900/20' : '';
+                const pColor = loss ? 'text-rose-500' : 'text-emerald-600 dark:text-emerald-400';
+                return `
+                    <tr class="${bg} border-t border-slate-100 dark:border-slate-800">
+                        <td class="py-1.5 pl-1 pr-2 font-bold text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                            ${isBest ? '<i class="fas fa-check text-emerald-500 mr-1 text-[9px]"></i>' : ''}${r.label}
+                        </td>
+                        <td class="py-1.5 text-right tabular-nums text-slate-400 dark:text-slate-500">${money(r.price)}</td>
+                        <td class="py-1.5 text-right tabular-nums text-slate-600 dark:text-slate-300">${money(r.net)}</td>
+                        <td class="py-1.5 text-right tabular-nums font-black ${pColor} whitespace-nowrap">${loss ? '' : '+'}${money(r.profit)}</td>
+                        <td class="py-1.5 pl-2 pr-1 text-right whitespace-nowrap">
+                            <div class="font-black tabular-nums ${pColor}">${margin.toFixed(1)}%</div>
+                            <div class="text-[9px] font-bold text-slate-400 dark:text-slate-500 tabular-nums">ทุน×${(r.net / cost).toFixed(2)}</div>
+                        </td>
+                    </tr>`;
+            }).join('');
+
+            // ราคาขั้นต่ำ / ราคาเป้า คิดที่ GP สูงสุด (worst case) เพื่อให้ปลอดภัยทั้งสองโหมด
+            const minPrice = cost / (1 - GP_RATE_ALT);
+            const targetPrice = cost / ((1 - GP_RATE_ALT) * (1 - MASTER_TARGET_MARGIN));
+            const underwater = lm > 0 && lm < minPrice;
+            beEl.innerHTML = `
+                <div class="${underwater ? 'text-rose-500' : 'text-slate-500 dark:text-slate-400'}">
+                    <i class="fas ${underwater ? 'fa-triangle-exclamation' : 'fa-circle-info'} mr-1"></i>
+                    LINE MAN ต่ำกว่า <span class="font-black tabular-nums">฿${money(minPrice)}</span> = ขาดทุน
+                    <span class="text-slate-400 dark:text-slate-500">(คิดที่ GP ${GP_RATE_ALT * 100}%)</span>
+                </div>
+                <div class="text-slate-500 dark:text-slate-400 mt-0.5">
+                    <i class="fas fa-bullseye mr-1"></i>
+                    อยากได้กำไร ${MASTER_TARGET_MARGIN * 100}% ตั้ง <span class="font-black tabular-nums">฿${money(targetPrice)}</span>
+                </div>`;
+
+            emptyEl.classList.add('hidden');
+            bodyEl.classList.remove('hidden');
+        }
+
         async function openMasterEdit(name, fromBillUid = null) {
             masterEditBillUid = fromBillUid; // เปิดจากฟอร์ม = null (รีเซ็ต context เก่าทิ้ง)
             name = name ? name.trim() : '';
@@ -3701,6 +3812,7 @@
                 document.getElementById('m-mlpCode').value = '';
                 document.getElementById('m-aliases').value = '';
             }
+            updateMasterProfit();
         }
 
         async function saveMasterEdit() {
