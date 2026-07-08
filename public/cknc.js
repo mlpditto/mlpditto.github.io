@@ -6812,6 +6812,19 @@ const pasteAnalyzeFieldDefs = [
   { key: "diagnosis", label: "คำวินิจฉัย", type: "text" },
 ];
 
+// ประเภทเคสจากข้อความในวงเล็บ — สปสช ต้องตรวจก่อน general เพราะ "(สปสช โรคทั่วไป)" มีคำว่า "ทั่วไป" ด้วย
+function caseTypeFromPasteText(caseText) {
+  if (/ประกัน|เคลม|insurance/i.test(caseText)) return "insurance";
+  if (/สปสช|บัตรทอง/i.test(caseText)) return "nhso";
+  if (/เงินสด|ทั่วไป|general/i.test(caseText)) return "general";
+  return "";
+}
+
+// ตัดจุดไข่ปลา/เครื่องหมายคั่นท้ายคำวินิจฉัย ("Acute sinusitis ..." -> "Acute sinusitis")
+function trimDiagnosis(value) {
+  return clean(value).replace(/[\s.·:;,\-–—…]+$/u, "");
+}
+
 function parseBillPasteText(rawText) {
   const text = String(rawText || "").replace(/\r/g, "");
   if (!clean(text)) return null;
@@ -6828,22 +6841,28 @@ function parseBillPasteText(rawText) {
     diagnosis: "",
   };
 
-  // คำวินิจฉัย: รองรับทั้ง "วินิจฉัย: ..." / "Dx: ..." / "อาการ: ..." (บรรทัดเดียว)
-  result.diagnosis = clean(text.match(/(?:^|\n)\s*(?:คำวินิจฉัย|การวินิจฉัย|วินิจฉัย|อาการ|diagnosis|dx)\s*[:：]\s*(.+)/i)?.[1] || "");
+  // คำวินิจฉัย: รองรับหัวข้อชัดเจน "วินิจฉัย: ..." / "Dx: ..." / "อาการ: ..." (บรรทัดเดียว)
+  result.diagnosis = trimDiagnosis(text.match(/(?:^|\n)\s*(?:คำวินิจฉัย|การวินิจฉัย|วินิจฉัย|อาการ|diagnosis|dx)\s*[:：]\s*(.+)/i)?.[1]);
 
   result.refId = text.match(/Ref-?\s*ID\s*:?\s*(R-?\d+)/i)?.[1]
     || text.match(/(?:^|\s)#\s*(R-?\d+)/im)?.[1]
     || "";
   result.orderId = findOrderId(text);
 
-  const nameMatch = text.match(/รายการของ\s*(.+?)\s*(?:\(([^)]*)\)|$)/m);
-  if (nameMatch) {
-    result.patient = clean(nameMatch[1]);
-    const caseText = clean(nameMatch[2] || "");
-    if (/ประกัน|เคลม|insurance/i.test(caseText)) result.caseType = "insurance";
-    else if (/สปสช|บัตรทอง/i.test(caseText)) result.caseType = "nhso";
-    else if (/เงินสด|ทั่วไป|general/i.test(caseText)) result.caseType = "general";
-  }
+  // ชื่อหยุดที่วงเล็บประเภท หรือคำว่า "ประเภท" (อยู่บรรทัดเดียวกันหรือคนละบรรทัดก็ได้)
+  const nameMatch = text.match(/รายการของ\s*(.+?)\s*(?:ประเภท|\(|$)/m);
+  if (nameMatch) result.patient = clean(nameMatch[1]);
+
+  // ประเภทเคสอยู่ในวงเล็บ: "(สปสช โรคทั่วไป)" — ท้ายชื่อ หรือหลัง "ประเภท:" คนละบรรทัดก็ได้
+  // ข้อความหลังวงเล็บบนบรรทัด "ประเภท:" คือคำวินิจฉัย เช่น "ประเภท: (สปสช โรคทั่วไป) Acute sinusitis"
+  // ไม่มีวงเล็บ ("ประเภท: สปสช โรคทั่วไป") ใช้อ่านประเภทได้ แต่ห้ามเอาไปเป็นคำวินิจฉัย
+  const typeLine = text.match(/ประเภท\s*[:：]?\s*\(([^)]*)\)\s*(.*)/);
+  const caseText = clean(typeLine?.[1]
+    || text.match(/รายการของ\s*.+?\s*\(([^)]*)\)/m)?.[1]
+    || text.match(/ประเภท\s*[:：]\s*(.*)/)?.[1]
+    || "");
+  result.caseType = caseTypeFromPasteText(caseText);
+  if (!result.diagnosis && typeLine) result.diagnosis = trimDiagnosis(typeLine[2]);
   // บรรทัด "เลขบิล-ชื่อ-เบอร์โทร-n" ใช้เป็น fallback ของชื่อ และเป็นแหล่งเบอร์โทรหลัก
   const orderLineMatch = text.match(/^.*?0?20\d{13,14}-(.+?)-(0\d{8,9})(?:-\d+)?\s*$/m);
   if (orderLineMatch) {
