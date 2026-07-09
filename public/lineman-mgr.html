@@ -1227,6 +1227,11 @@
                                 oninput="updateMasterProfit()">
                         </div>
                     </div>
+                    <div class="mb-2">
+                        <label class="vibrant-label !text-amber-600">ราคาแปะ (Sticker) — ราคาที่แปะมากับตัวสินค้า</label>
+                        <input type="number" id="m-sticker" class="minimal-input" placeholder="0.00"
+                            oninput="updateMasterProfit()">
+                    </div>
 
                     <!-- คาดการณ์กำไร: เทียบทุกช่องทาง + ราคาขั้นต่ำ/ราคาเป้า — คำนวณสด ไม่แตะ Firestore -->
                     <div class="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-3 mb-2">
@@ -1253,6 +1258,15 @@
                             </table>
                             <div id="m-profit-breakeven"
                                 class="mt-2 pt-2 border-t border-slate-200 dark:border-slate-700 text-[10px] font-bold leading-relaxed">
+                            </div>
+                            <div class="flex items-center gap-1.5 mt-1 text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                                <i class="fas fa-bullseye"></i>
+                                <span>อยากได้กำไร</span>
+                                <input type="number" id="m-target-margin" value="30" min="1" max="99" step="1"
+                                    class="w-11 px-1 py-0.5 text-center tabular-nums rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200"
+                                    oninput="updateMasterProfit()">
+                                <span>% ตั้ง</span>
+                                <span id="m-target-price" class="font-black tabular-nums text-slate-600 dark:text-slate-300">฿0.00</span>
                             </div>
                         </div>
                     </div>
@@ -3703,7 +3717,13 @@
             }
         }
 
-        const MASTER_TARGET_MARGIN = 0.30; // เป้ากำไร 30% ของยอดรับจริง — ใช้คำนวณ "ราคาเป้า" ในบรรทัดล่างตาราง
+        const MASTER_TARGET_MARGIN = 0.30; // เป้ากำไร 30% ของยอดรับจริง — ค่าเริ่มต้นเมื่อสินค้ายังไม่เคยตั้งเป้าเอง
+
+        // เป้ากำไรอ่านจากช่องในโมดัล (เปอร์เซ็นต์ 1–99) — ว่าง/นอกช่วง = ใช้ค่าเริ่มต้น MASTER_TARGET_MARGIN
+        function readTargetMargin() {
+            const v = parseFloat(document.getElementById('m-target-margin')?.value);
+            return (v > 0 && v < 100) ? v / 100 : MASTER_TARGET_MARGIN;
+        }
 
         // ตารางคาดการณ์กำไรในโมดัล Master: เทียบทุกช่องทางบนฐานเงินสดเดียวกัน (กำไร ÷ รับจริง)
         // ปลีก/ส่ง ไม่มี GP → รับจริง = ราคาขาย; LINE MAN หัก GP ตาม GP_RATE / GP_RATE_ALT / NO FEE
@@ -3719,6 +3739,7 @@
             const lm = num('m-price');
             const retail = num('m-retail');
             const wholesale = num('m-wholesale');
+            const sticker = num('m-sticker');
 
             const show = (msg) => {
                 emptyEl.textContent = msg;
@@ -3726,7 +3747,7 @@
                 bodyEl.classList.add('hidden');
             };
             if (!(cost > 0)) return show('ใส่ราคาทุนเพื่อดูกำไร');
-            if (!(lm > 0 || retail > 0 || wholesale > 0)) return show('ใส่ราคาขายเพื่อดูกำไร');
+            if (!(lm > 0 || retail > 0 || wholesale > 0 || sticker > 0)) return show('ใส่ราคาขายเพื่อดูกำไร');
 
             const rows = [
                 { label: `LINE MAN (GP ${GP_RATE * 100}%)`, price: lm, net: lm * (1 - GP_RATE) },
@@ -3734,6 +3755,7 @@
                 { label: 'LINE MAN (NO FEE)', price: lm, net: lm },
                 { label: 'ปลีก', price: retail, net: retail },
                 { label: 'ส่ง', price: wholesale, net: wholesale },
+                { label: 'ราคาแปะ', price: sticker, net: sticker },
             ].filter(r => r.price > 0).map(r => ({ ...r, profit: r.net - cost }));
 
             const best = Math.max(...rows.map(r => r.profit));
@@ -3763,18 +3785,17 @@
 
             // ราคาขั้นต่ำ / ราคาเป้า คิดที่ GP สูงสุด (worst case) เพื่อให้ปลอดภัยทั้งสองโหมด
             const minPrice = cost / (1 - GP_RATE_ALT);
-            const targetPrice = cost / ((1 - GP_RATE_ALT) * (1 - MASTER_TARGET_MARGIN));
+            const targetPrice = cost / ((1 - GP_RATE_ALT) * (1 - readTargetMargin()));
             const underwater = lm > 0 && lm < minPrice;
             beEl.innerHTML = `
                 <div class="${underwater ? 'text-rose-500' : 'text-slate-500 dark:text-slate-400'}">
                     <i class="fas ${underwater ? 'fa-triangle-exclamation' : 'fa-circle-info'} mr-1"></i>
                     LINE MAN ต่ำกว่า <span class="font-black tabular-nums">฿${money(minPrice)}</span> = ขาดทุน
                     <span class="text-slate-400 dark:text-slate-500">(คิดที่ GP ${GP_RATE_ALT * 100}%)</span>
-                </div>
-                <div class="text-slate-500 dark:text-slate-400 mt-0.5">
-                    <i class="fas fa-bullseye mr-1"></i>
-                    อยากได้กำไร ${MASTER_TARGET_MARGIN * 100}% ตั้ง <span class="font-black tabular-nums">฿${money(targetPrice)}</span>
                 </div>`;
+            // ราคาเป้า → เขียนลง span static (m-target-price) ข้างช่องกรอกเป้า เพื่อไม่ทำลาย input ตอน rebuild
+            const tpEl = document.getElementById('m-target-price');
+            if (tpEl) tpEl.textContent = `฿${money(targetPrice)}`;
 
             emptyEl.classList.add('hidden');
             bodyEl.classList.remove('hidden');
@@ -3796,10 +3817,12 @@
                 document.getElementById('m-cost').value = prices['COST'] || '';
                 document.getElementById('m-retail').value = prices['RETAIL'] || '';
                 document.getElementById('m-wholesale').value = prices['WHOLESALE'] || '';
+                document.getElementById('m-sticker').value = prices['STICKER'] || '';
                 document.getElementById('m-unit').value = m.unit || '';
                 document.getElementById('m-companyCode').value = m.companyProductId || '';
                 document.getElementById('m-mlpCode').value = m.mlpId || '';
                 document.getElementById('m-aliases').value = splitMasterAliases(m.aliases).join('\n');
+                document.getElementById('m-target-margin').value = (m.targetMargin > 0 ? m.targetMargin : 30);
             } else {
                 document.getElementById('m-name').value = name;
                 document.getElementById('m-originalName').value = name;
@@ -3807,10 +3830,12 @@
                 document.getElementById('m-cost').value = '';
                 document.getElementById('m-retail').value = '';
                 document.getElementById('m-wholesale').value = '';
+                document.getElementById('m-sticker').value = '';
                 document.getElementById('m-unit').value = '';
                 document.getElementById('m-companyCode').value = '';
                 document.getElementById('m-mlpCode').value = '';
                 document.getElementById('m-aliases').value = '';
+                document.getElementById('m-target-margin').value = 30;
             }
             updateMasterProfit();
         }
@@ -3823,11 +3848,14 @@
             const cost = parseFloat(document.getElementById('m-cost').value) || 0;
             const retail = parseFloat(document.getElementById('m-retail').value) || 0;
             const wholesale = parseFloat(document.getElementById('m-wholesale').value) || 0;
+            const sticker = parseFloat(document.getElementById('m-sticker').value) || 0;
 
             const unit = document.getElementById('m-unit').value.trim();
             const companyCode = document.getElementById('m-companyCode').value.trim();
             const mlpCode = document.getElementById('m-mlpCode').value.trim();
             const aliases = splitMasterAliases(document.getElementById('m-aliases').value);
+            const tmInput = parseFloat(document.getElementById('m-target-margin').value);
+            const targetMargin = (tmInput >= 1 && tmInput <= 99) ? tmInput : 30; // เก็บเป็นเปอร์เซ็นต์ต่อสินค้า
 
             const docId = name.replace(/\//g, '_');
 
@@ -3841,9 +3869,10 @@
                 if (cost > 0) prices['COST'] = cost;
                 if (retail > 0) prices['RETAIL'] = retail;
                 if (wholesale > 0) prices['WHOLESALE'] = wholesale;
+                if (sticker > 0) prices['STICKER'] = sticker;
 
                 const updateData = {
-                    name, aliases, unit, companyProductId: companyCode, mlpId: mlpCode, prices
+                    name, aliases, unit, companyProductId: companyCode, mlpId: mlpCode, prices, targetMargin
                 };
 
 
