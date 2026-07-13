@@ -1315,8 +1315,12 @@
                         <p class="text-[11px] text-slate-400">จับกลุ่มด้วยรหัส [NNNN] หรือชื่อที่ตรงกัน — ยืนยันทีละกลุ่มก่อนลบ</p>
                     </div>
                 </div>
-                <button onclick="document.getElementById('mergeModal').classList.add('hidden')"
-                    class="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 hover:bg-slate-200 flex items-center justify-center transition-all"><i class="fas fa-times"></i></button>
+                <div class="flex items-center gap-2">
+                    <button onclick="backupMasterAll()" title="ดาวน์โหลด backup ของ master ทั้งหมด"
+                        class="px-3 py-2 rounded-xl bg-amber-50 text-amber-600 font-bold hover:bg-amber-500 hover:text-white transition-all text-[11px] border border-amber-200"><i class="fas fa-download mr-1"></i> สำรองทั้งหมด</button>
+                    <button onclick="document.getElementById('mergeModal').classList.add('hidden')"
+                        class="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 hover:bg-slate-200 flex items-center justify-center transition-all"><i class="fas fa-times"></i></button>
+                </div>
             </div>
             <div id="merge-body" class="flex-1 overflow-y-auto p-5 space-y-4">
                 <!-- groups injected here -->
@@ -1595,6 +1599,28 @@
             return n;
         }
 
+        function downloadJSON(filename, obj) {
+            const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            link.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
+        function tsStamp() {
+            const d = new Date(), p = n => String(n).padStart(2, '0');
+            return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+        }
+
+        // สำรอง master_products ทั้งหมดเป็น JSON (กดเองจากปุ่มในโมดัลรวมซ้ำ)
+        function backupMasterAll() {
+            if (!masterProducts.length) return Swal.fire('ไม่มีข้อมูล', 'ยังไม่มีสินค้าใน MASTER', 'info');
+            downloadJSON(`master-backup-${tsStamp()}.json`, masterProducts);
+            Swal.fire({ icon: 'success', title: 'สำรอง MASTER แล้ว', text: `ดาวน์โหลด ${masterProducts.length} รายการ`, timer: 1800, showConfirmButton: false });
+        }
+
         function openMergeModal() {
             mergeGroups = scanDuplicateMasters();
             renderMergeGroups();
@@ -1673,11 +1699,22 @@
                     <div>ทุนที่ใช้: <b class="text-rose-600">${money(chosenCost)}</b> · ราคาที่ใช้: <b class="text-blue-600">${money(chosenPrice)}</b></div>
                     <div class="mt-2 p-2 bg-rose-50 rounded-lg text-rose-600 text-[12px]"><b>จะลบถาวร ${toDelete.length} รายการ:</b><br>${toDelete.map(id => '• ' + mergeEsc(id)).join('<br>')}</div>
                     <div class="text-[11px] text-slate-500 mt-1">ชื่อเดิมทั้งหมดจะถูกเก็บเป็น alias ให้บิลเก่ายังหาเจอ</div>
+                    <div class="text-[11px] text-emerald-600 mt-1"><i class="fas fa-shield-alt mr-1"></i>ระบบจะดาวน์โหลด backup JSON ของกลุ่มนี้ให้อัตโนมัติก่อนลบ</div>
                 </div>`,
                 icon: 'warning', showCancelButton: true, confirmButtonColor: '#9333ea',
                 confirmButtonText: 'รวม + ลบตัวซ้ำ', cancelButtonText: 'ยกเลิก'
             });
             if (!res.isConfirmed) return;
+
+            // SAFETY: สำรอง JSON ของทุก doc ในกลุ่มนี้ก่อนลบ (กู้คืนได้ถ้าพลาด) — auto ทุกครั้งก่อนแตะ Firestore
+            downloadJSON(`master-merge-backup-${tsStamp()}.json`, {
+                mergedAt: new Date().toISOString(),
+                groupKey: masterGroupKey(survivor),
+                survivorId: survivor.id,
+                chosenCost, chosenPrice,
+                deletedIds: toDelete,
+                docs: group   // ข้อมูลเต็มทุก doc ในกลุ่มก่อนรวม
+            });
 
             showLoading(true);
             try {
