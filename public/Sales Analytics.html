@@ -298,6 +298,25 @@
 <body
     class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 font-sans antialiased pb-24 relative transition-colors duration-300">
 
+    <!-- 🔒 Auth gate: blocks the page until an authorized user (admin or access['analytics']) signs in -->
+    <div id="authGate" class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 p-6 text-center">
+        <div id="authGateLoading" class="text-slate-400 animate-pulse">กำลังตรวจสอบสิทธิ์…</div>
+        <div id="authGateLogin" class="hidden max-w-xs w-full">
+            <h1 class="text-xl font-bold mb-1">Sales Analytics</h1>
+            <p class="text-sm text-slate-400 mb-6">กรุณาเข้าสู่ระบบเพื่อใช้งาน</p>
+            <button onclick="authGateLogin()"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors">เข้าสู่ระบบด้วย
+                Google</button>
+        </div>
+        <div id="authGateDenied" class="hidden max-w-xs w-full">
+            <div class="text-4xl mb-3">🚫</div>
+            <h1 class="text-xl font-bold mb-1">ไม่มีสิทธิ์เข้าถึง</h1>
+            <p id="authGateDeniedMsg" class="text-sm text-slate-400 mb-6"></p>
+            <button onclick="authGateLogout()" class="text-sm text-blue-500 hover:underline">ออกจากระบบ /
+                เข้าด้วยบัญชีอื่น</button>
+        </div>
+    </div>
+
     <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col gap-2"></div>
     <div id="loadingOverlay"
         class="fixed inset-0 bg-white/80 dark:bg-black/80 backdrop-blur-sm z-50 hidden flex-col items-center justify-center fade-in">
@@ -1085,20 +1104,41 @@
         let isBulkTransfer = false;
         let currentTransferId = null;
 
-        // 🔒 Wait for Firebase to restore any persisted session first, then fall back to
-        //    anonymous sign-in ONLY if nobody is logged in (rules require isAuthenticated()).
-        //    Checking auth.currentUser synchronously is unsafe: it is null at load until the
-        //    SDK finishes restoring, which would wrongly downgrade an admin/Google session.
-        const authReady = new Promise((resolve, reject) => {
-            const unsub = window.auth.onAuthStateChanged(async (user) => {
-                unsub();
+        // 🔒 Auth gate: this page is usable only by an admin or a user granted access['analytics'].
+        //    authReady resolves ONLY once an authorized user is signed in; every Firestore op
+        //    awaits it, so an unauthenticated/unauthorized visitor can never read or write.
+        const GATE_AREA = 'analytics';
+        const GATE_ADMIN_EMAIL = 'medlifeplus@gmail.com';
+        function authGateShow(state) {
+            document.getElementById('authGateLoading').classList.toggle('hidden', state !== 'loading');
+            document.getElementById('authGateLogin').classList.toggle('hidden', state !== 'login');
+            document.getElementById('authGateDenied').classList.toggle('hidden', state !== 'denied');
+            document.getElementById('authGate').classList.remove('hidden');
+        }
+        function authGateLogin() { window.auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => console.error('Login failed:', e)); }
+        function authGateLogout() { window.auth.signOut(); }
+        const authReady = new Promise((resolve) => {
+            window.auth.onAuthStateChanged(async (user) => {
+                if (!user) { authGateShow('login'); return; }
+                authGateShow('loading');
                 try {
-                    if (user) return resolve(user);              // keep existing admin/Google session
-                    const cred = await window.auth.signInAnonymously();
-                    resolve(cred.user);
+                    let ok = user.email === GATE_ADMIN_EMAIL;
+                    if (!ok) {
+                        const snap = await window.db.collection('users').doc(user.uid).get();
+                        const d = snap.exists ? snap.data() : {};
+                        ok = d.role === 'admin' || !!(d.access && d.access[GATE_AREA] === true);
+                    }
+                    if (ok) {
+                        document.getElementById('authGate').classList.add('hidden');
+                        resolve(user);
+                    } else {
+                        document.getElementById('authGateDeniedMsg').textContent =
+                            `บัญชี ${user.email || ''} ยังไม่ได้รับสิทธิ์เข้าถึงหน้านี้ — ติดต่อผู้ดูแลเพื่อขอสิทธิ์ "${GATE_AREA}"`;
+                        authGateShow('denied');
+                    }
                 } catch (e) {
-                    console.error("❌ Anonymous sign-in failed:", e);
-                    reject(e);
+                    document.getElementById('authGateDeniedMsg').textContent = 'ตรวจสอบสิทธิ์ไม่สำเร็จ: ' + (e.code || e.message);
+                    authGateShow('denied');
                 }
             });
         });

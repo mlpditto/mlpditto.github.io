@@ -97,20 +97,20 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    // Sales Analytics
+    // Sales Analytics: admin or users granted the 'analytics' area
     match /sales_analytics/{docId} {
-      allow read, write: if isAuthenticated();
+      allow read, write: if isAdmin() || hasAreaAccess('analytics');
     }
 
-    // TMTP Manager
+    // TMTP Manager: admin or users granted the 'tmtp' area
     match /tmtp_records/{docId} {
-      allow read, write: if isAuthenticated();
+      allow read, write: if isAdmin() || hasAreaAccess('tmtp');
     }
 
-    // Append-only backup log: any authenticated client may add a snapshot,
+    // Append-only backup log: authorized tmtp users may add a snapshot,
     // but reading/altering/deleting backups is admin-only.
     match /tmtp_backups/{docId} {
-      allow create: if isAuthenticated();
+      allow create: if isAdmin() || hasAreaAccess('tmtp');
       allow read, update, delete: if isAdmin();
     }
 
