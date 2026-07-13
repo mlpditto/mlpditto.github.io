@@ -99,16 +99,19 @@ service cloud.firestore {
 
     // Sales Analytics
     match /sales_analytics/{docId} {
-      allow read, write: if true;
+      allow read, write: if isAuthenticated();
     }
 
     // TMTP Manager
     match /tmtp_records/{docId} {
-      allow read, write: if true;
+      allow read, write: if isAuthenticated();
     }
-    
+
+    // Append-only backup log: any authenticated client may add a snapshot,
+    // but reading/altering/deleting backups is admin-only.
     match /tmtp_backups/{docId} {
-      allow read, write: if true;
+      allow create: if isAuthenticated();
+      allow read, update, delete: if isAdmin();
     }
 
     // LINE MAN Sales Backups (auto-backup snapshots)

@@ -1085,6 +1085,24 @@
         let isBulkTransfer = false;
         let currentTransferId = null;
 
+        // 🔒 Wait for Firebase to restore any persisted session first, then fall back to
+        //    anonymous sign-in ONLY if nobody is logged in (rules require isAuthenticated()).
+        //    Checking auth.currentUser synchronously is unsafe: it is null at load until the
+        //    SDK finishes restoring, which would wrongly downgrade an admin/Google session.
+        const authReady = new Promise((resolve, reject) => {
+            const unsub = window.auth.onAuthStateChanged(async (user) => {
+                unsub();
+                try {
+                    if (user) return resolve(user);              // keep existing admin/Google session
+                    const cred = await window.auth.signInAnonymously();
+                    resolve(cred.user);
+                } catch (e) {
+                    console.error("❌ Anonymous sign-in failed:", e);
+                    reject(e);
+                }
+            });
+        });
+
         const staffMap = [
             { key: "Opalll", full: "Opalll ไอรินทร์ สุวรรณวงศ์พร" },
             { key: "รัตนา", full: "STAFF รัตนา ศิริโชคชัยมงคล" },
@@ -1119,6 +1137,7 @@
 
         async function autoSaveToFirebase() {
             if (allData.length === 0 || !window.db) return;
+            await authReady;
 
             const dateGroups = {};
             allData.forEach(item => {
@@ -1163,6 +1182,7 @@
             list.innerHTML = '<p class="text-center text-slate-400 py-8 animate-pulse">กำลังโหลดรายการวันที่...</p>';
 
             try {
+                await authReady;
                 const snapshot = await window.db.collection('sales_analytics').orderBy('date', 'desc').limit(30).get();
                 if (snapshot.empty) {
                     list.innerHTML = '<p class="text-center text-slate-400 py-8">ไม่พบข้อมูลบนคลาวด์</p>';
@@ -1201,6 +1221,7 @@
             document.getElementById('loadingOverlay').classList.add('flex');
 
             try {
+                await authReady;
                 const doc = await window.db.collection('sales_analytics').doc(docId).get();
                 if (doc.exists) {
                     resetUI();

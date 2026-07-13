@@ -1104,6 +1104,24 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
 
+        // 🔒 Wait for Firebase to restore any persisted session first, then fall back to
+        //    anonymous sign-in ONLY if nobody is logged in (rules require isAuthenticated()).
+        //    Checking auth.currentUser synchronously is unsafe: it is null at load until the
+        //    SDK finishes restoring, which would wrongly downgrade an admin/Google session.
+        const authReady = new Promise((resolve, reject) => {
+            const unsub = auth.onAuthStateChanged(async (user) => {
+                unsub();
+                try {
+                    if (user) return resolve(user);              // keep existing admin/Google session
+                    const cred = await auth.signInAnonymously();
+                    resolve(cred.user);
+                } catch (e) {
+                    console.error("❌ Anonymous sign-in failed:", e);
+                    reject(e);
+                }
+            });
+        });
+
         const SELLER_STORAGE_KEY = 'tmtp_seller_info';
         const defaultSeller = {
             name: "บริษัท เมดไลฟ์ พลัส จำกัด (สำนักงานใหญ่)",
@@ -1129,6 +1147,7 @@
 
             showLoading();
             try {
+                await authReady;
                 const snap = await db.collection('tmtp_records').where('date', '==', formattedDate).get();
                 if (snap.empty) {
                     showToast("ไม่พบข้อมูลสำหรับวันที่ " + formattedDate, true);
@@ -2276,6 +2295,7 @@
             const dateStr = dateMatch ? dateMatch[0] : "Unknown";
 
             try {
+                await authReady;
                 await db.collection('tmtp_backups').add({
                     rawData: text,
                     extractedDate: dateStr,
@@ -2290,18 +2310,21 @@
 
         async function syncProcessedToCloud(items) {
             if (!items || items.length === 0) return;
-            const batch = db.batch();
-            items.forEach(item => {
-                // Use a combination of orderId and date to avoid conflicts across days
-                const safeId = (item.orderId + "_" + (item.date || "nodate")).replace(/[^a-zA-Z0-9]/g, '_');
-                const docRef = db.collection('tmtp_records').doc(safeId);
-                batch.set(docRef, {
-                    ...item,
-                    syncedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    updatedBy: auth.currentUser ? auth.currentUser.displayName : 'System'
-                }, { merge: true });
-            });
             try {
+                // Wait for auth BEFORE building the batch so auth.currentUser is populated
+                // (otherwise updatedBy is wrongly recorded as 'System' during session restore).
+                await authReady;
+                const batch = db.batch();
+                items.forEach(item => {
+                    // Use a combination of orderId and date to avoid conflicts across days
+                    const safeId = (item.orderId + "_" + (item.date || "nodate")).replace(/[^a-zA-Z0-9]/g, '_');
+                    const docRef = db.collection('tmtp_records').doc(safeId);
+                    batch.set(docRef, {
+                        ...item,
+                        syncedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        updatedBy: auth.currentUser ? auth.currentUser.displayName : 'System'
+                    }, { merge: true });
+                });
                 await batch.commit();
                 console.log("Sync to cloud successful");
             } catch (err) {
