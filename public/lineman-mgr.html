@@ -711,6 +711,7 @@
                                 <tr>
                                     <th class="text-left">สินค้า</th>
                                     <th class="w-16 text-center">จำนวน</th>
+                                    <th class="w-20 text-right !text-rose-500">ทุน/ชิ้น</th>
                                     <th class="w-24 text-right">かかく ราคา</th>
                                     <th class="w-8"></th>
                                 </tr>
@@ -1024,6 +1025,7 @@
                                     <tr>
                                         <th class="text-left">สินค้า</th>
                                         <th class="w-16 text-center">จำนวน</th>
+                                        <th class="w-20 text-right !text-rose-500">ทุน/ชิ้น</th>
                                         <th class="w-24 text-right">かかく ราคา</th>
                                         <th class="w-8"></th>
                                     </tr>
@@ -1500,6 +1502,11 @@
             else calculateNet();
         }
 
+        // ทำเครื่องหมายว่าช่องทุนถูกผู้ใช้แก้เอง → กันไม่ให้ auto-fill จาก MASTER มาเขียนทับ
+        function markCostEdited(input) {
+            if (input) input.dataset.userEdited = '1';
+        }
+
         function addItemRow(item = { name: '', qty: 1, price: 0 }, containerId = 'items-container') {
             const container = document.getElementById(containerId);
             const index = container.children.length;
@@ -1508,19 +1515,28 @@
 
             const isEdit = containerId.startsWith('e-');
             const inputClass = isEdit ? "minimal-input !text-xs !py-2" : "premium-input !py-3 !text-sm !rounded-xl";
+            const gid = isEdit ? 'e-grossAmount' : 'grossAmount';
+
+            // ทุน/ชิ้น: ถ้า item.cost มีค่า (มาจากบิลที่เคยเซฟ/นำเข้า) ให้ถือว่าผู้ใช้กำหนดเองแล้ว
+            // → ไม่โดน auto-fill จาก MASTER เขียนทับ; ถ้าไม่มีค่าให้ปล่อยว่างเพื่อ auto-fill
+            const hasCost = item.cost !== undefined && item.cost !== null && item.cost !== '' && !isNaN(parseFloat(item.cost));
+            const costVal = hasCost ? item.cost : '';
 
             row.innerHTML = `
                 <td class="p-2 relative">
-                    <input type="text" value="${item.name}" placeholder="ชื่อสินค้า" class="${inputClass} pr-8" list="master-list" oninput="handleItemChange(this, '${containerId}')">
+                    <input type="text" value="${item.name}" placeholder="ชื่อสินค้า" class="item-name ${inputClass} pr-8" list="master-list" oninput="handleItemChange(this, '${containerId}')">
                     <button type="button" onclick="openMasterEdit(this.previousElementSibling.value)" tabindex="-1" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-300 hover:text-blue-500 transition-colors">
                         <i class="fas fa-info-circle"></i>
                     </button>
                 </td>
                 <td class="p-2">
-                    <input type="number" value="${item.qty}" min="1" class="${inputClass} text-center" oninput="calculateTotalFromItems('${containerId}', '${isEdit ? 'e-grossAmount' : 'grossAmount'}')">
+                    <input type="number" value="${item.qty}" min="1" class="item-qty ${inputClass} text-center" oninput="calculateTotalFromItems('${containerId}', '${gid}')">
                 </td>
                 <td class="p-2">
-                    <input type="number" value="${item.price}" step="0.01" class="${inputClass} text-right" oninput="calculateTotalFromItems('${containerId}', '${isEdit ? 'e-grossAmount' : 'grossAmount'}')">
+                    <input type="number" value="${costVal}" step="0.01" min="0" placeholder="ทุน" ${hasCost ? 'data-user-edited="1"' : ''} class="item-cost ${inputClass} text-right !text-rose-600 dark:!text-rose-400" oninput="markCostEdited(this); calculateTotalFromItems('${containerId}', '${gid}')">
+                </td>
+                <td class="p-2">
+                    <input type="number" value="${item.price}" step="0.01" class="item-price ${inputClass} text-right" oninput="calculateTotalFromItems('${containerId}', '${gid}')">
                     <div class="item-net-hint text-[9px] font-bold text-amber-600 dark:text-amber-400 text-right mt-0.5 whitespace-nowrap"></div>
                 </td>
                 <td class="p-2 text-center">
@@ -1565,8 +1581,15 @@
                     }
                     const row = input.closest('tr'); // Changed from .item-row to tr
                     if (row) {
-                        const pInput = row.querySelector('td:nth-child(3) input'); // Select price input in the 3rd td
+                        const pInput = row.querySelector('.item-price');
                         if (pInput) pInput.value = price;
+
+                        // เติมทุน/ชิ้นจาก MASTER อัตโนมัติ ถ้าช่องยังว่างและผู้ใช้ยังไม่แก้เอง
+                        const cInput = row.querySelector('.item-cost');
+                        if (cInput && cInput.value === '' && !cInput.dataset.userEdited) {
+                            const masterCost = master.cost || (master.prices && master.prices['COST']) || 0;
+                            if (masterCost > 0) cInput.value = masterCost;
+                        }
 
                         // just trigger gross recalc
                         if (containerId === 'items-container') {
@@ -1586,18 +1609,24 @@
             if (!container) return;
 
             container.querySelectorAll('tr').forEach(row => {
-                const nameInput = row.querySelector('td:nth-child(1) input');
+                const nameInput = row.querySelector('.item-name');
                 const name = nameInput ? nameInput.value.trim() : '';
-                const qty = parseFloat(row.querySelector('td:nth-child(2) input').value) || 0;
-                const price = parseFloat(row.querySelector('td:nth-child(3) input').value) || 0;
+                const qty = parseFloat(row.querySelector('.item-qty')?.value) || 0;
+                const price = parseFloat(row.querySelector('.item-price')?.value) || 0;
                 totalGross += (qty * price);
 
-                // Auto-calc cost from master if possible
-                const master = findMasterProductByName(name);
-                const masterCost = master ? (master.cost || (master.prices && master.prices['COST']) || 0) : 0;
-                if (masterCost > 0) {
-                    totalCost += (qty * masterCost);
+                // ทุน/ชิ้นมาจากช่องในแถวเป็นหลัก; ถ้าว่างและผู้ใช้ยังไม่แก้เอง → auto-fill จาก MASTER
+                const costInput = row.querySelector('.item-cost');
+                let unitCost = 0;
+                if (costInput) {
+                    if (costInput.value === '' && !costInput.dataset.userEdited) {
+                        const master = findMasterProductByName(name);
+                        const masterCost = master ? (master.cost || (master.prices && master.prices['COST']) || 0) : 0;
+                        if (masterCost > 0) costInput.value = masterCost;
+                    }
+                    unitCost = parseFloat(costInput.value) || 0;
                 }
+                totalCost += (qty * unitCost);
             });
             document.getElementById(displayId).value = totalGross.toFixed(2);
 
@@ -1703,13 +1732,27 @@
             container.querySelectorAll('tr').forEach(row => {
                 const hint = row.querySelector('.item-net-hint');
                 if (!hint) return;
-                const qty = parseFloat(row.querySelector('td:nth-child(2) input')?.value) || 0;
-                const price = parseFloat(row.querySelector('td:nth-child(3) input')?.value) || 0;
-                if (!(price > 0) || ratio <= 0 || ratio >= 0.9999) { hint.textContent = ''; return; }
-                const unitNet = price * ratio;
-                hint.textContent = qty > 1
-                    ? `→ รับจริง ${money(unitNet)} ×${qty} = ${money(unitNet * qty)}`
-                    : `→ รับจริง ${money(unitNet)}`;
+                const qty = parseFloat(row.querySelector('.item-qty')?.value) || 0;
+                const price = parseFloat(row.querySelector('.item-price')?.value) || 0;
+                const unitCost = parseFloat(row.querySelector('.item-cost')?.value) || 0;
+                if (!(price > 0)) { hint.textContent = ''; return; }
+                const parts = [];
+                // รับจริง/ชิ้นหลังหัก GP — แสดงเฉพาะเมื่อมีการหักจริง (ratio < 1)
+                if (ratio > 0 && ratio < 0.9999) {
+                    const unitNet = price * ratio;
+                    parts.push(qty > 1
+                        ? `รับจริง ${money(unitNet)} ×${qty} = ${money(unitNet * qty)}`
+                        : `รับจริง ${money(unitNet)}`);
+                }
+                // กำไร/ชิ้น = รับจริง − ทุน (ถ้ากรอกทุนแล้ว)
+                if (unitCost > 0) {
+                    const unitNet = (ratio > 0 && ratio <= 1) ? price * ratio : price;
+                    const unitProfit = unitNet - unitCost;
+                    parts.push(qty > 1
+                        ? `กำไร ${money(unitProfit)} ×${qty} = ${money(unitProfit * qty)}`
+                        : `กำไร ${money(unitProfit)}`);
+                }
+                hint.textContent = parts.length ? '→ ' + parts.join('  ·  ') : '';
             });
         }
 
@@ -2653,15 +2696,17 @@
                 const masterUpdates = [];
                 const container = document.getElementById('items-container');
                 container.querySelectorAll('tr').forEach(row => {
-                    const nameInput = row.querySelector('td:nth-child(1) input');
-                    const qtyInput = row.querySelector('td:nth-child(2) input');
-                    const priceInput = row.querySelector('td:nth-child(3) input');
+                    const nameInput = row.querySelector('.item-name');
+                    const qtyInput = row.querySelector('.item-qty');
+                    const priceInput = row.querySelector('.item-price');
+                    const costInput = row.querySelector('.item-cost');
 
                     const name = nameInput ? nameInput.value.trim() : '';
                     const qty = parseFloat(qtyInput ? qtyInput.value : 0) || 0;
                     const price = parseFloat(priceInput ? priceInput.value : 0) || 0;
+                    const cost = parseFloat(costInput ? costInput.value : 0) || 0;
 
-                    if (name) items.push({ name, qty, price });
+                    if (name) items.push({ name, qty, price, cost });
                     if (name && price > 0) masterUpdates.push({ name, price });
                 });
 
@@ -2785,11 +2830,12 @@
                 const eContainer = document.getElementById('e-items-container');
                 if (eContainer) {
                     eContainer.querySelectorAll('tr').forEach(row => {
-                        const n = row.querySelector('td:nth-child(1) input')?.value?.trim();
-                        const q = parseFloat(row.querySelector('td:nth-child(2) input')?.value) || 0;
-                        const p = parseFloat(row.querySelector('td:nth-child(3) input')?.value) || 0;
+                        const n = row.querySelector('.item-name')?.value?.trim();
+                        const q = parseFloat(row.querySelector('.item-qty')?.value) || 0;
+                        const p = parseFloat(row.querySelector('.item-price')?.value) || 0;
+                        const c = parseFloat(row.querySelector('.item-cost')?.value) || 0;
                         if (n) {
-                            items.push({ name: n, qty: q, price: p });
+                            items.push({ name: n, qty: q, price: p, cost: c });
                             if (p > 0) masterUpdates.push({ name: n, price: p });
                         }
                     });
@@ -2938,9 +2984,10 @@
                 isManualNet: document.getElementById('isManualNet').checked,
                 manualNet: document.getElementById('manualNet').value,
                 items: Array.from(document.getElementById('items-container').querySelectorAll('tr')).map(row => ({ // Changed from .item-row to tr
-                    name: row.querySelector('td:nth-child(1) input').value,
-                    qty: row.querySelector('td:nth-child(2) input').value,
-                    price: row.querySelector('td:nth-child(3) input').value
+                    name: row.querySelector('.item-name').value,
+                    qty: row.querySelector('.item-qty').value,
+                    price: row.querySelector('.item-price').value,
+                    cost: row.querySelector('.item-cost')?.value || ''
                 })),
                 notes: document.getElementById('notes').value,
                 ref1: document.getElementById('ref1').value,
