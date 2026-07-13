@@ -1,5 +1,26 @@
 # 📝 Task Log - FKB Front Kanban
 
+## 📅 14 กรกฎาคม 2026 — Security: ปิดช่องโหว่ Firestore rules `if true` (Sales Analytics + TMTP)
+
+### 🔒 ต้นเหตุ
+`firestore.rules` มี 3 collection เปิดโล่ง `allow read, write: if true` — `sales_analytics`, `tmtp_records`, `tmtp_backups` — ใครมี API key (ซึ่งคอมเมนต์ใน `firebase-config.js` บอกว่าเคยรั่ว) ยิงตรงเข้า DB อ่าน/เขียน/ลบทั้ง collection ได้ผ่าน REST โดยไม่ต้องเปิดเว็บ; สาเหตุ = 2 หน้านี้เดิม **ไม่มีระบบ login เลย** (2 ใน 21 หน้าที่ไม่มี `signIn`/`onAuthStateChanged`)
+
+### Option A — anonymous stop-gap (commit `6fe6c73`)
+*   **rules:** `sales_analytics`/`tmtp_records` → `isAuthenticated()`; `tmtp_backups` → append-only (`create: isAuthenticated`, `read/update/delete: isAdmin`)
+*   **client (2 หน้า):** เพิ่ม `authReady` — `onAuthStateChanged` รอ restore session เดิมก่อน แล้วค่อย `signInAnonymously()` เฉพาะเมื่อไม่มี user (กัน downgrade admin/Google session เป็น anonymous — เดิมเช็ค `currentUser` แบบ sync ซึ่ง null ตอนโหลดเสมอ); ทุก Firestore op `await authReady`
+*   **Codex adversarial-review จับได้ 1 บั๊ก:** `updatedBy: 'System'` ใน `syncProcessedToCloud` เพราะ batch ถูกสร้างก่อน authReady resolve → ย้าย `await authReady` ไปก่อนสร้าง batch (currentUser ถูก restore ก่อนอ่าน) — สองผู้ตรวจ (Codex + Claude) สรุปตรงกันว่า anonymous = identity ไม่ใช่ authorization barrier
+*   ทดสอบ local + production ผ่าน: signed-in อ่านได้, ไม่มี token = `permission-denied`
+
+### Option B — auth gate จริง (commit `2826992`) ✅ ใช้จริง
+*   **rules:** `sales_analytics` → `isAdmin() || hasAreaAccess('analytics')`; `tmtp_records` → `isAdmin() || hasAreaAccess('tmtp')`; `tmtp_backups` create เช่นเดียวกัน (read/update/delete ยัง admin)
+*   **client (2 หน้า):** overlay gate เต็มจอ 3 สถานะ (loading/login/denied) — `authReady` resolve เฉพาะเมื่อ login + เป็น admin หรือมี `access[area]`; login ด้วย Google popup แทน anonymous; area key `analytics`/`tmtp` มีอยู่แล้วใน `PERMISSION_AREAS` ของ admin.html (ต่อสายที่ค้างไว้แต่แรก — admin ติ๊กสิทธิ์ให้ user รายคนได้โดยไม่ต้องแก้โค้ด)
+*   **ทดสอบ:** local (gate บล็อก, authReady ค้างเมื่อไม่มีสิทธิ์) + production (signed-out=login gate, anonymous=`permission-denied` + client denied, admin login=เข้าใช้งานได้ — ผู้ใช้ verify ทางผ่านแล้ว)
+*   deploy ลำดับ hosting→rules (กันหน้า cache เก่าเจอ rules ใหม่); ไม่ต้อง bump `?v=` (2 หน้านี้เป็น HTML เดี่ยว inline เหมือน lineman-mgr)
+
+### 📋 ค้าง (phase ถัดไป)
+*   **Schema validation ใน rules** (field/type/size/immutable, `createdBy/updatedBy == request.auth.uid`) ตามที่ Codex แนะนำ — เลื่อนออกจากรอบนี้ ยังไม่ทำ
+*   ควร rotate Firebase API key ที่คอมเมนต์บอกว่าเคยรั่ว
+
 ## 📅 13 กรกฎาคม 2026 — LINE MAN เพิ่มช่องกรอกต้นทุนรายชิ้นในรายการสินค้า
 
 ### 🧹 ลดรายการซ้ำใน MASTER (แบ่ง Phase)
