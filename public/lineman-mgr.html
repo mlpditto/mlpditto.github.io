@@ -1476,7 +1476,20 @@
                 dl.id = 'master-list';
                 document.body.appendChild(dl);
             }
-            dl.innerHTML = masterProducts.flatMap(p => masterSearchNames(p).map(name => `<option value="${name}">`)).join('');
+            // Phase 1 dedup: โชว์ 1 option ต่อสินค้า 1 ตัว (ชื่อหลัก canonicalName||name||id)
+            // เดิม dump ทุก alias (id/name/canonicalName มักซ้ำกันเป๊ะ) → ดรอปดาวน์มีบรรทัดซ้ำ
+            // alias ยังใช้จับคู่ใน findMasterProductByName ตามเดิม แค่ไม่เอามาโชว์
+            const seen = new Set();
+            const options = [];
+            masterProducts.forEach(p => {
+                const display = (p.canonicalName || p.name || p.id || '').toString().trim();
+                if (!display) return;
+                const key = normalizeMasterKey(display);
+                if (!key || seen.has(key)) return;
+                seen.add(key);
+                options.push(`<option value="${display.replace(/"/g, '&quot;')}">`);
+            });
+            dl.innerHTML = options.join('');
         }
 
         function autoFillShortOrderId() {

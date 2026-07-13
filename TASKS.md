@@ -2,6 +2,9 @@
 
 ## 📅 13 กรกฎาคม 2026 — LINE MAN เพิ่มช่องกรอกต้นทุนรายชิ้นในรายการสินค้า
 
+### 🧹 ลดรายการซ้ำใน MASTER (แบ่ง Phase)
+*   **Phase 1 — Dedup datalist (autocomplete รายการสินค้า):** เดิม `updateDatalist` dump ทุก alias ต่อสินค้า (`id`/`name`/`canonicalName` มักซ้ำกันเป๊ะ) → ดรอปดาวน์มีบรรทัดซ้ำ 2-3 ตัวต่อสินค้าเดียว; แก้เป็นโชว์ **1 option ต่อสินค้า 1 ตัว** (ชื่อหลัก `canonicalName||name||id`) + dedup ด้วย `normalizeMasterKey`; alias ยังใช้จับคู่ใน `findMasterProductByName` ตามเดิม (ทดสอบ: พิมพ์ variant เว้นวรรค/ตัวเล็กยังหาเจอ + ดึงทุนถูก) — เหลือ Phase 2 (กันสร้าง doc ซ้ำตอน upsert), Phase 3 (เครื่องมือรวม doc ซ้ำที่มีอยู่), Phase 4 (matching ฉลาดขึ้น)
+
 ### 🐛 แก้บั๊ก
 *   **ปุ่ม ⓘ ในตารางประวัติกดแล้ว popup MASTER ไม่โผล่ (โผล่ซ้อนหลัง editModal):** ต้นเหตุ — `masterModal` ถูกวางไว้ **ข้างใน `editModal`** ใน DOM; ตอน editModal ปิดอยู่มันเป็น `display:none` ลูกจึง render ไม่ได้ (ถอด `.hidden` ก็ไม่โผล่) พอเปิด editModal ทีหลัง masterModal ที่ค้างไว้เลยโผล่ตามแถมอยู่ต่ำกว่า (z-60 < editModal 130) เห็นเป็นซ้อนหลัง; **แก้:** ย้าย `masterModal` ออกมาเป็น sibling ระดับ `<body>` + ยก z-index `z-[60]`→`z-[140]` (สูงกว่า editModal ที่มี CSS override `z-index:130 !important`) เพื่อเปิดซ้อนตอนแก้บิลได้ด้วย (ปุ่ม ⓘ ข้างชื่อสินค้าในฟอร์มแก้ไขก็เรียก modal นี้); ทดสอบ local: กดจากตารางประวัติโผล่แล้ว + เปิดซ้อนตอนแก้บิล master อยู่บนสุด + editModal ยังครบ
 
