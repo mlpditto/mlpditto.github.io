@@ -493,6 +493,10 @@
                                     class="px-4 py-2.5 rounded-xl bg-emerald-50 text-emerald-600 font-bold hover:bg-emerald-600 hover:text-white transition-all text-xs border border-emerald-200">
                                     <i class="fas fa-receipt mr-2"></i> สรุปยอดโอน
                                 </button>
+                                <button onclick="openMergeModal()" title="รวมสินค้าซ้ำใน MASTER"
+                                    class="px-4 py-2.5 rounded-xl bg-purple-50 text-purple-600 font-bold hover:bg-purple-600 hover:text-white transition-all text-xs border border-purple-200">
+                                    <i class="fas fa-object-group mr-2"></i> รวมซ้ำ
+                                </button>
                                 <div
                                     class="flex items-center bg-slate-100 dark:bg-slate-800 rounded-xl p-1 border border-slate-200 dark:border-slate-700">
                                     <button onclick="exportSalesCSV()"
@@ -1299,6 +1303,27 @@
             </div>
         </div>
 
+    <!-- Merge Duplicate Master Modal (Phase 3) — body-level ตาม fkb-modal-body-level -->
+    <div id="mergeModal"
+        class="fixed inset-0 bg-black/60 z-[135] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-gray-50 dark:bg-slate-900 w-full max-w-2xl rounded-3xl shadow-2xl h-[85vh] flex flex-col overflow-hidden border border-white/20">
+            <div class="bg-white dark:bg-slate-800 p-5 shadow-sm flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-object-group text-purple-500 text-xl"></i>
+                    <div>
+                        <h3 class="text-lg font-black text-slate-700 dark:text-white">รวมสินค้าซ้ำ (Master)</h3>
+                        <p class="text-[11px] text-slate-400">จับกลุ่มด้วยรหัส [NNNN] หรือชื่อที่ตรงกัน — ยืนยันทีละกลุ่มก่อนลบ</p>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('mergeModal').classList.add('hidden')"
+                    class="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 hover:bg-slate-200 flex items-center justify-center transition-all"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="merge-body" class="flex-1 overflow-y-auto p-5 space-y-4">
+                <!-- groups injected here -->
+            </div>
+        </div>
+    </div>
+
     <!-- Payout History Modal -->
     <div id="payoutModal"
         class="fixed inset-0 bg-black/60 z-[120] hidden flex items-center justify-center p-4 backdrop-blur-sm">
@@ -1535,6 +1560,146 @@
                 options.push(`<option value="${display.replace(/"/g, '&quot;')}">`);
             });
             dl.innerHTML = options.join('');
+        }
+
+        // ===== Phase 3: เครื่องมือรวมสินค้าซ้ำใน MASTER =====
+        let mergeGroups = []; // เก็บกลุ่มที่สแกนได้ล่าสุด (array ของ array<product>)
+
+        const mergeEsc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        const productCostVal = (p) => Number((p && (p.cost || (p.prices && p.prices.COST))) || 0);
+        const productPriceVal = (p) => Number((p && p.prices && p.prices.LINEMAN) || 0);
+
+        // key จับกลุ่ม: รหัส [NNNN] ถ้ามี ไม่งั้น normalize ชื่อหลัก
+        function masterGroupKey(p) {
+            return masterCodeOf(p.name || p.id) ? ('code:' + masterCodeOf(p.name || p.id)) : ('name:' + normalizeMasterKey(p.canonicalName || p.name || p.id));
+        }
+
+        function scanDuplicateMasters() {
+            const map = new Map();
+            masterProducts.forEach(p => {
+                const k = masterGroupKey(p);
+                if (!k || k === 'name:') return;
+                if (!map.has(k)) map.set(k, []);
+                map.get(k).push(p);
+            });
+            return [...map.values()].filter(g => g.length >= 2);
+        }
+
+        // นับจำนวนบิลที่อ้างถึงสินค้าตัวนี้ (เฉพาะข้อมูลที่โหลดอยู่ — เดือนที่กำลังดู)
+        function countBillRefsFor(p) {
+            const keys = new Set(masterSearchNames(p).map(normalizeMasterKey));
+            let n = 0;
+            (salesData || []).forEach(r => (r.items || []).forEach(it => {
+                if (keys.has(normalizeMasterKey(it.name || ''))) n++;
+            }));
+            return n;
+        }
+
+        function openMergeModal() {
+            mergeGroups = scanDuplicateMasters();
+            renderMergeGroups();
+            document.getElementById('mergeModal').classList.remove('hidden');
+        }
+
+        function renderMergeGroups() {
+            const body = document.getElementById('merge-body');
+            if (!mergeGroups.length) {
+                body.innerHTML = `<div class="text-center text-slate-400 py-16"><i class="fas fa-check-circle text-4xl text-emerald-400 mb-3"></i><p class="font-bold">ไม่พบสินค้าซ้ำใน MASTER</p><p class="text-xs mt-1">จับกลุ่มด้วยรหัส [NNNN] และชื่อที่ตรงกันแล้ว ทุกตัวไม่ซ้ำ</p></div>`;
+                return;
+            }
+            body.innerHTML = mergeGroups.map((group, gi) => {
+                // default: ตัวหลัก = ตัวที่ข้อมูลครบสุด (มีทุน+ราคา+บิลมาก)
+                const scored = group.map(p => ({ p, score: (productCostVal(p) > 0 ? 4 : 0) + (productPriceVal(p) > 0 ? 2 : 0) + Math.min(countBillRefsFor(p), 1) }));
+                const bestId = scored.slice().sort((a, b) => b.score - a.score)[0].p.id;
+                const costDefault = (group.find(p => productCostVal(p) > 0) || group[0]).id;
+                const priceDefault = (group.find(p => productPriceVal(p) > 0) || group[0]).id;
+                const label = group[0] && masterCodeOf(group[0].name || group[0].id)
+                    ? `รหัส [${masterCodeOf(group[0].name || group[0].id)}]`
+                    : `ชื่อ: ${mergeEsc(group[0].canonicalName || group[0].name || group[0].id)}`;
+                const rows = group.map(p => {
+                    const did = mergeEsc(p.id);
+                    const refs = countBillRefsFor(p);
+                    return `<tr class="border-t border-slate-100 dark:border-slate-700">
+                        <td class="py-2 px-2 text-center"><input type="radio" name="merge-survivor-${gi}" value="${did}" ${p.id === bestId ? 'checked' : ''} class="w-4 h-4 accent-purple-600"></td>
+                        <td class="py-2 px-2"><div class="font-bold text-slate-700 dark:text-slate-200 break-all">${mergeEsc(p.name || p.id)}</div><div class="text-[9px] text-slate-400 break-all">${did}</div></td>
+                        <td class="py-2 px-2 text-right whitespace-nowrap"><label class="cursor-pointer inline-flex items-center gap-1"><input type="radio" name="merge-cost-${gi}" value="${did}" ${p.id === costDefault ? 'checked' : ''} class="w-3.5 h-3.5 accent-rose-500"><span class="text-rose-600 font-bold">฿${productCostVal(p).toLocaleString()}</span></label></td>
+                        <td class="py-2 px-2 text-right whitespace-nowrap"><label class="cursor-pointer inline-flex items-center gap-1"><input type="radio" name="merge-price-${gi}" value="${did}" ${p.id === priceDefault ? 'checked' : ''} class="w-3.5 h-3.5 accent-blue-500"><span class="text-blue-600 font-bold">฿${productPriceVal(p).toLocaleString()}</span></label></td>
+                        <td class="py-2 px-2 text-center text-slate-400">${refs || '—'}</td>
+                    </tr>`;
+                }).join('');
+                return `<div class="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-purple-100 dark:border-purple-900/30 shadow-sm">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-black text-purple-600 text-sm"><i class="fas fa-layer-group mr-1"></i> ${label}</span>
+                        <span class="text-[10px] bg-purple-100 dark:bg-purple-900/40 text-purple-600 px-2 py-0.5 rounded-full font-black">${group.length} ตัวซ้ำ</span>
+                    </div>
+                    <div class="overflow-x-auto"><table class="w-full text-[11px]"><thead><tr class="text-slate-400 text-[9px] uppercase">
+                        <th class="px-2 py-1">เก็บเป็นหลัก</th><th class="px-2 py-1 text-left">ชื่อ / doc id</th><th class="px-2 py-1 text-right">ใช้ทุนนี้</th><th class="px-2 py-1 text-right">ใช้ราคานี้</th><th class="px-2 py-1">บิล*</th>
+                    </tr></thead><tbody>${rows}</tbody></table></div>
+                    <div class="flex justify-between items-center mt-3">
+                        <span class="text-[9px] text-slate-400">*จำนวนบิลอ้างอิงในเดือนที่โหลดอยู่</span>
+                        <button onclick="mergeGroup(${gi})" class="px-4 py-2 rounded-xl bg-purple-600 text-white text-xs font-black hover:bg-purple-700 transition-all shadow-lg shadow-purple-500/20"><i class="fas fa-object-group mr-1"></i> รวมกลุ่มนี้</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        async function mergeGroup(gi) {
+            const group = mergeGroups[gi];
+            if (!group || group.length < 2) return;
+            const pick = (nm) => (document.querySelector(`input[name="${nm}-${gi}"]:checked`) || {}).value;
+            const survivorId = pick('merge-survivor');
+            const costId = pick('merge-cost');
+            const priceId = pick('merge-price');
+            const survivor = group.find(p => p.id === survivorId);
+            const costSrc = group.find(p => p.id === costId) || survivor;
+            const priceSrc = group.find(p => p.id === priceId) || survivor;
+            if (!survivor) return;
+
+            const chosenCost = productCostVal(costSrc);
+            const chosenPrice = productPriceVal(priceSrc);
+            const survivorName = survivor.name || survivor.id;
+            // union ชื่อ/alias ทั้งหมด ยกเว้นชื่อหลักของ survivor
+            const allNames = new Set();
+            group.forEach(p => masterSearchNames(p).forEach(n => { const t = (n || '').toString().trim(); if (t) allNames.add(t); }));
+            allNames.delete(survivorName);
+            const aliasArr = [...allNames];
+            const toDelete = group.filter(p => p.id !== survivor.id).map(p => p.id);
+
+            const money = (v) => `฿${Number(v || 0).toLocaleString()}`;
+            const res = await Swal.fire({
+                title: 'ยืนยันการรวมกลุ่มนี้?',
+                html: `<div class="text-left text-[13px] space-y-1">
+                    <div>เก็บเป็นหลัก: <b>${mergeEsc(survivorName)}</b></div>
+                    <div>ทุนที่ใช้: <b class="text-rose-600">${money(chosenCost)}</b> · ราคาที่ใช้: <b class="text-blue-600">${money(chosenPrice)}</b></div>
+                    <div class="mt-2 p-2 bg-rose-50 rounded-lg text-rose-600 text-[12px]"><b>จะลบถาวร ${toDelete.length} รายการ:</b><br>${toDelete.map(id => '• ' + mergeEsc(id)).join('<br>')}</div>
+                    <div class="text-[11px] text-slate-500 mt-1">ชื่อเดิมทั้งหมดจะถูกเก็บเป็น alias ให้บิลเก่ายังหาเจอ</div>
+                </div>`,
+                icon: 'warning', showCancelButton: true, confirmButtonColor: '#9333ea',
+                confirmButtonText: 'รวม + ลบตัวซ้ำ', cancelButtonText: 'ยกเลิก'
+            });
+            if (!res.isConfirmed) return;
+
+            showLoading(true);
+            try {
+                await window.db.collection('master_products').doc(survivor.id).set({
+                    name: survivorName,
+                    cost: chosenCost,
+                    prices: { ...(survivor.prices || {}), COST: chosenCost, LINEMAN: chosenPrice },
+                    aliases: aliasArr
+                }, { merge: true });
+                for (const id of toDelete) {
+                    await window.db.collection('master_products').doc(id).delete();
+                }
+                await syncMasterData();
+                mergeGroups = scanDuplicateMasters();
+                renderMergeGroups();
+                showLoading(false);
+                Swal.fire({ icon: 'success', title: 'รวมสำเร็จ', text: `รวมเป็น "${survivorName}" และลบตัวซ้ำ ${toDelete.length} รายการแล้ว`, timer: 2200, showConfirmButton: false });
+            } catch (err) {
+                showLoading(false);
+                console.error('mergeGroup error', err);
+                Swal.fire('ผิดพลาด', 'รวมไม่สำเร็จ: ' + (err.message || err), 'error');
+            }
         }
 
         function autoFillShortOrderId() {
