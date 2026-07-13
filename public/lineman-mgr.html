@@ -1463,10 +1463,55 @@
             ].filter(Boolean);
         }
 
+        // Phase 4: ดึงรหัสสินค้านำหน้าแบบ [NNNN] (SKU) — ใช้จับคู่ variant ที่ชื่อต่างกันแต่รหัสเดียวกัน
+        function masterCodeOf(value) {
+            const m = (value || '').toString().match(/\[\s*(\d{2,})\s*\]/);
+            return m ? m[1] : null;
+        }
+
         function findMasterProductByName(name) {
             const key = normalizeMasterKey(name);
             if (!key) return null;
-            return masterProducts.find(product => masterSearchNames(product).some(alias => normalizeMasterKey(alias) === key)) || null;
+            // 1) จับคู่แบบ normalize ตรงเป๊ะก่อน (พฤติกรรมเดิม)
+            const exact = masterProducts.find(product => masterSearchNames(product).some(alias => normalizeMasterKey(alias) === key));
+            if (exact) return exact;
+            // 2) fallback: จับคู่ด้วยรหัส [NNNN] ที่ขึ้นต้นเหมือนกัน (variant คนละ suffix = สินค้าเดียวกัน)
+            const code = masterCodeOf(name);
+            if (code) {
+                const byCode = masterProducts.find(product => masterSearchNames(product).some(alias => masterCodeOf(alias) === code));
+                if (byCode) return byCode;
+            }
+            return null;
+        }
+
+        // Phase 2: upsert ราคา LINEMAN เข้า MASTER แบบไม่งอก doc ซ้ำ
+        // - เจอ master เดิม (รวมจับด้วยรหัส [NNNN]) → เขียนลง doc เดิม + เรียนรู้ชื่อที่พิมพ์เป็น alias
+        // - ไม่เจอ → สร้าง doc ใหม่ (docId = ชื่อที่พิมพ์ trim แล้ว กัน '/')
+        async function upsertMasterLinemanPrice(update) {
+            const typed = (update.name || '').toString().trim();
+            if (!typed) return;
+            const master = findMasterProductByName(typed);
+            try {
+                if (master) {
+                    const docId = (master.id || master.name || typed).toString().replace(/\//g, '_');
+                    const payload = {
+                        name: master.name || master.id,
+                        prices: { ...(master.prices || {}), 'LINEMAN': update.price }
+                    };
+                    // เรียนรู้ variant: ผูกชื่อที่พิมพ์เป็น linemanAlias ถ้ายังไม่รู้จัก (จับผ่านรหัสเจอแต่สตริงต่าง)
+                    const known = masterSearchNames(master).map(normalizeMasterKey);
+                    if (!known.includes(normalizeMasterKey(typed))) {
+                        payload.linemanAliases = [...splitMasterAliases(master.linemanAliases), typed];
+                    }
+                    await window.db.collection('master_products').doc(docId).set(payload, { merge: true });
+                } else {
+                    const docId = typed.replace(/\//g, '_');
+                    await window.db.collection('master_products').doc(docId).set({
+                        name: typed,
+                        prices: { 'LINEMAN': update.price }
+                    }, { merge: true });
+                }
+            } catch (mErr) { console.warn('Master Update Failed for:', typed, mErr); }
         }
 
         function updateDatalist() {
@@ -2781,17 +2826,9 @@
 
                 showLoading(true);
 
-                // Master Update Logic
+                // Master Update Logic (Phase 2: กันสร้าง doc ซ้ำ — ดู upsertMasterLinemanPrice)
                 for (const update of masterUpdates) {
-                    const master = findMasterProductByName(update.name);
-                    const docName = master?.name || update.name;
-                    const docId = docName.replace(/\//g, '_'); // Firestore doc ID cannot contain /
-                    try {
-                        await window.db.collection('master_products').doc(docId).set({
-                            name: docName,
-                            prices: { ...(master?.prices || {}), 'LINEMAN': update.price }
-                        }, { merge: true });
-                    } catch (mErr) { console.warn("Master Update Failed for:", update.name, mErr); }
+                    await upsertMasterLinemanPrice(update);
                 }
 
                 // Save to per-month document
@@ -2917,15 +2954,7 @@
 
                 console.log("Saving Master Product Updates...");
                 for (const update of masterUpdates) {
-                    const master = findMasterProductByName(update.name);
-                    const docName = master?.name || update.name;
-                    const docId = docName.replace(/\//g, '_');
-                    try {
-                        await window.db.collection('master_products').doc(docId).set({
-                            name: docName,
-                            prices: { ...(master?.prices || {}), 'LINEMAN': update.price }
-                        }, { merge: true });
-                    } catch (mErr) { console.warn("Master Update Failed for:", update.name, mErr); }
+                    await upsertMasterLinemanPrice(update);
                 }
 
                 // Save to per-month document (handles month change if date was edited)
