@@ -1,5 +1,22 @@
 # 📝 Task Log - FKB Front Kanban
 
+## 📅 14 กรกฎาคม 2026 — Security: Schema validation ใน rules (phase ถัดไป — safe hardening)
+
+### 🔒 สิ่งที่ทำ (deploy rules-only แล้ว ✅ compiled+released)
+*   **ปิดช่องโหว่ privilege-escalation ใน `users` (ของจริงที่เจอ):** เดิม `allow read, write: if isOwner || isAdmin` → user ที่ล็อกอินยิง SDK/REST เขียน doc **ตัวเอง** ตั้ง `role:'admin'` หรือ `access.analytics:true` / `status:'approved'` = ยกสิทธิ์ตัวเองได้ (isAdmin เช็ค `role=='admin'`, hasAreaAccess เช็ค `access[area]`). แก้เป็นแยก read/create/update/delete + helper `safeSelfUserCreate` (ห้าม seed role/access, status ต้องเป็น 'pending') และ `safeSelfUserUpdate` (`diff().affectedKeys().hasAny(['role','access','status'])` = ห้ามแตะ 3 ฟิลด์นี้). ตรวจครบ 4 เส้นทางลงทะเบียนเอง (index.html:396, admin.html:430, history.html:1273) — เขียนแค่ displayName/phone/pictureUrl/status:'pending' ไม่พัง; admin grant (admin.html:796/803) ยังทำงานผ่าน branch `isAdmin()`
+*   **`createdAt` immutable บน task update:** `!...affectedKeys().hasAny(['createdAt'])` กันแก้ย้อนวันที่; ตรวจแล้วไม่มี client path ไหนเขียนทับ createdAt ตอน update (มีแต่ create/import ที่ตั้งค่า)
+
+### ⚠️ สิ่งที่ **ไม่ทำ** เพราะไม่ตรงกับ data model จริง (แก้ note ของ Codex)
+*   Codex แนะ `createdBy/updatedBy == request.auth.uid` — **ใช้ไม่ได้กับแอปนี้ จะ reject ทุก write:** `createdBy` เก็บ **ชื่อ display** ไม่ใช่ uid (index.html:411) + user ที่ล็อกอินผ่าน LINE LIFF ไม่ได้เป็น Firebase-auth เลย (request.auth = null/anonymous) ทำให้ owner-check เดิมใน tasks rules ก็จับ uid ไม่ตรงอยู่แล้ว
+*   immutable-`createdBy` = ไม่ปลอดภัย (admin แก้ record คนอื่นเขียนทับ createdBy จริง — history.html:1410)
+*   `createdAt==serverTimestamp` ตอน create = ไม่ปลอดภัย (Excel import เขียนวันที่ย้อนหลัง — history.html:1900)
+*   Full strict schema (hasOnly allow-list ทุก collection) = เลื่อนไว้ (เสี่ยง permission-denied ทั้งแอปถ้า map field ผิด, docs เขียนจาก 16 หน้า inline)
+
+### 📋 ค้าง / verify
+*   **ผู้ใช้ verify production:** user ปกติยัง register ได้ แต่ยกสิทธิ์ตัวเองไม่ได้ (permission-denied เมื่อพยายามเขียน role/access/status)
+*   tasks owner-check ยังจับ uid ไม่ตรง (createdBy=ชื่อ, LINE≠firebase-auth) — เป็นของเดิม ไม่ได้แตะรอบนี้ (ผลจริง = เฉพาะ admin แก้ tasks ได้ผ่าน rules)
+*   ควร rotate Firebase API key ที่คอมเมนต์บอกว่าเคยรั่ว (ยังค้างจากรอบก่อน)
+
 ## 📅 14 กรกฎาคม 2026 — Security: ปิดช่องโหว่ Firestore rules `if true` (Sales Analytics + TMTP)
 
 ### 🔒 ต้นเหตุ
