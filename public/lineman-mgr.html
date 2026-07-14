@@ -1197,7 +1197,7 @@
     <div id="masterModal"
         class="fixed inset-0 bg-black/50 z-[140] hidden flex items-center justify-center backdrop-blur-sm p-4">
             <div
-                class="bg-white dark:bg-slate-800 p-6 rounded-2xl w-full max-w-md shadow-2xl transform transition-all scale-100 flex flex-col max-h-[90vh]">
+                class="bg-white dark:bg-slate-800 p-6 rounded-2xl w-full max-w-xl shadow-2xl transform transition-all scale-100 flex flex-col max-h-[90vh]">
                 <h3 class="text-lg font-black text-slate-700 dark:text-white mb-4 flex items-center gap-2">
                     <i class="fas fa-boxes text-blue-500"></i> จัดการสินค้า (Master)
                 </h3>
@@ -1211,17 +1211,23 @@
                         <label class="vibrant-label">ชื่อพ้อง / Alias สำหรับ CKNC</label>
                         <textarea id="m-aliases" class="minimal-input" rows="3" placeholder="ใส่ชื่อที่สะกดต่างกัน คั่นด้วยบรรทัดใหม่หรือ comma"></textarea>
                     </div>
-                    <div class="grid grid-cols-2 gap-3 mb-2">
-                        <div>
-                            <label class="vibrant-label !text-rose-500">ราคาทุน (Cost)</label>
-                            <input type="number" id="m-cost" class="minimal-input" placeholder="0.00"
-                                oninput="updateMasterProfit()">
+                    <!-- ราคาทุนหลายเจ้า: กด ⭐ เลือกเจ้าที่ใช้เป็นทุนหลัก (คำนวณกำไร + autofill บิล) -->
+                    <div class="mb-2">
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="vibrant-label !text-rose-500 !mb-0 !ml-0">ราคาทุน (Cost) — หลายเจ้า</label>
+                            <span class="text-[9px] font-bold text-slate-400 dark:text-slate-500">⭐ = ทุนหลักที่ใช้คำนวณ</span>
                         </div>
-                        <div>
-                            <label class="vibrant-label !text-blue-500">ราคาขาย (LINE MAN)</label>
-                            <input type="number" id="m-price" class="minimal-input" placeholder="0.00"
-                                oninput="updateMasterProfit()">
-                        </div>
+                        <div id="m-supplier-rows" class="space-y-2"></div>
+                        <button type="button" onclick="addSupplierRow()"
+                            class="mt-2 text-xs font-bold text-rose-500 hover:text-rose-600 flex items-center gap-1.5">
+                            <i class="fas fa-plus-circle"></i> เพิ่มเจ้า
+                        </button>
+                        <datalist id="m-supplier-datalist"></datalist>
+                    </div>
+                    <div class="mb-2">
+                        <label class="vibrant-label !text-blue-500">ราคาขาย (LINE MAN)</label>
+                        <input type="number" id="m-price" class="minimal-input" placeholder="0.00"
+                            oninput="updateMasterProfit()">
                     </div>
                     <div class="grid grid-cols-2 gap-3 mb-2">
                         <div>
@@ -4027,7 +4033,7 @@
             const beEl = document.getElementById('m-profit-breakeven');
             if (!emptyEl || !bodyEl) return;
 
-            const cost = num('m-cost');
+            const cost = getPrimaryCost();
             const lm = num('m-price');
             const retail = num('m-retail');
             const wholesale = num('m-wholesale');
@@ -4093,6 +4099,88 @@
             bodyEl.classList.remove('hidden');
         }
 
+        // ===== ทุนหลายเจ้า (supplier costs) — ⭐ = ทุนหลักที่ใช้คำนวณกำไร/autofill =====
+        function supplierRowHtml(s = {}) {
+            const name = String(s.name || '').replace(/"/g, '&quot;');
+            const cost = (s.cost != null && s.cost !== '') ? s.cost : '';
+            const primary = s.primary ? 'checked' : '';
+            return `
+                <div class="supplier-row flex items-center gap-2">
+                    <input type="radio" name="m-primary-supplier" class="s-primary shrink-0 w-4 h-4 accent-rose-500 cursor-pointer" title="ตั้งเป็นทุนหลัก" ${primary} onchange="updateMasterProfit()">
+                    <input type="text" class="s-name minimal-input !mb-0 flex-1 min-w-0" list="m-supplier-datalist" placeholder="ชื่อบริษัท" value="${name}">
+                    <input type="number" class="s-cost minimal-input !mb-0 w-24 shrink-0" placeholder="ทุน" value="${cost}" oninput="updateMasterProfit()">
+                    <button type="button" onclick="removeSupplierRow(this)" class="shrink-0 text-slate-300 hover:text-rose-500 transition-colors" title="ลบเจ้านี้">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>`;
+        }
+
+        function addSupplierRow(s) {
+            document.getElementById('m-supplier-rows').insertAdjacentHTML('beforeend', supplierRowHtml(s || {}));
+            ensurePrimarySupplier();
+        }
+
+        function removeSupplierRow(btn) {
+            const row = btn.closest('.supplier-row');
+            const wasPrimary = row.querySelector('.s-primary')?.checked;
+            row.remove();
+            const wrap = document.getElementById('m-supplier-rows');
+            if (!wrap.querySelector('.supplier-row')) addSupplierRow(); // เหลืออย่างน้อย 1 แถว
+            if (wasPrimary) ensurePrimarySupplier(true);
+            updateMasterProfit();
+        }
+
+        // รับประกันว่ามี ⭐ 1 อัน (ไม่มี/บังคับ → เลือกแถวแรก)
+        function ensurePrimarySupplier(force) {
+            const rows = [...document.querySelectorAll('#m-supplier-rows .supplier-row')];
+            if (!rows.length) return;
+            const hasPrimary = rows.some(r => r.querySelector('.s-primary').checked);
+            if (!hasPrimary || force) {
+                rows.forEach(r => r.querySelector('.s-primary').checked = false);
+                rows[0].querySelector('.s-primary').checked = true;
+            }
+        }
+
+        function renderSupplierRows(suppliers) {
+            const wrap = document.getElementById('m-supplier-rows');
+            wrap.innerHTML = '';
+            const list = Array.isArray(suppliers) ? suppliers : [];
+            if (!list.length) { addSupplierRow(); return; }
+            list.forEach(s => wrap.insertAdjacentHTML('beforeend', supplierRowHtml(s)));
+            ensurePrimarySupplier();
+        }
+
+        // อ่านแถวทั้งหมด → [{name, cost, primary}] (ตัดแถวว่างล้วนทิ้ง)
+        function collectSuppliers() {
+            return [...document.querySelectorAll('#m-supplier-rows .supplier-row')].map(r => ({
+                name: r.querySelector('.s-name').value.trim(),
+                cost: parseFloat(r.querySelector('.s-cost').value) || 0,
+                primary: r.querySelector('.s-primary').checked
+            })).filter(s => s.name || s.cost > 0);
+        }
+
+        // ทุนหลัก = เจ้าที่ mark ⭐ (ไม่มี → เจ้าแรกที่ทุน>0)
+        function getPrimaryCost() {
+            const rows = [...document.querySelectorAll('#m-supplier-rows .supplier-row')];
+            const marked = rows.find(r => r.querySelector('.s-primary').checked);
+            const c0 = marked ? parseFloat(marked.querySelector('.s-cost').value) : NaN;
+            if (c0 > 0) return c0;
+            for (const r of rows) { const c = parseFloat(r.querySelector('.s-cost').value); if (c > 0) return c; }
+            return 0;
+        }
+
+        // รวมชื่อบริษัทจากทุกสินค้า → datalist เรียงตามความถี่ (ซื้อบ่อยขึ้นก่อน)
+        function buildSupplierDatalist() {
+            const freq = {};
+            (masterProducts || []).forEach(m => (m.suppliers || []).forEach(s => {
+                const n = String(s && s.name || '').trim();
+                if (n) freq[n] = (freq[n] || 0) + 1;
+            }));
+            const names = Object.keys(freq).sort((a, b) => freq[b] - freq[a] || a.localeCompare(b));
+            const dl = document.getElementById('m-supplier-datalist');
+            if (dl) dl.innerHTML = names.map(n => `<option value="${n.replace(/"/g, '&quot;')}">`).join('');
+        }
+
         async function openMasterEdit(name, fromBillUid = null) {
             masterEditBillUid = fromBillUid; // เปิดจากฟอร์ม = null (รีเซ็ต context เก่าทิ้ง)
             name = name ? name.trim() : '';
@@ -4106,7 +4194,9 @@
                 document.getElementById('m-originalName').value = m.name || name;
                 const prices = m.prices || {};
                 document.getElementById('m-price').value = prices['LINEMAN'] || 0;
-                document.getElementById('m-cost').value = prices['COST'] || '';
+                buildSupplierDatalist();
+                renderSupplierRows((m.suppliers && m.suppliers.length) ? m.suppliers
+                    : (prices['COST'] > 0 ? [{ name: '', cost: prices['COST'], primary: true }] : []));
                 document.getElementById('m-retail').value = prices['RETAIL'] || '';
                 document.getElementById('m-wholesale').value = prices['WHOLESALE'] || '';
                 document.getElementById('m-sticker').value = prices['STICKER'] || '';
@@ -4119,7 +4209,8 @@
                 document.getElementById('m-name').value = name;
                 document.getElementById('m-originalName').value = name;
                 document.getElementById('m-price').value = '';
-                document.getElementById('m-cost').value = '';
+                buildSupplierDatalist();
+                renderSupplierRows([]);
                 document.getElementById('m-retail').value = '';
                 document.getElementById('m-wholesale').value = '';
                 document.getElementById('m-sticker').value = '';
@@ -4137,7 +4228,8 @@
             if (!name) return;
 
             const price = parseFloat(document.getElementById('m-price').value) || 0;
-            const cost = parseFloat(document.getElementById('m-cost').value) || 0;
+            const suppliers = collectSuppliers();        // [{name, cost, primary}] ทุนหลายเจ้า
+            const cost = getPrimaryCost();               // ทุนหลัก (เจ้าที่ mark ⭐) → prices.COST
             const retail = parseFloat(document.getElementById('m-retail').value) || 0;
             const wholesale = parseFloat(document.getElementById('m-wholesale').value) || 0;
             const sticker = parseFloat(document.getElementById('m-sticker').value) || 0;
@@ -4164,7 +4256,7 @@
                 if (sticker > 0) prices['STICKER'] = sticker;
 
                 const updateData = {
-                    name, aliases, unit, companyProductId: companyCode, mlpId: mlpCode, prices, targetMargin
+                    name, aliases, unit, companyProductId: companyCode, mlpId: mlpCode, prices, targetMargin, suppliers
                 };
 
 

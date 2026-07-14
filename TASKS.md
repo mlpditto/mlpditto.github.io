@@ -1,5 +1,15 @@
 # 📝 Task Log - FKB Front Kanban
 
+## 📅 14 กรกฎาคม 2026 — LINE MAN Master modal: ทุนหลายเจ้า + popup กว้างขึ้น
+
+*   **Popup กว้างขึ้น:** `masterModal` card `max-w-md`→`max-w-xl` (มือถือยังเต็มจอ)
+*   **ราคาทุนหลายเจ้า (แทนช่องทุนเดี่ยว):** แถว dynamic `[⭐ radio][ชื่อบริษัท+datalist][ทุน][🗑]` + ปุ่ม "เพิ่มเจ้า"; **⭐ = ทุนหลัก** ที่ใช้คำนวณกำไร + autofill บิล (ผู้ใช้เลือกเอง — decision "เจ้าที่ mark ไว้"); ลบเจ้า⭐ → ⭐ ย้ายแถวอื่นอัตโนมัติ, เหลือขั้นต่ำ 1 แถว
+*   **link บ. ที่ซื้อบ่อย = datalist เรียนรู้เอง** (decision): รวม `suppliers[].name` จากทุกสินค้า → `<datalist>` เรียงตามความถี่ (ซื้อบ่อยขึ้นก่อน) ไม่ต้องสร้าง collection ใหม่
+*   **Data model:** เพิ่ม `suppliers: [{name, cost, primary}]` ใน `master_products`; **คง `prices.COST` = ทุนของเจ้า ⭐** (autofill/กำไรทั่วแอปที่อ่าน `prices.COST` 6+ จุดทำงานต่อไม่ regress) + `companyProductId` เดิมไม่แตะ
+*   **Functions ใหม่:** `supplierRowHtml/addSupplierRow/removeSupplierRow/ensurePrimarySupplier/renderSupplierRows/collectSuppliers/getPrimaryCost/buildSupplierDatalist`; `updateMasterProfit` + `saveMasterEdit` อ่านทุนจาก `getPrimaryCost()` แทน `#m-cost` (ลบ element เดิม)
+*   **Backward compat:** สินค้าเก่าที่มีแค่ `prices.COST` → auto สร้าง 1 แถว (cost เดิม, ⭐) ตอนเปิด modal
+*   **ทดสอบ browser จริง (local server) ผ่าน:** โหลด 2 เจ้า+⭐, เปลี่ยน⭐→กำไรคำนวณใหม่, เพิ่ม/ลบ+⭐ย้ายเอง, datalist เรียงความถี่, backward-compat, ไม่มี console error. **ยังไม่เทสต์ save จริง Firestore** (ต้อง login admin — ผู้ใช้ verify); inline ไม่ต้อง bump `?v=`
+
 ## 🗺️ ROADMAP (ยังไม่เริ่ม) — App Check + Full Strict Schema
 
 > วางแผนไว้ 14 ก.ค. 2026 ยังไม่ลงมือ. บริบทที่สำรวจแล้ว: **15 หน้า init Firebase ทุกหน้าใช้ compat SDK v9.6.1 + แชร์ `firebase-config.js` ร่วมกัน** (init App Check เขียนที่เดียวใช้ได้ทั้งหมด แต่ต้องเพิ่ม `<script>` app-check ราย 15 หน้า); 1 หน้าใช้ Storage; deploy rules ลงแค่ `(default)` (named DB deny-all แล้ว)
