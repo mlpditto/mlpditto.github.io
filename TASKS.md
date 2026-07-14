@@ -22,7 +22,7 @@
 *   `update /users/<uid non-admin>` + `{role:'admin'}` → **บล็อก** (write ไม่ผ่าน) 🔒; `{phone:'...'}` → **allowed** (แก้โปรไฟล์ยังได้ ไม่ regress)
 *   **เจอ 2 เรื่องระหว่าง verify:**
     *   **มี Firestore database 2 ตัว** — `(default)` (แอปใช้จริง + rules hardened อยู่ตัวนี้) กับ named `fkb-front-kanban` (ว่างเปล่า ไม่มีโค้ดไหนใช้ แต่ rules เดิม `allow read,write: if true` เปิดโล่ง) → **ล็อก deny-all แล้ว**. ระวัง: `firebase deploy --only firestore:rules` ลงเฉพาะ `(default)` — named DB ต้องแก้ rules แยกใน Console. ดู [[fkb-firestore-databases]]
-    *   **`isAdmin()` throw error เมื่อ user doc ไม่มีฟิลด์ `role`** (playground โชว์ "Property role is undefined") — ยังปลอดภัย (ผล = deny เหมือนกัน, ในแอปจริง client เห็น permission-denied สะอาด) แต่เปราะ; hardening ที่ควรทำ: `get(...).data.get('role','') == 'admin'` — pre-existing, แตะทุก rule, ยังไม่ทำ
+    *   **`isAdmin()` throw error เมื่อ user doc ไม่มีฟิลด์ `role`** (playground โชว์ "Property role is undefined") — **แก้แล้ว** (commit `0a23fbb`): `isAdmin` ใช้ `data.get('role','')`, `hasAreaAccess` ใช้ `data.get('access',{}).get(area,false)` → field หาย = deny สะอาดแทน error; พฤติกรรมทุกเคส valid เหมือนเดิม (admin ยังเป็น admin). **หมายเหตุ:** ยังเหลือเคส user doc ไม่มีอยู่เลย (`get()` = null) จะยัง error — แต่ user ที่ register แล้วมี doc เสมอ = edge หายาก
 
 ### 📋 ค้าง / verify
 *   tasks owner-check ยังจับ uid ไม่ตรง (createdBy=ชื่อ, LINE≠firebase-auth) — เป็นของเดิม ไม่ได้แตะรอบนี้ (ผลจริง = เฉพาะ admin แก้ tasks ได้ผ่าน rules)
