@@ -4048,8 +4048,8 @@
             if (!(lm > 0 || retail > 0 || wholesale > 0 || sticker > 0)) return show('ใส่ราคาขายเพื่อดูกำไร');
 
             const rows = [
-                { label: `LINE MAN (GP ${GP_RATE * 100}%)`, price: lm, net: lm * (1 - GP_RATE) },
                 { label: `LINE MAN (GP ${GP_RATE_ALT * 100}%)`, price: lm, net: lm * (1 - GP_RATE_ALT) },
+                { label: `LINE MAN (GP ${GP_RATE * 100}%)`, price: lm, net: lm * (1 - GP_RATE) },
                 { label: 'LINE MAN (NO FEE)', price: lm, net: lm },
                 { label: 'ปลีก', price: retail, net: retail },
                 { label: 'ส่ง', price: wholesale, net: wholesale },
