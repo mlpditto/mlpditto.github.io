@@ -1,5 +1,30 @@
 # 📝 Task Log - FKB Front Kanban
 
+## 🗺️ ROADMAP (ยังไม่เริ่ม) — App Check + Full Strict Schema
+
+> วางแผนไว้ 14 ก.ค. 2026 ยังไม่ลงมือ. บริบทที่สำรวจแล้ว: **15 หน้า init Firebase ทุกหน้าใช้ compat SDK v9.6.1 + แชร์ `firebase-config.js` ร่วมกัน** (init App Check เขียนที่เดียวใช้ได้ทั้งหมด แต่ต้องเพิ่ม `<script>` app-check ราย 15 หน้า); 1 หน้าใช้ Storage; deploy rules ลงแค่ `(default)` (named DB deny-all แล้ว)
+
+### 🛡️ Track A — App Check (reCAPTCHA v3)
+เป้า: กัน REST abuse จริง (referrer ปลอมได้). ความเสี่ยง: **enforce ก่อน client พร้อม = พังทั้งแอป** → ต้อง monitor ก่อน
+*   **A0 Prep:** สมัคร reCAPTCHA v3 site key + register app ใน App Check console + debug token localhost
+*   **A1 ติดตั้ง (monitor mode):** เพิ่ม `firebase-app-check-compat.js` 15 หน้า + init ใน `firebase-config.js` (`activate(siteKey, true)`) — ยังไม่ enforce [แตะ 15 ไฟล์ ต้องครบ]
+*   **A2 Monitor:** ดู metrics หลายวัน ว่า % verified สูง (รวม LINE LIFF ใน in-app browser); จุดไหน token ไม่มา แก้ให้ครบ
+*   **A3 Enforce Firestore:** เปิด enforcement เฉพาะ Firestore ก่อน (เสี่ยงสูง พร้อม rollback)
+*   **A4 Enforce Auth (+Storage):** ทีละตัว, ทดสอบ Google popup + LIFF login ให้ครบ
+
+### 📋 Track B — Full Strict Schema (ทุก collection) — ระดับ **Lenient-strict**
+เป้า: field/type/size validation. **ตัดสินใจ: ใช้ required+type+size cap ไม่ใช้ `hasOnly()`** (กันของผิดได้โดยเสี่ยง regress ต่ำ; ยอมให้มี field เกินได้). collection JSON ก้อนใหญ่ (`cknc_sessions`, `*_backups`, `sales_analytics`, `tmtp_records`) ทำได้แค่ size cap + required key ไม่กี่ตัว
+*   **หลักการต่อ collection:** map ทุกจุด client เขียน → validation fn → เทสต์ Playground (allow ถูก + deny ผิด) + smoke test แอปจริง → deploy `(default)`
+*   **B1 Pilot:** 1 ตัวง่าย admin-write (`faqs` หรือ `ecom_access_codes`) ตั้ง pattern
+*   **B2 สาธารณะ (ค่าสูงสุด):** VCI `visitor_registrations`/`visitor_logs`/`visitor_appointments` (`create: if true` = ใครก็เขียน) — map ฟอร์ม VCI ให้ครบ
+*   **B3 Admin data:** `master_products`, `settings`, `system`, `companies`
+*   **B4 ยากสุด (ท้าย):** `tasks` (polymorphic order/health/history), ปิดงาน `users`, + big-JSON แบบ size-cap
+
+### ลำดับที่แนะนำ
+A0→A1→A2 ก่อน (monitor passive เสี่ยงต่ำ) → ทำ B1→B2 ขนานระหว่างรอ metrics → A3/A4 enforce เมื่อพร้อม → B3→B4 ปิดท้าย
+
+---
+
 ## 📅 14 กรกฎาคม 2026 — Security: Schema validation ใน rules (phase ถัดไป — safe hardening)
 
 ### 🔒 สิ่งที่ทำ (deploy rules-only แล้ว ✅ compiled+released)
