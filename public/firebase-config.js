@@ -1,7 +1,10 @@
 // public/firebase-config.js
 
 // 1. ค่า Config ของโปรเจกต์คุณ
-// 🔒 SECURITY WARNING: API Key นี้เคยรั่วไหลสู่สาธารณะ โปรดนำ API Key ใหม่มาเปลี่ยนที่นี่
+// 🔒 หมายเหตุความปลอดภัย: apiKey ของ Firebase Web เป็นค่า "สาธารณะโดยดีไซน์"
+//    (ฝังอยู่ใน client JS ทุกหน้า ใครก็อ่านได้) — มันแค่ระบุโปรเจกต์ ไม่ได้ให้สิทธิ์เข้าถึงข้อมูล
+//    การป้องกันจริงคือ Firestore rules + API key restriction (HTTP referrer + API list ใน Cloud Console) + App Check
+//    คีย์นี้ผ่านการ rotate + restrict แล้ว (20260218-New Browser key, จำกัดเฉพาะโดเมนแอป) — ไม่ต้องพยายามซ่อนค่า
 const firebaseConfig = {
     apiKey: "AIzaSyCSeIW-4e9Op8_LzKYavaxwVdYyHC8Q0nE",
     authDomain: "fkb-front-kanban.firebaseapp.com",

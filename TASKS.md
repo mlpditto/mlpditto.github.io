@@ -12,10 +12,16 @@
 *   `createdAt==serverTimestamp` ตอน create = ไม่ปลอดภัย (Excel import เขียนวันที่ย้อนหลัง — history.html:1900)
 *   Full strict schema (hasOnly allow-list ทุก collection) = เลื่อนไว้ (เสี่ยง permission-denied ทั้งแอปถ้า map field ผิด, docs เขียนจาก 16 หน้า inline)
 
+### 🔑 Firebase API key — rotate + restrict เสร็จแล้ว (14 ก.ค. 2026)
+*   **เข้าใจใหม่:** apiKey ของ Firebase Web เป็น public by design (ฝังใน client JS) ไม่ใช่ความลับ — rotate อย่างเดียวไม่ช่วย เพราะคีย์ใหม่ก็ public; ตัวป้องกันจริง = **restrict** (HTTP referrer + API list) + Firestore rules + App Check
+*   **สถานะจริงใน Cloud Console (จากภาพผู้ใช้):** rotate ทำไปแล้ว — `20260218-New Browser key` (สร้าง 18 ก.พ.) restrict ครบ (Websites: `mlpditto.github.io/*`, `firebaseapp.com`, `web.app`, `localhost/*` + API list 24) และ **config ใช้คีย์ใหม่นี้อยู่แล้ว** (ยืนยันค่า `AIzaSyCSeIW…` ตรงกับ Show key)
+*   แก้คอมเมนต์ล้าสมัยใน `firebase-config.js` (เดิม "โปรดเปลี่ยน API Key" → note ที่ถูกต้อง)
+*   **เหลือ (optional):** ลบคีย์เก่า `Browser key (auto created by Firebase)` (28 ม.ค. = ตัวที่รั่ว, unused แล้ว) — ทดสอบ prod หลังลบ; ถ้ากังวล auto-recreate ปล่อยไว้ได้ (restricted แล้ว)
+
 ### 📋 ค้าง / verify
 *   **ผู้ใช้ verify production:** user ปกติยัง register ได้ แต่ยกสิทธิ์ตัวเองไม่ได้ (permission-denied เมื่อพยายามเขียน role/access/status)
 *   tasks owner-check ยังจับ uid ไม่ตรง (createdBy=ชื่อ, LINE≠firebase-auth) — เป็นของเดิม ไม่ได้แตะรอบนี้ (ผลจริง = เฉพาะ admin แก้ tasks ได้ผ่าน rules)
-*   ควร rotate Firebase API key ที่คอมเมนต์บอกว่าเคยรั่ว (ยังค้างจากรอบก่อน)
+*   **App Check (reCAPTCHA)** = ตัวกัน REST abuse จริง (referrer ปลอมได้) — งานใหญ่ เฟสถัดไป
 
 ## 📅 14 กรกฎาคม 2026 — Security: ปิดช่องโหว่ Firestore rules `if true` (Sales Analytics + TMTP)
 
