@@ -1861,6 +1861,49 @@ th.th-center {
   min-height: 28px;
 }
 
+.stack-cell .billing-stage-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 158px;
+}
+
+.stack-cell .billing-stage-row .billing-stage-select {
+  width: auto;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.quick-paid-btn {
+  flex: 0 0 auto;
+  border: 1px solid #6ec79f;
+  background: #d4f4e2;
+  color: #0f7a3b;
+  font-weight: 850;
+  font-size: 11px;
+  line-height: 1;
+  padding: 5px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  min-height: 28px;
+}
+
+.quick-paid-btn:hover {
+  background: #b8ebcd;
+  border-color: #4fb588;
+}
+
+html.dark .quick-paid-btn {
+  border-color: #2f7d57;
+  background: rgba(52, 160, 106, 0.22);
+  color: #7fe3ac;
+}
+
+html.dark .quick-paid-btn:hover {
+  background: rgba(52, 160, 106, 0.35);
+}
+
 .stack-cell .case-source {
   margin-top: 0;
   font-size: 10px;

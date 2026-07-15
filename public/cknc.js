@@ -2657,9 +2657,12 @@ function billingStageEchoesStatus(bill) {
 function renderBillingStageSelect(bill) {
   const value = bill.billingStage || "pending-review";
   return `
-    <select class="billing-stage-select ${value}" data-billing-stage-key="${htmlEscape(bill.billKey)}" aria-label="สถานะงานวางบิล">
-      ${billingStageOptions.map(([key, label]) => `<option value="${key}" ${key === value ? "selected" : ""}>${label}</option>`).join("")}
-    </select>
+    <span class="billing-stage-row">
+      <select class="billing-stage-select ${value}" data-billing-stage-key="${htmlEscape(bill.billKey)}" aria-label="สถานะงานวางบิล">
+        ${billingStageOptions.map(([key, label]) => `<option value="${key}" ${key === value ? "selected" : ""}>${label}</option>`).join("")}
+      </select>
+      ${value === "paid" ? "" : `<button type="button" class="quick-paid-btn" data-quick-paid="${htmlEscape(bill.billKey)}" title="ตั้งเป็น PAID ทันที" aria-label="ตั้งเป็น PAID ทันที">✓ PAID</button>`}
+    </span>
     ${bill.billingStageSource === "manual" ? '<span class="case-source">แก้มือ</span>' : ""}
   `;
 }
@@ -7973,6 +7976,12 @@ elements.billTableBody.addEventListener("click", (event) => {
   // ปุ่มล้างตัวกรองในแถวว่าง "ไม่พบข้อมูลตามตัวกรอง"
   if (event.target.closest("[data-clear-filters]")) {
     clearFilters();
+    return;
+  }
+  // ปุ่ม one-click ตั้งงานวางบิลเป็น PAID ทันที (ทางลัดของ dropdown งานวางบิล)
+  const quickPaidBtn = event.target.closest("[data-quick-paid]");
+  if (quickPaidBtn) {
+    quickUpdateBillingStage(quickPaidBtn.dataset.quickPaid, "paid");
     return;
   }
   const copyBtn = event.target.closest("[data-copy-text]");
