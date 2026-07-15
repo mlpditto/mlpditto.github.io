@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="เครื่องคิดกำไร LINE MAN จำลองทุกระดับ GP — กรอกทุน+ราคาขาย ไม่ต้องล็อกอิน ไม่บันทึกค่า">
+<title>คำนวณกำไร LINE MAN</title>
+<style>
+  :root{
+    --bg:#eef2f7; --surface:#ffffff; --surface2:#f7f9fc;
+    --ink:#0f172a; --soft:#4a5568; --faint:#93a0b4; --border:#e3e8ef;
+    --accent:#2563eb; --accent-soft:#eaf1fe;
+    --profit:#059669; --profit-soft:#e9f9f1;
+    --loss:#e11d48; --loss-soft:#fdecef;
+    --star:#f59e0b;
+    --radius:14px;
+    --font: "Noto Sans Thai","Sarabun","Sukhumvit Set",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0a111e; --surface:#141f30; --surface2:#101a29;
+      --ink:#e6edf7; --soft:#9fb0c6; --faint:#5f7089; --border:#26344c;
+      --accent:#5b9bf7; --accent-soft:#16233a;
+      --profit:#34d399; --profit-soft:#0f2a20;
+      --loss:#fb7185; --loss-soft:#2c1620;
+      --star:#fbbf24;
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#eef2f7; --surface:#ffffff; --surface2:#f7f9fc;
+    --ink:#0f172a; --soft:#4a5568; --faint:#93a0b4; --border:#e3e8ef;
+    --accent:#2563eb; --accent-soft:#eaf1fe;
+    --profit:#059669; --profit-soft:#e9f9f1; --loss:#e11d48; --loss-soft:#fdecef; --star:#f59e0b;
+  }
+  :root[data-theme="dark"]{
+    --bg:#0a111e; --surface:#141f30; --surface2:#101a29;
+    --ink:#e6edf7; --soft:#9fb0c6; --faint:#5f7089; --border:#26344c;
+    --accent:#5b9bf7; --accent-soft:#16233a;
+    --profit:#34d399; --profit-soft:#0f2a20; --loss:#fb7185; --loss-soft:#2c1620; --star:#fbbf24;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg)}
+  body{font-family:var(--font);color:var(--ink);-webkit-font-smoothing:antialiased}
+  .page{min-height:100vh;padding:18px 14px 40px}
+  .wrap{max-width:480px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+  .head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .title{font-size:20px;font-weight:800;letter-spacing:-.01em;margin:0;display:flex;align-items:center;gap:8px}
+  .sub{font-size:12.5px;color:var(--soft);margin:3px 0 0;font-weight:600}
+  .tog{border:1px solid var(--border);background:var(--surface);color:var(--soft);width:38px;height:38px;
+    border-radius:11px;font-size:16px;cursor:pointer;flex:none;display:flex;align-items:center;justify-content:center}
+  .tog:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+  .lab{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin:0 0 7px}
+  .lab.cost{color:var(--loss)} .lab.sell{color:var(--accent)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .field input{width:100%;border:none;border-bottom:2px solid var(--border);background:transparent;
+    font:inherit;font-size:26px;font-weight:800;color:var(--ink);padding:2px 0 6px;outline:none;
+    font-variant-numeric:tabular-nums;transition:border-color .15s}
+  .field.cost input:focus{border-color:var(--loss)} .field.sell input:focus{border-color:var(--accent)}
+  .field input::placeholder{color:var(--faint);font-weight:700}
+  .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
+  .stat{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:11px 9px;text-align:center}
+  .stat .k{font-size:10px;font-weight:800;color:var(--soft);letter-spacing:.02em;margin-bottom:5px;white-space:nowrap}
+  .stat .v{font-size:19px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1.05}
+  .stat .p{font-size:10.5px;font-weight:800;margin-top:2px;font-variant-numeric:tabular-nums}
+  .pos{color:var(--profit)} .neg{color:var(--loss)}
+  .note{font-size:12.5px;font-weight:700;color:var(--soft);display:flex;gap:7px;align-items:baseline;padding:0 2px}
+  .note b{font-variant-numeric:tabular-nums}
+  .note.warn{color:var(--loss)}
+  .sechead{display:flex;align-items:center;justify-content:space-between;margin:0 0 11px}
+  .sechead h2{font-size:14px;font-weight:800;margin:0}
+  .sechead .hint{font-size:10.5px;font-weight:700;color:var(--faint)}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+  th{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--faint);
+    text-align:right;padding:0 0 8px}
+  th:first-child{text-align:left}
+  td{font-size:13.5px;padding:9px 0;border-top:1px solid var(--border);text-align:right;font-weight:700}
+  td:first-child{text-align:left;font-weight:800}
+  tr.loss td{background:var(--loss-soft)} tr.best td{background:var(--profit-soft)}
+  .gpbadge{font-size:8.5px;font-weight:900;padding:1px 5px;border-radius:5px;margin-left:5px;vertical-align:middle;
+    background:var(--accent-soft);color:var(--accent)}
+  .gpbadge.free{background:var(--star);color:#3a2600}
+  .m{color:var(--soft)} .money{color:var(--ink)}
+  .custom{display:flex;align-items:center;gap:9px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--border)}
+  .custom label{font-size:12px;font-weight:800;color:var(--soft)}
+  .custom input[type=range]{flex:1;accent-color:var(--accent)}
+  .custom .cv{font-size:14px;font-weight:900;color:var(--accent);min-width:38px;text-align:right;font-variant-numeric:tabular-nums}
+  .target .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .target .mini{font-size:12px;font-weight:800;color:var(--soft)}
+  .target input[type=number]{width:64px;border:1px solid var(--border);background:var(--surface2);border-radius:9px;
+    font:inherit;font-weight:800;font-size:15px;color:var(--ink);text-align:center;padding:6px 4px;outline:none;font-variant-numeric:tabular-nums}
+  .target input:focus{border-color:var(--accent)}
+  .tgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+  .tbox{background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:10px 11px}
+  .tbox .k{font-size:10.5px;font-weight:800;color:var(--soft);margin-bottom:3px}
+  .tbox .v{font-size:18px;font-weight:900;color:var(--accent);font-variant-numeric:tabular-nums}
+  .foot{font-size:11px;color:var(--faint);font-weight:600;text-align:center;line-height:1.7;padding:2px 6px}
+  .empty{color:var(--faint);font-weight:700;text-align:center;padding:14px;font-size:13px}
+  @media (prefers-reduced-motion: reduce){*{transition:none!important}}
+  @media (max-width:360px){.stats{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="wrap">
+    <div class="head">
+      <div>
+        <h1 class="title"><span aria-hidden="true">🧮</span> คำนวณกำไร LINE MAN</h1>
+        <p class="sub">กรอกทุน + ราคาขาย ดูกำไรทุกระดับ GP — ไม่ต้องล็อกอิน ไม่บันทึกค่า</p>
+      </div>
+      <button class="tog" id="tog" aria-label="สลับธีมสว่าง/มืด">◐</button>
+    </div>
+
+    <div class="card">
+      <div class="grid2">
+        <div class="field cost">
+          <p class="lab cost">ต้นทุน (COST)</p>
+          <input id="cost" inputmode="decimal" placeholder="0" aria-label="ต้นทุน">
+        </div>
+        <div class="field sell">
+          <p class="lab sell">ราคาขาย (LINE MAN)</p>
+          <input id="sell" inputmode="decimal" placeholder="0" aria-label="ราคาขาย">
+        </div>
+      </div>
+    </div>
+
+    <div class="stats" id="stats"></div>
+    <div class="note" id="be"></div>
+
+    <div class="card">
+      <div class="sechead">
+        <h2>จำลองทุกระดับ GP</h2>
+        <span class="hint">รับจริง = ราคา × (1 − GP)</span>
+      </div>
+      <div id="tblwrap"><div class="empty">ใส่ทุนและราคาขายเพื่อดูตาราง</div></div>
+      <div class="custom">
+        <label for="cgp">GP กำหนดเอง</label>
+        <input type="range" id="cgp" min="0" max="50" step="1" value="40" aria-label="GP กำหนดเอง">
+        <span class="cv"><span id="cgpv">40</span>%</span>
+      </div>
+    </div>
+
+    <div class="card target">
+      <div class="sechead"><h2>ราคาที่ควรตั้ง</h2><span class="hint">ให้ได้กำไรตามเป้า</span></div>
+      <div class="row">
+        <span class="mini">อยากได้กำไร</span>
+        <input type="number" id="margin" value="30" min="1" max="95" step="1" aria-label="เป้ากำไร %">
+        <span class="mini">% ของยอดรับจริง</span>
+      </div>
+      <div class="tgrid" id="tgrid"></div>
+    </div>
+
+    <p class="foot">กำไร ÷ รับจริง = % margin · Break-even = ทุน ÷ (1 − GP)<br>เครื่องมือช่วยคิดเร็ว ไม่เชื่อมฐานข้อมูล ทุกค่าลบทิ้งเมื่อปิดหน้า</p>
+  </div>
+</div>
+
+<script>
+  (function(){
+    var $=function(id){return document.getElementById(id);};
+    var TIERS=[0,10,15,20,25,30,35];
+    var REAL={0:'NO FEE',30:'LINE MAN',35:'LINE MAN'};
+    function money(v){return v.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});}
+    function n(id){var v=parseFloat($(id).value);return isFinite(v)?v:0;}
+
+    function render(){
+      var cost=n('cost'), sell=n('sell'), cgp=parseInt($('cgp').value,10);
+      $('cgpv').textContent=cgp;
+      var margin=Math.min(95,Math.max(1,n('margin')||30))/100;
+
+      var ready=cost>0 && sell>0;
+
+      var rows=TIERS.slice();
+      if(rows.indexOf(cgp)<0) rows.push(cgp);
+      rows.sort(function(a,b){return a-b;});
+
+      var calc=rows.map(function(gp){
+        var net=sell*(1-gp/100);
+        return {gp:gp, net:net, profit:net-cost, margin:net>0?(net-cost)/net*100:0, isCustom:(gp===cgp && TIERS.indexOf(gp)<0)};
+      });
+      var best=Math.max.apply(null,calc.map(function(r){return r.profit;}));
+
+      var s=[[0,'NO FEE'],[30,'GP 30%'],[35,'GP 35%']].map(function(t){
+        var net=sell*(1-t[0]/100), pf=net-cost, mg=net>0?pf/net*100:0;
+        var cls=!ready?'':(pf<0?'neg':'pos');
+        return '<div class="stat"><div class="k">'+t[1]+'</div>'+
+          '<div class="v '+cls+'">'+(ready?(pf<0?'':'+')+money(pf):'—')+'</div>'+
+          '<div class="p '+cls+'">'+(ready?mg.toFixed(1)+'%':'')+'</div></div>';
+      }).join('');
+      $('stats').innerHTML=s;
+
+      if(ready){
+        var be35=cost/(1-0.35), under=sell<be35;
+        $('be').className='note'+(under?' warn':'');
+        $('be').innerHTML='<span aria-hidden="true">'+(under?'⚠️':'📉')+'</span>'+
+          '<span>ต่ำกว่า <b>฿'+money(be35)+'</b> = ขาดทุน <span class="m">(คิดที่ GP 35%)</span></span>';
+      } else { $('be').className='note'; $('be').innerHTML=''; }
+
+      if(!ready){
+        $('tblwrap').innerHTML='<div class="empty">ใส่ทุนและราคาขายเพื่อดูตาราง</div>';
+        $('tgrid').innerHTML='';
+        return;
+      }
+
+      var body=calc.map(function(r){
+        var loss=r.profit<0, isBest=!loss&&r.profit===best;
+        var badge=REAL[r.gp]?('<span class="gpbadge'+(r.gp===0?' free':'')+'">'+REAL[r.gp]+'</span>'):(r.isCustom?'<span class="gpbadge">กำหนดเอง</span>':'');
+        var cls=loss?'loss':(isBest?'best':'');
+        var pc=loss?'neg':'pos';
+        return '<tr class="'+cls+'"><td>GP '+r.gp+'%'+badge+'</td>'+
+          '<td class="money">'+money(r.net)+'</td>'+
+          '<td class="'+pc+'">'+(loss?'':'+')+money(r.profit)+'</td>'+
+          '<td class="'+pc+'">'+r.margin.toFixed(1)+'%</td></tr>';
+      }).join('');
+      $('tblwrap').innerHTML='<table><thead><tr><th>GP</th><th>รับจริง</th><th>กำไร</th><th>%</th></tr></thead><tbody>'+body+'</tbody></table>';
+
+      var tg=[[30,'GP 30%'],[35,'GP 35%']].map(function(t){
+        var price=cost/((1-t[0]/100)*(1-margin));
+        return '<div class="tbox"><div class="k">'+t[1]+' → ตั้งราคา</div><div class="v">฿'+money(price)+'</div></div>';
+      }).join('');
+      $('tgrid').innerHTML=tg;
+    }
+
+    ['cost','sell','cgp','margin'].forEach(function(id){
+      $(id).addEventListener('input',render);
+    });
+
+    $('tog').addEventListener('click',function(){
+      var cur=document.documentElement.getAttribute('data-theme');
+      if(!cur){ cur=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'; }
+      document.documentElement.setAttribute('data-theme', cur==='dark'?'light':'dark');
+    });
+
+    render();
+  })();
+</script>
+</body>
+</html>
