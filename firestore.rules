@@ -89,6 +89,14 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // CKNC medicine-name -> master_products mapping (สร้างจากหน้ากระทบยอดบิล CKNC).
+    // alias ใช้ร่วมกัน: staff ที่ล็อกอินเพิ่ม/แก้ได้, ลบได้เฉพาะ admin. ไม่แตะ master_products.
+    match /cknc_medicine_aliases/{aliasId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
     match /settings/{docId} {
       allow read: if true;
       allow write: if isAdmin();

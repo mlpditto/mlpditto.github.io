@@ -50,6 +50,7 @@ const state = {
   masterProducts: [],
   medicineAliasMap: new Map(),
   medicineMappingLoaded: false,
+  ckncAliasEntries: [], // [{ key, name, id }] mapping ชื่อยา CKNC -> master (จาก collection cknc_medicine_aliases)
   ruleConfig: null,
 };
 
@@ -464,6 +465,10 @@ function rebuildMedicineAliasMap() {
       if (key) aliasMap.set(key, { name: canonicalName, id: product.id || product.name || canonicalName });
     });
   });
+  // alias ที่แมปมือจาก CKNC (collection cknc_medicine_aliases) — set ท้ายสุดให้ชนะเมื่อ key ชนกับ master
+  state.ckncAliasEntries.forEach((entry) => {
+    if (entry.key) aliasMap.set(entry.key, { name: entry.name, id: entry.id });
+  });
   state.medicineAliasMap = aliasMap;
 }
 
@@ -611,6 +616,63 @@ async function loadMasterProductMappings() {
     state.medicineMappingLoaded = false;
     renderMasterMappingStatus();
   }
+}
+
+// โหลด mapping ชื่อยา CKNC -> master (collection แยก cknc_medicine_aliases) แล้ว merge เข้าดัชนี alias
+async function loadCkncAliases() {
+  if (!window.db) return;
+  try {
+    const snapshot = await window.db.collection("cknc_medicine_aliases").get();
+    state.ckncAliasEntries = snapshot.docs
+      .map((doc) => {
+        const d = doc.data() || {};
+        return { key: clean(d.key), name: clean(d.masterName), id: clean(d.masterProductId) };
+      })
+      .filter((entry) => entry.key && entry.id);
+    rebuildMedicineAliasMap();
+    renderMasterMappingStatus();
+    if (state.clicknicRows.length || state.manualClicknicRows.length) renderAll();
+  } catch (error) {
+    console.warn("CKNC medicine alias load failed", error);
+  }
+}
+
+// ลิงก์ชื่อยา CKNC เข้ากับสินค้าใน master: อัปเดตดัชนีทันที + บันทึกลง collection แยก (ไม่แตะ master_products)
+async function linkMedicineToMaster(rawName, product) {
+  const key = normalizeMedicineKey(rawName);
+  const masterName = clean(product.canonicalName || product.name || product.id);
+  const masterId = clean(product.id || product.name || masterName);
+  if (!key || !masterId) return false;
+  // อัปเดตหน่วยความจำก่อนให้เห็นผลทันที (ทุกบรรทัดที่ชื่อตรงกันจะ map ตาม)
+  state.ckncAliasEntries = state.ckncAliasEntries.filter((entry) => entry.key !== key);
+  state.ckncAliasEntries.push({ key, name: masterName, id: masterId });
+  rebuildMedicineAliasMap();
+  rebuildBillsForCurrentMode();
+  renderMetrics();
+  renderTabs();
+  renderTable();
+  renderMasterMappingStatus();
+  scheduleAutosave("cknc-alias-link");
+  // บันทึกถาวร (best-effort) — id = key ที่ encode ให้ปลอดภัยเป็น doc id, key จริงอยู่ใน field
+  if (window.db && window.auth?.currentUser) {
+    try {
+      const docId = encodeURIComponent(key).slice(0, 500);
+      await window.db.collection("cknc_medicine_aliases").doc(docId).set({
+        key,
+        ckncNameRaw: clean(rawName),
+        masterProductId: masterId,
+        masterName,
+        updatedBy: state.authUser?.email || state.authUser?.uid || "",
+        updatedAt: new Date().toISOString(),
+      }, { merge: true });
+    } catch (error) {
+      console.warn("Save CKNC alias failed", error);
+      showToast(`ลิงก์ในเครื่องแล้ว แต่บันทึกขึ้นระบบไม่สำเร็จ: ${clean(rawName)}`);
+      return true;
+    }
+  }
+  showToast(`ลิงก์ "${clean(rawName)}" → ${masterName} แล้ว`);
+  return true;
 }
 
 function setAuthGate(title, message, showAction = false) {
@@ -2820,8 +2882,14 @@ function renderTable() {
   const customerCount = customerKeys.size + unidentified;
   const customerText = `${number(customerCount)} ลูกค้า${repeatKeys.size ? ` · ${number(repeatKeys.size)} คนมาซ้ำ` : ""}`;
   const periodLabel = activePeriodLabel();
-  elements.tableSummary.textContent = state.bills.length
-    ? `${periodLabel ? `${periodLabel}: ` : ""}แสดง ${number(rows.length)} จาก ${number(state.bills.length)} บิล · ${customerText} · รายได้จริง: ขาย ${money(totals.sale)} · ต้นทุน ${money(totals.cost)} · กำไร ${money(totals.profit)} (${profitSplit}) · วางบิล ${money(billedTotal)}${caseText ? ` · ${caseText}` : ""}`
+  const totalBills = state.bills.length;
+  // ตัวส่วนอิงช่วงที่กรอง: "<ช่วง>: X บิล · (ทั้งหมด Y)" — ซ่อน "(ทั้งหมด)" เมื่อไม่ได้กรองให้แคบลง (X=Y)
+  const scopePrefix = periodLabel ? `${periodLabel}: ` : "";
+  const countText = rows.length === totalBills
+    ? `${scopePrefix}${number(rows.length)} บิล`
+    : `${scopePrefix}${number(rows.length)} บิล · (ทั้งหมด ${number(totalBills)})`;
+  elements.tableSummary.textContent = totalBills
+    ? `${countText} · ${customerText} · รายได้จริง: ขาย ${money(totals.sale)} · ต้นทุน ${money(totals.cost)} · กำไร ${money(totals.profit)} (${profitSplit}) · วางบิล ${money(billedTotal)}${caseText ? ` · ${caseText}` : ""}`
     : "ยังไม่มีข้อมูล";
 
   if (!rows.length) {
@@ -2985,9 +3053,12 @@ function renderMedsCell(bill) {
     const unit = qty > 0 ? Math.round((sale / qty) * 100) / 100 : Math.round(sale * 100) / 100;
     const mlpUnit = qty > 0 ? Math.round((mlp / qty) * 100) / 100 : Math.round(mlp * 100) / 100;
     const name = htmlEscape(line.medicine || "-");
+    const linked = state.medicineAliasMap.has(normalizeMedicineKey(line.medicine || ""));
+    const linkBtn = `<button class="med-link-btn${linked ? " linked" : ""}" type="button" data-med-link="${htmlEscape(bill.billKey)}" data-med-index="${index}" data-med-name="${htmlEscape(line.medicine || "")}" title="${linked ? "ลิงก์ master แล้ว · คลิกเพื่อเปลี่ยน" : "ลิงก์ยานี้เข้า master"}" aria-label="ลิงก์เข้า master"><i class="fa-solid fa-link"></i></button>`;
     return `
       <div class="med-line">
         <span class="med-name" title="${name}">${name}</span>
+        ${linkBtn}
         <input class="inline-cell-input med-input" type="text" inputmode="decimal" value="${qty}" data-med-key="${htmlEscape(bill.billKey)}" data-med-index="${index}" data-med-field="qty" aria-label="จำนวน ${name}" title="จำนวน" />
         <span class="med-x">×</span>
         <span class="med-tag med-tag-ck" title="ราคาที่ CKNC เรียกจากประกัน">CKNC</span>
@@ -3096,6 +3167,62 @@ function quickUpdateMedicineLine(billKey, index, field, rawValue) {
   renderTable();
   renderAuditTrail();
   scheduleAutosave("medicine-line-update");
+}
+
+// Picker เลือกสินค้า master เพื่อลิงก์ชื่อยา CKNC (ระดับ body ตามธรรมเนียม modal)
+function openMedLinkPicker(rawName) {
+  document.querySelector(".med-link-modal")?.remove();
+  const overlay = document.createElement("div");
+  overlay.className = "med-link-modal";
+  overlay.innerHTML = `
+    <div class="med-link-panel" role="dialog" aria-label="ลิงก์ยาเข้า master">
+      <div class="med-link-head">
+        <div>
+          <div class="med-link-title"><i class="fa-solid fa-link"></i> ลิงก์ยาเข้า master</div>
+          <div class="med-link-sub">CKNC: <strong>${htmlEscape(rawName || "-")}</strong></div>
+        </div>
+        <button class="med-link-close" type="button" aria-label="ปิด">×</button>
+      </div>
+      <input class="med-link-search" type="text" placeholder="ค้นหาชื่อยาใน master…" aria-label="ค้นหา master" />
+      <div class="med-link-results" data-results></div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  const search = overlay.querySelector(".med-link-search");
+  const results = overlay.querySelector("[data-results]");
+  const close = () => { overlay.remove(); document.removeEventListener("keydown", onKey); };
+  function onKey(e) { if (e.key === "Escape") close(); }
+
+  const renderResults = (q) => {
+    const query = normalizeMedicineKey(q);
+    const list = (query
+      ? state.masterProducts.filter((p) => normalizeMedicineKey(`${p.name || ""} ${p.id || ""}`).includes(query))
+      : state.masterProducts
+    ).slice(0, 50);
+    results._list = list;
+    if (!list.length) { results.innerHTML = `<div class="med-link-empty">ไม่พบสินค้าใน master ตามคำค้น</div>`; return; }
+    results.innerHTML = list.map((p, i) => {
+      const nm = htmlEscape(clean(p.name || p.id));
+      const idText = clean(p.name) && clean(p.id) && clean(p.id) !== clean(p.name) ? `<span class="med-link-id">${htmlEscape(clean(p.id))}</span>` : "";
+      const unit = clean(p.unit) ? `<span class="med-link-unit">${htmlEscape(clean(p.unit))}</span>` : "";
+      return `<button class="med-link-item" type="button" data-pick="${i}"><span class="med-link-nm">${nm}</span>${idText}${unit}</button>`;
+    }).join("");
+  };
+
+  renderResults("");
+  search.addEventListener("input", () => renderResults(search.value));
+  results.addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-pick]");
+    if (!btn) return;
+    const product = results._list[Number(btn.dataset.pick)];
+    if (!product) return;
+    close();
+    await linkMedicineToMaster(rawName, product);
+  });
+  overlay.querySelector(".med-link-close").addEventListener("click", close);
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+  document.addEventListener("keydown", onKey);
+  setTimeout(() => search.focus(), 30);
 }
 
 // ฟอร์มเพิ่มรายการยาใหม่ในเซลล์ตาราง — ไม่ต้องเปิด drawer แก้ไข
@@ -8005,6 +8132,11 @@ elements.billTableBody.addEventListener("click", (event) => {
     openInlineMedForm(addMedBtn);
     return;
   }
+  const medLinkBtn = event.target.closest("[data-med-link]");
+  if (medLinkBtn) {
+    openMedLinkPicker(medLinkBtn.dataset.medName);
+    return;
+  }
   const newMedConfirm = event.target.closest("[data-new-med-confirm]");
   if (newMedConfirm) {
     commitInlineMedForm(newMedConfirm.closest("[data-new-med-form]"));
@@ -8759,7 +8891,7 @@ elements.sessionList.addEventListener("click", (event) => {
 });
 loadRuleConfigFromStorage();
 populateRuleEditor();
-verifyCkncAccess().then(loadMasterProductMappings);
+verifyCkncAccess().then(loadMasterProductMappings).then(loadCkncAliases);
 renderTabs();
 renderAuditTrail();
 renderMasterMappingStatus();
