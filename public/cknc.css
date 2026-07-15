@@ -2165,6 +2165,52 @@ html.dark .inline-cell-input.med-price-mlp {
   border-color: #5d4f97;
 }
 
+/* ต้นทุนจริงต่อบรรทัด (ดึงจาก master COST) — โทนแดงเหมือน "ต้นทุน" ในแอป */
+.med-tag-cost {
+  color: #e11d48;
+}
+
+html.dark .med-tag-cost {
+  color: #fb7185;
+}
+
+.med-price-cost {
+  border-color: #f4b8c4;
+  color: #e11d48;
+  font-weight: 700;
+}
+
+html.dark .inline-cell-input.med-price-cost {
+  border-color: #9f4b5e;
+  color: #fb7185;
+}
+
+/* แถวสรุปต้นทุนจริงรวม + ปุ่มคัดลอกไปช่อง "ต้นทุน CKNC" */
+.med-costsum-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  padding: 6px 4px 2px;
+  border-top: 1px dashed var(--line);
+}
+
+.med-costsum-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.med-costsum-label strong {
+  color: #e11d48;
+}
+
+html.dark .med-costsum-label strong {
+  color: #fb7185;
+}
+
 /* สรุปรวมสองฝั่งท้ายเซลล์ยา */
 .med-sum-note {
   margin-top: 4px;
@@ -4080,6 +4126,7 @@ html.dark #cardDetailBody tr.row-paid td {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap; /* 3 ช่องราคา (CKNC/MLP/ทุน) ในดรอเวอร์แคบ → ห่อบรรทัดแทนล้น */
 }
 
 .drawer-list-item .med-name {

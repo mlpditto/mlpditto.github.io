@@ -483,6 +483,33 @@ function resolveMedicineName(value) {
   };
 }
 
+// หา master product จากชื่อยา CKNC (ผ่าน alias map) แล้วดึงต้นทุน/ราคา — ใช้ auto-fill แถวยาในดรอเวอร์
+function resolveMasterProduct(value) {
+  const { masterProductId } = resolveMedicineName(value);
+  if (!masterProductId) return null;
+  return state.masterProducts.find((p) => clean(p.id || p.name) === masterProductId
+    || clean(p.name) === masterProductId) || null;
+}
+const masterCostOf = (p) => Number((p && (p.cost || (p.prices && p.prices.COST))) || 0);      // ต้นทุนจริง (LINE MAN COST)
+const masterLinemanOf = (p) => Number((p && p.prices && p.prices.LINEMAN) || 0);                // ราคา LINE MAN (= MLP คิด CKNC)
+
+// datalist ชื่อยาจาก master สำหรับ autocomplete แถวยาในดรอเวอร์ (1 ชื่อ/สินค้า)
+function updateCkncMasterDatalist() {
+  const dl = document.getElementById("cknc-master-list");
+  if (!dl) return;
+  const seen = new Set();
+  const options = [];
+  state.masterProducts.forEach((p) => {
+    const display = clean(p.canonicalName || p.name || p.id);
+    if (!display) return;
+    const key = normalizeMedicineKey(display);
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    options.push(`<option value="${htmlEscape(display)}"></option>`);
+  });
+  dl.innerHTML = options.join("");
+}
+
 function renderMasterMappingStatus() {
   if (!elements.masterMappingStatus) return;
   const mappedAliases = state.medicineAliasMap.size;
@@ -609,6 +636,7 @@ async function loadMasterProductMappings() {
     state.masterProducts = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
     state.medicineMappingLoaded = true;
     rebuildMedicineAliasMap();
+    updateCkncMasterDatalist();
     renderMasterMappingStatus();
     if (state.clicknicRows.length || state.manualClicknicRows.length) renderAll();
   } catch (error) {
@@ -652,6 +680,7 @@ async function linkMedicineToMaster(rawName, product) {
   renderTabs();
   renderTable();
   renderMasterMappingStatus();
+  if (elements.detailDrawer?.open) autofillDrawerMedicinesFromMaster(); // ลิงก์ตอนดรอเวอร์เปิด → ดึงต้นทุนเข้าแถวทันที
   scheduleAutosave("cknc-alias-link");
   // บันทึกถาวร (best-effort) — id = key ที่ encode ให้ปลอดภัยเป็น doc id, key จริงอยู่ใน field
   if (window.db && window.auth?.currentUser) {
@@ -6896,6 +6925,8 @@ function openDetailDrawer(billKey) {
     qty: toNumeric(line.qty),
     sale: toNumeric(line.sale),
     cost: toNumeric(line.cost),
+    realCost: toNumeric(line.realCost),
+    realCostEdited: toNumeric(line.realCost) > 0, // ต้นทุนที่เคยเซฟ = ถือว่าผู้ใช้กำหนดแล้ว ไม่ให้ autofill ทับ
   }));
   renderDrawerMedicines(bill);
 
@@ -6915,26 +6946,67 @@ function renderDrawerMedicines(bill) {
     return;
   }
   const source = bill?.hasManualMedicines ? "จาก Screenshot/manual" : "จาก Excel";
-  elements.drawerMedicines.innerHTML = lines.map((line, index) => {
+  const round2 = (v) => Math.round(v * 100) / 100;
+  const rowsHtml = lines.map((line, index) => {
     const qty = toNumeric(line.qty);
     const sale = toNumeric(line.sale);
     const mlp = toNumeric(line.cost);
-    const unit = qty > 0 ? Math.round((sale / qty) * 100) / 100 : Math.round(sale * 100) / 100;
-    const mlpUnit = qty > 0 ? Math.round((mlp / qty) * 100) / 100 : Math.round(mlp * 100) / 100;
+    const realCost = toNumeric(line.realCost);
+    const unit = qty > 0 ? round2(sale / qty) : round2(sale);
+    const mlpUnit = qty > 0 ? round2(mlp / qty) : round2(mlp);
+    const costUnit = qty > 0 ? round2(realCost / qty) : round2(realCost);
     const name = htmlEscape(line.medicine || "");
+    const linked = state.medicineAliasMap.has(normalizeMedicineKey(line.medicine || ""));
+    const lineProfit = round2(mlp - realCost); // กำไรบรรทัด = MLP คิด CKNC − ต้นทุนจริง
     return `
     <div class="drawer-list-item med-line" title="${source}">
-      <input class="inline-cell-input med-name-input" type="text" value="${name}" placeholder="ชื่อยา" data-drawer-med-index="${index}" data-drawer-med-field="medicine" aria-label="ชื่อยา" />
+      <input class="inline-cell-input med-name-input" type="text" value="${name}" placeholder="ชื่อยา" list="cknc-master-list" data-drawer-med-index="${index}" data-drawer-med-field="medicine" aria-label="ชื่อยา" />
+      <button class="med-link-btn${linked ? " linked" : ""}" type="button" data-drawer-med-link="${index}" title="${linked ? "ลิงก์ master แล้ว · คลิกเพื่อเปลี่ยน" : "ลิงก์ยานี้เข้า master (แล้วดึงต้นทุนอัตโนมัติ)"}" aria-label="ลิงก์เข้า master"><i class="fa-solid fa-link"></i></button>
       <input class="inline-cell-input med-input" type="text" inputmode="decimal" value="${qty}" data-drawer-med-index="${index}" data-drawer-med-field="qty" aria-label="จำนวน ${name || "ยาใหม่"}" title="จำนวน" />
       <span class="med-x">×</span>
       <span class="med-tag med-tag-ck" title="ราคาที่ CKNC เรียกจากประกัน">CKNC</span>
       <input class="inline-cell-input med-input med-price" type="text" inputmode="decimal" value="${unit > 0 ? unit : ""}" placeholder="ราคา" data-drawer-med-index="${index}" data-drawer-med-field="unitPrice" aria-label="ราคา CKNC ต่อหน่วย ${name || "ยาใหม่"}" title="ราคา CKNC เรียกประกัน (ต่อหน่วย)" />
       <span class="med-tag med-tag-mlp" title="ราคาที่ MLP คิดกับ CKNC">MLP</span>
       <input class="inline-cell-input med-input med-price med-price-mlp" type="text" inputmode="decimal" value="${mlpUnit > 0 ? mlpUnit : ""}" placeholder="ราคา" data-drawer-med-index="${index}" data-drawer-med-field="mlpUnitPrice" aria-label="ราคา MLP ต่อหน่วย ${name || "ยาใหม่"}" title="ราคา MLP คิด CKNC (ต่อหน่วย)" />
-      <span class="med-line-total" title="รวมบรรทัดนี้ CKNC / MLP">= ${sale > 0 ? money(sale) : "—"}${mlp > 0 ? ` <span class="med-mlp-val">/ ${money(mlp)}</span>` : ""}</span>
+      <span class="med-tag med-tag-cost" title="ต้นทุนจริงต่อหน่วย (ดึงจาก master COST)">ทุน</span>
+      <input class="inline-cell-input med-input med-price med-price-cost" type="text" inputmode="decimal" value="${costUnit > 0 ? costUnit : ""}" placeholder="ทุน" ${line.realCostEdited ? 'data-user-edited="1"' : ""} data-drawer-med-index="${index}" data-drawer-med-field="realCost" aria-label="ต้นทุนจริงต่อหน่วย ${name || "ยาใหม่"}" title="ต้นทุนจริง (ต่อหน่วย) ดึงจาก master" />
+      <span class="med-line-total" title="กำไรบรรทัด = MLP คิด CKNC − ต้นทุนจริง">${realCost > 0 ? `กำไร ${money(lineProfit)}` : (mlp > 0 ? `= ${money(mlp)}` : "")}</span>
       <button class="icon-button med-remove-btn" type="button" data-drawer-med-remove="${index}" title="ลบรายการนี้" aria-label="ลบ ${name || "ยาใหม่"}">×</button>
     </div>`;
   }).join("");
+  // แถวสรุปต้นทุนจริง + ปุ่มคัดลอกไปช่อง "ต้นทุน CKNC" (ไม่แตะ bill.cost อัตโนมัติ — money field กดเองชัดเจน)
+  const totalRealCost = round2(lines.reduce((s, l) => s + toNumeric(l.realCost), 0));
+  const footerHtml = totalRealCost > 0
+    ? `<div class="med-costsum-row">
+        <span class="med-costsum-label">ต้นทุนจริงรวม <strong>${money(totalRealCost)}</strong></span>
+        <button type="button" class="ghost small med-apply-cost-btn" data-drawer-apply-cost="${totalRealCost}" title="คัดลอกยอดนี้ไปช่อง 'ต้นทุน CKNC' ด้านบน">↑ ใช้เป็นต้นทุน CKNC</button>
+      </div>`
+    : "";
+  elements.drawerMedicines.innerHTML = rowsHtml + footerHtml;
+}
+
+// เติมราคา MLP + ต้นทุนจริงจาก master ให้ทุกแถวที่ map ได้ (ช่องว่าง/ยังไม่แก้เอง) — เรียกหลังลิงก์ยาเข้า master
+function autofillDrawerMedicinesFromMaster() {
+  const lines = state.drawerMedicines || [];
+  if (!lines.length) return;
+  const round2 = (v) => Math.round(v * 100) / 100;
+  lines.forEach((line) => {
+    const master = resolveMasterProduct(line.medicine);
+    if (!master) return;
+    const qtyN = toNumeric(line.qty) || 1;
+    if (toNumeric(line.cost) <= 0) {
+      const lm = masterLinemanOf(master);
+      if (lm > 0) line.cost = round2(qtyN * lm);
+    }
+    if (!line.realCostEdited && toNumeric(line.realCost) <= 0) {
+      const mc = masterCostOf(master);
+      if (mc > 0) line.realCost = round2(qtyN * mc);
+    }
+  });
+  const mlpTotal = round2(lines.reduce((s, l) => s + toNumeric(l.cost), 0));
+  if (mlpTotal > 0) elements.editSale.value = fixed2(mlpTotal);
+  renderDrawerMedicines(currentDetailBill());
+  updateEditProfitPreview();
 }
 
 const pasteAnalyzeFieldDefs = [
@@ -7521,6 +7593,7 @@ function saveBillOverride() {
       qty: toNumeric(line.qty) || 1,
       sale: toNumeric(line.sale),
       cost: toNumeric(line.cost),
+      realCost: toNumeric(line.realCost),
     }));
   const hadMedicines = Boolean((bill.medicines || []).length)
     || Boolean(clean(bill.medicinesText) && clean(bill.medicinesText) !== "-");
@@ -8192,24 +8265,46 @@ elements.drawerMedicines.addEventListener("change", (event) => {
   const lines = state.drawerMedicines || [];
   const line = lines[Number(input.dataset.drawerMedIndex)];
   if (!line) return;
+  const round2 = (value) => Math.round(value * 100) / 100;
   if (input.dataset.drawerMedField === "medicine") {
     line.medicine = clean(input.value);
+    // auto-fill จาก master: ราคา MLP (LINE MAN price) + ต้นทุนจริง (COST) เข้าช่องที่ยังว่าง/ผู้ใช้ยังไม่แก้เอง
+    const master = resolveMasterProduct(line.medicine);
+    if (master) {
+      const qtyN = toNumeric(line.qty) || 1;
+      if (toNumeric(line.cost) <= 0) {
+        const lm = masterLinemanOf(master);
+        if (lm > 0) line.cost = round2(qtyN * lm);
+      }
+      if (!line.realCostEdited && toNumeric(line.realCost) <= 0) {
+        const mc = masterCostOf(master);
+        if (mc > 0) line.realCost = round2(qtyN * mc);
+      }
+      const mlpTotal = round2(lines.reduce((sum, item) => sum + toNumeric(item.cost), 0));
+      if (mlpTotal > 0) elements.editSale.value = fixed2(mlpTotal);
+    }
+    renderDrawerMedicines(currentDetailBill());
+    updateEditProfitPreview();
     return;
   }
-  const round2 = (value) => Math.round(value * 100) / 100;
   const pricedBefore = lines.some((item) => toNumeric(item.sale) > 0);
   const field = input.dataset.drawerMedField;
   const value = Math.max(0, toNumeric(input.value));
   const prevUnit = line.qty > 0 ? line.sale / line.qty : 0;
   const prevMlpUnit = line.qty > 0 ? line.cost / line.qty : 0;
+  const prevCostUnit = line.qty > 0 ? line.realCost / line.qty : 0;
   if (field === "qty") {
     line.qty = value;
     line.sale = round2(value * prevUnit);
     line.cost = round2(value * prevMlpUnit);
+    line.realCost = round2(value * prevCostUnit);
   } else if (field === "unitPrice") {
     line.sale = round2((line.qty || 1) * value);
   } else if (field === "mlpUnitPrice") {
     line.cost = round2((line.qty || 1) * value);
+  } else if (field === "realCost") {
+    line.realCost = round2((line.qty || 1) * value);
+    line.realCostEdited = true; // ผู้ใช้แก้ต้นทุนเอง → autofill จะไม่เขียนทับ
   } else {
     return;
   }
@@ -8230,11 +8325,29 @@ elements.drawerAddMedicineBtn?.addEventListener("click", () => {
   const bill = currentDetailBill();
   if (!bill) return;
   state.drawerMedicines = state.drawerMedicines || [];
-  state.drawerMedicines.push({ medicine: "", qty: 1, sale: 0, cost: 0 });
+  state.drawerMedicines.push({ medicine: "", qty: 1, sale: 0, cost: 0, realCost: 0 });
   renderDrawerMedicines(bill);
   elements.drawerMedicines.querySelector(`[data-drawer-med-index="${state.drawerMedicines.length - 1}"][data-drawer-med-field="medicine"]`)?.focus();
 });
 elements.drawerMedicines.addEventListener("click", (event) => {
+  // 🔗 ลิงก์ยาเข้า master (หลังลิงก์ดึงต้นทุนอัตโนมัติ ผ่าน autofillDrawerMedicinesFromMaster ใน linkMedicineToMaster)
+  const linkBtn = event.target.closest("[data-drawer-med-link]");
+  if (linkBtn) {
+    const idx = Number(linkBtn.dataset.drawerMedLink);
+    const line = (state.drawerMedicines || [])[idx];
+    if (line) openMedLinkPicker(line.medicine || "");
+    return;
+  }
+  // ↑ คัดลอกต้นทุนจริงรวม → ช่อง "ต้นทุน CKNC" (money field เปลี่ยนเมื่อกดเองเท่านั้น)
+  const applyCostBtn = event.target.closest("[data-drawer-apply-cost]");
+  if (applyCostBtn) {
+    if (elements.editCost) {
+      elements.editCost.value = fixed2(Math.max(0, toNumeric(applyCostBtn.dataset.drawerApplyCost)));
+      updateEditProfitPreview();
+      showToast(`ตั้งต้นทุน CKNC = ${money(toNumeric(elements.editCost.value))} จากต้นทุนจริงรายบรรทัด`);
+    }
+    return;
+  }
   const removeBtn = event.target.closest("[data-drawer-med-remove]");
   if (!removeBtn) return;
   const lines = state.drawerMedicines || [];
