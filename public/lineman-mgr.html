@@ -1584,15 +1584,32 @@
             return masterCodeOf(p.name || p.id) ? ('code:' + masterCodeOf(p.name || p.id)) : ('name:' + normalizeMasterKey(p.canonicalName || p.name || p.id));
         }
 
+        // key ชื่อแบบตัดรหัส [NNNN] นำหน้าออก — ใช้เชื่อมตัวมีโค้ด↔ไม่มีโค้ดที่เป็นสินค้าเดียวกัน
+        function masterNameKey(p) {
+            const raw = (p.canonicalName || p.name || p.id || '').toString().replace(/^\s*\[\s*\d{2,}\s*\]\s*/, '');
+            return normalizeMasterKey(raw);
+        }
+
         function scanDuplicateMasters() {
-            const map = new Map();
-            masterProducts.forEach(p => {
-                const k = masterGroupKey(p);
-                if (!k || k === 'name:') return;
-                if (!map.has(k)) map.set(k, []);
-                map.get(k).push(p);
+            // union-find: 2 doc = สินค้าเดียวกัน ถ้า "รหัส [NNNN] ตรงกัน" หรือ "ชื่อ(ตัดรหัส) ตรงกัน"
+            // เชื่อมได้ทั้ง coded↔uncoded และ pack-variant ที่แชร์โค้ด เข้ากลุ่มเดียว
+            const parent = masterProducts.map((_, i) => i);
+            const find = (x) => { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; };
+            const union = (a, b) => { parent[find(a)] = find(b); };
+            const byCode = new Map(), byName = new Map();
+            masterProducts.forEach((p, i) => {
+                const code = masterCodeOf(p.name || p.id);
+                if (code) { const c = 'code:' + code; if (byCode.has(c)) union(i, byCode.get(c)); else byCode.set(c, i); }
+                const nameK = masterNameKey(p);
+                if (nameK) { const n = 'name:' + nameK; if (byName.has(n)) union(i, byName.get(n)); else byName.set(n, i); }
             });
-            return [...map.values()].filter(g => g.length >= 2);
+            const groups = new Map();
+            masterProducts.forEach((p, i) => {
+                const r = find(i);
+                if (!groups.has(r)) groups.set(r, []);
+                groups.get(r).push(p);
+            });
+            return [...groups.values()].filter(g => g.length >= 2);
         }
 
         // นับจำนวนบิลที่อ้างถึงสินค้าตัวนี้ (เฉพาะข้อมูลที่โหลดอยู่ — เดือนที่กำลังดู)
@@ -1722,12 +1739,26 @@
                 docs: group   // ข้อมูลเต็มทุก doc ในกลุ่มก่อนรวม
             });
 
+            // รวมราคา supplier (คีย์ที่ไม่ใช่ reserved) จากทุก doc ในกลุ่ม — เก็บค่ามากสุด(>0) กันต้นทุนจริงหายตอนลบตัวซ้ำ
+            const RESERVED_PRICE_KEYS = new Set(['COST', 'LINEMAN', 'RETAIL', 'WHOLESALE', 'STICKER']);
+            const mergedPrices = { ...(survivor.prices || {}) };
+            group.forEach(p => {
+                const pr = p.prices || {};
+                Object.keys(pr).forEach(k => {
+                    if (RESERVED_PRICE_KEYS.has(k.split('_')[0])) return; // reserved จัดการแยกด้านล่าง
+                    const v = Number(pr[k]) || 0;               // ค่า nested/ไม่ใช่ตัวเลข -> 0 (ข้าม)
+                    if (v > (Number(mergedPrices[k]) || 0)) mergedPrices[k] = v;
+                });
+            });
+            mergedPrices.COST = chosenCost;
+            mergedPrices.LINEMAN = chosenPrice;
+
             showLoading(true);
             try {
                 await window.db.collection('master_products').doc(survivor.id).set({
                     name: survivorName,
                     cost: chosenCost,
-                    prices: { ...(survivor.prices || {}), COST: chosenCost, LINEMAN: chosenPrice },
+                    prices: mergedPrices,
                     aliases: aliasArr
                 }, { merge: true });
                 for (const id of toDelete) {
