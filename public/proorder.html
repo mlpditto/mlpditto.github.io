@@ -846,6 +846,60 @@
             return name.replace(/\//g, '_');
         }
 
+        // ===== De-dup helpers: จับ master เดิมให้เจอแม้ชื่อต่าง (มีโค้ด [NNNN]/ไม่มีโค้ด) กัน doc งอกซ้ำตอน import =====
+        // logic ตรงกับ lineman-mgr (findMasterProductByName) เพื่อให้ import prevention ตรงกับเครื่องมือรวมซ้ำ
+        function normalizeMasterKey(value) {
+            return (value || '').toString().normalize('NFKC').toLowerCase().replace(/[(){}\[\],;|]+/g, ' ').replace(/\s+/g, ' ').trim();
+        }
+        function masterCodeOf(value) {
+            const m = (value || '').toString().match(/\[\s*(\d{2,})\s*\]/);
+            return m ? m[1] : null;
+        }
+        function splitMasterAliases(value) {
+            if (Array.isArray(value)) return value.map(v => (v || '').toString().trim()).filter(Boolean);
+            return (value || '').toString().split(/[\n,|;]+/).map(v => v.trim()).filter(Boolean);
+        }
+        function masterSearchNames(product = {}) {
+            return [product.id, product.name, product.canonicalName, product.companyProductId, product.mlpId,
+                ...splitMasterAliases(product.aliases)].filter(Boolean);
+        }
+        // ชื่อแบบตัดรหัส [NNNN] ออก (ตำแหน่งไหนก็ได้) แล้ว normalize — เชื่อมตัวมีโค้ด↔ไม่มีโค้ดที่เป็นสินค้าเดียวกัน
+        // (ตัวไม่มีโค้ดจับด้วย masterCodeOf ไม่ได้ ต้องอาศัย key ตัดรหัสนี้ ตรงกับ scanDuplicateMasters ในเครื่องมือรวมซ้ำ)
+        function masterNameKeyOf(value) {
+            return normalizeMasterKey((value || '').toString().replace(/\[\s*\d{2,}\s*\]/g, ' '));
+        }
+
+        // โหลด master ทั้งคอลเลกชันครั้งเดียวต่อการ import (โหลดสดกันใช้ข้อมูลเก่า) — ~875 doc, read เดียว
+        let _masterDedupIndex = null;
+        async function loadMasterDedupIndex(force = false) {
+            if (_masterDedupIndex && !force) return _masterDedupIndex;
+            const arr = [];
+            const snap = await db.collection('master_products').get();
+            snap.forEach(doc => arr.push({ id: doc.id, ...doc.data() }));
+            _masterDedupIndex = arr;
+            return arr;
+        }
+        // หา master เดิมที่เป็นสินค้าเดียวกับ name (normalize ตรงเป๊ะ หรือ รหัส [NNNN] ตรงกัน) — คืน object หรือ null
+        function findExistingMaster(name, index) {
+            const key = normalizeMasterKey(name);
+            if (!key) return null;
+            const exact = index.find(p => masterSearchNames(p).some(a => normalizeMasterKey(a) === key));
+            if (exact) return exact;
+            const code = masterCodeOf(name);
+            if (code) {
+                const byCode = index.find(p => masterSearchNames(p).some(a => masterCodeOf(a) === code));
+                if (byCode) return byCode;
+            }
+            // ตัดรหัสแล้วจับด้วยชื่อ — เชื่อม coded↔uncoded ได้ทั้ง 2 ทาง (ตัวไม่มีโค้ดจับด้วย masterCodeOf ไม่ได้)
+            // ต้องรันแม้ชื่อ import ไม่มีโค้ด เพราะ doc เดิมอาจเป็นตัวมีโค้ดที่ exact จับไม่ติด
+            const nameKey = masterNameKeyOf(name);
+            if (nameKey) {
+                const byName = index.find(p => masterSearchNames(p).some(a => masterNameKeyOf(a) === nameKey));
+                if (byName) return byName;
+            }
+            return null;
+        }
+
         auth.onAuthStateChanged(user => {
             if (user && user.email === 'medlifeplus@gmail.com') {
                 document.getElementById('auth-guard').classList.add('hidden'); // Unlock
@@ -1106,28 +1160,18 @@
 
         async function batchAddProducts(newItems) {
             let added = 0, updated = 0;
+            await loadMasterDedupIndex(true); // โหลด master สดครั้งเดียวก่อนวนลูป (item ถัดไป dedup กับตัวที่เพิ่งสร้างได้)
             for (let item of newItems) {
+                const importedName = item.name; // ชื่อดิบจากการ import (ก่อนแทนด้วยชื่อหลัก) — ส่งให้ recordToMaster เรียนรู้เป็น alias
                 let systemName = item.name;
                 let aliases = [];
 
-                // --- Alias Resolution ---
+                // --- Alias / duplicate resolution (จับด้วยชื่อ + รหัส [NNNN] กันแสดงเป็นของใหม่ทั้งที่มีอยู่แล้ว) ---
                 try {
-                    // 1. Check if it's already a system name (doc ID)
-                    const docId = getDocId(item.name);
-                    const doc = await db.collection('master_products').doc(docId).get();
-
-                    if (doc.exists) {
-                        const d = doc.data();
-                        systemName = d.name || item.name;
-                        aliases = d.aliases || [];
-                    } else {
-                        // 2. Not a doc ID, check if it's an alias
-                        const aliasSnap = await db.collection('master_products').where('aliases', 'array-contains', item.name).limit(1).get();
-                        if (!aliasSnap.empty) {
-                            const d = aliasSnap.docs[0].data();
-                            systemName = d.name;
-                            aliases = d.aliases || [];
-                        }
+                    const existing = findExistingMaster(item.name, await loadMasterDedupIndex());
+                    if (existing) {
+                        systemName = existing.name || existing.id;
+                        aliases = existing.aliases || [];
                     }
                 } catch (e) { console.error("Alias resolution failed", e); }
 
@@ -1149,15 +1193,20 @@
                     setTimeout(() => { const card = document.getElementById(`card-${id}`); if (card) card.classList.add('flash-success'); }, 100);
                     added++;
                 }
-                // Auto-record to Master Database
-                recordToMaster(item.name, item.unit, item.company, item.price);
+                // Auto-record to Master Database — await เพื่อ serialize การเขียน + ให้ index อัปเดตก่อน item ถัดไป (กัน race งอก doc ซ้ำ)
+                await recordToMaster(importedName, item.unit, item.company, item.price);
             }
             return { added, updated };
         }
 
         async function recordToMaster(name, unit = "", company = "", price = 0) {
             if (!name) return;
-            const docRef = db.collection('master_products').doc(getDocId(name));
+            const index = await loadMasterDedupIndex();
+            // จับ master เดิม (ชื่อตรง หรือรหัส [NNNN] ตรง) — เจอแล้ว upsert ลง doc เดิม ไม่งอก doc ซ้ำ
+            const existing = findExistingMaster(name, index);
+            const docRef = existing
+                ? db.collection('master_products').doc(existing.id)
+                : db.collection('master_products').doc(getDocId(name));
             try {
                 const doc = await docRef.get();
                 if (!doc.exists) {
@@ -1175,6 +1224,7 @@
                         data.prices[priceKey] = price || 0;
                     }
                     await docRef.set(data);
+                    index.push({ id: docRef.id, ...data }); // ให้ item ถัดไปใน batch เดียวกัน dedup เจอ
                 } else {
                     const d = doc.data();
                     const updates = {};
@@ -1197,8 +1247,17 @@
                         }
                     }
 
+                    // เรียนรู้ชื่อที่ import เป็น alias ถ้าจับ master เจอผ่านรหัสแต่สตริงต่าง (กันครั้งหน้า import ชื่อนี้แล้วงอก doc ใหม่)
+                    const docName = d.name || docRef.id;
+                    const known = masterSearchNames({ id: docRef.id, ...d }).map(normalizeMasterKey);
+                    if (name !== docName && !known.includes(normalizeMasterKey(name))) {
+                        updates.aliases = [...splitMasterAliases(d.aliases), name];
+                    }
+
                     if (Object.keys(updates).length > 0) {
                         await docRef.update(updates);
+                        const cached = index.find(p => p.id === docRef.id); // sync index สำหรับ item ถัดไปในลูปเดียวกัน
+                        if (cached) Object.assign(cached, updates);
                     }
                 }
             } catch (err) { console.error("Master Record Error", err); }
