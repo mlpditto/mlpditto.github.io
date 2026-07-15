@@ -1322,6 +1322,8 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
+                    <button id="merge-all-btn" onclick="mergeAllGroups()" title="รวมทุกกลุ่มด้วยค่าเริ่มต้น (เก็บตัวข้อมูลครบสุดเป็นหลัก) — backup รวมไฟล์เดียว ยืนยันครั้งเดียว"
+                        class="px-3 py-2 rounded-xl bg-purple-600 text-white font-black hover:bg-purple-700 transition-all text-[11px] shadow-lg shadow-purple-500/20"><i class="fas fa-layer-group mr-1"></i> รวมทั้งหมด</button>
                     <button onclick="backupMasterAll()" title="ดาวน์โหลด backup ของ master ทั้งหมด"
                         class="px-3 py-2 rounded-xl bg-amber-50 text-amber-600 font-bold hover:bg-amber-500 hover:text-white transition-all text-[11px] border border-amber-200"><i class="fas fa-download mr-1"></i> สำรองทั้งหมด</button>
                     <button onclick="document.getElementById('mergeModal').classList.add('hidden')"
@@ -1650,18 +1652,28 @@
             document.getElementById('mergeModal').classList.remove('hidden');
         }
 
+        // ค่าเริ่มต้นต่อกลุ่ม: ตัวหลัก = ข้อมูลครบสุด (ทุน+ราคา+บิล), ทุน/ราคา = ตัวแรกที่มีค่า > 0
+        // ใช้ทั้งตอน render radio และตอน bulk merge (mergeAllGroups) ให้ผลตรงกัน
+        function computeGroupDefaults(group) {
+            const scored = group.map(p => ({ p, score: (productCostVal(p) > 0 ? 4 : 0) + (productPriceVal(p) > 0 ? 2 : 0) + Math.min(countBillRefsFor(p), 1) }));
+            return {
+                survivorId: scored.slice().sort((a, b) => b.score - a.score)[0].p.id,
+                costId: (group.find(p => productCostVal(p) > 0) || group[0]).id,
+                priceId: (group.find(p => productPriceVal(p) > 0) || group[0]).id,
+            };
+        }
+
         function renderMergeGroups() {
             const body = document.getElementById('merge-body');
+            const allBtn = document.getElementById('merge-all-btn');
             if (!mergeGroups.length) {
+                if (allBtn) allBtn.classList.add('hidden');
                 body.innerHTML = `<div class="text-center text-slate-400 py-16"><i class="fas fa-check-circle text-4xl text-emerald-400 mb-3"></i><p class="font-bold">ไม่พบสินค้าซ้ำใน MASTER</p><p class="text-xs mt-1">จับกลุ่มด้วยรหัส [NNNN] และชื่อที่ตรงกันแล้ว ทุกตัวไม่ซ้ำ</p></div>`;
                 return;
             }
+            if (allBtn) allBtn.classList.remove('hidden');
             body.innerHTML = mergeGroups.map((group, gi) => {
-                // default: ตัวหลัก = ตัวที่ข้อมูลครบสุด (มีทุน+ราคา+บิลมาก)
-                const scored = group.map(p => ({ p, score: (productCostVal(p) > 0 ? 4 : 0) + (productPriceVal(p) > 0 ? 2 : 0) + Math.min(countBillRefsFor(p), 1) }));
-                const bestId = scored.slice().sort((a, b) => b.score - a.score)[0].p.id;
-                const costDefault = (group.find(p => productCostVal(p) > 0) || group[0]).id;
-                const priceDefault = (group.find(p => productPriceVal(p) > 0) || group[0]).id;
+                const { survivorId: bestId, costId: costDefault, priceId: priceDefault } = computeGroupDefaults(group);
                 const label = group[0] && masterCodeOf(group[0].name || group[0].id)
                     ? `รหัส [${masterCodeOf(group[0].name || group[0].id)}]`
                     : `ชื่อ: ${mergeEsc(group[0].canonicalName || group[0].name || group[0].id)}`;
@@ -1692,18 +1704,18 @@
             }).join('');
         }
 
-        async function mergeGroup(gi) {
-            const group = mergeGroups[gi];
-            if (!group || group.length < 2) return;
-            const pick = (nm) => (document.querySelector(`input[name="${nm}-${gi}"]:checked`) || {}).value;
-            const survivorId = pick('merge-survivor');
-            const costId = pick('merge-cost');
-            const priceId = pick('merge-price');
-            const survivor = group.find(p => p.id === survivorId);
-            const costSrc = group.find(p => p.id === costId) || survivor;
-            const priceSrc = group.find(p => p.id === priceId) || survivor;
-            if (!survivor) return;
-
+        // สร้างสเปกการรวม 1 กลุ่มจาก radio ที่เลือกใน DOM (fallback = ค่าเริ่มต้น) — ไม่แตะ Firestore
+        // ใช้ทั้ง mergeGroup (ทีละกลุ่ม) และ mergeAllGroups (bulk) ให้ logic รวม/alias/ราคา supplier ตรงกันเป๊ะ
+        function buildMergeSpec(group, gi) {
+            const def = computeGroupDefaults(group);
+            const pick = (nm, fallback) => {
+                const el = gi != null ? document.querySelector(`input[name="${nm}-${gi}"]:checked`) : null;
+                return (el && el.value) || fallback;
+            };
+            const survivor = group.find(p => p.id === pick('merge-survivor', def.survivorId)) || group.find(p => p.id === def.survivorId);
+            if (!survivor) return null;
+            const costSrc = group.find(p => p.id === pick('merge-cost', def.costId)) || survivor;
+            const priceSrc = group.find(p => p.id === pick('merge-price', def.priceId)) || survivor;
             const chosenCost = productCostVal(costSrc);
             const chosenPrice = productPriceVal(priceSrc);
             const survivorName = survivor.name || survivor.id;
@@ -1713,33 +1725,7 @@
             allNames.delete(survivorName);
             const aliasArr = [...allNames];
             const toDelete = group.filter(p => p.id !== survivor.id).map(p => p.id);
-
-            const money = (v) => `฿${Number(v || 0).toLocaleString()}`;
-            const res = await Swal.fire({
-                title: 'ยืนยันการรวมกลุ่มนี้?',
-                html: `<div class="text-left text-[13px] space-y-1">
-                    <div>เก็บเป็นหลัก: <b>${mergeEsc(survivorName)}</b></div>
-                    <div>ทุนที่ใช้: <b class="text-rose-600">${money(chosenCost)}</b> · ราคาที่ใช้: <b class="text-blue-600">${money(chosenPrice)}</b></div>
-                    <div class="mt-2 p-2 bg-rose-50 rounded-lg text-rose-600 text-[12px]"><b>จะลบถาวร ${toDelete.length} รายการ:</b><br>${toDelete.map(id => '• ' + mergeEsc(id)).join('<br>')}</div>
-                    <div class="text-[11px] text-slate-500 mt-1">ชื่อเดิมทั้งหมดจะถูกเก็บเป็น alias ให้บิลเก่ายังหาเจอ</div>
-                    <div class="text-[11px] text-emerald-600 mt-1"><i class="fas fa-shield-alt mr-1"></i>ระบบจะดาวน์โหลด backup JSON ของกลุ่มนี้ให้อัตโนมัติก่อนลบ</div>
-                </div>`,
-                icon: 'warning', showCancelButton: true, confirmButtonColor: '#9333ea',
-                confirmButtonText: 'รวม + ลบตัวซ้ำ', cancelButtonText: 'ยกเลิก'
-            });
-            if (!res.isConfirmed) return;
-
-            // SAFETY: สำรอง JSON ของทุก doc ในกลุ่มนี้ก่อนลบ (กู้คืนได้ถ้าพลาด) — auto ทุกครั้งก่อนแตะ Firestore
-            downloadJSON(`master-merge-backup-${tsStamp()}.json`, {
-                mergedAt: new Date().toISOString(),
-                groupKey: masterGroupKey(survivor),
-                survivorId: survivor.id,
-                chosenCost, chosenPrice,
-                deletedIds: toDelete,
-                docs: group   // ข้อมูลเต็มทุก doc ในกลุ่มก่อนรวม
-            });
-
-            // รวมราคา supplier (คีย์ที่ไม่ใช่ reserved) จากทุก doc ในกลุ่ม — เก็บค่ามากสุด(>0) กันต้นทุนจริงหายตอนลบตัวซ้ำ
+            // รวมราคา supplier (คีย์ที่ไม่ใช่ reserved) จากทุก doc — เก็บค่ามากสุด(>0) กันต้นทุนจริงหายตอนลบตัวซ้ำ
             const RESERVED_PRICE_KEYS = new Set(['COST', 'LINEMAN', 'RETAIL', 'WHOLESALE', 'STICKER']);
             const mergedPrices = { ...(survivor.prices || {}) };
             group.forEach(p => {
@@ -1752,27 +1738,116 @@
             });
             mergedPrices.COST = chosenCost;
             mergedPrices.LINEMAN = chosenPrice;
+            return { group, survivor, survivorName, chosenCost, chosenPrice, aliasArr, toDelete, mergedPrices };
+        }
+
+        // เขียน survivor + ลบตัวซ้ำตามสเปก (ไม่ทำ backup/confirm/sync — ให้ผู้เรียกจัดการ)
+        async function applyMergeSpec(spec) {
+            await window.db.collection('master_products').doc(spec.survivor.id).set({
+                name: spec.survivorName,
+                cost: spec.chosenCost,
+                prices: spec.mergedPrices,
+                aliases: spec.aliasArr
+            }, { merge: true });
+            for (const id of spec.toDelete) {
+                await window.db.collection('master_products').doc(id).delete();
+            }
+        }
+
+        async function mergeGroup(gi) {
+            const group = mergeGroups[gi];
+            if (!group || group.length < 2) return;
+            const spec = buildMergeSpec(group, gi);
+            if (!spec) return;
+
+            const money = (v) => `฿${Number(v || 0).toLocaleString()}`;
+            const res = await Swal.fire({
+                title: 'ยืนยันการรวมกลุ่มนี้?',
+                html: `<div class="text-left text-[13px] space-y-1">
+                    <div>เก็บเป็นหลัก: <b>${mergeEsc(spec.survivorName)}</b></div>
+                    <div>ทุนที่ใช้: <b class="text-rose-600">${money(spec.chosenCost)}</b> · ราคาที่ใช้: <b class="text-blue-600">${money(spec.chosenPrice)}</b></div>
+                    <div class="mt-2 p-2 bg-rose-50 rounded-lg text-rose-600 text-[12px]"><b>จะลบถาวร ${spec.toDelete.length} รายการ:</b><br>${spec.toDelete.map(id => '• ' + mergeEsc(id)).join('<br>')}</div>
+                    <div class="text-[11px] text-slate-500 mt-1">ชื่อเดิมทั้งหมดจะถูกเก็บเป็น alias ให้บิลเก่ายังหาเจอ</div>
+                    <div class="text-[11px] text-emerald-600 mt-1"><i class="fas fa-shield-alt mr-1"></i>ระบบจะดาวน์โหลด backup JSON ของกลุ่มนี้ให้อัตโนมัติก่อนลบ</div>
+                </div>`,
+                icon: 'warning', showCancelButton: true, confirmButtonColor: '#9333ea',
+                confirmButtonText: 'รวม + ลบตัวซ้ำ', cancelButtonText: 'ยกเลิก'
+            });
+            if (!res.isConfirmed) return;
+
+            // SAFETY: สำรอง JSON ของทุก doc ในกลุ่มนี้ก่อนลบ (กู้คืนได้ถ้าพลาด) — auto ทุกครั้งก่อนแตะ Firestore
+            downloadJSON(`master-merge-backup-${tsStamp()}.json`, {
+                mergedAt: new Date().toISOString(),
+                groupKey: masterGroupKey(spec.survivor),
+                survivorId: spec.survivor.id,
+                chosenCost: spec.chosenCost, chosenPrice: spec.chosenPrice,
+                deletedIds: spec.toDelete,
+                docs: group   // ข้อมูลเต็มทุก doc ในกลุ่มก่อนรวม
+            });
 
             showLoading(true);
             try {
-                await window.db.collection('master_products').doc(survivor.id).set({
-                    name: survivorName,
-                    cost: chosenCost,
-                    prices: mergedPrices,
-                    aliases: aliasArr
-                }, { merge: true });
-                for (const id of toDelete) {
-                    await window.db.collection('master_products').doc(id).delete();
-                }
+                await applyMergeSpec(spec);
                 await syncMasterData();
                 mergeGroups = scanDuplicateMasters();
                 renderMergeGroups();
                 showLoading(false);
-                Swal.fire({ icon: 'success', title: 'รวมสำเร็จ', text: `รวมเป็น "${survivorName}" และลบตัวซ้ำ ${toDelete.length} รายการแล้ว`, timer: 2200, showConfirmButton: false });
+                Swal.fire({ icon: 'success', title: 'รวมสำเร็จ', text: `รวมเป็น "${spec.survivorName}" และลบตัวซ้ำ ${spec.toDelete.length} รายการแล้ว`, timer: 2200, showConfirmButton: false });
             } catch (err) {
                 showLoading(false);
                 console.error('mergeGroup error', err);
                 Swal.fire('ผิดพลาด', 'รวมไม่สำเร็จ: ' + (err.message || err), 'error');
+            }
+        }
+
+        // รวมทุกกลุ่มรวดเดียวด้วยค่าที่เลือกอยู่ (default หรือที่ปรับใน radio) — backup รวมไฟล์เดียว, ยืนยันครั้งเดียว
+        async function mergeAllGroups() {
+            if (!mergeGroups.length) return;
+            // เก็บสเปกทุกกลุ่มจาก DOM ก่อน (ก่อนลบอะไร) เพราะหลังลบแล้ว index/DOM จะเลื่อน
+            const specs = mergeGroups.map((group, gi) => buildMergeSpec(group, gi)).filter(Boolean);
+            if (!specs.length) return;
+            const totalDelete = specs.reduce((s, x) => s + x.toDelete.length, 0);
+
+            const res = await Swal.fire({
+                title: `รวมทั้งหมด ${specs.length} กลุ่ม?`,
+                html: `<div class="text-left text-[13px] space-y-1">
+                    <div>ทุกกลุ่มจะใช้ค่าที่เลือกอยู่ตอนนี้ (ตัวหลัก/ทุน/ราคา ตามที่ตั้งไว้ในตาราง)</div>
+                    <div class="mt-2 p-2 bg-rose-50 rounded-lg text-rose-600 text-[12px]"><b>จะลบถาวรรวม ${totalDelete} รายการ</b> จาก ${specs.length} กลุ่ม</div>
+                    <div class="text-[11px] text-slate-500 mt-1">ชื่อเดิมทั้งหมดถูกเก็บเป็น alias ให้บิลเก่ายังหาเจอ</div>
+                    <div class="text-[11px] text-emerald-600 mt-1"><i class="fas fa-shield-alt mr-1"></i>ดาวน์โหลด backup JSON รวมทุกกลุ่มไฟล์เดียวก่อนลบ</div>
+                </div>`,
+                icon: 'warning', showCancelButton: true, confirmButtonColor: '#9333ea',
+                confirmButtonText: `รวมทั้งหมด + ลบ ${totalDelete} รายการ`, cancelButtonText: 'ยกเลิก'
+            });
+            if (!res.isConfirmed) return;
+
+            // SAFETY: backup รวมทุกกลุ่มไฟล์เดียวก่อนแตะ Firestore
+            downloadJSON(`master-merge-ALL-backup-${tsStamp()}.json`, {
+                mergedAt: new Date().toISOString(),
+                groupCount: specs.length,
+                groups: specs.map(s => ({
+                    survivorId: s.survivor.id, survivorName: s.survivorName,
+                    chosenCost: s.chosenCost, chosenPrice: s.chosenPrice,
+                    deletedIds: s.toDelete, docs: s.group
+                }))
+            });
+
+            showLoading(true);
+            let done = 0, failed = 0;
+            const errs = [];
+            for (const spec of specs) {
+                try { await applyMergeSpec(spec); done++; }
+                catch (err) { failed++; errs.push(`${spec.survivorName}: ${err.message || err}`); console.error('mergeAll error', spec.survivor.id, err); }
+            }
+            await syncMasterData();
+            mergeGroups = scanDuplicateMasters();
+            renderMergeGroups();
+            showLoading(false);
+
+            if (failed) {
+                Swal.fire({ icon: 'warning', title: `รวมเสร็จบางส่วน`, html: `สำเร็จ ${done}/${specs.length} กลุ่ม<br>ล้มเหลว ${failed} กลุ่ม:<br><span class="text-[11px] text-rose-500">${errs.slice(0, 5).map(mergeEsc).join('<br>')}</span>` });
+            } else {
+                Swal.fire({ icon: 'success', title: 'รวมทั้งหมดสำเร็จ', text: `รวม ${done} กลุ่ม ลบตัวซ้ำ ${totalDelete} รายการแล้ว`, timer: 2600, showConfirmButton: false });
             }
         }
 
