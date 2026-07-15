@@ -1259,6 +1259,12 @@
         let allCompaniesData = new Set();
         let selectedCompanies = new Set();
 
+        // Reserved price-map keys written by LINE MAN (lineman-mgr.html) = ราคาขาย/ทุน ไม่ใช่ชื่อบริษัท supplier
+        // ต้อง filter ทิ้งก่อนตีความ key ใน prices เป็นชื่อเจ้า ไม่งั้นจะโผล่เป็นบริษัทปลอม
+        const RESERVED_PRICE_KEYS = new Set(['COST', 'LINEMAN', 'RETAIL', 'WHOLESALE', 'STICKER']);
+        const priceKeyCompany = (key) => String(key).split('_')[0];
+        const isCompanyPriceKey = (key) => !RESERVED_PRICE_KEYS.has(priceKeyCompany(key));
+
         async function openCompanyExplorer() {
             document.getElementById('companyExplorerModal').classList.remove('hidden-el');
             selectedCompanies.clear();
@@ -1274,7 +1280,7 @@
                 const snap = await db.collection('master_products').limit(500).get();
                 snap.forEach(doc => {
                     const d = doc.data();
-                    if (d.prices) Object.keys(d.prices).forEach(k => allCompaniesData.add(k.split('_')[0]));
+                    if (d.prices) Object.keys(d.prices).forEach(k => { if (isCompanyPriceKey(k)) allCompaniesData.add(priceKeyCompany(k)); });
                 });
                 renderCompanyExplorer();
             } catch (err) { renderCompanyExplorer(); } // Show what we have even if fetch fails
@@ -1428,6 +1434,7 @@
                     if (d.prices) {
                         const newPrices = { ...d.prices };
                         Object.keys(d.prices).forEach(key => {
+                            if (!isCompanyPriceKey(key)) return; // อย่าแตะ key ราคาขาย/ทุนของ LINE MAN
                             const [comp, unit] = key.split('_');
                             if (sourceNames.includes(comp) && comp !== targetName) {
                                 // Found a price from a source company
@@ -1624,6 +1631,7 @@
                     // Adapt old price format to new if needed
                     const normalizedPrices = [];
                     Object.entries(prices).forEach(([key, price]) => {
+                        if (!isCompanyPriceKey(key)) return; // ข้ามราคาขาย/ทุนของ LINE MAN (LINEMAN/COST/...)
                         const parts = key.split('_');
                         normalizedPrices.push({
                             company: parts[0],
@@ -1685,7 +1693,7 @@
                     const d = doc.data();
                     if (d.unit) uniqueUnits.add(d.unit);
                     if (d.units) d.units.forEach(u => uniqueUnits.add(u));
-                    if (d.prices) Object.keys(d.prices).forEach(k => uniqueCompanies.add(k.split('_')[0]));
+                    if (d.prices) Object.keys(d.prices).forEach(k => { if (isCompanyPriceKey(k)) uniqueCompanies.add(priceKeyCompany(k)); });
                 });
             } catch (err) { console.error("Suggestion Fetch Error", err); }
 
