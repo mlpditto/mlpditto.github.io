@@ -4181,6 +4181,29 @@
             if (dl) dl.innerHTML = names.map(n => `<option value="${n.replace(/"/g, '&quot;')}">`).join('');
         }
 
+        // Read-time sync: ดึงต้นทุนต่อเจ้าจาก prices["บริษัท_หน่วย"] ของ ProOrder (เฉพาะ >0) มาเป็นแถว supplier
+        // ข้าม key สงวนของ LINE MAN, key ":" ไร้ชื่อ, และค่าที่เป็น object (nested map เสียรูป) — mark ทุนต่ำสุดเป็นทุนหลัก ⭐
+        const MASTER_RESERVED_PRICE_KEYS = ['COST', 'LINEMAN', 'RETAIL', 'WHOLESALE', 'STICKER'];
+        function suppliersFromCompanyPrices(prices) {
+            if (!prices || typeof prices !== 'object') return [];
+            const rows = [];
+            Object.keys(prices).forEach(key => {
+                const cost = prices[key];
+                if (typeof cost !== 'number' || !(cost > 0)) return;      // ข้าม 0 และ nested map เสียรูป
+                const head = key.split('_')[0];
+                if (MASTER_RESERVED_PRICE_KEYS.includes(head) || head === ':') return;
+                const parts = key.split('_');
+                const name = (parts.length > 1 ? parts.slice(0, -1).join('_') : parts[0]).trim();
+                rows.push({ name, cost, primary: false });
+            });
+            if (rows.length) {
+                let mi = 0;
+                rows.forEach((r, i) => { if (r.cost < rows[mi].cost) mi = i; });
+                rows[mi].primary = true;   // ทุนต่ำสุด = ทุนหลัก (ผู้ใช้เปลี่ยน ⭐ เองได้ก่อนบันทึก)
+            }
+            return rows;
+        }
+
         async function openMasterEdit(name, fromBillUid = null) {
             masterEditBillUid = fromBillUid; // เปิดจากฟอร์ม = null (รีเซ็ต context เก่าทิ้ง)
             name = name ? name.trim() : '';
@@ -4195,8 +4218,11 @@
                 const prices = m.prices || {};
                 document.getElementById('m-price').value = prices['LINEMAN'] || 0;
                 buildSupplierDatalist();
-                renderSupplierRows((m.suppliers && m.suppliers.length) ? m.suppliers
-                    : (prices['COST'] > 0 ? [{ name: '', cost: prices['COST'], primary: true }] : []));
+                renderSupplierRows(
+                    (m.suppliers && m.suppliers.length) ? m.suppliers          // 1) มี suppliers[] เดิม → ใช้เลย
+                    : (suppliersFromCompanyPrices(prices).length ? suppliersFromCompanyPrices(prices)  // 2) ดึงจาก ProOrder
+                    : (prices['COST'] > 0 ? [{ name: '', cost: prices['COST'], primary: true }]        // 3) ทุนเดี่ยวเดิม
+                    : [])));                                                     // 4) ว่าง
                 document.getElementById('m-retail').value = prices['RETAIL'] || '';
                 document.getElementById('m-wholesale').value = prices['WHOLESALE'] || '';
                 document.getElementById('m-sticker').value = prices['STICKER'] || '';

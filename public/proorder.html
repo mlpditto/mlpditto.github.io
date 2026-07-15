@@ -1189,8 +1189,11 @@
 
                     if (company) {
                         const priceKey = unit ? `${company}_${unit}` : company;
-                        if (!d.prices || d.prices[priceKey] === undefined || (price > 0 && d.prices[priceKey] !== price)) {
-                            updates[`prices.${priceKey}`] = price || (d.prices && d.prices[priceKey]) || 0;
+                        const cur = d.prices && d.prices[priceKey];
+                        if (!d.prices || cur === undefined || (price > 0 && cur !== price)) {
+                            // เขียน prices ทั้ง map (ไม่ใช่ dot-path) — ชื่อเจ้าที่มี "." จะได้ไม่ถูก Firestore แตกเป็น map ซ้อน
+                            updates.prices = { ...(d.prices || {}) };
+                            updates.prices[priceKey] = price || cur || 0;
                         }
                     }
 
