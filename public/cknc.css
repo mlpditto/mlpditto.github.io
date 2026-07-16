@@ -2112,6 +2112,20 @@ html.dark .paid-bar-all { background: rgba(255, 255, 255, 0.04); border-color: r
   font-weight: 800;
 }
 
+/* ปุ่ม 🪄 เติมต้นทุนจาก master ในตาราง */
+.auto-cost-btn {
+  flex: 0 0 auto;
+  border: none;
+  background: transparent;
+  color: #9333ea;
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 11px;
+  line-height: 1;
+  border-radius: 5px;
+}
+.auto-cost-btn:hover { background: rgba(147, 51, 234, 0.12); }
+
 .med-lines {
   display: grid;
   gap: 4px;

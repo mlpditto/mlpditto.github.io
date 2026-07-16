@@ -2818,6 +2818,28 @@ function renderInlineMoneyInput(bill, field, label) {
   `;
 }
 
+// รวมต้นทุนจริงจาก master ของยาในบิล (COST × qty) — สำหรับปุ่มเติมทุนในตาราง
+function billMasterCostTotal(bill) {
+  const meds = (bill.medicines && bill.medicines.length) ? bill.medicines : parseMedicinesTextLines(bill.medicinesText);
+  let total = 0;
+  meds.forEach((line) => {
+    const master = resolveMasterProduct(line.medicine);
+    if (!master) return;
+    const c = masterCostOf(master);
+    if (c > 0) total += c * (toNumeric(line.qty) || 1);
+  });
+  return Math.round(total * 100) / 100;
+}
+
+// ปุ่ม 🪄 เติมต้นทุนจาก master — โชว์เฉพาะบิลที่ยังไม่มีทุน (cost 0) และหาทุนจาก master ได้
+function autoCostBtnHtml(bill) {
+  const cur = Math.round((toNumeric(bill.cost) + toNumeric(bill.mlpCost)) * 100) / 100;
+  if (cur > 0) return "";
+  const master = billMasterCostTotal(bill);
+  if (master <= 0) return "";
+  return `<button type="button" class="auto-cost-btn" data-auto-cost="${htmlEscape(bill.billKey)}" title="เติมต้นทุนจาก master = ฿${number(master)}" aria-label="เติมต้นทุนจาก master"><i class="fa-solid fa-wand-magic-sparkles"></i></button>`;
+}
+
 function filteredBills() {
   const query = clean(elements.searchInput.value).toLowerCase();
   const status = state.activeStatus;
@@ -3006,7 +3028,7 @@ function renderTable() {
       </td>
       <td class="num money-cell">
         <span class="money-row"><span class="money-tag">ขาย</span>${renderInlineMoneyInput(bill, "sale", "ยอดขายยา")}</span>
-        <span class="money-row"><span class="money-tag">ทุน</span>${renderInlineMoneyInput(bill, "totalCost", "ต้นทุน")}</span>
+        <span class="money-row"><span class="money-tag">ทุน</span>${renderInlineMoneyInput(bill, "totalCost", "ต้นทุน")}${autoCostBtnHtml(bill)}</span>
         <span class="profit-line ${bill.profit < 0 ? "profit-negative" : ""}${Math.abs(toNumeric(bill.profit) - 10) < 0.005 ? " profit-nhso" : ""}" title="กำไร = ยอดขายยา − ต้นทุน (แก้ยอดใบวางบิลได้ในหน้ารายละเอียด)">กำไร ${money(bill.profit)}</span>
       </td>
       <td class="check-cell">${renderCheckCell(bill)}</td>
@@ -8821,6 +8843,14 @@ elements.billTableBody.addEventListener("click", (event) => {
   // ปุ่มล้างตัวกรองในแถวว่าง "ไม่พบข้อมูลตามตัวกรอง"
   if (event.target.closest("[data-clear-filters]")) {
     clearFilters();
+    return;
+  }
+  // ปุ่ม 🪄 เติมต้นทุนจาก master ในตาราง
+  const autoCost = event.target.closest("[data-auto-cost]");
+  if (autoCost) {
+    const bill = state.bills.find((b) => b.billKey === autoCost.dataset.autoCost);
+    const master = bill ? billMasterCostTotal(bill) : 0;
+    if (master > 0) quickUpdateInlineField(bill.billKey, "totalCost", master, "number");
     return;
   }
   // ป้าย "🔗 รวมได้" บนบิล billing-only ที่มีคู่ ORW ฝั่งยา — เลือกทั้งกลุ่มแล้วรวม (มี confirm)
