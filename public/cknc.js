@@ -5111,6 +5111,11 @@ function billOrwRefs(bill) {
   return refs;
 }
 
+// normalize เลขอ้างอิง (BAR/AR) — ตัดช่องว่าง, พิมพ์ใหญ่, เรียงหลายเลขให้เทียบได้
+function normRef(value) {
+  return clean(value).toUpperCase().split(/[,\s/]+/).filter(Boolean).sort().join(",");
+}
+
 // ให้คะแนนความคล้ายของบิลคู่หนึ่ง (0-99%) พร้อมเหตุผลที่ตรงกัน
 function mergeSimilarity(a, b) {
   let score = 0;
@@ -5120,6 +5125,17 @@ function mergeSimilarity(a, b) {
   if ([...orwA].some((ref) => orwB.has(ref))) {
     score += 45;
     reasons.push("ORW เดียวกัน");
+  }
+  // ใบวางบิล (BAR) / เลขเครดิต (AR) ตรงกัน = สัญญาณแรงมาก (เลขบิลจริงตรงกัน)
+  const barA = normRef(a.barNo), barB = normRef(b.barNo);
+  if (barA && barA === barB) {
+    score += 15;
+    reasons.push("ใบวางบิล (BAR) ตรงกัน");
+  }
+  const arA = normRef(a.creditNos), arB = normRef(b.creditNos);
+  if (arA && arA === arB) {
+    score += 15;
+    reasons.push("เลขเครดิต (AR) ตรงกัน");
   }
   const nameA = normalizedPatientKey(a.patient);
   const nameB = normalizedPatientKey(b.patient);
@@ -5161,6 +5177,85 @@ function mergeSimilarity(a, b) {
 function mergeSuggestBillLabel(bill) {
   return [clean(bill.patient) || "(ไม่มีชื่อ)", clean(bill.orderId) || clean(bill.orw.split(",")[0]) || ""]
     .filter(Boolean).join(" · ");
+}
+
+// กลุ่มบิลที่ "แน่นอนว่าซ้ำ" — ORW + ใบวางบิล(BAR) + เครดิต(AR) ตรงกันครบ (เลขบิลจริงตรงหมด)
+function certainMergeGroups() {
+  const bills = state.bills.filter((bill) => !bill.excluded);
+  if (bills.length < 2) return [];
+  const buckets = new Map();
+  bills.forEach((bill) => {
+    const bar = normRef(bill.barNo);
+    const ar = normRef(bill.creditNos);
+    const orws = billOrwRefs(bill);
+    if (!bar || !ar || !orws.size) return; // ต้องมีครบทั้ง ORW/BAR/AR
+    orws.forEach((orw) => {
+      const key = `${orw}|${bar}|${ar}`;
+      const arr = buckets.get(key) || [];
+      if (!arr.includes(bill)) arr.push(bill);
+      buckets.set(key, arr);
+    });
+  });
+  return [...buckets.values()].filter((arr) => arr.length >= 2);
+}
+
+// รวมทุกกลุ่มที่แน่นอน (ORW+BAR+AR ตรง) รวดเดียว — ยืนยันครั้งเดียว + undo ได้
+function mergeCertainGroups() {
+  const groups = certainMergeGroups();
+  if (!groups.length) { showToast("ไม่พบคู่บิลที่ ORW + BAR + AR ตรงกันครบ"); return; }
+  const totalBills = groups.reduce((sum, g) => sum + g.length, 0);
+  const ok = confirm([
+    "รวมบิลที่แน่นอนว่าซ้ำ (ORW + ใบวางบิล BAR + เครดิต AR ตรงกันครบ)?",
+    "",
+    `${number(groups.length)} กลุ่ม · ${number(totalBills)} บิล → ${number(groups.length)} บิล`,
+    "",
+    "แต่ละกลุ่มเก็บบิลข้อมูลเยอะสุดเป็นหลัก ที่เหลือรวมเข้า · กด \"เลิกรวม\" ในแถบแจ้งเตือนเพื่อยกเลิกได้",
+  ].join("\n"));
+  if (!ok) return;
+  const createdIds = [];
+  const originals = [];
+  groups.forEach((members) => {
+    const ordered = [...members].sort((a, b) => billRichness(b) - billRichness(a));
+    const groupId = `merge-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+    state.billMergeGroups.push({ id: groupId, memberKeys: ordered.map((bill) => bill.billKey), createdAt: new Date().toISOString() });
+    createdIds.push(groupId);
+    originals.push({ primaryKey: ordered[0].billKey, members: ordered.map((bill) => ({ ...bill })) });
+  });
+  state.auditTrail.unshift({
+    id: makeAuditId(), action: "merge_bills", createdAt: new Date().toISOString(),
+    orderId: "", orw: "", invoice: "", date: "", lineCount: 0, totalSale: 0, totalCost: 0,
+    screenshotName: "certain-merge", replacedLineCount: 0,
+    note: `รวมบิลแน่นอน (ORW+BAR+AR ตรง) ${number(groups.length)} กลุ่ม · ${number(totalBills)} บิล`,
+    medicines: [],
+  });
+  rebuildBillsForCurrentMode();
+  renderMetrics();
+  renderTabs();
+  renderTable();
+  renderAuditTrail();
+  scheduleAutosave("merge-certain");
+  elements.statusText.textContent = `รวมบิลแน่นอน ${number(groups.length)} กลุ่มแล้ว`;
+  if (elements.mergeWarnModal?.open) {
+    if (warnTotalCount() === 0) elements.mergeWarnModal.close();
+    else renderMergeWarnBody();
+  }
+  showUndoToast(`รวมบิลแน่นอน ${number(groups.length)} กลุ่ม (${number(totalBills)} บิล) แล้ว`, () => {
+    state.billMergeGroups = (state.billMergeGroups || []).filter((group) => !createdIds.includes(group.id));
+    // คืนบิลต้นฉบับ (โหมด snapshot ที่ rebuild ไม่สร้างใหม่จาก source)
+    originals.forEach(({ primaryKey, members }) => {
+      const idx = state.bills.findIndex((bill) => bill.billKey === primaryKey);
+      const rest = state.bills.filter((bill) => !members.some((m) => m.billKey === bill.billKey));
+      const restored = members.map((bill) => ({ ...bill }));
+      if (idx >= 0) rest.splice(idx, 0, ...restored); else rest.push(...restored);
+      state.bills = rest;
+    });
+    rebuildBillsForCurrentMode();
+    renderMetrics();
+    renderTabs();
+    renderTable();
+    scheduleAutosave("unmerge-certain");
+    elements.statusText.textContent = "เลิกรวมบิลแน่นอนแล้ว";
+  });
 }
 
 // หา "คู่ที่น่าจะเป็นบิลเดียวกัน" — จับกลุ่มจากสัญญาณแรง (ORW/เบอร์/ชื่อ) ก่อน แล้วค่อยให้คะแนนรายคู่
@@ -5237,8 +5332,11 @@ function renderMergeWarnBody() {
   const nhsoIssues = nhsoCostIssues();
   if (elements.mergeWarnTitle) elements.mergeWarnTitle.textContent = `รายการที่ต้องตรวจ (${number(suggestions.length + nhsoIssues.length)})`;
   if (!elements.mergeWarnBody) return;
+  const certainCount = certainMergeGroups().length; // คู่/กลุ่มที่ ORW+BAR+AR ตรงครบ = แน่นอนซ้ำ
   const pairSection = suggestions.length ? `
-    <h3 class="warn-section-title">น่าจะเป็นบิลเดียวกัน ${number(suggestions.length)} คู่</h3>
+    <h3 class="warn-section-title">น่าจะเป็นบิลเดียวกัน ${number(suggestions.length)} คู่
+      ${certainCount ? `<button class="ghost small" type="button" data-merge-certain title="รวมทุกกลุ่มที่ ORW + ใบวางบิล(BAR) + เครดิต(AR) ตรงกันครบ — แน่นอนว่าซ้ำ">รวมที่แน่นอน (${number(certainCount)})</button>` : ""}
+    </h3>
     <table class="case-seq-table merge-pair-table">
       <thead><tr><th>%</th><th>คู่บิล</th><th>เหตุผล</th><th class="act-col">จัดการ</th></tr></thead>
       <tbody>
@@ -9189,6 +9287,10 @@ elements.mergeWarnModal?.addEventListener("click", (event) => {
   if (event.target === elements.mergeWarnModal) elements.mergeWarnModal.close();
 });
 elements.mergeWarnBody?.addEventListener("click", (event) => {
+  if (event.target.closest("[data-merge-certain]")) {
+    mergeCertainGroups();
+    return;
+  }
   const fixAll = event.target.closest("[data-nhso-fix-all]");
   if (fixAll) {
     const issues = nhsoCostIssues();
