@@ -5063,6 +5063,42 @@ html.dark .dismiss-reason-chip:hover {
   font-size: 11.5px;
 }
 
+/* ตัวแก้กลุ่ม NHSO (ต้นทุน/ยอดขาย/MLP) */
+.nhso-bulk-editor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 0 12px 8px;
+  padding: 10px 12px;
+  background: var(--panel, #f4f7f5);
+  border: 1px solid rgba(15, 55, 40, 0.10);
+  border-radius: 12px;
+}
+.nhso-be-label { font-size: 12px; font-weight: 800; color: var(--muted); }
+.nhso-be-field { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; color: var(--muted); }
+.nhso-be-field input {
+  width: 78px;
+  padding: 5px 8px;
+  border: 1px solid rgba(15, 55, 40, 0.22);
+  border-radius: 8px;
+  font: inherit;
+  text-align: right;
+  background: #fff;
+  color: var(--text);
+}
+.nhso-be-field input:focus { outline: none; border-color: var(--green, #168250); }
+.nhso-be-hint { font-size: 11.5px; font-weight: 700; color: var(--green-dark, #0f7a3b); margin-left: auto; }
+.nhso-be-hint + .primary.small { margin-left: 0; }
+
+.nhso-profit { font-weight: 800; }
+.nhso-profit.preview .nhso-profit-cur { color: var(--muted); font-weight: 600; text-decoration: line-through; }
+.nhso-profit.preview strong { color: var(--green-dark, #0f7a3b); }
+.nhso-arrow { color: var(--muted); }
+
+html.dark .nhso-bulk-editor { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.12); }
+html.dark .nhso-be-field input { background: #0f172a; color: #e2e8f0; border-color: #334155; }
+
 /* popup "รายการที่ต้องตรวจ" — ขยายให้กว้างขึ้น + ให้คอลัมน์ข้อความตัดบรรทัดแทนดันตารางกว้าง (ลด scroll แนวนอน) */
 #mergeWarnModal {
   width: min(1320px, calc(100vw - 28px));

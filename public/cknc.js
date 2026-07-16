@@ -5238,24 +5238,107 @@ function renderMergeWarnBody() {
       </tbody>
     </table>
     <p class="case-seq-hint">เทียบ = เปิดตารางเทียบสองบิล (มีปุ่มรวม/ซ่อนคู่พร้อมเหตุผลในนั้น) · รวม = เข้าขั้นตอนรวมบิล มีสรุปให้ยืนยันก่อนเสมอ</p>` : "";
+  // ตัด key ที่เลือกไว้แต่ไม่อยู่ในรายการปัญหาแล้ว (ถูกแก้ไปแล้ว)
+  const nhsoKeys = new Set(nhsoIssues.map((b) => b.billKey));
+  [...nhsoWarnSelected].forEach((k) => { if (!nhsoKeys.has(k)) nhsoWarnSelected.delete(k); });
+  const allNhsoChecked = nhsoIssues.length > 0 && nhsoIssues.every((b) => nhsoWarnSelected.has(b.billKey));
+  const round2 = (v) => Math.round(v * 100) / 100;
   const nhsoSection = nhsoIssues.length ? `
     <h3 class="warn-section-title">สปสช ต้นทุน MLP ไม่ใช่ 0 — ${number(nhsoIssues.length)} บิล
       <button class="ghost small" type="button" data-nhso-fix-all title="ตั้งต้นทุน MLP = 0 ให้บิลสปสชทั้งหมดที่ผิด">Set MLP cost 0</button>
     </h3>
+    <div class="nhso-bulk-editor">
+      <span class="nhso-be-label">แก้กลุ่มที่เลือก:</span>
+      <label class="nhso-be-field">ต้นทุน<input type="number" step="0.01" min="0" data-nhso-edit="cost" placeholder="ไม่แก้" /></label>
+      <label class="nhso-be-field">ยอดขาย<input type="number" step="0.01" min="0" data-nhso-edit="sale" placeholder="ไม่แก้" /></label>
+      <label class="nhso-be-field">MLP cost<input type="number" step="0.01" min="0" data-nhso-edit="mlpCost" placeholder="ไม่แก้" /></label>
+      <span class="nhso-be-hint" data-nhso-hint></span>
+      <button class="primary small" type="button" data-nhso-apply-custom disabled>ใช้กับที่เลือก (0)</button>
+    </div>
     <table class="case-seq-table">
-      <thead><tr><th>ผู้รับบริการ</th><th>ออเดอร์ / ORW</th><th>ต้นทุน MLP</th><th class="act-col">จัดการ</th></tr></thead>
+      <thead><tr>
+        <th class="seq-col"><input type="checkbox" data-nhso-check-all ${allNhsoChecked ? "checked" : ""} aria-label="เลือกทั้งหมด" /></th>
+        <th>ผู้รับบริการ</th><th>ออเดอร์ / ORW</th><th>ต้นทุน</th><th>ยอดขาย</th><th>ต้นทุน MLP</th><th>กำไร</th><th class="act-col">จัดการ</th>
+      </tr></thead>
       <tbody>
-        ${nhsoIssues.map((bill) => `
-        <tr>
+        ${nhsoIssues.map((bill) => {
+          const profit = round2(toNumeric(bill.sale) - toNumeric(bill.cost) - toNumeric(bill.mlpCost));
+          const on = nhsoWarnSelected.has(bill.billKey);
+          return `
+        <tr data-nhso-row="${htmlEscape(bill.billKey)}" class="${on ? "case-seq-row-active" : ""}">
+          <td class="seq-col"><input type="checkbox" data-nhso-check="${htmlEscape(bill.billKey)}" ${on ? "checked" : ""} aria-label="เลือกบิลนี้" /></td>
           <td>${htmlEscape(bill.patient || "-")}</td>
           <td>${htmlEscape(bill.orderId || bill.orw || "-")}</td>
+          <td>${money(bill.cost)}</td>
+          <td>${money(bill.sale)}</td>
           <td class="case-seq-code" style="color:#a12626">${money(bill.mlpCost)}</td>
+          <td class="nhso-profit" data-profit-cell>${money(profit)}</td>
           <td class="act-col"><button type="button" class="row-action icon-action" data-nhso-open="${htmlEscape(bill.billKey)}" title="เปิดรายละเอียด / แก้ไขบิลนี้" aria-label="เปิดรายละเอียด / แก้ไขบิลนี้"><i class="fa-solid fa-pen-to-square"></i></button></td>
-        </tr>`).join("")}
+        </tr>`;
+        }).join("")}
       </tbody>
     </table>
-    <p class="case-seq-hint">เคส สปสช ปกติต้นทุน MLP = 0.00 · กด "Set MLP cost 0" เพื่อแก้ทีเดียว หรือปุ่มดินสอเพื่อแก้รายบิลใน drawer</p>` : "";
+    <p class="case-seq-hint">ติ๊กเลือกบิล → กรอกค่า (เว้นว่าง = ไม่แก้) → "ใช้กับที่เลือก" · เช่น ต้นทุน 0 · ยอดขาย 10 · MLP 0 = กำไร 10 · หรือ "Set MLP cost 0" แก้ MLP ทั้งหมด · ดินสอ = แก้รายบิล</p>` : "";
   elements.mergeWarnBody.innerHTML = pairSection + nhsoSection;
+  if (nhsoIssues.length) { updateNhsoApplyBtn(); updateNhsoPreview(); }
+}
+
+// ===== NHSO bulk editor (แก้ต้นทุน/ยอดขาย/MLP หลายบิลพร้อมกัน) =====
+let nhsoWarnSelected = new Set();
+
+function nhsoEditorValues() {
+  const body = elements.mergeWarnBody;
+  const vals = {};
+  if (!body) return vals;
+  body.querySelectorAll("[data-nhso-edit]").forEach((inp) => {
+    const raw = clean(inp.value);
+    if (raw !== "") vals[inp.dataset.nhsoEdit] = Math.max(0, toNumeric(raw)); // "0" = ตั้งเป็น 0; ว่าง = ไม่แก้
+  });
+  return vals;
+}
+
+function updateNhsoApplyBtn() {
+  const body = elements.mergeWarnBody;
+  if (!body) return;
+  const btn = body.querySelector("[data-nhso-apply-custom]");
+  const hint = body.querySelector("[data-nhso-hint]");
+  const n = nhsoWarnSelected.size;
+  const edit = nhsoEditorValues();
+  const hasEdit = Object.keys(edit).length > 0;
+  if (btn) { btn.disabled = n === 0 || !hasEdit; btn.textContent = `ใช้กับที่เลือก (${n})`; }
+  if (hint) {
+    const parts = [];
+    if ("cost" in edit) parts.push(`ต้นทุน ${money(edit.cost)}`);
+    if ("sale" in edit) parts.push(`ยอดขาย ${money(edit.sale)}`);
+    if ("mlpCost" in edit) parts.push(`MLP ${money(edit.mlpCost)}`);
+    hint.textContent = parts.length ? `จะตั้ง: ${parts.join(" · ")}` : "เว้นว่าง = ไม่แก้ฟิลด์นั้น";
+  }
+}
+
+// preview กำไรต่อบิลที่เลือก: current → after (ตามค่าที่กรอก, ช่องว่าง = ใช้ค่าปัจจุบันของบิล)
+function updateNhsoPreview() {
+  const body = elements.mergeWarnBody;
+  if (!body) return;
+  const edit = nhsoEditorValues();
+  const hasEdit = Object.keys(edit).length > 0;
+  const round2 = (v) => Math.round(v * 100) / 100;
+  body.querySelectorAll("[data-nhso-row]").forEach((tr) => {
+    const bill = state.bills.find((b) => b.billKey === tr.dataset.nhsoRow);
+    const cell = tr.querySelector("[data-profit-cell]");
+    if (!bill || !cell) return;
+    const cur = round2(toNumeric(bill.sale) - toNumeric(bill.cost) - toNumeric(bill.mlpCost));
+    if (hasEdit && nhsoWarnSelected.has(bill.billKey)) {
+      const cost = "cost" in edit ? edit.cost : toNumeric(bill.cost);
+      const sale = "sale" in edit ? edit.sale : toNumeric(bill.sale);
+      const mlp = "mlpCost" in edit ? edit.mlpCost : toNumeric(bill.mlpCost);
+      const next = round2(sale - cost - mlp);
+      cell.innerHTML = `<span class="nhso-profit-cur">${money(cur)}</span> <span class="nhso-arrow">→</span> <strong>${money(next)}</strong>`;
+      cell.classList.add("preview");
+    } else {
+      cell.textContent = money(cur);
+      cell.classList.remove("preview");
+    }
+  });
 }
 
 function openMergeWarnModal() {
@@ -9069,6 +9152,18 @@ elements.mergeWarnBody?.addEventListener("click", (event) => {
     if (elements.detailDrawer?.open && state.currentDetailKey) openDetailDrawer(state.currentDetailKey);
     return;
   }
+  const applyCustom = event.target.closest("[data-nhso-apply-custom]");
+  if (applyCustom) {
+    const edit = nhsoEditorValues();
+    if (!Object.keys(edit).length) { showToast("กรอกค่าที่ต้องการอย่างน้อย 1 ช่อง"); return; }
+    const keys = new Set([...nhsoWarnSelected]);
+    if (!keys.size) return;
+    nhsoWarnSelected.clear();
+    applyBulkOverride(() => ({ ...edit }), `แก้กลุ่ม สปสช (${Object.keys(edit).join("/")})`, keys);
+    elements.statusText.textContent = `แก้ ${number(keys.size)} บิล สปสช แล้ว (${Object.keys(edit).join("/")})`;
+    if (elements.detailDrawer?.open && state.currentDetailKey) openDetailDrawer(state.currentDetailKey);
+    return;
+  }
   const openBill = event.target.closest("[data-nhso-open]");
   if (openBill) {
     elements.mergeWarnModal?.close();
@@ -9097,6 +9192,35 @@ elements.mergeWarnBody?.addEventListener("click", (event) => {
   }
   // ปิด WARN เฉพาะเมื่อ popup เทียบเปิดได้จริง — กันกรณีเปิดไม่สำเร็จแล้วเหลือปิดหมด
   if (openSuggestPairModal(item, "warn")) elements.mergeWarnModal?.close();
+});
+// เลือกรายบิล / เลือกทั้งหมด ในกลุ่ม NHSO (ไม่ re-render เต็ม เพื่อรักษาค่าที่กรอกในตัวแก้)
+elements.mergeWarnBody?.addEventListener("change", (event) => {
+  const all = event.target.closest("[data-nhso-check-all]");
+  if (all) {
+    const checked = all.checked;
+    nhsoWarnSelected.clear();
+    if (checked) nhsoCostIssues().forEach((b) => nhsoWarnSelected.add(b.billKey));
+    elements.mergeWarnBody.querySelectorAll("[data-nhso-check]").forEach((cb) => {
+      cb.checked = checked;
+      cb.closest("tr")?.classList.toggle("case-seq-row-active", checked);
+    });
+    updateNhsoApplyBtn();
+    updateNhsoPreview();
+    return;
+  }
+  const one = event.target.closest("[data-nhso-check]");
+  if (one) {
+    if (one.checked) nhsoWarnSelected.add(one.dataset.nhsoCheck); else nhsoWarnSelected.delete(one.dataset.nhsoCheck);
+    one.closest("tr")?.classList.toggle("case-seq-row-active", one.checked);
+    const allBox = elements.mergeWarnBody.querySelector("[data-nhso-check-all]");
+    if (allBox) allBox.checked = nhsoCostIssues().every((b) => nhsoWarnSelected.has(b.billKey));
+    updateNhsoApplyBtn();
+    updateNhsoPreview();
+  }
+});
+// พิมพ์ค่าในตัวแก้กลุ่ม → อัปเดตปุ่ม + preview กำไรสด
+elements.mergeWarnBody?.addEventListener("input", (event) => {
+  if (event.target.closest("[data-nhso-edit]")) { updateNhsoApplyBtn(); updateNhsoPreview(); }
 });
 elements.suggestPairClose?.addEventListener("click", () => elements.suggestPairModal?.close());
 elements.suggestPairCancel?.addEventListener("click", () => elements.suggestPairModal?.close());
