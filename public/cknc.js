@@ -5143,6 +5143,14 @@ function mergeSimilarity(a, b) {
     score += 15;
     reasons.push("ข้อมูลคนละฝั่งเติมกันพอดี (CKNC ↔ MLP)");
   }
+  // ใบวางบิลไม่เจอ MLP ↔ บิลฝั่งยา/ออเดอร์ (ORW เดียวกัน) = คนละครึ่งของบิลเดียว → ดันให้ทะลุ threshold
+  // (billing-only ไม่มีชื่อ/เบอร์/วันที่ให้บวกคะแนน สัญญาณเดียวคือ ORW=45 ยังไม่ถึง 50)
+  const billingComplement = ((a.status === "billing-only") !== (b.status === "billing-only"))
+    && [...orwA].some((ref) => orwB.has(ref));
+  if (billingComplement) {
+    score += 25;
+    reasons.push("ใบวางบิลไม่เจอ MLP ↔ ORW ฝั่งยาตรงกัน");
+  }
   if (toNumeric(a.sale) > 0 && Math.abs(toNumeric(a.sale) - toNumeric(b.sale)) < 0.005) {
     score += 10;
     reasons.push("ยอดขายเท่ากัน");
