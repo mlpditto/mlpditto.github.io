@@ -1977,6 +1977,25 @@ html.dark .paid-date-input {
   margin-top: 14px;
 }
 
+/* checkbox "ใช้กับทุกบิล BAR เดียวกัน" ในกล่องกรอกวันรับเงิน */
+.paid-bar-all {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 9px 11px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  background: var(--panel, #f4f7f5);
+  border: 1px solid rgba(15, 55, 40, 0.12);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.paid-bar-all input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--green, #168250); }
+.paid-bar-all strong { color: var(--green-dark, #0f7a3b); }
+html.dark .paid-bar-all { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.12); }
+
 .stack-cell .case-source {
   margin-top: 0;
   font-size: 10px;

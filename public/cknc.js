@@ -3505,21 +3505,27 @@ function openMedLinkPicker(rawName) {
 }
 
 // prompt เล็ก ๆ กรอก "วันที่ได้รับเงิน" ตอนกด PAID (หรือแก้ทีหลัง) — overlay ระดับ body ใช้สไตล์เดียวกับ med-link
-function openPaidDatePrompt(defaultKey, onConfirm) {
+function openPaidDatePrompt(defaultKey, onConfirm, options = {}) {
   document.querySelector(".paid-date-modal")?.remove();
   const overlay = document.createElement("div");
   overlay.className = "med-link-modal paid-date-modal";
   const initial = /^\d{4}-\d{2}-\d{2}$/.test(defaultKey || "") ? defaultKey : dateKey(new Date());
+  // ถ้ามีบิลอื่น BAR เดียวกัน → เสนอตั้ง PAID ทั้ง BAR วันเดียวกัน (ปกติจ่ายมาพร้อมกันทั้งใบวางบิล)
+  const barNo = clean(options.barNo);
+  const sameBarCount = Number(options.sameBarCount) || 0;
+  const sameBarUi = (barNo && sameBarCount > 1) ? `
+      <label class="paid-bar-all"><input type="checkbox" class="paid-bar-all-check" checked /> ใช้กับทุกบิลใบวางบิล ${htmlEscape(barNo)} <strong>(${number(sameBarCount)} บิล)</strong></label>` : "";
   overlay.innerHTML = `
     <div class="med-link-panel paid-date-panel" role="dialog" aria-label="วันที่ได้รับเงิน">
       <div class="med-link-head">
         <div>
           <div class="med-link-title"><i class="fa-solid fa-hand-holding-dollar"></i> วันที่ได้รับเงิน</div>
-          <div class="med-link-sub">ตั้งบิลนี้เป็น PAID · เลือกวันที่เงินเข้าจริง</div>
+          <div class="med-link-sub">ตั้งเป็น PAID · เลือกวันที่เงินเข้าจริง</div>
         </div>
         <button class="med-link-close" type="button" aria-label="ปิด">×</button>
       </div>
       <input class="paid-date-input" type="date" value="${initial}" aria-label="วันที่ได้รับเงิน" />
+      ${sameBarUi}
       <div class="paid-date-actions">
         <button type="button" class="ghost paid-date-cancel">ยกเลิก</button>
         <button type="button" class="primary paid-date-confirm">บันทึก</button>
@@ -3532,8 +3538,9 @@ function openPaidDatePrompt(defaultKey, onConfirm) {
   const confirm = () => {
     const key = dateKey(input.value);
     if (!key) { input.focus(); return; }
+    const applyToAllBar = Boolean(overlay.querySelector(".paid-bar-all-check")?.checked);
     close();
-    onConfirm(key);
+    onConfirm(key, applyToAllBar);
   };
   function onKey(e) {
     if (e.key === "Escape") close();
@@ -8059,6 +8066,26 @@ function setBillPaidDate(billKey, paidDate) {
   showToast(`ตั้งวันที่ได้รับเงิน ${formatDisplayDate(paidDate)} แล้ว`);
 }
 
+// บิลทั้งหมดที่ใช้ใบวางบิล (BAR) เดียวกัน — ปกติจ่ายมาพร้อมกันทั้ง BAR
+function billsSharingBar(barNo) {
+  const target = normRef(barNo);
+  if (!target) return [];
+  return state.bills.filter((bill) => !bill.excluded && normRef(bill.barNo) === target);
+}
+
+// ตั้ง PAID + วันที่ได้รับเงิน ให้ทุกบิลของ BAR นี้รวดเดียว
+function markBarPaid(barNo, paidDate) {
+  const bills = billsSharingBar(barNo);
+  if (!bills.length) return 0;
+  const keys = new Set(bills.map((bill) => bill.billKey));
+  applyBulkOverride(() => ({
+    billingStage: "paid",
+    billingStageSource: "manual",
+    paidDate,
+  }), `จ่าย PAID ทั้ง BAR ${clean(barNo)} · รับเงิน ${formatDisplayDate(paidDate)}`, keys);
+  return keys.size;
+}
+
 const inlineFieldLabels = {
   clicknicDate: "วันที่ CLICKNIC",
   mlpDate: "วันที่ MLP",
@@ -8761,9 +8788,16 @@ elements.billTableBody.addEventListener("click", (event) => {
   if (quickPaidBtn) {
     const key = quickPaidBtn.dataset.quickPaid;
     const bill = state.bills.find((item) => item.billKey === key);
-    openPaidDatePrompt(dateKey(bill?.paidDate) || dateKey(new Date()), (chosen) => {
-      quickUpdateBillingStage(key, "paid", chosen);
-    });
+    const sameBar = bill?.barNo ? billsSharingBar(bill.barNo) : [];
+    openPaidDatePrompt(dateKey(bill?.paidDate) || dateKey(new Date()), (chosen, applyAllBar) => {
+      if (applyAllBar && bill?.barNo && sameBar.length > 1) {
+        const n = markBarPaid(bill.barNo, chosen);
+        elements.statusText.textContent = `ตั้ง PAID ${number(n)} บิล (BAR ${clean(bill.barNo)}) · รับเงิน ${formatDisplayDate(chosen)}`;
+      } else {
+        quickUpdateBillingStage(key, "paid", chosen);
+      }
+      if (elements.detailDrawer?.open && state.currentDetailKey) openDetailDrawer(state.currentDetailKey);
+    }, { barNo: bill?.barNo, sameBarCount: sameBar.length });
     return;
   }
   // ชิปวันที่ได้รับเงิน (บิล PAID แล้ว) — คลิกเพื่อแก้วันรับเงิน
@@ -8771,9 +8805,12 @@ elements.billTableBody.addEventListener("click", (event) => {
   if (paidDateEditBtn) {
     const key = paidDateEditBtn.dataset.paidDateEdit;
     const bill = state.bills.find((item) => item.billKey === key);
-    openPaidDatePrompt(dateKey(bill?.paidDate) || dateKey(new Date()), (chosen) => {
-      setBillPaidDate(key, chosen);
-    });
+    const sameBar = bill?.barNo ? billsSharingBar(bill.barNo) : [];
+    openPaidDatePrompt(dateKey(bill?.paidDate) || dateKey(new Date()), (chosen, applyAllBar) => {
+      if (applyAllBar && bill?.barNo && sameBar.length > 1) markBarPaid(bill.barNo, chosen);
+      else setBillPaidDate(key, chosen);
+      if (elements.detailDrawer?.open && state.currentDetailKey) openDetailDrawer(state.currentDetailKey);
+    }, { barNo: bill?.barNo, sameBarCount: sameBar.length });
     return;
   }
   const copyBtn = event.target.closest("[data-copy-text]");
