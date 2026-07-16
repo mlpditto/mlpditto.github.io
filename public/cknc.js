@@ -3537,11 +3537,17 @@ function openPaidDatePrompt(defaultKey, onConfirm, options = {}) {
   `;
   document.body.appendChild(overlay);
   const input = overlay.querySelector(".paid-date-input");
-  const close = () => { overlay.remove(); document.removeEventListener("keydown", onKey); };
+  let confirmed = false;
+  const close = () => {
+    overlay.remove();
+    document.removeEventListener("keydown", onKey);
+    if (!confirmed && typeof options.onCancel === "function") options.onCancel();
+  };
   const confirm = () => {
     const key = dateKey(input.value);
     if (!key) { input.focus(); return; }
     const applyToAllBar = Boolean(overlay.querySelector(".paid-bar-all-check")?.checked);
+    confirmed = true;
     close();
     onConfirm(key, applyToAllBar);
   };
@@ -8759,7 +8765,19 @@ elements.billTableBody.addEventListener("change", (event) => {
   }
   const billingStageSelect = event.target.closest("[data-billing-stage-key]");
   if (billingStageSelect) {
-    quickUpdateBillingStage(billingStageSelect.dataset.billingStageKey, billingStageSelect.value);
+    const key = billingStageSelect.dataset.billingStageKey;
+    const stage = billingStageSelect.value;
+    if (stage === "paid") {
+      // ตั้ง PAID จาก dropdown → เด้งถามวันรับเงิน (พร้อมตัวเลือกทั้ง BAR); ยกเลิก = คืนค่า dropdown เดิม
+      const bill = state.bills.find((b) => b.billKey === key);
+      const sameBar = bill?.barNo ? billsSharingBar(bill.barNo) : [];
+      openPaidDatePrompt(dateKey(bill?.paidDate) || dateKey(new Date()), (chosen, applyAllBar) => {
+        if (applyAllBar && bill?.barNo && sameBar.length > 1) markBarPaid(bill.barNo, chosen);
+        else quickUpdateBillingStage(key, "paid", chosen);
+      }, { barNo: bill?.barNo, sameBarCount: sameBar.length, onCancel: () => renderTable() });
+    } else {
+      quickUpdateBillingStage(key, stage);
+    }
     return;
   }
   const input = event.target.closest("[data-inline-key][data-inline-field]");
