@@ -2680,6 +2680,8 @@ function statusCounts() {
   return state.bills.filter(isWithinDateRange).reduce((counts, bill) => {
     counts.all += 1;
     counts[bill.status] = (counts[bill.status] || 0) + 1;
+    // สปสช clicknic-only ที่วางบิลครบ (BAR+AR) = reconcile แล้ว → นับเป็น "จับคู่แล้ว" ด้วย
+    if (isReconciledNhsoClicknic(bill)) counts.matched += 1;
     if ((bill.billingStage || "") === "paid") counts.paid += 1;
     if ((bill.caseType || "unknown") === "insurance") counts["case-insurance"] += 1;
     if ((bill.caseType || "unknown") === "nhso") counts["case-nhso"] += 1;
@@ -2832,7 +2834,8 @@ function filteredBills() {
               : status === "repeat-customers" ? (bill.customerVisitCount >= 2 && !bill.excluded)
                 : status === "pending-billing" ? (bill.status === "pending-billing" && !BILLING_WORKFLOW_STAGES.has(bill.billingStage || "pending-review"))
                   : status === "clicknic-only" ? (bill.status === "clicknic-only" && !isReconciledNhsoClicknic(bill))
-                    : bill.status === status);
+                    : status === "matched" ? (bill.status === "matched" || isReconciledNhsoClicknic(bill))
+                      : bill.status === status);
     const matchesCaseType = caseType === "all" || (bill.caseType || "unknown") === caseType;
     const matchesBillingStage = billingStage === "all" || (bill.billingStage || "pending-review") === billingStage;
     const haystack = [
