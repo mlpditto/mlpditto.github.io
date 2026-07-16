@@ -7399,6 +7399,17 @@ function trimDiagnosis(value) {
   return clean(value).replace(/[\s.·:;,\-–—…]+$/u, "");
 }
 
+// วันที่แบบไทย "12 กรกฎาคม 2569" (ชื่อเดือน + ปี พ.ศ.) -> "2026-07-12"
+const TH_MONTHS = { "มกราคม": 1, "กุมภาพันธ์": 2, "มีนาคม": 3, "เมษายน": 4, "พฤษภาคม": 5, "มิถุนายน": 6, "กรกฎาคม": 7, "สิงหาคม": 8, "กันยายน": 9, "ตุลาคม": 10, "พฤศจิกายน": 11, "ธันวาคม": 12 };
+const TH_MONTH_ALT = Object.keys(TH_MONTHS).join("|");
+function parseThaiDateKey(text) {
+  const m = String(text || "").match(new RegExp(`(\\d{1,2})\\s*(${TH_MONTH_ALT})\\s*(\\d{4})`));
+  if (!m) return "";
+  const day = Number(m[1]), month = TH_MONTHS[m[2]], year = Number(m[3]);
+  const ce = year > 2400 ? year - 543 : year; // 2569 พ.ศ. -> 2026 ค.ศ.
+  return `${ce}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
 function parseBillPasteText(rawText) {
   const text = String(rawText || "").replace(/\r/g, "");
   if (!clean(text)) return null;
@@ -7426,6 +7437,11 @@ function parseBillPasteText(rawText) {
   // ชื่อหยุดที่วงเล็บประเภท หรือคำว่า "ประเภท" (อยู่บรรทัดเดียวกันหรือคนละบรรทัดก็ได้)
   const nameMatch = text.match(/รายการของ\s*(.+?)\s*(?:ประเภท|\(|$)/m);
   if (nameMatch) result.patient = clean(nameMatch[1]);
+  // รูปแบบ "[Ref-ID : R-xxx] ชื่อ (ประเภท ...)" — ชื่ออยู่ระหว่าง ] กับ ( บรรทัดแรก
+  if (!result.patient) {
+    const bracketName = text.match(/\]\s*([^()\[\]\n]+?)\s*\(/);
+    if (bracketName) result.patient = clean(bracketName[1]);
+  }
 
   // ประเภทเคสอยู่ในวงเล็บ: "(สปสช โรคทั่วไป)" — ท้ายชื่อ หรือหลัง "ประเภท:" คนละบรรทัดก็ได้
   // ข้อความหลังวงเล็บบนบรรทัด "ประเภท:" คือคำวินิจฉัย เช่น "ประเภท: (สปสช โรคทั่วไป) Acute sinusitis"
@@ -7433,6 +7449,7 @@ function parseBillPasteText(rawText) {
   const typeLine = text.match(/ประเภท\s*[:：]?\s*\(([^)]*)\)\s*(.*)/);
   const caseText = clean(typeLine?.[1]
     || text.match(/รายการของ\s*.+?\s*\(([^)]*)\)/m)?.[1]
+    || text.match(/\]\s*[^()\[\]\n]+?\s*\(([^)]*)\)/)?.[1]   // "[Ref-ID : R-xxx] ชื่อ (ประเภท ...)"
     || text.match(/ประเภท\s*[:：]\s*(.*)/)?.[1]
     || "");
   result.caseType = caseTypeFromPasteText(caseText);
@@ -7453,18 +7470,33 @@ function parseBillPasteText(rawText) {
   if (!orderLineMatch) {
     const memoLine = text.match(/^.*?020\d{13}-(.+?)-([\d,]+(?:\.\d+)?)(?:-(\d+))?(?:\s+\d{1,2}[/.]\d{1,2}[/.]\d{2,4}\s+\d{1,2}[:.]\d{2})?\s*$/m);
     if (memoLine) {
-      if (!result.patient) result.patient = clean(memoLine[1].split(/-(?=\d)/)[0]);
+      const memoField1 = clean(memoLine[1].split(/-(?=\d)/)[0]);
+      // ฟิลด์แรกหลังเลขบิลเป็นเบอร์โทร (รูปแบบ เลขบิล-เบอร์-ยอด-จำนวน) ไม่ใช่ชื่อ
+      if (/^0\d{8,9}$/.test(memoField1)) {
+        if (!result.phone) result.phone = memoField1;
+      } else if (!result.patient) {
+        result.patient = memoField1;
+      }
       // กันเลขที่หน้าตาเป็นเบอร์โทรถูกอ่านเป็นยอดขาย
       if (!/^0\d{8,9}$/.test(memoLine[2])) result.sale = toNumeric(memoLine[2]);
       if (!result.address) {
         const lineEnd = text.indexOf(memoLine[0]) + memoLine[0].length;
-        result.address = clean(text.slice(lineEnd).replace(/\s+/g, " "));
+        let addr = text.slice(lineEnd).replace(/\s+/g, " ");
+        // ตัดวันที่ไทย/เวลาท้ายที่อยู่ออก ("... 10530 12 กรกฎาคม 2569 เวลา 10:09" -> "... 10530")
+        addr = addr.replace(new RegExp(`\\s*\\d{1,2}\\s*(?:${TH_MONTH_ALT})\\s*\\d{4}.*$`), "")
+          .replace(/\s*(?:เวลา\s*)?\d{1,2}[:.]\d{2}.*$/, "")
+          .replace(/\s*\d{1,2}[/.]\d{1,2}[/.]\d{2,4}\s*$/, "");
+        result.address = clean(addr);
       }
     }
   }
 
   const dtMatch = text.match(/(\d{1,2}\/\d{1,2}\/\d{4})\s+\d{1,2}[:.]\d{2}/);
   if (dtMatch) result.clicknicDate = dateKey(dtMatch[1]);
+  // วันที่แบบไทย "12 กรกฎาคม 2569"
+  if (!result.clicknicDate) result.clicknicDate = parseThaiDateKey(text);
+  // สำรอง: วันที่ฝังในเลขบิล CLICKNIC (0-YYYY-MM-DD...)
+  if (!result.clicknicDate && result.orderId) result.clicknicDate = orderIdEmbeddedDate(result.orderId);
 
   const amountMatch = text.match(/\d{1,2}[:.]\d{2}\s+([\d,]+(?:\.\d+)?)\s*-\s*([\d,]+(?:\.\d+)?)/)
     || text.match(/([\d,]+(?:\.\d+)?)\s*-\s*([\d,]+(?:\.\d+)?)\s*$/);
