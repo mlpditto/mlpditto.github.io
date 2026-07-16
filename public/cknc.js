@@ -187,6 +187,10 @@ const elements = {
   mergeWarnTitle: $("mergeWarnTitle"),
   mergeWarnBody: $("mergeWarnBody"),
   mergeWarnClose: $("mergeWarnClose"),
+  payoutModal: $("payoutModal"),
+  payoutBody: $("payoutBody"),
+  payoutClose: $("payoutClose"),
+  openPayoutBtn: $("openPayoutBtn"),
   editClicknicDate: $("editClicknicDate"),
   editMlpDate: $("editMlpDate"),
   editBillingDueDate: $("editBillingDueDate"),
@@ -9459,6 +9463,67 @@ elements.mergeWarnCard?.addEventListener("keydown", (event) => {
 elements.mergeWarnClose?.addEventListener("click", () => elements.mergeWarnModal?.close());
 elements.mergeWarnModal?.addEventListener("click", (event) => {
   if (event.target === elements.mergeWarnModal) elements.mergeWarnModal.close();
+});
+
+// ===== รายงานยอดเงินเข้า (ตามวันรับเงิน × ใบวางบิล BAR) =====
+function payoutBills() {
+  return state.bills.filter((bill) => !bill.excluded && bill.billingStage === "paid" && clean(bill.paidDate));
+}
+function renderPayoutReport() {
+  const body = elements.payoutBody;
+  if (!body) return;
+  const bills = payoutBills();
+  if (!bills.length) {
+    body.innerHTML = `<p class="case-seq-hint">ยังไม่มีบิลที่ตั้ง PAID + วันรับเงิน — กด "✓ PAID" ที่บิลแล้วใส่วันที่ได้รับเงิน</p>`;
+    return;
+  }
+  const round2 = (v) => Math.round(v * 100) / 100;
+  const groups = new Map();
+  bills.forEach((bill) => {
+    const d = dateKey(bill.paidDate);
+    const bar = clean(bill.barNo) || "(ไม่มี BAR)";
+    const key = `${d}|${bar}`;
+    if (!groups.has(key)) groups.set(key, { date: d, bar, count: 0, sale: 0, profit: 0 });
+    const g = groups.get(key);
+    g.count += 1; g.sale += toNumeric(bill.sale); g.profit += toNumeric(bill.profit);
+  });
+  const rows = [...groups.values()].sort((a, b) => b.date.localeCompare(a.date) || a.bar.localeCompare(b.bar));
+  const totalSale = round2(bills.reduce((s, b) => s + toNumeric(b.sale), 0));
+  const totalProfit = round2(bills.reduce((s, b) => s + toNumeric(b.profit), 0));
+  // ยอดต่อวัน (รวมทุก BAR) — โชว้เป็นหัวข้อคั่น
+  let lastDate = null;
+  const bodyRows = rows.map((g) => {
+    const dateHead = g.date !== lastDate ? (() => {
+      lastDate = g.date;
+      const dayBills = rows.filter((r) => r.date === g.date);
+      const daySale = round2(dayBills.reduce((s, r) => s + r.sale, 0));
+      const dayCount = dayBills.reduce((s, r) => s + r.count, 0);
+      return `<tr class="payout-date-row"><td colspan="4"><strong>${htmlEscape(formatDisplayDate(g.date))}</strong> · ${number(dayCount)} บิล · ยอดขาย ${money(daySale)}</td></tr>`;
+    })() : "";
+    return `${dateHead}<tr>
+      <td class="case-seq-code">${htmlEscape(g.bar)}</td>
+      <td>${number(g.count)}</td>
+      <td class="num">${money(round2(g.sale))}</td>
+      <td class="num">${money(round2(g.profit))}</td>
+    </tr>`;
+  }).join("");
+  body.innerHTML = `
+    <div class="payout-summary">รวม <strong>${number(bills.length)}</strong> บิล · ยอดขาย <strong>${money(totalSale)}</strong> · กำไร <strong>${money(totalProfit)}</strong> · ${number(rows.length)} รายการ (วัน × BAR)</div>
+    <table class="case-seq-table">
+      <thead><tr><th>ใบวางบิล (BAR)</th><th>บิล</th><th class="num">ยอดขาย</th><th class="num">กำไร</th></tr></thead>
+      <tbody>${bodyRows}</tbody>
+    </table>
+    <p class="case-seq-hint">นับเฉพาะบิลสถานะ PAID ที่มีวันรับเงิน · จัดกลุ่มตามวันรับเงิน แล้วแยกตามใบวางบิล (BAR) · เรียงวันล่าสุดก่อน</p>
+  `;
+}
+function openPayoutModal() {
+  renderPayoutReport();
+  if (elements.payoutModal && !elements.payoutModal.open) elements.payoutModal.showModal();
+}
+elements.openPayoutBtn?.addEventListener("click", openPayoutModal);
+elements.payoutClose?.addEventListener("click", () => elements.payoutModal?.close());
+elements.payoutModal?.addEventListener("click", (event) => {
+  if (event.target === elements.payoutModal) elements.payoutModal.close();
 });
 elements.mergeWarnBody?.addEventListener("click", (event) => {
   if (event.target.closest("[data-merge-certain]")) {

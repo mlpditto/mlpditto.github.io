@@ -369,6 +369,11 @@
           <p id="masterMappingStatus" class="mapping-status">ยังไม่ได้โหลด master mapping จาก LINE MAN</p>
           <div id="topMedicines" class="rank-list"></div>
         </article>
+        <article class="insight">
+          <h2><i class="fa-solid fa-hand-holding-dollar"></i> ยอดเงินเข้า</h2>
+          <p class="mapping-status">สรุปบิลที่ PAID ตามวันที่ได้รับเงิน (และใบวางบิล BAR)</p>
+          <button id="openPayoutBtn" class="primary small" type="button">ดูรายงานยอดเงินเข้า</button>
+        </article>
         <article class="insight rule-tuning-panel">
           <div class="rule-head">
             <div>
@@ -618,6 +623,19 @@
           <button id="mergeWarnClose" class="icon-button" type="button" aria-label="ปิด">×</button>
         </div>
         <div id="mergeWarnBody" class="case-seq-modal-body"></div>
+      </form>
+    </dialog>
+
+    <dialog id="payoutModal" class="clipboard-modal">
+      <form method="dialog" class="clipboard-card case-seq-card">
+        <div class="modal-head">
+          <div>
+            <p class="eyebrow">ยอดเงินเข้า</p>
+            <h2 id="payoutTitle">สรุปยอดเงินเข้าตามวันรับเงิน</h2>
+          </div>
+          <button id="payoutClose" class="icon-button" type="button" aria-label="ปิด">×</button>
+        </div>
+        <div id="payoutBody" class="case-seq-modal-body"></div>
       </form>
     </dialog>
 

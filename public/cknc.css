@@ -5126,6 +5126,25 @@ html.dark .dismiss-reason-chip:hover {
   font-size: 11.5px;
 }
 
+/* รายงานยอดเงินเข้า */
+.payout-summary {
+  margin: 12px;
+  padding: 12px 14px;
+  background: var(--panel, #f4f7f5);
+  border: 1px solid rgba(15, 55, 40, 0.10);
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.payout-summary strong { color: var(--green-dark, #0f7a3b); }
+.payout-date-row td {
+  background: rgba(22, 130, 80, 0.06);
+  font-size: 12px;
+}
+html.dark .payout-summary { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.12); }
+html.dark .payout-date-row td { background: rgba(22, 130, 80, 0.14); }
+
 /* ตัวแก้กลุ่ม NHSO (ต้นทุน/ยอดขาย/MLP) */
 .nhso-bulk-editor {
   display: flex;
