@@ -5291,9 +5291,9 @@ function mergeCertainGroups() {
 // รวมทุกคู่ ORW ที่เป็น "ใบวางบิลไม่เจอ MLP ↔ บิลฝั่งยา" รวดเดียว
 function mergeOrwComplementGroups() {
   bulkMergeGroups(orwComplementGroups(), {
-    confirmTitle: "รวมคู่บิลที่ ORW ตรงกัน (ใบวางบิลไม่เจอ MLP ↔ ฝั่งยา/ออเดอร์) ทั้งหมด?",
+    confirmTitle: "รวมคู่บิลที่ ORW ตรงกันแต่จับคู่ยังไม่ครบ (ใบวางบิล↔ยา, ไม่มี MLP↔ไม่พบยา) ทั้งหมด?",
     doneLabel: "รวมคู่ ORW",
-    emptyMsg: "ไม่พบคู่ ORW ใบวางบิล↔ฝั่งยา",
+    emptyMsg: "ไม่พบคู่ ORW ที่จับคู่ยังไม่ครบ",
     auditTag: "orw-complement-merge",
   });
 }
@@ -5345,6 +5345,10 @@ function computeMergeSuggestions() {
 }
 
 // กลุ่มบิลที่ ORW เดียวกัน + มีทั้ง "ใบวางบิลไม่เจอ MLP" และบิลฝั่งยา/ออเดอร์ = คนละครึ่งของบิลเดียว
+// กลุ่ม ORW เดียวกันที่ "จับคู่ยังไม่ครบ" — คนละครึ่งของบิลเดียว ควรรวม:
+// billing-only↔ฝั่งยา, รายการยาไม่มี MLP (clicknic-only)↔ไม่พบรายการยา (mlp-only), ฯลฯ
+// เงื่อนไข: ORW ตรง + มีสถานะต่างกัน (mixed) + มีอย่างน้อย 1 ตัวที่ยัง match ไม่ครบ
+const INCOMPLETE_MATCH_STATUSES = new Set(["clicknic-only", "mlp-only", "billing-only"]);
 function orwComplementGroups() {
   const bills = state.bills.filter((bill) => !bill.excluded);
   if (bills.length < 2) return [];
@@ -5357,8 +5361,8 @@ function orwComplementGroups() {
     });
   });
   return [...buckets.values()].filter((arr) => arr.length >= 2
-    && arr.some((b) => b.status === "billing-only")
-    && arr.some((b) => b.status !== "billing-only"));
+    && new Set(arr.map((b) => b.status)).size >= 2
+    && arr.some((b) => INCOMPLETE_MATCH_STATUSES.has(b.status)));
 }
 
 // เคส สปสช โดยปกติต้นทุน MLP = 0.00 — เคสที่ ≠ 0 ถือเป็นรายการต้องตรวจ (รวมที่ WARN)
@@ -5401,7 +5405,7 @@ function renderMergeWarnBody() {
   const moreNote = suggTotal > suggestions.length ? ` <span class="warn-more-note">(แสดง ${number(suggestions.length)} จาก ${number(suggTotal)})</span>` : "";
   const pairSection = suggestions.length ? `
     <h3 class="warn-section-title">น่าจะเป็นบิลเดียวกัน ${number(suggTotal)} คู่${moreNote}
-      ${orwCount ? `<button class="ghost small" type="button" data-merge-orw title="รวมทุกคู่ที่ ORW ตรงกัน (ใบวางบิลไม่เจอ MLP ↔ บิลฝั่งยา/ออเดอร์) รวดเดียว">รวมคู่ ORW ทั้งหมด (${number(orwCount)})</button>` : ""}
+      ${orwCount ? `<button class="ghost small" type="button" data-merge-orw title="รวมทุกคู่ที่ ORW ตรงกันแต่จับคู่ยังไม่ครบ (ใบวางบิล↔ฝั่งยา, รายการยาไม่มี MLP↔ไม่พบรายการยา) รวดเดียว">รวมคู่ ORW ทั้งหมด (${number(orwCount)})</button>` : ""}
       ${certainCount ? `<button class="ghost small" type="button" data-merge-certain title="รวมทุกกลุ่มที่ ORW + ใบวางบิล(BAR) + เครดิต(AR) ตรงกันครบ — แน่นอนว่าซ้ำ">รวมที่แน่นอน (${number(certainCount)})</button>` : ""}
     </h3>
     <table class="case-seq-table merge-pair-table">
