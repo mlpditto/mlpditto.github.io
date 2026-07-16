@@ -327,6 +327,11 @@ const billingStageOptions = [
   ["cancelled", "ยกเลิก"],
 ];
 
+// stage งานวางบิลที่มี "ชิปเฉพาะ" ในกลุ่มงานวางบิลค้าง (ประกันรอเอกสาร/สปสชรอวางบิล/รอตรวจสอบ)
+// ใช้ตัดออกจากชิป "รอใบวางบิล" กันนับซ้ำ — บิลถูกจัดเข้าหมวดเฉพาะแล้วไม่ต้องโผล่ที่ "รอใบวางบิล" อีก
+// (general-pending ไม่มีชิปเฉพาะ → ยังคงอยู่ใน "รอใบวางบิล" ตามเดิม)
+const BILLING_WORKFLOW_STAGES = new Set(["insurance-review", "nhso-pending", "pending-review"]);
+
 const RULE_CONFIG_STORAGE_KEY = "cknc_rule_config_v1";
 
 const DEFAULT_RULE_CONFIG = {
@@ -2160,11 +2165,14 @@ function renderMergeAssistant() {
     return `<button type="button" class="gap-chip ${chip.tone}${chip.active ? " active" : ""}" ${attr} title="กดเพื่อกรองดูเฉพาะกลุ่มนี้">${htmlEscape(chip.label)} <strong>${number(chip.value)}</strong></button>`;
   };
   // กลุ่ม 1: จับคู่ 3 ฝั่ง (กรองด้วยสถานะ)
+  // รอใบวางบิล: นับเฉพาะที่ยังไม่ถูกจัดเข้าหมวดงานวางบิลเฉพาะ (กันนับซ้ำกับกลุ่มงานวางบิลค้าง) — ให้ตรงกับ filteredBills
+  const pendingBillingDedup = state.bills.filter(isWithinDateRange)
+    .filter((b) => b.status === "pending-billing" && !BILLING_WORKFLOW_STAGES.has(b.billingStage || "pending-review")).length;
   const matchGroup = [
     { status: "mlp-only", label: "ไม่พบรายการยา", value: counts["mlp-only"] || 0, tone: "warning", active: state.activeStatus === "mlp-only" },
     { status: "clicknic-only", label: "รายการยาไม่มี MLP", value: counts["clicknic-only"] || 0, tone: "danger", active: state.activeStatus === "clicknic-only" },
     { status: "billing-only", label: "ใบวางบิลไม่เจอ MLP", value: counts["billing-only"] || 0, tone: "danger", active: state.activeStatus === "billing-only" },
-    { status: "pending-billing", label: "รอใบวางบิล", value: counts["pending-billing"] || 0, tone: "warning", active: state.activeStatus === "pending-billing" },
+    { status: "pending-billing", label: "รอใบวางบิล", value: pendingBillingDedup, tone: "warning", active: state.activeStatus === "pending-billing" },
   ].filter((chip) => chip.value > 0);
   // กลุ่ม 2: งานวางบิลค้าง (กรองด้วยงานวางบิล)
   const billingGroup = [
@@ -2812,7 +2820,8 @@ function filteredBills() {
           : status === "case-insurance" ? (bill.caseType || "unknown") === "insurance"
             : status === "case-nhso" ? (bill.caseType || "unknown") === "nhso"
               : status === "repeat-customers" ? (bill.customerVisitCount >= 2 && !bill.excluded)
-                : bill.status === status);
+                : status === "pending-billing" ? (bill.status === "pending-billing" && !BILLING_WORKFLOW_STAGES.has(bill.billingStage || "pending-review"))
+                  : bill.status === status);
     const matchesCaseType = caseType === "all" || (bill.caseType || "unknown") === caseType;
     const matchesBillingStage = billingStage === "all" || (bill.billingStage || "pending-review") === billingStage;
     const haystack = [
