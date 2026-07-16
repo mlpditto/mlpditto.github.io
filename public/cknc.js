@@ -2752,7 +2752,9 @@ function renderBillingStageSelect(bill) {
       <select class="billing-stage-select ${value}" data-billing-stage-key="${htmlEscape(bill.billKey)}" aria-label="สถานะงานวางบิล">
         ${billingStageOptions.map(([key, label]) => `<option value="${key}" ${key === value ? "selected" : ""}>${label}</option>`).join("")}
       </select>
-      ${value === "paid" ? "" : `<button type="button" class="quick-paid-btn" data-quick-paid="${htmlEscape(bill.billKey)}" title="ตั้งเป็น PAID ทันที" aria-label="ตั้งเป็น PAID ทันที">✓ PAID</button>`}
+      ${value === "paid"
+        ? `<button type="button" class="paid-date-chip${bill.paidDate ? "" : " empty"}" data-paid-date-edit="${htmlEscape(bill.billKey)}" title="วันที่ได้รับเงิน · คลิกเพื่อแก้"><i class="fa-solid fa-hand-holding-dollar"></i> ${bill.paidDate ? htmlEscape(formatDisplayDate(bill.paidDate)) : "ใส่วันรับเงิน"}</button>`
+        : `<button type="button" class="quick-paid-btn" data-quick-paid="${htmlEscape(bill.billKey)}" title="ตั้งเป็น PAID + กรอกวันที่ได้รับเงิน" aria-label="ตั้งเป็น PAID">✓ PAID</button>`}
     </span>
     ${bill.billingStageSource === "manual" ? '<span class="case-source">แก้มือ</span>' : ""}
   `;
@@ -3252,6 +3254,49 @@ function openMedLinkPicker(rawName) {
   overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
   document.addEventListener("keydown", onKey);
   setTimeout(() => search.focus(), 30);
+}
+
+// prompt เล็ก ๆ กรอก "วันที่ได้รับเงิน" ตอนกด PAID (หรือแก้ทีหลัง) — overlay ระดับ body ใช้สไตล์เดียวกับ med-link
+function openPaidDatePrompt(defaultKey, onConfirm) {
+  document.querySelector(".paid-date-modal")?.remove();
+  const overlay = document.createElement("div");
+  overlay.className = "med-link-modal paid-date-modal";
+  const initial = /^\d{4}-\d{2}-\d{2}$/.test(defaultKey || "") ? defaultKey : dateKey(new Date());
+  overlay.innerHTML = `
+    <div class="med-link-panel paid-date-panel" role="dialog" aria-label="วันที่ได้รับเงิน">
+      <div class="med-link-head">
+        <div>
+          <div class="med-link-title"><i class="fa-solid fa-hand-holding-dollar"></i> วันที่ได้รับเงิน</div>
+          <div class="med-link-sub">ตั้งบิลนี้เป็น PAID · เลือกวันที่เงินเข้าจริง</div>
+        </div>
+        <button class="med-link-close" type="button" aria-label="ปิด">×</button>
+      </div>
+      <input class="paid-date-input" type="date" value="${initial}" aria-label="วันที่ได้รับเงิน" />
+      <div class="paid-date-actions">
+        <button type="button" class="ghost paid-date-cancel">ยกเลิก</button>
+        <button type="button" class="primary paid-date-confirm">บันทึก</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  const input = overlay.querySelector(".paid-date-input");
+  const close = () => { overlay.remove(); document.removeEventListener("keydown", onKey); };
+  const confirm = () => {
+    const key = dateKey(input.value);
+    if (!key) { input.focus(); return; }
+    close();
+    onConfirm(key);
+  };
+  function onKey(e) {
+    if (e.key === "Escape") close();
+    else if (e.key === "Enter") confirm();
+  }
+  overlay.querySelector(".paid-date-confirm").addEventListener("click", confirm);
+  overlay.querySelector(".paid-date-cancel").addEventListener("click", close);
+  overlay.querySelector(".med-link-close").addEventListener("click", close);
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+  document.addEventListener("keydown", onKey);
+  setTimeout(() => { input.focus(); }, 30);
 }
 
 // ฟอร์มเพิ่มรายการยาใหม่ในเซลล์ตาราง — ไม่ต้องเปิด drawer แก้ไข
@@ -7441,18 +7486,19 @@ function quickUpdateCaseType(billKey, caseType) {
   scheduleAutosave("case-type-update");
 }
 
-function quickUpdateBillingStage(billKey, billingStage) {
+function quickUpdateBillingStage(billKey, billingStage, paidDate = null) {
   const bill = state.bills.find((item) => item.billKey === billKey);
   if (!bill) return;
   const existing = state.billOverrides[bill.billKey] || {};
   const currentBillingStage = existing.values?.billingStage || bill.billingStage || "pending-review";
-  if (currentBillingStage === billingStage) return;
+  if (currentBillingStage === billingStage && !paidDate) return;
   state.billOverrides[bill.billKey] = {
     ...existing,
     values: {
       ...(existing.values || {}),
       billingStage,
       billingStageSource: "manual",
+      ...(paidDate ? { paidDate } : {}), // วันที่ได้รับเงิน (เก็บตอนกด PAID) — ไหลเข้า bill.paidDate ผ่าน applyBillOverride
     },
     note: existing.note || "แก้สถานะงานวางบิลจากตาราง",
     updatedAt: new Date().toISOString(),
@@ -7470,7 +7516,7 @@ function quickUpdateBillingStage(billKey, billingStage) {
     totalCost: bill.cost,
     screenshotName: "summary-table",
     replacedLineCount: 0,
-    note: `${billingStageLabel(currentBillingStage)} -> ${billingStageLabel(billingStage)}`,
+    note: `${billingStageLabel(currentBillingStage)} -> ${billingStageLabel(billingStage)}${paidDate ? ` · รับเงิน ${formatDisplayDate(paidDate)}` : ""}`,
     medicines: [],
   });
   rebuildBillsForCurrentMode();
@@ -7479,6 +7525,23 @@ function quickUpdateBillingStage(billKey, billingStage) {
   renderTable();
   renderAuditTrail();
   scheduleAutosave("billing-stage-update");
+}
+
+// แก้เฉพาะ "วันที่ได้รับเงิน" ของบิลที่ PAID แล้ว (กดชิปวันรับเงินในตาราง) — ไม่แตะสถานะ
+function setBillPaidDate(billKey, paidDate) {
+  const bill = state.bills.find((item) => item.billKey === billKey);
+  if (!bill) return;
+  const existing = state.billOverrides[bill.billKey] || {};
+  state.billOverrides[bill.billKey] = {
+    ...existing,
+    values: { ...(existing.values || {}), paidDate },
+    note: existing.note || "แก้วันที่ได้รับเงิน",
+    updatedAt: new Date().toISOString(),
+  };
+  rebuildBillsForCurrentMode();
+  renderTable();
+  scheduleAutosave("paid-date-update");
+  showToast(`ตั้งวันที่ได้รับเงิน ${formatDisplayDate(paidDate)} แล้ว`);
 }
 
 const inlineFieldLabels = {
@@ -8178,10 +8241,24 @@ elements.billTableBody.addEventListener("click", (event) => {
     clearFilters();
     return;
   }
-  // ปุ่ม one-click ตั้งงานวางบิลเป็น PAID ทันที (ทางลัดของ dropdown งานวางบิล)
+  // ปุ่ม one-click ตั้งงานวางบิลเป็น PAID + กรอกวันที่ได้รับเงิน
   const quickPaidBtn = event.target.closest("[data-quick-paid]");
   if (quickPaidBtn) {
-    quickUpdateBillingStage(quickPaidBtn.dataset.quickPaid, "paid");
+    const key = quickPaidBtn.dataset.quickPaid;
+    const bill = state.bills.find((item) => item.billKey === key);
+    openPaidDatePrompt(dateKey(bill?.paidDate) || dateKey(new Date()), (chosen) => {
+      quickUpdateBillingStage(key, "paid", chosen);
+    });
+    return;
+  }
+  // ชิปวันที่ได้รับเงิน (บิล PAID แล้ว) — คลิกเพื่อแก้วันรับเงิน
+  const paidDateEditBtn = event.target.closest("[data-paid-date-edit]");
+  if (paidDateEditBtn) {
+    const key = paidDateEditBtn.dataset.paidDateEdit;
+    const bill = state.bills.find((item) => item.billKey === key);
+    openPaidDatePrompt(dateKey(bill?.paidDate) || dateKey(new Date()), (chosen) => {
+      setBillPaidDate(key, chosen);
+    });
     return;
   }
   const copyBtn = event.target.closest("[data-copy-text]");

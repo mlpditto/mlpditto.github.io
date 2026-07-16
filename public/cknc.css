@@ -1904,6 +1904,79 @@ html.dark .quick-paid-btn:hover {
   background: rgba(52, 160, 106, 0.35);
 }
 
+/* ชิปวันที่ได้รับเงิน (บิล PAID แล้ว) — คลิกเพื่อแก้วันรับเงิน */
+.paid-date-chip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid #6ec79f;
+  background: #eafaf1;
+  color: #0f7a3b;
+  font-weight: 800;
+  font-size: 11px;
+  line-height: 1;
+  padding: 5px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  min-height: 28px;
+}
+
+.paid-date-chip:hover {
+  background: #d4f4e2;
+  border-color: #4fb588;
+}
+
+.paid-date-chip.empty {
+  border-style: dashed;
+  color: #b45309;
+  border-color: #e2b878;
+  background: #fdf4e3;
+}
+
+html.dark .paid-date-chip {
+  border-color: #2f7d57;
+  background: rgba(52, 160, 106, 0.18);
+  color: #7fe3ac;
+}
+
+html.dark .paid-date-chip.empty {
+  color: #f0c078;
+  border-color: #7a5a2c;
+  background: rgba(180, 120, 40, 0.16);
+}
+
+/* prompt วันที่ได้รับเงิน (ใช้ overlay .med-link-modal ร่วมกัน) */
+.paid-date-modal .paid-date-panel {
+  max-width: 340px;
+}
+
+.paid-date-input {
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  background: #fff;
+}
+
+html.dark .paid-date-input {
+  background: #0f172a;
+  color: #e2e8f0;
+  border-color: #334155;
+}
+
+.paid-date-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+
 .stack-cell .case-source {
   margin-top: 0;
   font-size: 10px;
