@@ -5054,6 +5054,16 @@ html.dark .dismiss-reason-chip:hover {
   margin-left: auto;
 }
 
+.warn-section-title .ghost.small + .ghost.small {
+  margin-left: 8px;
+}
+
+.warn-more-note {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
 .merge-warn-names {
   font-weight: 800;
 }

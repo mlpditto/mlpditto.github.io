@@ -5199,13 +5199,12 @@ function certainMergeGroups() {
   return [...buckets.values()].filter((arr) => arr.length >= 2);
 }
 
-// รวมทุกกลุ่มที่แน่นอน (ORW+BAR+AR ตรง) รวดเดียว — ยืนยันครั้งเดียว + undo ได้
-function mergeCertainGroups() {
-  const groups = certainMergeGroups();
-  if (!groups.length) { showToast("ไม่พบคู่บิลที่ ORW + BAR + AR ตรงกันครบ"); return; }
+// รวมหลายกลุ่มรวดเดียว — ยืนยันครั้งเดียว + undo ได้ (ใช้ร่วมทั้ง "รวมที่แน่นอน" และ "รวมคู่ ORW")
+function bulkMergeGroups(groups, { confirmTitle, doneLabel, emptyMsg, auditTag }) {
+  if (!groups.length) { showToast(emptyMsg); return; }
   const totalBills = groups.reduce((sum, g) => sum + g.length, 0);
   const ok = confirm([
-    "รวมบิลที่แน่นอนว่าซ้ำ (ORW + ใบวางบิล BAR + เครดิต AR ตรงกันครบ)?",
+    confirmTitle,
     "",
     `${number(groups.length)} กลุ่ม · ${number(totalBills)} บิล → ${number(groups.length)} บิล`,
     "",
@@ -5224,8 +5223,8 @@ function mergeCertainGroups() {
   state.auditTrail.unshift({
     id: makeAuditId(), action: "merge_bills", createdAt: new Date().toISOString(),
     orderId: "", orw: "", invoice: "", date: "", lineCount: 0, totalSale: 0, totalCost: 0,
-    screenshotName: "certain-merge", replacedLineCount: 0,
-    note: `รวมบิลแน่นอน (ORW+BAR+AR ตรง) ${number(groups.length)} กลุ่ม · ${number(totalBills)} บิล`,
+    screenshotName: auditTag, replacedLineCount: 0,
+    note: `${doneLabel} ${number(groups.length)} กลุ่ม · ${number(totalBills)} บิล`,
     medicines: [],
   });
   rebuildBillsForCurrentMode();
@@ -5233,13 +5232,13 @@ function mergeCertainGroups() {
   renderTabs();
   renderTable();
   renderAuditTrail();
-  scheduleAutosave("merge-certain");
-  elements.statusText.textContent = `รวมบิลแน่นอน ${number(groups.length)} กลุ่มแล้ว`;
+  scheduleAutosave("bulk-merge");
+  elements.statusText.textContent = `${doneLabel} ${number(groups.length)} กลุ่มแล้ว`;
   if (elements.mergeWarnModal?.open) {
     if (warnTotalCount() === 0) elements.mergeWarnModal.close();
     else renderMergeWarnBody();
   }
-  showUndoToast(`รวมบิลแน่นอน ${number(groups.length)} กลุ่ม (${number(totalBills)} บิล) แล้ว`, () => {
+  showUndoToast(`${doneLabel} ${number(groups.length)} กลุ่ม (${number(totalBills)} บิล) แล้ว`, () => {
     state.billMergeGroups = (state.billMergeGroups || []).filter((group) => !createdIds.includes(group.id));
     // คืนบิลต้นฉบับ (โหมด snapshot ที่ rebuild ไม่สร้างใหม่จาก source)
     originals.forEach(({ primaryKey, members }) => {
@@ -5253,8 +5252,28 @@ function mergeCertainGroups() {
     renderMetrics();
     renderTabs();
     renderTable();
-    scheduleAutosave("unmerge-certain");
-    elements.statusText.textContent = "เลิกรวมบิลแน่นอนแล้ว";
+    scheduleAutosave("bulk-unmerge");
+    elements.statusText.textContent = "เลิกรวมแล้ว";
+  });
+}
+
+// รวมทุกกลุ่มที่แน่นอน (ORW+BAR+AR ตรง) รวดเดียว
+function mergeCertainGroups() {
+  bulkMergeGroups(certainMergeGroups(), {
+    confirmTitle: "รวมบิลที่แน่นอนว่าซ้ำ (ORW + ใบวางบิล BAR + เครดิต AR ตรงกันครบ)?",
+    doneLabel: "รวมบิลแน่นอน (ORW+BAR+AR)",
+    emptyMsg: "ไม่พบคู่บิลที่ ORW + BAR + AR ตรงกันครบ",
+    auditTag: "certain-merge",
+  });
+}
+
+// รวมทุกคู่ ORW ที่เป็น "ใบวางบิลไม่เจอ MLP ↔ บิลฝั่งยา" รวดเดียว
+function mergeOrwComplementGroups() {
+  bulkMergeGroups(orwComplementGroups(), {
+    confirmTitle: "รวมคู่บิลที่ ORW ตรงกัน (ใบวางบิลไม่เจอ MLP ↔ ฝั่งยา/ออเดอร์) ทั้งหมด?",
+    doneLabel: "รวมคู่ ORW",
+    emptyMsg: "ไม่พบคู่ ORW ใบวางบิล↔ฝั่งยา",
+    auditTag: "orw-complement-merge",
   });
 }
 
@@ -5300,7 +5319,25 @@ function computeMergeSuggestions() {
       }
     }
   });
+  state.mergeSuggestionsTotal = suggestions.length; // จำนวนคู่จริง (ก่อนตัดเหลือ 8) — โชว์ progress
   return suggestions.sort((a, b) => b.score - a.score).slice(0, 8);
+}
+
+// กลุ่มบิลที่ ORW เดียวกัน + มีทั้ง "ใบวางบิลไม่เจอ MLP" และบิลฝั่งยา/ออเดอร์ = คนละครึ่งของบิลเดียว
+function orwComplementGroups() {
+  const bills = state.bills.filter((bill) => !bill.excluded);
+  if (bills.length < 2) return [];
+  const buckets = new Map();
+  bills.forEach((bill) => {
+    billOrwRefs(bill).forEach((orw) => {
+      const arr = buckets.get(orw) || [];
+      if (!arr.includes(bill)) arr.push(bill);
+      buckets.set(orw, arr);
+    });
+  });
+  return [...buckets.values()].filter((arr) => arr.length >= 2
+    && arr.some((b) => b.status === "billing-only")
+    && arr.some((b) => b.status !== "billing-only"));
 }
 
 // เคส สปสช โดยปกติต้นทุน MLP = 0.00 — เคสที่ ≠ 0 ถือเป็นรายการต้องตรวจ (รวมที่ WARN)
@@ -5308,8 +5345,13 @@ function nhsoCostIssues() {
   return activeBills().filter((bill) => bill.caseType === "nhso" && Math.abs(toNumeric(bill.mlpCost)) >= 0.005);
 }
 
+// จำนวนคู่แนะนำจริง (ไม่ตัดเหลือ 8) — ใช้โชว์ progress ให้เห็นว่าลดลงจริงตอนรวม
+function mergeSuggestTotal() {
+  return state.mergeSuggestionsTotal != null ? state.mergeSuggestionsTotal : state.mergeSuggestions.length;
+}
+
 function warnTotalCount() {
-  return state.mergeSuggestions.length + nhsoCostIssues().length;
+  return mergeSuggestTotal() + nhsoCostIssues().length;
 }
 
 function renderMergeSuggestions() {
@@ -5330,11 +5372,15 @@ function renderMergeSuggestions() {
 function renderMergeWarnBody() {
   const suggestions = state.mergeSuggestions;
   const nhsoIssues = nhsoCostIssues();
-  if (elements.mergeWarnTitle) elements.mergeWarnTitle.textContent = `รายการที่ต้องตรวจ (${number(suggestions.length + nhsoIssues.length)})`;
+  const suggTotal = mergeSuggestTotal(); // จำนวนคู่จริง (ไม่ตัดเหลือ 8)
+  if (elements.mergeWarnTitle) elements.mergeWarnTitle.textContent = `รายการที่ต้องตรวจ (${number(suggTotal + nhsoIssues.length)})`;
   if (!elements.mergeWarnBody) return;
   const certainCount = certainMergeGroups().length; // คู่/กลุ่มที่ ORW+BAR+AR ตรงครบ = แน่นอนซ้ำ
+  const orwCount = orwComplementGroups().length;     // คู่ ORW ใบวางบิล↔ฝั่งยา
+  const moreNote = suggTotal > suggestions.length ? ` <span class="warn-more-note">(แสดง ${number(suggestions.length)} จาก ${number(suggTotal)})</span>` : "";
   const pairSection = suggestions.length ? `
-    <h3 class="warn-section-title">น่าจะเป็นบิลเดียวกัน ${number(suggestions.length)} คู่
+    <h3 class="warn-section-title">น่าจะเป็นบิลเดียวกัน ${number(suggTotal)} คู่${moreNote}
+      ${orwCount ? `<button class="ghost small" type="button" data-merge-orw title="รวมทุกคู่ที่ ORW ตรงกัน (ใบวางบิลไม่เจอ MLP ↔ บิลฝั่งยา/ออเดอร์) รวดเดียว">รวมคู่ ORW ทั้งหมด (${number(orwCount)})</button>` : ""}
       ${certainCount ? `<button class="ghost small" type="button" data-merge-certain title="รวมทุกกลุ่มที่ ORW + ใบวางบิล(BAR) + เครดิต(AR) ตรงกันครบ — แน่นอนว่าซ้ำ">รวมที่แน่นอน (${number(certainCount)})</button>` : ""}
     </h3>
     <table class="case-seq-table merge-pair-table">
@@ -9289,6 +9335,10 @@ elements.mergeWarnModal?.addEventListener("click", (event) => {
 elements.mergeWarnBody?.addEventListener("click", (event) => {
   if (event.target.closest("[data-merge-certain]")) {
     mergeCertainGroups();
+    return;
+  }
+  if (event.target.closest("[data-merge-orw]")) {
+    mergeOrwComplementGroups();
     return;
   }
   const fixAll = event.target.closest("[data-nhso-fix-all]");
