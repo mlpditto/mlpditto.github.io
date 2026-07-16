@@ -2193,6 +2193,71 @@ html.dark .med-link-item { border-color: #334155; }
 html.dark .med-link-item:hover { background: rgba(59, 130, 246, .18); }
 html.dark .med-link-btn { color: #475569; }
 
+/* แถวผลลัพธ์: checkbox (เลือกรวม) + ปุ่มลิงก์ */
+.med-link-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 8px;
+  border-bottom: 1px solid #f1f5f9;
+  border-radius: 8px;
+}
+.med-link-row.picked { background: rgba(147, 51, 234, .08); }
+.med-link-row .med-link-item { border-bottom: none; flex: 1 1 auto; }
+.med-link-check { flex: 0 0 auto; width: 16px; height: 16px; cursor: pointer; accent-color: #9333ea; }
+
+/* หัวข้อกลุ่ม (แนะนำ / ทั้งหมด) */
+.med-link-secthead {
+  padding: 10px 12px 4px;
+  font-size: 11px;
+  font-weight: 850;
+  color: #9333ea;
+  letter-spacing: .2px;
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 1;
+}
+.med-link-secthead.muted { color: var(--muted, #64748b); }
+
+/* % ความคล้าย + badge อาจซ้ำ */
+.med-sugg-score { margin-left: auto; font-size: 11px; font-weight: 850; color: #16a34a; }
+.med-dup-badge {
+  margin-left: 6px;
+  font-size: 9.5px;
+  font-weight: 800;
+  color: #b45309;
+  background: #fdf4e3;
+  border: 1px solid #e2b878;
+  padding: 0 5px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* แถบล่าง merge (multi-select) */
+.med-link-footer { display: none; }
+.med-link-footer.active {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid #e5e7eb;
+  background: #faf5ff;
+}
+.med-link-selcount { font-size: 12px; font-weight: 800; color: #7c3aed; margin-right: auto; }
+.med-merge-confirm { width: 100%; display: flex; flex-direction: column; gap: 3px; }
+.med-merge-line { font-size: 13px; }
+.med-merge-del { font-size: 11.5px; color: #dc2626; font-weight: 700; word-break: break-all; }
+.med-merge-note { font-size: 10.5px; color: var(--muted, #64748b); }
+.med-merge-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+
+html.dark .med-link-row { border-color: #334155; }
+html.dark .med-link-row.picked { background: rgba(147, 51, 234, .22); }
+html.dark .med-link-secthead { background: #1e293b; }
+html.dark .med-link-footer.active { background: rgba(124, 58, 237, .14); border-color: #334155; }
+html.dark .med-dup-badge { color: #f0c078; background: rgba(180, 120, 40, .16); border-color: #7a5a2c; }
+
 .med-input {
   flex: 0 0 auto;
   width: 52px;

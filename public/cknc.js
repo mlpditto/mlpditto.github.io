@@ -3200,6 +3200,135 @@ function quickUpdateMedicineLine(billKey, index, field, rawValue) {
   scheduleAutosave("medicine-line-update");
 }
 
+// ===== ตัวช่วย Suggest / ตรวจซ้ำ / merge ใน picker ลิงก์ยา =====
+function masterCodeOf(value) {
+  const m = clean(value).match(/\[\s*(\d{2,})\s*\]/);
+  return m ? m[1] : "";
+}
+// คำ pack/หน่วยที่ไม่ใช่ชื่อยา — ตัดออกก่อนวัดความคล้าย/จับซ้ำ
+const MED_NOISE_WORDS = new Set(["tab", "tabs", "tablet", "cap", "caps", "capsule", "แผง", "เม็ด", "ขวด", "กล่อง", "หลอด", "ชิ้น", "box", "bottle", "strip", "strips", "pieces", "pcs", "tube", "sachet", "amp", "vial", "set", "mg", "g", "ml", "mcg"]);
+// ชื่อแกน (ตัดรหัส/จำนวน/pack/หน่วย) — ใช้วัดความคล้าย + จับกลุ่มซ้ำ
+function masterCoreKey(value) {
+  let s = normalizeMedicineKey(value)
+    .replace(/\[\s*\d{2,}\s*\]/g, " ")     // รหัส [NNNN]
+    .replace(/\b\d+\s*x\s*\d+\b/g, " ")     // 5x1 10x10
+    .replace(/\b\d+\s*s\b/g, " ");          // 10s 70s
+  const tokens = s.split(/\s+/).filter((t) => t && !MED_NOISE_WORDS.has(t));
+  return tokens.join(" ").trim();
+}
+function medTokens(value) {
+  return masterCoreKey(value).split(/\s+/).filter(Boolean);
+}
+// เซตโดสเป็นตัวเลข (ตัด 0 นำหน้า) เช่น 90MG/090 -> 90 ใช้ boost คะแนน
+function doseSet(value) {
+  const set = new Set();
+  (normalizeMedicineKey(value).match(/\d+(?:\.\d+)?/g) || []).forEach((tok) => {
+    const n = parseFloat(tok);
+    if (!isNaN(n) && n > 0) set.add(n);
+  });
+  return set;
+}
+// dice bigram coefficient (0..1) — ทนพิมพ์ต่าง/เว้นวรรค
+function stringDice(a, b) {
+  a = (a || "").replace(/\s+/g, "");
+  b = (b || "").replace(/\s+/g, "");
+  if (a.length < 2 || b.length < 2) return a && a === b ? 1 : 0;
+  const bigrams = (s) => { const m = new Map(); for (let i = 0; i < s.length - 1; i++) { const g = s.slice(i, i + 2); m.set(g, (m.get(g) || 0) + 1); } return m; };
+  const A = bigrams(a), B = bigrams(b);
+  let inter = 0, total = 0;
+  A.forEach((c, g) => { total += c; if (B.has(g)) inter += Math.min(c, B.get(g)); });
+  B.forEach((c) => { total += c; });
+  return total ? (2 * inter) / total : 0;
+}
+// คะแนนความคล้ายชื่อ CKNC กับ master (0..1) — dice + token jaccard + boost โดส/คำแรก
+function similarityScore(ckncName, product) {
+  const coreA = masterCoreKey(ckncName);
+  const tokA = new Set(medTokens(ckncName));
+  const doseA = doseSet(ckncName);
+  let best = 0;
+  productAliases(product).forEach((alias) => {
+    const coreB = masterCoreKey(alias);
+    if (!coreB) return;
+    const tokB = medTokens(alias);
+    let inter = 0;
+    tokB.forEach((t) => { if (tokA.has(t)) inter++; });
+    const uni = new Set([...tokA, ...tokB]).size || 1;
+    let score = 0.55 * stringDice(coreA, coreB) + 0.45 * (inter / uni);
+    const doseB = doseSet(alias);
+    if (doseA.size && [...doseA].some((d) => doseB.has(d))) score += 0.12; // โดสตรง
+    if (tokB[0] && tokA.has(tokB[0])) score += 0.08;                       // คำแรก(ชื่อยา)ตรง
+    if (score > best) best = score;
+  });
+  return Math.min(1, best);
+}
+// key จับกลุ่มซ้ำ: รหัส [NNNN] > ชื่อแกน (ตรงกับ scanDuplicateMasters ของ LINE MAN)
+function masterDupKey(product) {
+  const code = masterCodeOf(product.name || product.id);
+  return code ? "c:" + code : "n:" + masterCoreKey(product.canonicalName || product.name || product.id);
+}
+
+function downloadJSON(filename, obj) {
+  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// สร้างสเปก merge master หลายตัว (logic ตรงกับ buildMergeSpec ของ lineman-mgr)
+function buildMasterMergeSpec(group) {
+  if (!group || group.length < 2) return null;
+  const scored = group.map((p) => ({ p, s: (masterCodeOf(p.name || p.id) ? 4 : 0) + (masterCostOf(p) > 0 ? 2 : 0) + (masterLinemanOf(p) > 0 ? 1 : 0) }));
+  const survivor = scored.slice().sort((a, b) => b.s - a.s)[0].p;
+  const survivorName = clean(survivor.name || survivor.id);
+  const names = new Set();
+  group.forEach((p) => productAliases(p).forEach((n) => { const t = clean(n); if (t) names.add(t); }));
+  names.delete(survivorName);
+  const toDelete = group.filter((p) => p.id !== survivor.id).map((p) => p.id);
+  const RESERVED = new Set(["COST", "LINEMAN", "RETAIL", "WHOLESALE", "STICKER"]);
+  const mergedPrices = { ...(survivor.prices || {}) };
+  let maxCost = masterCostOf(survivor), maxPrice = masterLinemanOf(survivor);
+  group.forEach((p) => {
+    maxCost = Math.max(maxCost, masterCostOf(p));
+    maxPrice = Math.max(maxPrice, masterLinemanOf(p));
+    const pr = p.prices || {};
+    Object.keys(pr).forEach((k) => {
+      if (RESERVED.has(k.split("_")[0])) return;      // reserved จัดการแยก
+      const v = Number(pr[k]) || 0;
+      if (v > (Number(mergedPrices[k]) || 0)) mergedPrices[k] = v;
+    });
+  });
+  if (maxCost > 0) mergedPrices.COST = maxCost;
+  if (maxPrice > 0) mergedPrices.LINEMAN = maxPrice;
+  return { group, survivor, survivorName, cost: maxCost, aliasArr: [...names], toDelete, mergedPrices };
+}
+
+// เขียน survivor + ลบตัวซ้ำใน master_products (cross-app: LINE MAN ใช้ร่วม) + อัปเดต cache ในเครื่อง
+async function applyMasterMerge(spec) {
+  await window.db.collection("master_products").doc(spec.survivor.id).set({
+    name: spec.survivorName,
+    cost: spec.cost,
+    prices: spec.mergedPrices,
+    aliases: spec.aliasArr,
+  }, { merge: true });
+  for (const id of spec.toDelete) {
+    await window.db.collection("master_products").doc(id).delete();
+  }
+  const survivorLocal = state.masterProducts.find((p) => p.id === spec.survivor.id);
+  if (survivorLocal) {
+    survivorLocal.name = spec.survivorName;
+    survivorLocal.cost = spec.cost;
+    survivorLocal.prices = spec.mergedPrices;
+    survivorLocal.aliases = spec.aliasArr;
+  }
+  state.masterProducts = state.masterProducts.filter((p) => !spec.toDelete.includes(p.id));
+  rebuildMedicineAliasMap();
+  updateCkncMasterDatalist();
+  renderMasterMappingStatus();
+}
+
 // Picker เลือกสินค้า master เพื่อลิงก์ชื่อยา CKNC (ระดับ body ตามธรรมเนียม modal)
 function openMedLinkPicker(rawName) {
   document.querySelector(".med-link-modal")?.remove();
@@ -3216,40 +3345,139 @@ function openMedLinkPicker(rawName) {
       </div>
       <input class="med-link-search" type="text" placeholder="ค้นหาชื่อยาใน master…" aria-label="ค้นหา master" />
       <div class="med-link-results" data-results></div>
+      <div class="med-link-footer" data-footer></div>
     </div>
   `;
   document.body.appendChild(overlay);
   const search = overlay.querySelector(".med-link-search");
   const results = overlay.querySelector("[data-results]");
+  const footer = overlay.querySelector("[data-footer]");
+  const selected = new Set(); // เลือกหลายตัวเพื่อ merge (เก็บ id ที่ clean แล้ว)
+  let byId = new Map();
+  let dupCount = new Map();
   const close = () => { overlay.remove(); document.removeEventListener("keydown", onKey); };
   function onKey(e) { if (e.key === "Escape") close(); }
 
-  const renderResults = (q) => {
-    const query = normalizeMedicineKey(q);
-    const list = (query
-      ? state.masterProducts.filter((p) => normalizeMedicineKey(`${p.name || ""} ${p.id || ""}`).includes(query))
-      : state.masterProducts
-    ).slice(0, 50);
-    results._list = list;
-    if (!list.length) { results.innerHTML = `<div class="med-link-empty">ไม่พบสินค้าใน master ตามคำค้น</div>`; return; }
-    results.innerHTML = list.map((p, i) => {
-      const nm = htmlEscape(clean(p.name || p.id));
-      const idText = clean(p.name) && clean(p.id) && clean(p.id) !== clean(p.name) ? `<span class="med-link-id">${htmlEscape(clean(p.id))}</span>` : "";
-      const unit = clean(p.unit) ? `<span class="med-link-unit">${htmlEscape(clean(p.unit))}</span>` : "";
-      return `<button class="med-link-item" type="button" data-pick="${i}"><span class="med-link-nm">${nm}</span>${idText}${unit}</button>`;
-    }).join("");
+  // สร้างดัชนี id + นับกลุ่มซ้ำใหม่ทุกครั้ง (master เปลี่ยนหลัง merge)
+  const rebuildIndex = () => {
+    byId = new Map(state.masterProducts.map((p) => [clean(p.id), p]));
+    dupCount = new Map();
+    state.masterProducts.forEach((p) => { const k = masterDupKey(p); dupCount.set(k, (dupCount.get(k) || 0) + 1); });
   };
 
+  const rowHtml = (p, scorePct) => {
+    const id = clean(p.id);
+    const nm = htmlEscape(clean(p.name || p.id));
+    const idText = clean(p.name) && clean(p.id) && clean(p.id) !== clean(p.name) ? `<span class="med-link-id">${htmlEscape(clean(p.id))}</span>` : "";
+    const unit = clean(p.unit) ? `<span class="med-link-unit">${htmlEscape(clean(p.unit))}</span>` : "";
+    const dup = (dupCount.get(masterDupKey(p)) || 0) >= 2 ? `<span class="med-dup-badge" title="มี master รหัส/ชื่อแกนตรงกันมากกว่า 1 — ติ๊กเลือกแล้วกดรวมได้">อาจซ้ำ</span>` : "";
+    const score = scorePct != null ? `<span class="med-sugg-score">${scorePct}%</span>` : "";
+    return `
+      <div class="med-link-row${selected.has(id) ? " picked" : ""}">
+        <input type="checkbox" class="med-link-check" data-sel-id="${htmlEscape(id)}" ${selected.has(id) ? "checked" : ""} aria-label="เลือกเพื่อรวม ${nm}" />
+        <button class="med-link-item" type="button" data-pick-id="${htmlEscape(id)}"><span class="med-link-nm">${nm}${dup}</span>${idText}${unit}${score}</button>
+      </div>`;
+  };
+
+  const renderResults = (q) => {
+    rebuildIndex();
+    const query = normalizeMedicineKey(q);
+    let html = "";
+    if (!query) {
+      // แนะนำ: จัดอันดับความคล้ายชื่อ CKNC (ไม่ต้องพิมพ์)
+      const suggestions = state.masterProducts
+        .map((p) => ({ p, s: similarityScore(rawName, p) }))
+        .filter((x) => x.s >= 0.18)
+        .sort((a, b) => b.s - a.s)
+        .slice(0, 8);
+      if (suggestions.length) {
+        html += `<div class="med-link-secthead"><i class="fa-solid fa-wand-magic-sparkles"></i> แนะนำ (คล้าย "${htmlEscape(rawName || "-")}")</div>`;
+        html += suggestions.map((x) => rowHtml(x.p, Math.round(x.s * 100))).join("");
+        html += `<div class="med-link-secthead muted">ทั้งหมด</div>`;
+      }
+      html += state.masterProducts.slice(0, 50).map((p) => rowHtml(p)).join("");
+    } else {
+      const list = state.masterProducts.filter((p) => normalizeMedicineKey(`${p.name || ""} ${p.id || ""}`).includes(query)).slice(0, 50);
+      html = list.length ? list.map((p) => rowHtml(p)).join("") : `<div class="med-link-empty">ไม่พบสินค้าใน master ตามคำค้น</div>`;
+    }
+    results.innerHTML = html;
+  };
+
+  const renderFooter = () => {
+    if (selected.size < 2) { footer.innerHTML = ""; footer.classList.remove("active"); return; }
+    footer.classList.add("active");
+    footer.innerHTML = `
+      <span class="med-link-selcount">เลือก ${selected.size} รายการ</span>
+      <button type="button" class="ghost small" data-merge-clear>ล้าง</button>
+      <button type="button" class="primary small" data-merge-go><i class="fa-solid fa-object-group"></i> รวมเป็นตัวเดียว</button>`;
+  };
+
+  // ยืนยัน + backup + รวม (inline ในแถบล่าง)
+  function confirmMerge() {
+    const group = [...selected].map((id) => byId.get(id)).filter(Boolean);
+    const spec = buildMasterMergeSpec(group);
+    if (!spec) { renderFooter(); return; }
+    footer.classList.add("active");
+    footer.innerHTML = `
+      <div class="med-merge-confirm">
+        <div class="med-merge-line">เก็บเป็นหลัก: <strong>${htmlEscape(spec.survivorName)}</strong>${spec.cost > 0 ? ` · ทุน ฿${number(spec.cost)}` : ""}</div>
+        <div class="med-merge-del">ลบถาวร ${spec.toDelete.length}: ${spec.toDelete.map((id) => htmlEscape(clean(id))).join(" · ")}</div>
+        <div class="med-merge-note">ชื่อเดิมทั้งหมดเก็บเป็น alias · แตะ master กลาง (LINE MAN ใช้ร่วม) · ดาวน์โหลด backup ก่อนลบ</div>
+        <div class="med-merge-actions">
+          <button type="button" class="ghost small" data-merge-cancel>ยกเลิก</button>
+          <button type="button" class="primary small" data-merge-confirm><i class="fa-solid fa-shield-halved"></i> backup + รวม</button>
+        </div>
+      </div>`;
+    footer.querySelector("[data-merge-cancel]").addEventListener("click", renderFooter);
+    footer.querySelector("[data-merge-confirm]").addEventListener("click", async (ev) => {
+      if (!window.db || !window.auth?.currentUser) { showToast("ต้อง login ก่อนถึงจะรวม master ได้"); return; }
+      const btn = ev.currentTarget;
+      btn.disabled = true;
+      btn.innerHTML = "กำลังรวม…";
+      const stamp = new Date().toISOString().replace(/[:.]/g, "").slice(0, 15);
+      downloadJSON(`master-merge-cknc-${stamp}.json`, {
+        mergedAt: new Date().toISOString(), survivorId: spec.survivor.id, deletedIds: spec.toDelete, docs: spec.group,
+      });
+      try {
+        await applyMasterMerge(spec);
+        selected.clear();
+        renderResults(search.value);
+        renderFooter();
+        showToast(`รวมสำเร็จ: เก็บ "${spec.survivorName}" · ลบซ้ำ ${spec.toDelete.length} รายการ`);
+      } catch (err) {
+        console.error("master merge failed", err);
+        showToast("รวมไม่สำเร็จ: " + (err.message || err));
+        renderFooter();
+      }
+    });
+  }
+
   renderResults("");
+  renderFooter();
   search.addEventListener("input", () => renderResults(search.value));
+
+  results.addEventListener("change", (e) => {
+    const chk = e.target.closest("[data-sel-id]");
+    if (!chk) return;
+    if (chk.checked) selected.add(chk.dataset.selId); else selected.delete(chk.dataset.selId);
+    chk.closest(".med-link-row")?.classList.toggle("picked", chk.checked);
+    renderFooter();
+  });
+
   results.addEventListener("click", async (e) => {
-    const btn = e.target.closest("[data-pick]");
-    if (!btn) return;
-    const product = results._list[Number(btn.dataset.pick)];
+    const pick = e.target.closest("[data-pick-id]");
+    if (!pick) return;
+    const product = byId.get(pick.dataset.pickId);
     if (!product) return;
     close();
     await linkMedicineToMaster(rawName, product);
   });
+
+  footer.addEventListener("click", (e) => {
+    if (e.target.closest("[data-merge-clear]")) { selected.clear(); renderResults(search.value); renderFooter(); return; }
+    if (e.target.closest("[data-merge-go]")) { confirmMerge(); return; }
+  });
+
   overlay.querySelector(".med-link-close").addEventListener("click", close);
   overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
   document.addEventListener("keydown", onKey);
