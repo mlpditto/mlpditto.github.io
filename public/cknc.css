@@ -3105,6 +3105,16 @@ html.dark .case-seq-drawer-warn {
   border-radius: 14px;
 }
 
+/* popup ใส่ BAR หลายบิล: ขยายให้กว้างขึ้น (6 คอลัมน์ AR/ORW ยาว) ลด scroll ด้านข้าง */
+#barPickerModal.clipboard-modal {
+  width: min(1320px, calc(100vw - 20px));
+}
+
+/* ถ้ายังกว้างเกินจอ ให้เลื่อนแนวนอนในกรอบตาราง (ไม่ตัดคอลัมน์หาย) */
+#barPickerModal .case-seq-modal-body {
+  overflow-x: auto;
+}
+
 html.dark .case-seq-search {
   border-color: rgba(255, 255, 255, 0.14);
 }
