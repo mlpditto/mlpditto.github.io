@@ -1490,6 +1490,13 @@ function pushIssue(issues, level, code, text) {
   issues.push({ level, code, text });
 }
 
+// สปสช ที่มีรายการยา (clicknic-only) แต่วางบิลครบ (BAR+AR) = reconcile แล้ว
+// — MLP ที่หายไปไม่กระทบ เพราะ สปสช ต้นทุน/ต้นทุน MLP = 0 อยู่แล้ว → ไม่ต้องเตือน/ไม่นับเป็นปัญหา
+function isReconciledNhsoClicknic(bill) {
+  return bill.status === "clicknic-only" && bill.caseType === "nhso"
+    && Boolean(clean(bill.barNo)) && Boolean(clean(bill.creditNos));
+}
+
 function validationRulesForBill(bill) {
   const issues = [];
   if (bill.excluded) {
@@ -1504,7 +1511,7 @@ function validationRulesForBill(bill) {
   if (bill.status === "billing-only") {
     pushIssue(issues, "danger", "BILLING_NOT_IN_MLP", "ใบวางบิลไม่เจอ MLP");
   }
-  if (bill.status === "clicknic-only") {
+  if (bill.status === "clicknic-only" && !isReconciledNhsoClicknic(bill)) {
     pushIssue(issues, "danger", "CLICKNIC_NOT_IN_MLP", "รายการยาไม่มี MLP");
   }
   if (bill.profit < -Math.max(0, toNumeric(activeRuleConfig().negativeProfitTolerance))) {
@@ -2168,9 +2175,12 @@ function renderMergeAssistant() {
   // รอใบวางบิล: นับเฉพาะที่ยังไม่ถูกจัดเข้าหมวดงานวางบิลเฉพาะ (กันนับซ้ำกับกลุ่มงานวางบิลค้าง) — ให้ตรงกับ filteredBills
   const pendingBillingDedup = state.bills.filter(isWithinDateRange)
     .filter((b) => b.status === "pending-billing" && !BILLING_WORKFLOW_STAGES.has(b.billingStage || "pending-review")).length;
+  // รายการยาไม่มี MLP: ไม่นับ สปสช ที่วางบิลครบ (BAR+AR) — reconcile แล้ว (ให้ตรงกับ filteredBills)
+  const clicknicOnlyIssues = state.bills.filter(isWithinDateRange)
+    .filter((b) => b.status === "clicknic-only" && !isReconciledNhsoClicknic(b)).length;
   const matchGroup = [
     { status: "mlp-only", label: "ไม่พบรายการยา", value: counts["mlp-only"] || 0, tone: "warning", active: state.activeStatus === "mlp-only" },
-    { status: "clicknic-only", label: "รายการยาไม่มี MLP", value: counts["clicknic-only"] || 0, tone: "danger", active: state.activeStatus === "clicknic-only" },
+    { status: "clicknic-only", label: "รายการยาไม่มี MLP", value: clicknicOnlyIssues, tone: "danger", active: state.activeStatus === "clicknic-only" },
     { status: "billing-only", label: "ใบวางบิลไม่เจอ MLP", value: counts["billing-only"] || 0, tone: "danger", active: state.activeStatus === "billing-only" },
     { status: "pending-billing", label: "รอใบวางบิล", value: pendingBillingDedup, tone: "warning", active: state.activeStatus === "pending-billing" },
   ].filter((chip) => chip.value > 0);
@@ -2821,7 +2831,8 @@ function filteredBills() {
             : status === "case-nhso" ? (bill.caseType || "unknown") === "nhso"
               : status === "repeat-customers" ? (bill.customerVisitCount >= 2 && !bill.excluded)
                 : status === "pending-billing" ? (bill.status === "pending-billing" && !BILLING_WORKFLOW_STAGES.has(bill.billingStage || "pending-review"))
-                  : bill.status === status);
+                  : status === "clicknic-only" ? (bill.status === "clicknic-only" && !isReconciledNhsoClicknic(bill))
+                    : bill.status === status);
     const matchesCaseType = caseType === "all" || (bill.caseType || "unknown") === caseType;
     const matchesBillingStage = billingStage === "all" || (bill.billingStage || "pending-review") === billingStage;
     const haystack = [
