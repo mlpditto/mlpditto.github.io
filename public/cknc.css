@@ -1904,6 +1904,26 @@ html.dark .quick-paid-btn:hover {
   background: rgba(52, 160, 106, 0.35);
 }
 
+/* ป้าย "🔗 รวมได้" บนบิล billing-only ที่มีคู่ ORW ฝั่งยา */
+.orw-merge-hint {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid #7a5fd0;
+  background: rgba(122, 95, 208, 0.10);
+  color: #6a4fc0;
+  font-weight: 800;
+  font-size: 11px;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.orw-merge-hint:hover { background: rgba(122, 95, 208, 0.2); }
+html.dark .orw-merge-hint { color: #b3a6f0; border-color: #5d4f97; background: rgba(122, 95, 208, 0.18); }
+
 /* ชิปวันที่ได้รับเงิน (บิล PAID แล้ว) — คลิกเพื่อแก้วันรับเงิน */
 .paid-date-chip {
   flex: 0 0 auto;

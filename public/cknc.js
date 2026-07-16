@@ -2990,6 +2990,7 @@ function renderTable() {
       </td>
       <td class="stack-cell">
         ${bill.status === "matched" ? "" : renderStatusSelect(bill)}
+        ${bill.status === "billing-only" && orwMergeableKeySet().has(bill.billKey) ? `<button type="button" class="orw-merge-hint" data-orw-merge-hint="${htmlEscape(bill.billKey)}" title="พบบิลฝั่งยาที่ ORW ตรงกัน — คลิกเพื่อรวม (มีสรุปให้ยืนยัน)"><i class="fa-solid fa-link"></i> รวมได้</button>` : ""}
         ${billingStageEchoesStatus(bill) ? "" : renderBillingStageSelect(bill)}
         ${renderCaseTypeSelect(bill)}
       </td>
@@ -5350,7 +5351,6 @@ function computeMergeSuggestions() {
   return suggestions.sort((a, b) => b.score - a.score).slice(0, 8);
 }
 
-// กลุ่มบิลที่ ORW เดียวกัน + มีทั้ง "ใบวางบิลไม่เจอ MLP" และบิลฝั่งยา/ออเดอร์ = คนละครึ่งของบิลเดียว
 // กลุ่ม ORW เดียวกันที่ "จับคู่ยังไม่ครบ" — คนละครึ่งของบิลเดียว ควรรวม:
 // billing-only↔ฝั่งยา, รายการยาไม่มี MLP (clicknic-only)↔ไม่พบรายการยา (mlp-only), ฯลฯ
 // เงื่อนไข: ORW ตรง + มีสถานะต่างกัน (mixed) + มีอย่างน้อย 1 ตัวที่ยัง match ไม่ครบ
@@ -5369,6 +5369,21 @@ function orwComplementGroups() {
   return [...buckets.values()].filter((arr) => arr.length >= 2
     && new Set(arr.map((b) => b.status)).size >= 2
     && arr.some((b) => INCOMPLETE_MATCH_STATUSES.has(b.status)));
+}
+
+// cache: billKeys ที่อยู่ในกลุ่ม ORW จับคู่ไม่ครบ (ใช้โชว์ป้าย "🔗 รวมได้" ในตาราง — O(1) ต่อแถว)
+function orwMergeableKeySet() {
+  if (state.orwMergeableCacheRef !== state.bills) {
+    state.orwMergeableCacheRef = state.bills;
+    const set = new Set();
+    orwComplementGroups().forEach((group) => group.forEach((bill) => set.add(bill.billKey)));
+    state.orwMergeableKeys = set;
+  }
+  return state.orwMergeableKeys;
+}
+// กลุ่ม ORW ที่บิลนี้อยู่ (สำหรับปุ่ม "🔗 รวมได้" — เลือกทั้งกลุ่มแล้วรวม)
+function orwGroupFor(billKey) {
+  return orwComplementGroups().find((group) => group.some((bill) => bill.billKey === billKey)) || [];
 }
 
 // เคส สปสช โดยปกติต้นทุน MLP = 0.00 — เคสที่ ≠ 0 ถือเป็นรายการต้องตรวจ (รวมที่ WARN)
@@ -8806,6 +8821,16 @@ elements.billTableBody.addEventListener("click", (event) => {
   // ปุ่มล้างตัวกรองในแถวว่าง "ไม่พบข้อมูลตามตัวกรอง"
   if (event.target.closest("[data-clear-filters]")) {
     clearFilters();
+    return;
+  }
+  // ป้าย "🔗 รวมได้" บนบิล billing-only ที่มีคู่ ORW ฝั่งยา — เลือกทั้งกลุ่มแล้วรวม (มี confirm)
+  const orwHint = event.target.closest("[data-orw-merge-hint]");
+  if (orwHint) {
+    const group = orwGroupFor(orwHint.dataset.orwMergeHint);
+    if (group.length >= 2) {
+      state.selectedBillKeys = new Set(group.map((bill) => bill.billKey));
+      mergeSelectedBills();
+    }
     return;
   }
   // ปุ่ม one-click ตั้งงานวางบิลเป็น PAID + กรอกวันที่ได้รับเงิน
