@@ -97,6 +97,14 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // ทะเบียนเจ้า (supplier) — doc id = โค้ดเจ้า, aliasKeys = ชื่อดิบไว้ map ชื่อจาก ProOrder/LINE MAN.
+    // สิทธิ์แนวเดียวกับ cknc_medicine_aliases: staff ที่ล็อกอินเพิ่ม/แก้เจ้าใหม่ได้ระหว่างทำงาน, ลบได้เฉพาะ admin.
+    match /suppliers/{supplierId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
     match /settings/{docId} {
       allow read: if true;
       allow write: if isAdmin();

@@ -1477,6 +1477,36 @@
             } catch (err) { console.error("Master Sync Error", err); }
         }
 
+        // ---- ทะเบียนเจ้า (collection suppliers) — doc id = โค้ด, aliasKeys = ชื่อดิบทุกแบบของเจ้านั้น ----
+        // ProOrder กับ LINE MAN เรียกเจ้าเดียวกันคนละชื่อ (เช่น "YAPAIBOON บจก. ยาไพบูลย์ (สำนักงานใหญ่)" = "YPB")
+        // → map ชื่อดิบเป็นโค้ดตอน "อ่าน" ไม่ต้องแก้ข้อมูลเดิม ของเก่าจะค่อย ๆ กลายเป็นโค้ดเองตอน user กดบันทึก
+        let supplierRegistry = [];
+        let supplierAliasToCode = new Map();
+
+        function supplierKeyOf(value) {
+            return (value || '').toString().trim().toUpperCase().replace(/\s+/g, ' ');
+        }
+
+        async function syncSuppliers() {
+            try {
+                const snapshot = await window.db.collection('suppliers').get();
+                supplierRegistry = snapshot.docs.map(doc => ({ code: doc.id, ...doc.data() }));
+                supplierAliasToCode = new Map();
+                supplierRegistry.forEach(s => {
+                    (s.aliasKeys && s.aliasKeys.length ? s.aliasKeys : [s.code]).forEach(k => {
+                        supplierAliasToCode.set(supplierKeyOf(k), s.code);
+                    });
+                });
+            } catch (err) { console.error("Supplier Sync Error", err); }
+        }
+
+        // ชื่อดิบ -> โค้ดเจ้า; ไม่รู้จัก = คืนชื่อเดิม (ห้ามกลืนหาย ผู้ใช้ต้องเห็นว่ายังไม่มีในทะเบียน)
+        function normalizeSupplierName(raw) {
+            const key = supplierKeyOf(raw);
+            if (!key) return '';
+            return supplierAliasToCode.get(key) || (raw || '').toString().trim();
+        }
+
         function normalizeMasterKey(value) {
             return (value || '').toString().normalize('NFKC').toLowerCase().replace(/[(){}\[\],;|]+/g, ' ').replace(/\s+/g, ' ').trim();
         }
@@ -2228,6 +2258,7 @@
                             document.getElementById('app-container').style.display = 'block';
                             syncData();
                             syncMasterData();
+                            syncSuppliers();
                         } else {
                             document.getElementById('app-container').style.display = 'none';
                             document.getElementById('login-container').style.display = 'flex';
@@ -4275,16 +4306,20 @@
             return 0;
         }
 
-        // รวมชื่อบริษัทจากทุกสินค้า → datalist เรียงตามความถี่ (ซื้อบ่อยขึ้นก่อน)
+        // datalist ชื่อเจ้า = ทะเบียน suppliers (โค้ด + ชื่อเต็มไว้ให้ค้นเจอ) เรียงตามความถี่ที่ใช้จริงใน master
+        // เดิมรวบชื่อจาก suppliers[] ของ master ทุกตัว → ได้ชื่อดิบ/ชื่อที่กรอกมั่วปนมาด้วย และไม่มีเจ้าที่ยังไม่เคยใช้
         function buildSupplierDatalist() {
             const freq = {};
             (masterProducts || []).forEach(m => (m.suppliers || []).forEach(s => {
-                const n = String(s && s.name || '').trim();
+                const n = normalizeSupplierName(s && s.name);
                 if (n) freq[n] = (freq[n] || 0) + 1;
             }));
-            const names = Object.keys(freq).sort((a, b) => freq[b] - freq[a] || a.localeCompare(b));
+            const fromRegistry = supplierRegistry.map(s => ({ code: s.code, label: s.name || '' }));
+            // เจ้าที่อยู่ใน master แต่ยังไม่มีในทะเบียน — ต้องโชว์ด้วย ไม่งั้นของเดิมหายไปจากตัวเลือกเงียบ ๆ
+            const unknown = Object.keys(freq).filter(n => !supplierAliasToCode.has(supplierKeyOf(n))).map(n => ({ code: n, label: 'ยังไม่มีในทะเบียนเจ้า' }));
+            const options = [...fromRegistry, ...unknown].sort((a, b) => (freq[b.code] || 0) - (freq[a.code] || 0) || a.code.localeCompare(b.code));
             const dl = document.getElementById('m-supplier-datalist');
-            if (dl) dl.innerHTML = names.map(n => `<option value="${n.replace(/"/g, '&quot;')}">`).join('');
+            if (dl) dl.innerHTML = options.map(o => `<option value="${o.code.replace(/"/g, '&quot;')}">${o.label.replace(/"/g, '&quot;')}</option>`).join('');
         }
 
         // Read-time sync: ดึงต้นทุนต่อเจ้าจาก prices["บริษัท_หน่วย"] ของ ProOrder (เฉพาะ >0) มาเป็นแถว supplier
@@ -4299,9 +4334,20 @@
                 const head = key.split('_')[0];
                 if (MASTER_RESERVED_PRICE_KEYS.includes(head) || head === ':') return;
                 const parts = key.split('_');
-                const name = (parts.length > 1 ? parts.slice(0, -1).join('_') : parts[0]).trim();
-                rows.push({ name, cost, primary: false });
+                const rawName = (parts.length > 1 ? parts.slice(0, -1).join('_') : parts[0]).trim();
+                rows.push({ name: normalizeSupplierName(rawName), cost, primary: false });
             });
+            // เจ้าเดียวกันถูกบันทึกไว้หลายสะกด (เช่น "..._สำนักงานใหญ่" กับ "... (สำนักงานใหญ่)_Box") พอ normalize แล้วยุบเป็นโค้ดเดียว
+            // → ทุนเท่ากันเป๊ะ = รายการเดียวกัน เก็บแถวเดียวพอ; ทุนต่างกัน = เก็บไว้ทั้งคู่ (อาจเป็นคนละหน่วยจริง ห้ามกลืนทิ้ง)
+            const seen = new Set();
+            const deduped = rows.filter(r => {
+                const k = `${r.name}|${r.cost}`;
+                if (seen.has(k)) return false;
+                seen.add(k);
+                return true;
+            });
+            rows.length = 0;
+            rows.push(...deduped);
             if (rows.length) {
                 let mi = 0;
                 rows.forEach((r, i) => { if (r.cost < rows[mi].cost) mi = i; });
@@ -4325,7 +4371,8 @@
                 document.getElementById('m-price').value = prices['LINEMAN'] || 0;
                 buildSupplierDatalist();
                 renderSupplierRows(
-                    (m.suppliers && m.suppliers.length) ? m.suppliers          // 1) มี suppliers[] เดิม → ใช้เลย
+                    // ชื่อเจ้าที่เก็บไว้เดิมอาจเป็นชื่อดิบ/ชื่อย่อเก่า → แปลงเป็นโค้ดตอนแสดง (ทุน/⭐ ไม่แตะ)
+                    (m.suppliers && m.suppliers.length) ? m.suppliers.map(s => ({ ...s, name: normalizeSupplierName(s.name) }))  // 1) มี suppliers[] เดิม → ใช้เลย
                     : (suppliersFromCompanyPrices(prices).length ? suppliersFromCompanyPrices(prices)  // 2) ดึงจาก ProOrder
                     : (prices['COST'] > 0 ? [{ name: '', cost: prices['COST'], primary: true }]        // 3) ทุนเดี่ยวเดิม
                     : [])));                                                     // 4) ว่าง
