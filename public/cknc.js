@@ -791,9 +791,12 @@ async function verifyCkncAccess() {
   }
 }
 
+// ตัดสัญลักษณ์เงินออกด้วย: ไฟล์ใบวางบิลจริง export ช่องจำนวนเงินเป็นรูปแบบสกุลเงิน ("$10.00")
+// เดิม Number("$10.00") = NaN → คืน 0 → ยอดหายทั้งไฟล์ (ตกไปหยิบเลขลำดับแถวมาเป็นยอดแทน)
+// ห้ามตัดตัวอักษร/"/" ทิ้ง — ต้องให้ "02/07/2026" ยังเป็น NaN คืน 0 ไม่งั้นวันที่จะกลายเป็นจำนวนเงิน
 function toNumeric(value) {
   if (typeof value === "number") return Number.isFinite(value) ? value : 0;
-  const parsed = Number(clean(value).replace(/,/g, ""));
+  const parsed = Number(clean(value).replace(/[,\s฿$]/g, ""));
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
@@ -1294,6 +1297,27 @@ function billingDueDateFromCells(cells) {
   return cells.find((cell) => /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(clean(cell))) || "";
 }
 
+const DATE_CELL = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
+
+// ป้ายวันครบกำหนดที่ยอมรับ: มีคำว่า "ครบ" (= วันครบกำหนดแน่นอน) หรือเป็น "กำหนดชำระ" เป๊ะ ๆ ทั้งช่อง (ไฟล์ xlsx ใช้คำนี้)
+// ⚠️ ห้ามยอม "วันกำหนดชำระ" — เป็นหัวคอลัมน์ในตาราง ค่าข้างในคือวันที่ทำรายการ ไม่ใช่วันครบกำหนด
+const isHeadDueLabel = (text) => /ครบกำหนด/.test(text) || /^กำหนดชำระ[:：]?$/.test(text);
+
+// วันครบกำหนดชำระจาก "หัวใบ" ของไฟล์ใบวางบิล — ต้องอ่านจาก rows ดิบ (ยังไม่ filter ช่องว่างทิ้ง) เพราะใช้ตำแหน่งคอลัมน์
+// กติกา: เอาวันที่ตัวแรกที่อยู่ *ทางขวา* ของป้าย เพราะบรรทัดหัวใบมีวันที่ทำรายการอยู่ทางซ้ายด้วย
+//   "วันที่ 02/07/2026 | ยอดเรียกเก็บ $660.00 | กำหนดชำระ 15/08/2026"  → ต้องได้ 15/08/2026 ไม่ใช่ 02/07/2026
+// หัวตาราง ("ครบกำหนด") ไม่หลุดมาเพราะแถวหัวตารางไม่มีวันที่ในตัวเอง
+function headDueDateFromRows(rows) {
+  for (const row of rows) {
+    if (!Array.isArray(row)) continue;
+    const labelIndex = row.findIndex((cell) => isHeadDueLabel(clean(cell)));
+    if (labelIndex < 0) continue;
+    const date = row.slice(labelIndex + 1).map(clean).find((cell) => DATE_CELL.test(cell));
+    if (date) return date;
+  }
+  return "";
+}
+
 function billingAmountFromCells(cells) {
   const amountCandidates = cells
     .map((cell, index) => ({ value: toNumeric(cell), index, text: clean(cell) }))
@@ -1364,13 +1388,16 @@ function parseBillingWorkbook(workbook, sourceName, options = {}) {
       defval: "",
       raw: false,
     });
+    // วันครบกำหนดจริงอยู่หัวใบ ไม่ใช่ในแถว — คอลัมน์ "ครบกำหนด" ของแต่ละแถวคือวันที่ทำรายการ
+    // ค่าที่กรอกในโมดัล paste ชนะเสมอ ถ้าไม่มีค่อยใช้หัวใบในไฟล์
+    const sheetOptions = { ...options, dueDateOverride: options.dueDateOverride || headDueDateFromRows(rows) };
     let pendingRecord = null;
     // เลข BAR ที่เจอล่าสุดในชีต (เช่นหัวกระดาษหน้าใบวางบิลลูกหนี้ที่ copy ทั้งหน้ามาวาง)
     // → ผูกให้รายการเครดิต (AR) ทุกแถวถัดไปที่ไม่มี BAR ของตัวเอง
     let contextBar = "";
     const flushPendingRecord = () => {
       if (!pendingRecord) return;
-      const record = parseBillingRecord(pendingRecord.cells, sourceName, sheetName, pendingRecord.rowNumber, pendingRecord.contextBar, options);
+      const record = parseBillingRecord(pendingRecord.cells, sourceName, sheetName, pendingRecord.rowNumber, pendingRecord.contextBar, sheetOptions);
       if (record) parsed.push(record);
       pendingRecord = null;
     };
@@ -1401,7 +1428,7 @@ function parseBillingWorkbook(workbook, sourceName, options = {}) {
         return;
       }
 
-      const record = parseBillingRecord(cells, sourceName, sheetName, index + 1, contextBar, options);
+      const record = parseBillingRecord(cells, sourceName, sheetName, index + 1, contextBar, sheetOptions);
       if (record) parsed.push(record);
     });
     flushPendingRecord();

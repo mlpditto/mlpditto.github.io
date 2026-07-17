@@ -1002,6 +1002,11 @@ html.dark .card-detail-table tr.row-selected td.col-action {
 
 /* ส่วน bulk แบบ inline ในแถว card-detail-actions — พื้นอ่อนแยกโซนจาก chips กรอง
    flex:1 = ยืดเต็มพื้นที่ที่เหลือของแถวจนสุดขอบ popup ไม่จบแค่ความกว้างเนื้อหา */
+/* display: flex ชนะ [hidden] ของ UA stylesheet → ต้องปิดเอง ไม่งั้นแถบโผล่ค้างตอนเลือก 0 บิล */
+.card-detail-bulk-inline[hidden] {
+  display: none;
+}
+
 .card-detail-bulk-inline {
   display: flex;
   flex: 1 1 auto;
@@ -3610,6 +3615,11 @@ html.dark .case-seq-bill-link:hover {
 
 .show-merged-toggle {
   justify-self: start;
+}
+
+/* display: flex ชนะ [hidden] ของ UA stylesheet → ต้องปิดเอง ไม่งั้นแถบโผล่ค้างตอนเลือก 0 บิล */
+.bulk-bar[hidden] {
+  display: none;
 }
 
 .bulk-bar {
