@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="./cknc.css?v=20260717192109" />
+    <link rel="stylesheet" href="./cknc.css?v=20260717232401" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -868,7 +868,7 @@
                   <input id="editPatient" type="text" placeholder="ชื่อผู้รับบริการ" />
                 </label>
                 <label>
-                  Ref-ID
+                  <span class="label-with-copy">Ref-ID <button id="editRefIdCopy" class="copy-ref-btn" type="button" data-copy-input="editRefId" title="คัดลอก Ref-ID" aria-label="คัดลอก Ref-ID"><i class="fa-regular fa-copy"></i></button></span>
                   <input id="editRefId" type="text" placeholder="R-..." />
                 </label>
                 <label>
@@ -889,22 +889,22 @@
               <h4 class="edit-group-title"><i class="fa-solid fa-file-lines"></i> เอกสารอ้างอิง</h4>
               <div class="form-grid">
                 <label>
-                  ORW
+                  <span class="label-with-copy">ORW <button id="editOrwCopy" class="copy-ref-btn" type="button" data-copy-input="editOrw" title="คัดลอก ORW" aria-label="คัดลอก ORW"><i class="fa-regular fa-copy"></i></button></span>
                   <input id="editOrw" type="text" />
                 </label>
                 <label>
-                  INV
+                  <span class="label-with-copy">INV <button id="editInvoiceCopy" class="copy-ref-btn" type="button" data-copy-input="editInvoice" title="คัดลอก INV" aria-label="คัดลอก INV"><i class="fa-regular fa-copy"></i></button></span>
                   <input id="editInvoice" type="text" />
                 </label>
                 <label>
-                  ใบวางบิล (BAR)
+                  <span class="label-with-copy">ใบวางบิล (BAR) <button id="editBarNoCopy" class="copy-ref-btn" type="button" data-copy-input="editBarNo" title="คัดลอก BAR" aria-label="คัดลอก BAR"><i class="fa-regular fa-copy"></i></button></span>
                   <span class="bar-field-row">
                     <input id="editBarNo" type="text" placeholder="BAR-..." />
                     <button id="editBarPickerBtn" class="ghost small" type="button" title="ใส่ BAR นี้ให้หลายบิล (เลือกตาม AR)">AR2BAR</button>
                   </span>
                 </label>
                 <label>
-                  เลขที่เครดิต (AR)
+                  <span class="label-with-copy">เลขที่เครดิต (AR) <button id="editCreditNosCopy" class="copy-ref-btn" type="button" data-copy-input="editCreditNos" title="คัดลอก AR" aria-label="คัดลอก AR"><i class="fa-regular fa-copy"></i></button></span>
                   <input id="editCreditNos" type="text" placeholder="AR-... (หลายเลขคั่นด้วย ,)" />
                 </label>
                 <label>
@@ -1005,7 +1005,7 @@
       </div>
     </dialog>
 
-    <script src="./cknc.js?v=20260717192109"></script>
+    <script src="./cknc.js?v=20260717232401"></script>
     <script>
       (function () {
         const btn = document.getElementById("themeToggleBtn");

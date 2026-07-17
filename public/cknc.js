@@ -3924,6 +3924,7 @@ function renderVisitTimeline() {
           <div class="visit-bill${bill.billKey === anchor.billKey ? " visit-bill-active" : ""}">
             <div class="visit-bill-head">
               <button type="button" class="case-seq-bill-link" data-visit-open="${htmlEscape(bill.billKey)}" title="เปิดรายละเอียด / แก้ไขบิลนี้">${htmlEscape(bill.orderId || bill.orw || "(ไม่มีเลขที่)")}</button>
+              ${clean(bill.refId) ? `<span class="visit-ref">Ref-ID ${htmlEscape(clean(bill.refId))} <button type="button" class="copy-ref-btn" data-copy-text="${htmlEscape(clean(bill.refId))}" title="คัดลอก Ref-ID" aria-label="คัดลอก Ref-ID"><i class="fa-regular fa-copy"></i></button></span>` : ""}
               <span class="visit-meds">${htmlEscape(bill.medicinesText || "ไม่มีรายการยา")}</span>
             </div>
             <label class="visit-dx">
@@ -8791,6 +8792,17 @@ elements.visitTimelineBody?.addEventListener("mousedown", (event) => {
   if (event.target.closest("[data-visit-open]")) event.preventDefault();
 });
 elements.visitTimelineBody?.addEventListener("click", (event) => {
+  const copyBtn = event.target.closest("[data-copy-text]");
+  if (copyBtn) {
+    navigator.clipboard?.writeText(copyBtn.dataset.copyText).then(() => {
+      const icon = copyBtn.querySelector("i");
+      if (icon) {
+        icon.className = "fa-solid fa-check";
+        setTimeout(() => { icon.className = "fa-regular fa-copy"; }, 1200);
+      }
+    }).catch(() => {});
+    return;
+  }
   const openBtn = event.target.closest("[data-visit-open]");
   if (!openBtn) return;
   const billKey = openBtn.dataset.visitOpen; // อ่านก่อน — commit ด้านล่างอาจวาดปุ่มนี้ทิ้ง
@@ -9303,9 +9315,15 @@ elements.editBillingStageChips?.addEventListener("click", (event) => {
 elements.closeDetailDrawer.addEventListener("click", closeDetailDrawer);
 elements.detailDrawer.addEventListener("click", (event) => {
   if (event.target === elements.detailDrawer) closeDetailDrawer();
-  const copyBtn = event.target.closest("[data-copy-text]");
+  // data-copy-input = อ่านค่าสดจากช่องกรอกตอนกด (ช่องที่แก้ได้ เช่น Ref-ID/ORW/INV/BAR/AR) — กันก๊อปค่าเก่าหลังผู้ใช้พิมพ์แก้
+  const copyBtn = event.target.closest("[data-copy-text], [data-copy-input]");
   if (copyBtn) {
-    navigator.clipboard?.writeText(copyBtn.dataset.copyText).then(() => {
+    const copySource = copyBtn.dataset.copyInput
+      ? document.getElementById(copyBtn.dataset.copyInput)?.value
+      : copyBtn.dataset.copyText;
+    const copyValue = clean(copySource);
+    if (!copyValue) return;
+    navigator.clipboard?.writeText(copyValue).then(() => {
       const icon = copyBtn.querySelector("i");
       if (icon) {
         icon.className = "fa-solid fa-check";

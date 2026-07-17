@@ -3871,6 +3871,13 @@ html.dark .merge-suggest-score {
   color: var(--green-dark);
 }
 
+/* ปุ่มก๊อปที่อยู่ข้างชื่อช่องในฟอร์ม — ต้องไม่ดันความสูงแถว label */
+.label-with-copy {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .drawer-title-row {
   display: flex;
   align-items: center;
@@ -6205,6 +6212,14 @@ html.dark .paste-field select {
   align-items: baseline;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.visit-ref {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted, #6d7c74);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .visit-meds {
