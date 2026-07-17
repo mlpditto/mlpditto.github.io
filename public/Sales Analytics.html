@@ -1460,11 +1460,19 @@
                     if (l.match(/OR[RW]-[\d-]+/i)) orderId = l.match(/OR[RW]-[\d-]+/i)[0].toUpperCase();
                     if (l.match(/(IN[VS]-[\d-]+)/)) invoiceId = l.match(/(IN[VS]-[\d-]+)/)[0];
                     if (l.match(/(\d{1,2}\/\d{1,2}\/\d{4})/)) date = l.match(/(\d{1,2}\/\d{1,2}\/\d{4})/)[0];
-                    if (l.match(/(?<!\d)([\d,]+\.\d{2})(?!\d)/)) {
-                        const m = l.match(/(?<!\d)([\d,]+\.\d{2})(?!\d)/);
-                        amountStr = m[0];
+                    // ยอดเงิน: เอาเฉพาะบรรทัดที่เป็น "ตัวเลขล้วน" (คอลัมน์ยอด) — กัน regex ไปจับวันที่ในหมายเหตุ
+                    // เช่น "เข้ารับบริการ 14.07.26" ที่ทำให้ยอด 81.00 เพี้ยนเป็น 14.07
+                    if (/^[\d,]+\.\d{2}$/.test(l)) {
+                        amountStr = l;
                         amountVal = parseFloat(amountStr.replace(/,/g, ''));
                         amountIdx = i;
+                    }
+                }
+                // fallback: ถ้าไม่มีบรรทัดตัวเลขล้วนเลย ค่อยใช้ regex แบบเดิม (จับยอดที่ฝังอยู่ในบรรทัด)
+                if (amountIdx === -1) {
+                    for (let i = 0; i < lines.length; i++) {
+                        const m = lines[i].match(/(?<!\d)([\d,]+\.\d{2})(?!\d)/);
+                        if (m) { amountStr = m[0]; amountVal = parseFloat(amountStr.replace(/,/g, '')); amountIdx = i; }
                     }
                 }
 
@@ -1628,8 +1636,8 @@
                 document.getElementById('pocketActionBar').classList.add('hidden');
                 res = res.filter(r => !r.isExcluded); // Show active
 
-                // Normal Filters
-                if (activeTab !== 'all') {
+                // Normal Filters — ถ้ากำลังค้นหา (q) ข้ามตัวกรอง tab เพื่อให้ค้นเจอทุก tab
+                if (activeTab !== 'all' && !q) {
                     if (['wholesale', 'retail'].includes(activeTab)) res = res.filter(r => r.saleType.toLowerCase() === activeTab);
                     else {
                         res = res.filter(r => {
