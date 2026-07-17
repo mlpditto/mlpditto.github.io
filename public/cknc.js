@@ -3644,7 +3644,7 @@ function openPaidDatePrompt(defaultKey, onConfirm, options = {}) {
   const barNo = clean(options.barNo);
   const sameBarCount = Number(options.sameBarCount) || 0;
   const sameBarUi = (barNo && sameBarCount > 1) ? `
-      <label class="paid-bar-all"><input type="checkbox" class="paid-bar-all-check" checked /> ใช้กับทุกบิลใบวางบิล ${htmlEscape(barNo)} <strong>(${number(sameBarCount)} บิล)</strong></label>` : "";
+      <label class="paid-bar-all"><input type="checkbox" class="paid-bar-all-check" checked /><span class="paid-bar-all-text">ใช้กับทุกบิลใบวางบิล ${htmlEscape(barNo)} <strong>(${number(sameBarCount)} บิล)</strong></span></label>` : "";
   overlay.innerHTML = `
     <div class="med-link-panel paid-date-panel" role="dialog" aria-label="วันที่ได้รับเงิน">
       <div class="med-link-head">

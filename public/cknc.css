@@ -2049,6 +2049,9 @@ html.dark .paid-date-input {
 }
 .paid-bar-all input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--green, #168250); }
 .paid-bar-all strong { color: var(--green-dark, #0f7a3b); }
+/* checkbox ไม่หด · ข้อความ (รวม (n บิล)) ไหลเป็นก้อนเดียว ตัดบรรทัดปกติ ไม่ให้ <strong> กลายเป็น flex item แยกที่ถูกดันไปขวาแล้วตัดคำเสีย */
+.paid-bar-all-check { flex: none; }
+.paid-bar-all-text { flex: 1; min-width: 0; }
 html.dark .paid-bar-all { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.12); }
 
 .stack-cell .case-source {
