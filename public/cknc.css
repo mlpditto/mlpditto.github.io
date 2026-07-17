@@ -1174,15 +1174,17 @@ html.dark .card-detail-bulk-inline {
   background: #e8f5ef;
 }
 
-.date-chip.paid-complete i {
-  margin-right: 1px;
-  font-size: 11px;
-}
-
 .date-chip.active {
   background: var(--green);
   border-color: var(--green);
   color: #fff;
+}
+
+/* วันเอกสารครบ (PAID + ลงวันรับเงินครบทุกใบ) — ขอบทอง อ่านคู่กับพื้นเขียว
+   inset ring: ไม่ดันเลย์เอาต์ + เห็นชัดบนพื้นเขียวทึบตอน active · วางหลัง .active เพื่อชนะ border-color */
+.date-chip.dates-complete {
+  border-color: #d9a300;
+  box-shadow: inset 0 0 0 1px #d9a300;
 }
 
 .date-chip span {
@@ -1986,15 +1988,20 @@ html.dark .paid-date-chip.empty {
 
 /* prompt วันที่ได้รับเงิน (ใช้ overlay .med-link-modal ร่วมกัน) */
 .paid-date-modal .paid-date-panel {
-  max-width: 380px;
+  max-width: 440px;
+}
+
+/* หัว popup: เว้นระยะมากขึ้นให้โปร่ง (scope เฉพาะ paid — med-link-head เป็น base ร่วมกับ modal อื่น) */
+.paid-date-panel .med-link-head {
+  padding: 18px 22px;
 }
 
 /* เนื้อหาใต้หัว popup: header เต็มความกว้าง (มีเส้นคั่น) ส่วน body เยื้องเท่ากันทุกด้าน + ระยะห่างสม่ำเสมอ */
 .paid-date-body {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 14px 16px 16px;
+  gap: 16px;
+  padding: 20px 22px 22px;
 }
 
 /* body ใช้ gap คุมระยะห่างแล้ว → ลบ margin-top เดิมของลูกแต่ละตัว (specificity สูงกว่าเดิม ชนะแน่) */
@@ -2010,13 +2017,20 @@ html.dark .paid-date-chip.empty {
 
 .paid-date-input {
   width: 100%;
-  padding: 10px 12px;
+  padding: 12px 14px;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  font-size: 15px;
+  border-radius: 10px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--ink);
   background: #fff;
+}
+
+/* ปุ่มปฏิทินสูงเท่าช่องวันที่ (ไม่งั้นดูเตี้ยไม่สมดุล) */
+.paid-date-field .date-pick-btn {
+  align-self: stretch;
+  border-radius: 10px;
+  padding-inline: 13px;
 }
 
 html.dark .paid-date-input {
@@ -2028,8 +2042,14 @@ html.dark .paid-date-input {
 .paid-date-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 10px;
   margin-top: 14px;
+}
+
+.paid-date-actions button {
+  min-height: 44px;
+  padding-inline: 22px;
+  border-radius: 10px;
 }
 
 /* checkbox "ใช้กับทุกบิล BAR เดียวกัน" ในกล่องกรอกวันรับเงิน */
@@ -2038,7 +2058,7 @@ html.dark .paid-date-input {
   align-items: center;
   gap: 8px;
   margin-top: 12px;
-  padding: 9px 11px;
+  padding: 12px 14px;
   font-size: 13px;
   font-weight: 700;
   color: var(--text);
@@ -5632,6 +5652,11 @@ html.dark .date-chip-note {
 html.dark .date-chip.paid-complete:not(.active) {
   background: rgba(0, 177, 79, 0.14);
   border-color: #2f6b52;
+}
+
+html.dark .date-chip.dates-complete {
+  border-color: #f0c04a;
+  box-shadow: inset 0 0 0 1px #f0c04a;
 }
 
 html.dark .toolbar input:focus,

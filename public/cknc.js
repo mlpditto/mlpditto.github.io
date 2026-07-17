@@ -2176,6 +2176,25 @@ function paidCompleteDates() {
   return done;
 }
 
+// วัน "เอกสารครบ" — ทุกบิลของวันนั้น PAID และลงวันที่ได้รับเงินครบ (เข้มกว่า paidCompleteDates ที่เช็คแค่สถานะ)
+// บังคับ paid ด้วยเพื่อให้เซ็ตนี้เป็น subset ของ paidCompleteDates เสมอ (ขอบทองมาคู่พื้นเขียวเสมอ)
+function paidDatedCompleteDates() {
+  const byDate = new Map();
+  state.bills.forEach((bill) => {
+    const key = dateKey(bill.clicknicDate);
+    if (!key) return;
+    const entry = byDate.get(key) || { total: 0, dated: 0 };
+    entry.total += 1;
+    if ((bill.billingStage || "") === "paid" && clean(bill.paidDate)) entry.dated += 1;
+    byDate.set(key, entry);
+  });
+  const done = new Set();
+  byDate.forEach((entry, key) => {
+    if (entry.total > 0 && entry.total === entry.dated) done.add(key);
+  });
+  return done;
+}
+
 // สรุปจำนวนออเดอร์รายเดือนจาก buckets รายวัน — คีย์ YYYY-MM เรียงใหม่ → เก่า
 function clicknicMonthBuckets(dayBuckets) {
   const months = new Map();
@@ -2245,14 +2264,19 @@ function renderQuickDateFilters() {
     return true;
   });
   const paidDone = paidCompleteDates();
+  const datedDone = paidDatedCompleteDates();
   const dayRow = `
     <div class="date-chip-row">
       <button class="date-chip ${!activeFrom && !activeTo ? "active" : ""}" type="button" data-clicknic-date="all">ทุกวัน CLICKNIC</button>
       ${days.map((bucket) => {
         const done = paidDone.has(bucket.date);
+        const dated = datedDone.has(bucket.date);
+        const chipTitle = dated ? "เก็บเงินครบ + ลงวันรับเงินครบทุกใบ"
+          : done ? "PAID ทุกใบแล้ว แต่ยังลงวันที่ได้รับเงินไม่ครบ"
+          : "";
         return `
-        <button class="date-chip ${done ? "paid-complete" : ""} ${activeFrom === bucket.date && activeTo === bucket.date ? "active" : ""}" type="button" data-clicknic-date="${bucket.date}"${done ? ` title="เก็บเงินครบแล้ว — บิลของวันนี้ PAID ทุกใบ"` : ""}>
-          ${done ? `<i class="fa-solid fa-circle-check" aria-hidden="true"></i> ` : ""}${formatDisplayDate(bucket.date)} <span>(${number(bucket.orders.size)})</span>
+        <button class="date-chip ${done ? "paid-complete" : ""} ${dated ? "dates-complete" : ""} ${activeFrom === bucket.date && activeTo === bucket.date ? "active" : ""}" type="button" data-clicknic-date="${bucket.date}"${chipTitle ? ` title="${chipTitle}"` : ""}>
+          ${formatDisplayDate(bucket.date)} <span>(${number(bucket.orders.size)})</span>
         </button>
       `;
       }).join("")}
