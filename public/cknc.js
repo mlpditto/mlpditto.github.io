@@ -2155,6 +2155,27 @@ function clicknicDateBuckets() {
   return [...buckets.values()].sort((a, b) => b.date.localeCompare(a.date));
 }
 
+// วันที่เก็บเงินครบแล้ว = วันนั้นมีบิลอย่างน้อย 1 ใบ และ "ทุกใบ" เป็น PAID
+// นับบิลที่ Exclude ด้วย (ตกลงกับ user 17 ก.ค. 2026: บิล Exclude ที่ยังไม่ PAID = ยังไม่ครบ)
+// → บิลสถานะ "ยกเลิก" ก็บล็อกเช่นกัน เพราะไม่มีวันเป็น PAID
+// วันที่มีออเดอร์ใน CLICKNIC แต่ยังไม่มีบิล = ไม่ครบ (Set ว่าง → ไม่เข้าเงื่อนไข)
+function paidCompleteDates() {
+  const byDate = new Map();
+  state.bills.forEach((bill) => {
+    const key = dateKey(bill.clicknicDate);
+    if (!key) return;
+    const entry = byDate.get(key) || { total: 0, paid: 0 };
+    entry.total += 1;
+    if ((bill.billingStage || "") === "paid") entry.paid += 1;
+    byDate.set(key, entry);
+  });
+  const done = new Set();
+  byDate.forEach((entry, key) => {
+    if (entry.total > 0 && entry.total === entry.paid) done.add(key);
+  });
+  return done;
+}
+
 // สรุปจำนวนออเดอร์รายเดือนจาก buckets รายวัน — คีย์ YYYY-MM เรียงใหม่ → เก่า
 function clicknicMonthBuckets(dayBuckets) {
   const months = new Map();
@@ -2223,14 +2244,18 @@ function renderQuickDateFilters() {
     if (activeYear) return bucket.date.startsWith(activeYear);
     return true;
   });
+  const paidDone = paidCompleteDates();
   const dayRow = `
     <div class="date-chip-row">
       <button class="date-chip ${!activeFrom && !activeTo ? "active" : ""}" type="button" data-clicknic-date="all">ทุกวัน CLICKNIC</button>
-      ${days.map((bucket) => `
-        <button class="date-chip ${activeFrom === bucket.date && activeTo === bucket.date ? "active" : ""}" type="button" data-clicknic-date="${bucket.date}">
-          ${formatDisplayDate(bucket.date)} <span>(${number(bucket.orders.size)})</span>
+      ${days.map((bucket) => {
+        const done = paidDone.has(bucket.date);
+        return `
+        <button class="date-chip ${done ? "paid-complete" : ""} ${activeFrom === bucket.date && activeTo === bucket.date ? "active" : ""}" type="button" data-clicknic-date="${bucket.date}"${done ? ` title="เก็บเงินครบแล้ว — บิลของวันนี้ PAID ทุกใบ"` : ""}>
+          ${done ? `<i class="fa-solid fa-circle-check" aria-hidden="true"></i> ` : ""}${formatDisplayDate(bucket.date)} <span>(${number(bucket.orders.size)})</span>
         </button>
-      `).join("")}
+      `;
+      }).join("")}
     </div>`;
 
   elements.quickDateFilters.innerHTML = yearRow + monthRow + dayRow;

@@ -1167,6 +1167,18 @@ html.dark .card-detail-bulk-inline {
   cursor: pointer;
 }
 
+/* วันที่เก็บเงินครบ (บิล PAID ทุกใบ) — เขียวอ่อน ขอบเข้ม กวาดตาเจอทันทีแต่ไม่แย่งซีน
+   :not(.active) เพราะชิปที่กำลังกรองอยู่ต้องเป็นเขียวทึบเสมอ ไม่งั้นแยกไม่ออกว่าอันไหนถูกเลือก */
+.date-chip.paid-complete:not(.active) {
+  border-color: var(--green);
+  background: #e8f5ef;
+}
+
+.date-chip.paid-complete i {
+  margin-right: 1px;
+  font-size: 11px;
+}
+
 .date-chip.active {
   background: var(--green);
   border-color: var(--green);
@@ -5589,6 +5601,12 @@ html.dark .date-chip-note {
   background: #0f172a;
   border-color: #334155;
   color: var(--ink);
+}
+
+/* โทนเดียวกับแถวบิล PAID ในโหมดมืด (rgba เขียว) — ให้ "จ่ายครบ" เป็นภาษาเดียวกันทั้งแอป */
+html.dark .date-chip.paid-complete:not(.active) {
+  background: rgba(0, 177, 79, 0.14);
+  border-color: #2f6b52;
 }
 
 html.dark .toolbar input:focus,
