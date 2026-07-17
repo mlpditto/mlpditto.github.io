@@ -1972,9 +1972,12 @@ html.dark .paid-date-chip.empty {
   max-width: 340px;
 }
 
+.paid-date-field {
+  margin-top: 12px;
+}
+
 .paid-date-input {
   width: 100%;
-  margin-top: 12px;
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -2780,6 +2783,62 @@ html.dark .med-costsum-label strong {
   font-size: 12px;
   line-height: 1.45;
   resize: vertical;
+}
+
+/* STEP 3 เท่านั้น: หัวใบวางบิล (BAR / วันครบกำหนด / ยอดเรียกเก็บ) อยู่ในช่อง input ของหน้าต้นทาง
+   → Ctrl+A copy ไม่ติดมา ต้องกรอกเองหลังวาง */
+.clipboard-billing-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f7faf9;
+}
+
+/* display: grid ข้างบนชนะ UA stylesheet ของ [hidden] → ต้องปิดเอง ไม่งั้นโผล่ตอน STEP 1/2 */
+.clipboard-billing-fields[hidden] {
+  display: none;
+}
+
+.clipboard-billing-fields label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.clipboard-billing-fields input {
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  background: #fff;
+}
+
+.clipboard-checksum {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.clipboard-checksum:empty {
+  display: none;
+}
+
+.clipboard-checksum.checksum-ok {
+  color: var(--green);
+}
+
+.clipboard-checksum.checksum-warn {
+  color: var(--amber);
 }
 
 .clipboard-preview-wrap {
@@ -3670,6 +3729,11 @@ html.dark .issue-chip.tone-orange {
 
 html.dark .issue-chip.tone-amber {
   background: rgba(245, 158, 11, 0.16);
+  color: #fbbf24;
+}
+
+/* --amber (#b45309) ไม่มีตัวแปรเวอร์ชัน dark — บนพื้นเข้มจะจมจนอ่านไม่ออก ใช้โทนเดียวกับ chip เตือน */
+html.dark .clipboard-checksum.checksum-warn {
   color: #fbbf24;
 }
 
@@ -4626,7 +4690,8 @@ html.dark #cardDetailBody tr.row-paid td {
   }
 
   .metrics-grid,
-  .toolbar {
+  .toolbar,
+  .clipboard-billing-fields {
     grid-template-columns: 1fr;
   }
 
@@ -5540,6 +5605,8 @@ html.dark .drawer-card {
 html.dark .image-panel,
 html.dark .screenshot-preview,
 html.dark .clipboard-preview-wrap,
+html.dark .clipboard-billing-fields,
+html.dark .clipboard-billing-fields input,
 html.dark .summary-tile,
 html.dark .drawer-list-item,
 html.dark .session-item,

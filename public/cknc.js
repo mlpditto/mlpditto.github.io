@@ -33,6 +33,8 @@ const state = {
   currentManualBill: null,
   currentDetailKey: "",
   pasteAnalyzeKey: "",
+  // ค่าหัวใบวางบิลที่เติมให้อัตโนมัติล่าสุด — ไว้เทียบว่าผู้ใช้แก้เองหรือยัง จะได้ไม่เขียนทับ
+  clipboardBillingAuto: { bar: "", dueDate: "", total: "" },
   drawerMedicines: [],
   screenshotObjectUrl: "",
   screenshotFile: null,
@@ -72,6 +74,11 @@ const elements = {
   clipboardPreviewHead: $("clipboardPreviewHead"),
   clipboardPreviewBody: $("clipboardPreviewBody"),
   clipboardSummary: $("clipboardSummary"),
+  clipboardBillingFields: $("clipboardBillingFields"),
+  clipboardBarNo: $("clipboardBarNo"),
+  clipboardDueDate: $("clipboardDueDate"),
+  clipboardExpectedTotal: $("clipboardExpectedTotal"),
+  clipboardChecksum: $("clipboardChecksum"),
   cancelClipboardImport: $("cancelClipboardImport"),
   confirmClipboardImport: $("confirmClipboardImport"),
   statusText: $("statusText"),
@@ -827,6 +834,13 @@ function dateKey(value) {
   return date ? date.toISOString().slice(0, 10) : "";
 }
 
+// "วันนี้" เป็นคีย์ YYYY-MM-DD — ประกอบจากเวลาท้องถิ่นเอง
+// อย่าใช้ dateKey(new Date()): String(date) เป็น "Fri Jul 17 2026 ... GMT+0700" ไม่มี / หรือ - ให้ parseDateValue จับ → คืน ""
+// อย่าใช้ toISOString().slice(0,10): เป็น UTC ก่อน 07:00 ตามเวลาไทยจะได้วันก่อนหน้า
+function todayKey(now = new Date()) {
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
 const YEAR_ERA_STORAGE_KEY = "cknc_year_era";
 let yearEra = "be";
 try {
@@ -892,10 +906,12 @@ function findOrderId(value) {
   return "";
 }
 
+// อัปเปอร์เคสทั้งก้อนก่อนหา: เลขที่ copy มาบางทีเป็นตัวพิมพ์เล็ก (เดิม regex ไม่มี flag i เลยมองไม่เห็น
+// จนแถวนั้นถูกยำรวมกับแถวก่อนหน้าและยอดเพี้ยน) — ผลพลอยได้คือเลขที่คืนออกไป normalize แล้วในตัว ใช้เป็นคีย์จับคู่ได้เลย
 function extractRefs(value) {
-  const text = clean(value);
+  const text = clean(value).toUpperCase();
   // ตัดเลข BAR ออกก่อนหา AR — "BAR-00003-26-xxxx" มี "AR-..." ซ้อนอยู่ข้างใน จะได้ไม่กลายเป็นเลขเครดิตผี
-  const arSource = text.replace(/BAR-\d{5}-\d{2}-\d+/gi, " ");
+  const arSource = text.replace(/BAR-\d{5}-\d{2}-\d+/g, " ");
   return {
     ar: arSource.match(/AR-\d{5}-\d{2}-\d{4,}/g) || [],
     orw: text.match(/ORW-\d{5}-\d{2}-\d{4,}/g) || [],
@@ -1290,21 +1306,48 @@ function billingAmountFromCells(cells) {
   return fallbackCandidates.length ? fallbackCandidates[fallbackCandidates.length - 1] : 0;
 }
 
+// หัวใบวางบิลลูกหนี้: "วันครบกำหนดชำระ" (หัวใบ) ต่างจาก "วันกำหนดชำระ" (คอลัมน์ในตาราง = วันที่ทำรายการ)
+// → บังคับให้มีคำว่า "ครบ" กันไปหยิบวันที่ในตารางมาผิด
+const BILLING_HEAD_DUE_DATE = /วันครบกำหนด(?:ชำระ)?[\s:]*(\d{1,2}\/\d{1,2}\/\d{4})/;
+const BILLING_HEAD_TOTAL = /ยอดเรียกเก็บ[\s:]*([\d,]+(?:\.\d{1,2})?)/;
+
+// ค่าหัวใบที่ติดมากับข้อความ (ถ้า copy ทั้งหน้ามา) — ช่องที่เป็น input ของหน้าต้นทางจะไม่ติดมา ต้องกรอกเอง
+function detectBillingHead(text) {
+  const value = clean(text);
+  return {
+    bar: extractBarNo(value),
+    dueDate: value.match(BILLING_HEAD_DUE_DATE)?.[1] || "",
+    total: value.match(BILLING_HEAD_TOTAL)?.[1] || "",
+  };
+}
+
+// วันครบกำหนดที่กรอกในโมดัล: รับได้ทั้ง พ.ศ./ค.ศ. แล้วเก็บเป็น วว/ดด/ปปปป (ค.ศ.) ให้รูปแบบตรงกับแถวที่อ่านจากไฟล์
+function normalizeBillingDueDateInput(value) {
+  const date = parseDateValue(value);
+  if (!date) return "";
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  return `${day}/${month}/${date.getUTCFullYear()}`;
+}
+
 function extractBarNo(value) {
   const match = clean(value).toUpperCase().match(/BAR-\d{5}-\d{2}-\d+/);
   return match ? match[0] : "";
 }
 
-function parseBillingRecord(cells, sourceName, sheetName, rowNumber, contextBar = "") {
+// fallbackBar / dueDateOverride = ค่าที่กรอกในโมดัล paste (หัวใบวางบิล copy ไม่ติดมา)
+// BAR: ใช้ต่อท้ายสุด — ที่เจอในไฟล์/ข้อความจริงชนะเสมอ
+// วันครบกำหนด: ทับค่าในแถว เพราะคอลัมน์ "วันกำหนดชำระ" ของหน้า BAR คือวันที่ทำรายการ ไม่ใช่วันครบกำหนด
+function parseBillingRecord(cells, sourceName, sheetName, rowNumber, contextBar = "", { fallbackBar = "", dueDateOverride = "" } = {}) {
   const text = cells.map(clean).filter(Boolean).join(" ");
   const refs = extractRefs(text);
   if (!refs.orw.length && !refs.inv.length && !refs.ar.length) return null;
   return {
-    bar: extractBarNo(sourceName) || extractBarNo(text) || contextBar,
+    bar: extractBarNo(sourceName) || extractBarNo(text) || contextBar || fallbackBar,
     ar: refs.ar[0] || "",
     orw: refs.orw[0] || "",
     inv: refs.inv[0] || "",
-    dueDate: billingDueDateFromCells(cells),
+    dueDate: dueDateOverride || billingDueDateFromCells(cells),
     amount: billingAmountFromCells(cells),
     rawText: text,
     sourceName,
@@ -1313,7 +1356,7 @@ function parseBillingRecord(cells, sourceName, sheetName, rowNumber, contextBar 
   };
 }
 
-function parseBillingWorkbook(workbook, sourceName) {
+function parseBillingWorkbook(workbook, sourceName, options = {}) {
   const parsed = [];
   workbook.SheetNames.forEach((sheetName) => {
     const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
@@ -1327,7 +1370,7 @@ function parseBillingWorkbook(workbook, sourceName) {
     let contextBar = "";
     const flushPendingRecord = () => {
       if (!pendingRecord) return;
-      const record = parseBillingRecord(pendingRecord.cells, sourceName, sheetName, pendingRecord.rowNumber, pendingRecord.contextBar);
+      const record = parseBillingRecord(pendingRecord.cells, sourceName, sheetName, pendingRecord.rowNumber, pendingRecord.contextBar, options);
       if (record) parsed.push(record);
       pendingRecord = null;
     };
@@ -1358,7 +1401,7 @@ function parseBillingWorkbook(workbook, sourceName) {
         return;
       }
 
-      const record = parseBillingRecord(cells, sourceName, sheetName, index + 1, contextBar);
+      const record = parseBillingRecord(cells, sourceName, sheetName, index + 1, contextBar, options);
       if (record) parsed.push(record);
     });
     flushPendingRecord();
@@ -1443,6 +1486,15 @@ function aggregateMlp(rows) {
     bill.rows.push(row);
   });
   return byOrder;
+}
+
+// เลขที่อ้างอิงของกลุ่ม MLP ที่ใช้จับคู่ใบวางบิล — สกัดเลขออกจากค่าในคอลัมน์อีกชั้น
+// เดิมเอาค่าดิบทั้งช่องไปเทียบตรง ๆ ถ้าช่องมีข้อความพ่วงมาด้วยคือ miss เงียบ
+// (ฝั่งใบวางบิลเก็บเลขที่ผ่าน extractRefs มาแล้ว = normalize ทั้งคู่ คีย์จึงตรงกันได้)
+function mlpRefKeys(mlp) {
+  if (!mlp) return [];
+  const refs = extractRefs([...(mlp.orwList || []), ...(mlp.invoiceList || [])].join(" "));
+  return [...new Set([...refs.orw, ...refs.inv])];
 }
 
 function aggregateBilling(rows) {
@@ -1590,11 +1642,7 @@ function buildBills() {
     const click = clicknicByOrder.get(key);
     const mlp = mlpByOrder.get(key);
     const hasManualMedicines = Boolean(click?.medicines.some((row) => row.sourceType === "screenshot"));
-    const mlpRefs = [
-      ...(mlp?.orwList || []),
-      ...(mlp?.invoiceList || []),
-    ].filter(Boolean);
-    const billingMatches = mlpRefs.flatMap((ref) => billingByRef.get(ref) || []);
+    const billingMatches = mlpRefKeys(mlp).flatMap((ref) => billingByRef.get(ref) || []);
     const uniqueBilling = [...new Map(billingMatches.map((row) => [`${row.sourceName}:${row.sheetName}:${row.rowNumber}`, row])).values()];
     uniqueBilling.forEach((row) => usedBillingRows.add(`${row.sourceName}:${row.sheetName}:${row.rowNumber}`));
     const sale = click?.sale || 0;
@@ -3539,7 +3587,7 @@ function openPaidDatePrompt(defaultKey, onConfirm, options = {}) {
   document.querySelector(".paid-date-modal")?.remove();
   const overlay = document.createElement("div");
   overlay.className = "med-link-modal paid-date-modal";
-  const initial = /^\d{4}-\d{2}-\d{2}$/.test(defaultKey || "") ? defaultKey : dateKey(new Date());
+  const initial = /^\d{4}-\d{2}-\d{2}$/.test(defaultKey || "") ? defaultKey : todayKey();
   // ถ้ามีบิลอื่น BAR เดียวกัน → เสนอตั้ง PAID ทั้ง BAR วันเดียวกัน (ปกติจ่ายมาพร้อมกันทั้งใบวางบิล)
   const barNo = clean(options.barNo);
   const sameBarCount = Number(options.sameBarCount) || 0;
@@ -3554,7 +3602,11 @@ function openPaidDatePrompt(defaultKey, onConfirm, options = {}) {
         </div>
         <button class="med-link-close" type="button" aria-label="ปิด">×</button>
       </div>
-      <input class="paid-date-input" type="date" value="${initial}" aria-label="วันที่ได้รับเงิน" />
+      <span class="date-field paid-date-field">
+        <input class="paid-date-input" type="text" inputmode="numeric" placeholder="วว/ดด/ปปปป" value="${initial ? formatDisplayDate(initial) : ""}" aria-label="วันที่ได้รับเงิน" />
+        <button type="button" class="date-pick-btn" title="เลือกวันที่จากปฏิทิน" aria-label="เลือกวันที่จากปฏิทิน"><i class="fa-solid fa-calendar-days"></i></button>
+        <input type="date" class="date-picker-hidden" tabindex="-1" aria-hidden="true" />
+      </span>
       ${sameBarUi}
       <div class="paid-date-actions">
         <button type="button" class="ghost paid-date-cancel">ยกเลิก</button>
@@ -4557,7 +4609,87 @@ function clipboardKindLabel(kind) {
   return "Clipboard";
 }
 
+// ค่าหัวใบที่กรอกในโมดัล → ส่งต่อให้ parseBillingWorkbook
+function billingImportOptions() {
+  return {
+    fallbackBar: clean(elements.clipboardBarNo?.value).toUpperCase(),
+    dueDateOverride: normalizeBillingDueDateInput(elements.clipboardDueDate?.value),
+  };
+}
+
+function billingRowsFromText(text) {
+  if (!clean(text)) return [];
+  try {
+    return parseBillingWorkbook(workbookFromClipboardText(text, "Clipboard billing"), "clipboard-billing", billingImportOptions());
+  } catch (error) {
+    return [];
+  }
+}
+
+// เติมช่องหัวใบให้อัตโนมัติถ้าหาเจอในข้อความ แต่ไม่ทับค่าที่ผู้ใช้พิมพ์เอง
+function autofillBillingHead(text) {
+  const found = detectBillingHead(text);
+  const auto = state.clipboardBillingAuto;
+  const apply = (input, key, value) => {
+    if (!input || !value) return;
+    const current = clean(input.value);
+    if (current && current !== auto[key]) return;
+    input.value = value;
+    auto[key] = value;
+  };
+  apply(elements.clipboardBarNo, "bar", found.bar);
+  apply(elements.clipboardDueDate, "dueDate", found.dueDate);
+  apply(elements.clipboardExpectedTotal, "total", found.total);
+}
+
+// เทียบยอดรวมของแถวที่วาง กับ "ยอดเรียกเก็บ" หัวใบ — จับเคส copy มาไม่ครบ (คืน null = ไม่ได้กรอกยอดไว้ตรวจ)
+function billingChecksum(text) {
+  const expected = toNumeric(elements.clipboardExpectedTotal?.value);
+  if (!(expected > 0)) return null;
+  const rows = billingRowsFromText(text);
+  const actual = rows.reduce((sum, row) => sum + toNumeric(row.amount), 0);
+  const diff = Number((expected - actual).toFixed(2));
+  return { expected, actual, rowCount: rows.length, diff, ok: Math.abs(diff) < 0.005 };
+}
+
+function billingChecksumMessage(check) {
+  if (check.ok) return `ยอดครบ — ${number(check.rowCount)} รายการ รวม ${money(check.actual)} ตรงกับยอดเรียกเก็บ`;
+  const side = check.diff > 0 ? "วางมาไม่ครบ" : "เกินยอดเรียกเก็บ";
+  return `ยอดไม่ตรง (${side}) — ${number(check.rowCount)} รายการ รวม ${money(check.actual)} ต่างจากยอดเรียกเก็บ ${money(Math.abs(check.diff))}`;
+}
+
+function renderBillingChecksum(text) {
+  const el = elements.clipboardChecksum;
+  if (!el) return;
+  const check = billingChecksum(text);
+  if (!check) {
+    el.textContent = "";
+    el.className = "clipboard-checksum";
+    return;
+  }
+  el.className = `clipboard-checksum ${check.ok ? "checksum-ok" : "checksum-warn"}`;
+  el.textContent = billingChecksumMessage(check);
+}
+
+// ยอดไม่ตรง = เตือนแต่ไม่บล็อก (บางครั้งตั้งใจวางแค่บางส่วน) — คืน true = ไปต่อ
+function confirmIfChecksumMismatch(text) {
+  const check = billingChecksum(text);
+  if (!check || check.ok) return true;
+  return confirm([
+    billingChecksumMessage(check),
+    "",
+    `ยอดเรียกเก็บที่กรอกไว้: ${money(check.expected)}`,
+    `ยอดรวมจากข้อความที่วาง: ${money(check.actual)} (${number(check.rowCount)} รายการ)`,
+    "",
+    "กด OK เพื่อนำเข้าตามที่วางมา · Cancel เพื่อกลับไปวางใหม่ให้ครบ",
+  ].join("\n"));
+}
+
 function previewClipboardText(text) {
+  if (state.activeClipboardKind === "billing") {
+    autofillBillingHead(text);
+    renderBillingChecksum(text);
+  }
   const rows = clipboardTextToRows(text);
   // MLP: บอกจำนวนที่จะนำเข้าจริงหลังกรองเฉพาะ คลิกนิก เฮลท์ ให้เห็นก่อนกด Import
   const mlpImportable = state.activeClipboardKind === "mlp"
@@ -4588,7 +4720,7 @@ async function importClipboardText(kind, text) {
   const sourceName = `clipboard-${kind}`;
   const parsed = kind === "clicknic" ? parseClicknicWorkbook(workbook, sourceName)
     : kind === "mlp" ? parseMlpWorkbook(workbook, sourceName)
-      : parseBillingWorkbook(workbook, sourceName);
+      : parseBillingWorkbook(workbook, sourceName, billingImportOptions());
 
   // มีข้อมูลอยู่แล้ว = เพิ่มเข้าข้อมูลเดิมเสมอ (แถวซ้ำถูกตัดอัตโนมัติ ค่าที่แก้มือคงอยู่) — ไม่ถามโหมด
   const mode = state.bills.length ? "append" : "replace";
@@ -4628,6 +4760,20 @@ async function importClipboardText(kind, text) {
   return true;
 }
 
+// ช่องหัวใบโผล่เฉพาะ STEP 3 และล้างทุกครั้งที่เปิดโมดัล กันค่ารอบก่อนติดมากับใบใหม่
+function resetClipboardBillingFields(kind) {
+  const isBilling = kind === "billing";
+  if (elements.clipboardBillingFields) elements.clipboardBillingFields.hidden = !isBilling;
+  state.clipboardBillingAuto = { bar: "", dueDate: "", total: "" };
+  [elements.clipboardBarNo, elements.clipboardDueDate, elements.clipboardExpectedTotal].forEach((input) => {
+    if (input) input.value = "";
+  });
+  if (elements.clipboardChecksum) {
+    elements.clipboardChecksum.textContent = "";
+    elements.clipboardChecksum.className = "clipboard-checksum";
+  }
+}
+
 async function readClipboardIntoModal() {
   try {
     if (!navigator.clipboard?.readText) {
@@ -4655,6 +4801,7 @@ async function openClipboardImport(kind) {
   elements.clipboardPreview.placeholder = kind === "billing"
     ? "Ctrl+V — วางได้ทั้งตารางจาก Excel และทั้งหน้าใบวางบิลลูกหนี้ (Ctrl+A ที่หน้า BAR แล้ว copy) ระบบจะผูกเลข BAR ให้ทุกรายการเครดิตในหน้านั้นอัตโนมัติ"
     : "Ctrl+V here if the browser blocks automatic clipboard reading.";
+  resetClipboardBillingFields(kind);
   elements.clipboardPreview.value = "";
   elements.clipboardStatus.textContent = "Reading clipboard...";
   elements.clipboardSummary.textContent = "No clipboard data yet";
@@ -4675,6 +4822,10 @@ async function confirmClipboardImport() {
     const text = elements.clipboardPreview.value;
     const rows = previewClipboardText(text);
     if (!rows.length) throw new Error("Clipboard is empty");
+    if (state.activeClipboardKind === "billing" && !confirmIfChecksumMismatch(text)) {
+      elements.clipboardStatus.textContent = "ยกเลิกการนำเข้า (ยอดรวมไม่ตรงยอดเรียกเก็บ)";
+      return;
+    }
     const imported = await importClipboardText(state.activeClipboardKind, text);
     // ผู้ใช้ยกเลิกตอนเลือกโหมด: คง modal เดิมไว้ ไม่ทิ้งข้อความที่วางมา
     if (imported === false) return;
@@ -8414,6 +8565,9 @@ elements.clipboardPreview.addEventListener("input", () => {
   previewClipboardText(elements.clipboardPreview.value);
   elements.clipboardStatus.textContent = "Review pasted data before importing.";
 });
+elements.clipboardExpectedTotal?.addEventListener("input", () => {
+  renderBillingChecksum(elements.clipboardPreview.value);
+});
 elements.confirmClipboardImport.addEventListener("click", confirmClipboardImport);
 elements.cancelClipboardImport.addEventListener("click", closeClipboardImport);
 elements.closeClipboardModal.addEventListener("click", closeClipboardImport);
@@ -8812,7 +8966,7 @@ elements.billTableBody.addEventListener("change", (event) => {
       // ตั้ง PAID จาก dropdown → เด้งถามวันรับเงิน (พร้อมตัวเลือกทั้ง BAR); ยกเลิก = คืนค่า dropdown เดิม
       const bill = state.bills.find((b) => b.billKey === key);
       const sameBar = bill?.barNo ? billsSharingBar(bill.barNo) : [];
-      openPaidDatePrompt(dateKey(bill?.paidDate) || dateKey(new Date()), (chosen, applyAllBar) => {
+      openPaidDatePrompt(dateKey(bill?.paidDate) || todayKey(), (chosen, applyAllBar) => {
         if (applyAllBar && bill?.barNo && sameBar.length > 1) markBarPaid(bill.barNo, chosen);
         else quickUpdateBillingStage(key, "paid", chosen);
       }, { barNo: bill?.barNo, sameBarCount: sameBar.length, onCancel: () => renderTable() });
@@ -8873,7 +9027,7 @@ elements.billTableBody.addEventListener("click", (event) => {
     const key = quickPaidBtn.dataset.quickPaid;
     const bill = state.bills.find((item) => item.billKey === key);
     const sameBar = bill?.barNo ? billsSharingBar(bill.barNo) : [];
-    openPaidDatePrompt(dateKey(bill?.paidDate) || dateKey(new Date()), (chosen, applyAllBar) => {
+    openPaidDatePrompt(dateKey(bill?.paidDate) || todayKey(), (chosen, applyAllBar) => {
       if (applyAllBar && bill?.barNo && sameBar.length > 1) {
         const n = markBarPaid(bill.barNo, chosen);
         elements.statusText.textContent = `ตั้ง PAID ${number(n)} บิล (BAR ${clean(bill.barNo)}) · รับเงิน ${formatDisplayDate(chosen)}`;
@@ -8890,7 +9044,7 @@ elements.billTableBody.addEventListener("click", (event) => {
     const key = paidDateEditBtn.dataset.paidDateEdit;
     const bill = state.bills.find((item) => item.billKey === key);
     const sameBar = bill?.barNo ? billsSharingBar(bill.barNo) : [];
-    openPaidDatePrompt(dateKey(bill?.paidDate) || dateKey(new Date()), (chosen, applyAllBar) => {
+    openPaidDatePrompt(dateKey(bill?.paidDate) || todayKey(), (chosen, applyAllBar) => {
       if (applyAllBar && bill?.barNo && sameBar.length > 1) markBarPaid(bill.barNo, chosen);
       else setBillPaidDate(key, chosen);
       if (elements.detailDrawer?.open && state.currentDetailKey) openDetailDrawer(state.currentDetailKey);
