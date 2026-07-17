@@ -3654,15 +3654,17 @@ function openPaidDatePrompt(defaultKey, onConfirm, options = {}) {
         </div>
         <button class="med-link-close" type="button" aria-label="ปิด">×</button>
       </div>
-      <span class="date-field paid-date-field">
-        <input class="paid-date-input" type="text" inputmode="numeric" placeholder="วว/ดด/ปปปป" value="${initial ? formatDisplayDate(initial) : ""}" aria-label="วันที่ได้รับเงิน" />
-        <button type="button" class="date-pick-btn" title="เลือกวันที่จากปฏิทิน" aria-label="เลือกวันที่จากปฏิทิน"><i class="fa-solid fa-calendar-days"></i></button>
-        <input type="date" class="date-picker-hidden" tabindex="-1" aria-hidden="true" />
-      </span>
-      ${sameBarUi}
-      <div class="paid-date-actions">
-        <button type="button" class="ghost paid-date-cancel">ยกเลิก</button>
-        <button type="button" class="primary paid-date-confirm">บันทึก</button>
+      <div class="paid-date-body">
+        <span class="date-field paid-date-field">
+          <input class="paid-date-input" type="text" inputmode="numeric" placeholder="วว/ดด/ปปปป" value="${initial ? formatDisplayDate(initial) : ""}" aria-label="วันที่ได้รับเงิน" />
+          <button type="button" class="date-pick-btn" title="เลือกวันที่จากปฏิทิน" aria-label="เลือกวันที่จากปฏิทิน"><i class="fa-solid fa-calendar-days"></i></button>
+          <input type="date" class="date-picker-hidden" tabindex="-1" aria-hidden="true" />
+        </span>
+        ${sameBarUi}
+        <div class="paid-date-actions">
+          <button type="button" class="ghost paid-date-cancel">ยกเลิก</button>
+          <button type="button" class="primary paid-date-confirm">บันทึก</button>
+        </div>
       </div>
     </div>
   `;

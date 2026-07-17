@@ -1986,7 +1986,22 @@ html.dark .paid-date-chip.empty {
 
 /* prompt วันที่ได้รับเงิน (ใช้ overlay .med-link-modal ร่วมกัน) */
 .paid-date-modal .paid-date-panel {
-  max-width: 340px;
+  max-width: 380px;
+}
+
+/* เนื้อหาใต้หัว popup: header เต็มความกว้าง (มีเส้นคั่น) ส่วน body เยื้องเท่ากันทุกด้าน + ระยะห่างสม่ำเสมอ */
+.paid-date-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px 16px;
+}
+
+/* body ใช้ gap คุมระยะห่างแล้ว → ลบ margin-top เดิมของลูกแต่ละตัว (specificity สูงกว่าเดิม ชนะแน่) */
+.paid-date-body .paid-date-field,
+.paid-date-body .paid-bar-all,
+.paid-date-body .paid-date-actions {
+  margin-top: 0;
 }
 
 .paid-date-field {
