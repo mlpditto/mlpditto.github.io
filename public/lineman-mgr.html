@@ -240,6 +240,11 @@
             border-bottom-color: #00B14F;
         }
 
+        .minimal-table {
+            table-layout: fixed;
+            width: 100%;
+        }
+
         .minimal-table th {
             font-size: 10px;
             font-weight: 800;
@@ -247,6 +252,12 @@
             color: #64748b;
             padding: 0.5rem;
             border-bottom: 1px solid #f1f5f9;
+        }
+
+        .minimal-table .item-net-hint {
+            white-space: normal;
+            word-break: break-word;
+            line-height: 1.25;
         }
 
         .dark .minimal-table th {
@@ -715,8 +726,8 @@
                                 <tr>
                                     <th class="text-left">สินค้า</th>
                                     <th class="w-14 text-center">จำนวน</th>
-                                    <th class="w-16 text-right !text-rose-500">ทุน/ชิ้น</th>
-                                    <th class="w-20 text-right">ราคา</th>
+                                    <th class="w-20 text-right !text-rose-500">ทุน/ชิ้น</th>
+                                    <th class="w-28 text-right">ราคา</th>
                                     <th class="w-8"></th>
                                 </tr>
                             </thead>
@@ -1029,8 +1040,8 @@
                                     <tr>
                                         <th class="text-left">สินค้า</th>
                                         <th class="w-14 text-center">จำนวน</th>
-                                        <th class="w-16 text-right !text-rose-500">ทุน/ชิ้น</th>
-                                        <th class="w-20 text-right">ราคา</th>
+                                        <th class="w-20 text-right !text-rose-500">ทุน/ชิ้น</th>
+                                        <th class="w-28 text-right">ราคา</th>
                                         <th class="w-8"></th>
                                     </tr>
                                 </thead>
@@ -1927,7 +1938,7 @@
 
             row.innerHTML = `
                 <td class="p-2 relative">
-                    <input type="text" value="${item.name}" placeholder="ชื่อสินค้า" class="item-name ${inputClass} pr-8" list="master-list" oninput="handleItemChange(this, '${containerId}')">
+                    <input type="text" value="${item.name}" title="${item.name}" placeholder="ชื่อสินค้า" class="item-name ${inputClass} pr-8" list="master-list" oninput="this.title=this.value; handleItemChange(this, '${containerId}')" onblur="this.scrollLeft=0">
                     <button type="button" onclick="openMasterEdit(this.previousElementSibling.value)" tabindex="-1" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-300 hover:text-blue-500 transition-colors">
                         <i class="fas fa-info-circle"></i>
                     </button>
@@ -3498,6 +3509,9 @@
             calculateNetPopup();
 
             document.getElementById('editModal').classList.remove('hidden');
+            requestAnimationFrame(() => {
+                document.querySelectorAll('#e-items-container .item-name').forEach(i => { i.scrollLeft = 0; });
+            });
         }
 
         function closeEditModal() {
