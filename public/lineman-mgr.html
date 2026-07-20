@@ -221,6 +221,38 @@
             display: block;
         }
 
+        /* DD/MM/YYYY overlay สำหรับ native date input (ช่องวันที่รับโอน) */
+        .date-dmy { position: relative; }
+        .date-dmy > input[type="date"]::-webkit-datetime-edit { color: transparent; }
+        .date-dmy > input[type="date"] { color: transparent; }
+        .date-dmy > .dmy-overlay {
+            position: absolute;
+            left: 0; top: 50%; transform: translateY(-50%);
+            pointer-events: none;              /* คลิกทะลุไปโดนปฏิทิน */
+            font: inherit; font-weight: 700;
+            color: #0f172a;
+            white-space: nowrap;
+        }
+        .dark .date-dmy > .dmy-overlay { color: #e2e8f0; }
+
+        /* Segmented GP control ในหัวข้อการชำระเงิน */
+        .gp-seg-group { display: inline-flex; background: #f1f5f9; border-radius: 9999px; padding: 2px; }
+        .dark .gp-seg-group { background: #0f172a; }
+        .gp-seg { padding: 3px 10px; font-size: 11px; font-weight: 900; letter-spacing: -.02em;
+                  border-radius: 9999px; color: #94a3b8; transition: all .15s; line-height: 1.4; cursor: pointer; }
+        .gp-seg:hover { color: #475569; }
+        .gp-seg-active { background: #fff; color: #0f172a; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+        .dark .gp-seg-active { background: #334155; color: #fff; }
+        .gp-seg-active[data-rate="0"]  { color: #e11d48; }  /* rose  = -0% */
+        .gp-seg-active[data-rate="35"] { color: #d97706; }  /* amber = -35% */
+        .net-pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px;
+                    font-size: 11px; font-weight: 900; border-radius: 9999px;
+                    background: #f1f5f9; color: #94a3b8; transition: all .15s; cursor: pointer; }
+        .dark .net-pill { background: #0f172a; }
+        .net-pill:hover { color: #475569; }
+        .net-pill-active { background: #dbeafe; color: #2563eb; }
+        .dark .net-pill-active { background: #1e3a5f; color: #93c5fd; }
+
         .minimal-input {
             width: 100%;
             padding: 0.5rem 0;
@@ -743,6 +775,16 @@
                             <i class="fas fa-receipt text-amber-500"></i>
                             <span class="text-sm font-black uppercase tracking-wider">支払い การชำระเงิน</span>
                         </div>
+                        <div class="flex items-center gap-2 ml-auto mr-2" onclick="event.stopPropagation()">
+                            <div class="gp-seg-group">
+                                <button type="button" class="gp-seg" data-scope="add" data-rate="0" onclick="setGpMode(0,'add')">-0%</button>
+                                <button type="button" class="gp-seg" data-scope="add" data-rate="30" onclick="setGpMode(30,'add')">-30%</button>
+                                <button type="button" class="gp-seg" data-scope="add" data-rate="35" onclick="setGpMode(35,'add')">-35%</button>
+                            </div>
+                            <button type="button" class="net-pill" data-scope="add" onclick="toggleManualNetUI('add')">
+                                <i class="fas fa-pencil"></i> NET
+                            </button>
+                        </div>
                         <i
                             class="fas fa-chevron-down text-slate-300 transition-transform duration-300 transform rotate-180"></i>
                     </div>
@@ -775,31 +817,10 @@
                             </div>
                         </div>
 
-                        <div class="flex flex-wrap gap-3 mb-6">
-                            <label
-                                class="flex items-center gap-3 p-3 px-4 bg-slate-100 dark:bg-slate-800 rounded-2xl cursor-pointer hover:bg-slate-200 transition-all border border-transparent has-[:checked]:border-rose-500/50 has-[:checked]:bg-rose-50/50">
-                                <input type="checkbox" id="isNoFee" onchange="gpExclusive('nofee')"
-                                    class="w-5 h-5 rounded-lg border-2 border-slate-300 text-rose-600 focus:ring-rose-500">
-                                <span class="text-[11px] font-black uppercase tracking-tighter"><i
-                                        class="fas fa-bolt text-rose-500 mr-1"></i> NO FEE</span>
-                            </label>
-
-                            <label
-                                class="flex items-center gap-3 p-3 px-4 bg-slate-100 dark:bg-slate-800 rounded-2xl cursor-pointer hover:bg-slate-200 transition-all border border-transparent has-[:checked]:border-amber-500/50 has-[:checked]:bg-amber-50/50">
-                                <input type="checkbox" id="isGp35" onchange="gpExclusive('gp35')"
-                                    class="w-5 h-5 rounded-lg border-2 border-slate-300 text-amber-600 focus:ring-amber-500">
-                                <span class="text-[11px] font-black uppercase tracking-tighter"><i
-                                        class="fas fa-percent text-amber-500 mr-1"></i> -35%</span>
-                            </label>
-
-                            <label
-                                class="flex items-center gap-3 p-3 px-4 bg-slate-100 dark:bg-slate-800 rounded-2xl cursor-pointer hover:bg-slate-200 transition-all border border-transparent has-[:checked]:border-blue-500/50 has-[:checked]:bg-blue-50/50">
-                                <input type="checkbox" id="isManualNet" onchange="toggleManualNet()"
-                                    class="w-5 h-5 rounded-lg border-2 border-slate-300 text-blue-600 focus:ring-blue-500">
-                                <span class="text-[11px] font-black uppercase tracking-tighter"><i
-                                        class="fas fa-pencil text-blue-500 mr-1"></i> MANUAL NET</span>
-                            </label>
-                        </div>
+                        <!-- source of truth ของ GP mode — คุมโดย segmented control ในหัวข้อ (setGpMode/toggleManualNetUI) -->
+                        <input type="checkbox" id="isNoFee" class="hidden">
+                        <input type="checkbox" id="isGp35" class="hidden">
+                        <input type="checkbox" id="isManualNet" class="hidden">
 
                         <div id="manual-net-box"
                             class="hidden mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border-2 border-blue-500/20">
@@ -831,8 +852,10 @@
                                     <div>
                                         <label
                                             class="text-[9px] uppercase font-black text-emerald-600 mb-1 block ml-1">วันที่รับโอน</label>
-                                        <input type="date" id="paidDate"
-                                            class="minimal-input !border-emerald-200 dark:!border-emerald-900/40 text-sm font-bold">
+                                        <div class="date-dmy">
+                                            <input type="date" id="paidDate"
+                                                class="minimal-input !border-emerald-200 dark:!border-emerald-900/40 text-sm font-bold">
+                                        </div>
                                     </div>
                                     <div>
                                         <label
@@ -1059,6 +1082,16 @@
                                 <i class="fas fa-receipt text-amber-500"></i>
                                 <span class="text-sm font-black uppercase tracking-wider">支払い การชำระเงิน</span>
                             </div>
+                            <div class="flex items-center gap-2 ml-auto mr-2" onclick="event.stopPropagation()">
+                                <div class="gp-seg-group">
+                                    <button type="button" class="gp-seg" data-scope="edit" data-rate="0" onclick="setGpMode(0,'edit')">-0%</button>
+                                    <button type="button" class="gp-seg" data-scope="edit" data-rate="30" onclick="setGpMode(30,'edit')">-30%</button>
+                                    <button type="button" class="gp-seg" data-scope="edit" data-rate="35" onclick="setGpMode(35,'edit')">-35%</button>
+                                </div>
+                                <button type="button" class="net-pill" data-scope="edit" onclick="toggleManualNetUI('edit')">
+                                    <i class="fas fa-pencil"></i> NET
+                                </button>
+                            </div>
                             <i class="fas fa-chevron-down text-slate-300 transition-transform duration-300"></i>
                         </div>
                         <div class="section-content">
@@ -1093,43 +1126,10 @@
                                 </div>
                             </div>
 
-                            <div class="flex flex-wrap gap-3 mb-6">
-                                <label
-                                    class="flex items-center gap-3 p-3 px-4 bg-slate-100 dark:bg-slate-800 rounded-2xl cursor-pointer hover:bg-slate-200 transition-all border border-transparent has-[:checked]:border-rose-500/50 has-[:checked]:bg-rose-50/50">
-                                    <input type="checkbox" id="e-isNoFee" onchange="gpExclusive('nofee', 'edit')"
-                                        class="w-5 h-5 rounded-lg border-2 border-slate-300 text-rose-600 focus:ring-rose-500">
-                                    <div class="flex flex-col">
-                                        <span
-                                            class="text-[11px] font-black uppercase tracking-tighter flex items-center gap-2 m-0 p-0 transform -translate-y-0.5">
-                                            <i class="fas fa-bolt text-rose-500"></i> NO FEE (0%)
-                                        </span>
-                                    </div>
-                                </label>
-
-                                <label
-                                    class="flex items-center gap-3 p-3 px-4 bg-slate-100 dark:bg-slate-800 rounded-2xl cursor-pointer hover:bg-slate-200 transition-all border border-transparent has-[:checked]:border-amber-500/50 has-[:checked]:bg-amber-50/50">
-                                    <input type="checkbox" id="e-isGp35" onchange="gpExclusive('gp35', 'edit')"
-                                        class="w-5 h-5 rounded-lg border-2 border-slate-300 text-amber-600 focus:ring-amber-500">
-                                    <div class="flex flex-col">
-                                        <span
-                                            class="text-[11px] font-black uppercase tracking-tighter flex items-center gap-2 m-0 p-0 transform -translate-y-0.5">
-                                            <i class="fas fa-percent text-amber-500"></i> -35%
-                                        </span>
-                                    </div>
-                                </label>
-
-                                <label
-                                    class="flex items-center gap-3 p-3 px-4 bg-slate-100 dark:bg-slate-800 rounded-2xl cursor-pointer hover:bg-slate-200 transition-all border border-transparent has-[:checked]:border-blue-500/50 has-[:checked]:bg-blue-50/50">
-                                    <input type="checkbox" id="e-isManualNet" onchange="toggleManualNet('edit')"
-                                        class="w-5 h-5 rounded-lg border-2 border-slate-300 text-blue-600 focus:ring-blue-500">
-                                    <div class="flex flex-col">
-                                        <span
-                                            class="text-[11px] font-black uppercase tracking-tighter flex items-center gap-2 m-0 p-0 transform -translate-y-0.5">
-                                            <i class="fas fa-pencil text-blue-500"></i> MANUAL NET
-                                        </span>
-                                    </div>
-                                </label>
-                            </div>
+                            <!-- source of truth ของ GP mode — คุมโดย segmented control ในหัวข้อ (setGpMode/toggleManualNetUI) -->
+                            <input type="checkbox" id="e-isNoFee" class="hidden">
+                            <input type="checkbox" id="e-isGp35" class="hidden">
+                            <input type="checkbox" id="e-isManualNet" class="hidden">
 
                             <div id="e-manual-net-box"
                                 class="hidden mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border-2 border-blue-500/20">
@@ -1161,8 +1161,10 @@
                                         <div>
                                             <label
                                                 class="text-[9px] uppercase font-black text-emerald-600 mb-1 block ml-1">วันที่รับโอน</label>
-                                            <input type="date" id="e-paidDate"
-                                                class="minimal-input !border-emerald-200 dark:!border-emerald-900/40 text-sm font-bold">
+                                            <div class="date-dmy">
+                                                <input type="date" id="e-paidDate"
+                                                    class="minimal-input !border-emerald-200 dark:!border-emerald-900/40 text-sm font-bold">
+                                            </div>
                                         </div>
                                         <div>
                                             <label
@@ -2201,12 +2203,75 @@
             updateItemNetHints('items-container');
         }
 
+        // ---- DD/MM/YYYY overlay สำหรับ native date input (paidDate / e-paidDate) ----
+        // input เก็บค่า ISO (YYYY-MM-DD) เหมือนเดิม — overlay เป็นแค่ชั้นแสดงผล
+        function isoToDMY(iso) {
+            if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return '';
+            const [y, m, d] = iso.split('-');
+            return `${d}/${m}/${y}`;
+        }
+        function ensureOverlay(el) {
+            let ov = el.parentElement && el.parentElement.querySelector('.dmy-overlay');
+            if (!ov && el.parentElement) {
+                ov = document.createElement('span');
+                ov.className = 'dmy-overlay';
+                el.parentElement.appendChild(ov);
+            }
+            return ov;
+        }
+        function refreshDateOverlay(el) {
+            if (!el) return;
+            const ov = ensureOverlay(el);
+            if (ov) ov.textContent = isoToDMY(el.value) || 'วว/ดด/ปปปป';
+        }
+        // set ค่า + refresh overlay ในครั้งเดียว (ใช้แทน .value = ... ตรง ๆ กับช่อง date ที่มี overlay)
+        function setDateInput(id, iso) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.value = iso || '';
+            refreshDateOverlay(el);
+        }
+        function initDateOverlays() {
+            document.querySelectorAll('.date-dmy > input[type="date"]').forEach(el => {
+                refreshDateOverlay(el);
+                el.addEventListener('input', () => refreshDateOverlay(el));
+                el.addEventListener('change', () => refreshDateOverlay(el));
+            });
+        }
+
+        // ---- Segmented GP control: เขียน checkbox เดิม (source of truth) แล้ว sync UI ----
+        function setGpMode(rate, mode) {
+            const p = mode === 'edit' ? 'e-' : '';
+            document.getElementById(`${p}isNoFee`).checked = (rate === 0);
+            document.getElementById(`${p}isGp35`).checked = (rate === 35);
+            syncGpSegUI(mode);
+            if (mode === 'edit') calculateNetPopup(); else calculateNet();
+        }
+        function toggleManualNetUI(mode) {
+            const p = mode === 'edit' ? 'e-' : '';
+            const cb = document.getElementById(`${p}isManualNet`);
+            cb.checked = !cb.checked;
+            toggleManualNet(mode);   // เดิม: โชว์/ซ่อน manual-net-box + recalc
+            syncGpSegUI(mode);
+        }
+        function syncGpSegUI(mode) {
+            const p = mode === 'edit' ? 'e-' : '';
+            const scope = mode === 'edit' ? 'edit' : 'add';
+            const active = document.getElementById(`${p}isNoFee`)?.checked ? '0'
+                         : document.getElementById(`${p}isGp35`)?.checked ? '35' : '30';
+            document.querySelectorAll(`.gp-seg[data-scope="${scope}"]`).forEach(b =>
+                b.classList.toggle('gp-seg-active', b.dataset.rate === active));
+            const mp = document.querySelector(`.net-pill[data-scope="${scope}"]`);
+            if (mp) mp.classList.toggle('net-pill-active',
+                !!document.getElementById(`${p}isManualNet`)?.checked);
+        }
+
         function initDefaults() {
             const now = new Date();
             const today = now.toISOString().split('T')[0];
             document.getElementById('recordDate').value = today;
             document.getElementById('receivedDate').value = today;
-            document.getElementById('paidDate').value = today;
+            setDateInput('paidDate', today);
 
             const hours = now.getHours().toString().padStart(2, '0');
             const mins = now.getMinutes().toString().padStart(2, '0');
@@ -2225,7 +2290,7 @@
                 const rd = document.getElementById('receivedDate');
                 const pd = document.getElementById('paidDate');
                 if (!rd.dataset.manual) rd.value = e.target.value;
-                if (!pd.dataset.manual) pd.value = e.target.value;
+                if (!pd.dataset.manual) { pd.value = e.target.value; refreshDateOverlay(pd); }
             };
             document.getElementById('receivedDate').oninput = (e) => { e.target.dataset.manual = "true"; };
             document.getElementById('paidDate').oninput = (e) => { e.target.dataset.manual = "true"; };
@@ -2235,7 +2300,7 @@
                 const erd = document.getElementById('e-receivedDate');
                 const epd = document.getElementById('e-paidDate');
                 if (!erd.dataset.manual) erd.value = e.target.value;
-                if (!epd.dataset.manual) epd.value = e.target.value;
+                if (!epd.dataset.manual) { epd.value = e.target.value; refreshDateOverlay(epd); }
             };
             document.getElementById('e-receivedDate').oninput = (e) => { e.target.dataset.manual = "true"; };
             document.getElementById('e-paidDate').oninput = (e) => { e.target.dataset.manual = "true"; };
@@ -2246,6 +2311,9 @@
             document.getElementById('monthFilter').value = currentMonthStr;
             document.getElementById('payoutMonthFilter').innerHTML = initialOpt;
             document.getElementById('payoutMonthFilter').value = currentMonthStr;
+
+            initDateOverlays();   // ผูก overlay + refresh ช่องวันที่รับโอน (default = วันนี้)
+            syncGpSegUI('add');   // ไฮไลต์ -30% เป็น default ตั้งแต่เปิดฟอร์ม
 
             if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
                 document.documentElement.classList.add('dark');
@@ -3436,6 +3504,7 @@
             if (draft.ref1) document.getElementById('ref1').value = draft.ref1;
             if (draft.ref2) document.getElementById('ref2').value = draft.ref2;
             calculateTotalFromItems();
+            syncGpSegUI('add');   // ไฮไลต์ segmented control ให้ตรงกับ draft ที่กู้คืน
         }
 
         function clearDraft() {
@@ -3492,7 +3561,7 @@
             document.getElementById('e-isPaid').checked = record.isPaid || false;
 
             if (record.isPaid) {
-                document.getElementById('e-paidDate').value = record.paidDate || record.date;
+                setDateInput('e-paidDate', record.paidDate || record.date);
                 if (record.paidTime && record.paidTime.includes(':')) {
                     const [th, tm] = record.paidTime.split(':');
                     document.getElementById('e-transferHH').value = th;
@@ -3507,6 +3576,8 @@
             toggleManualNet('edit');
             togglePaidSection('edit');
             calculateNetPopup();
+            syncGpSegUI('edit');   // ไฮไลต์ segmented control ให้ตรงกับค่าที่โหลดเข้ามา
+            refreshDateOverlay(document.getElementById('e-paidDate'));
 
             document.getElementById('editModal').classList.remove('hidden');
             requestAnimationFrame(() => {
