@@ -509,6 +509,85 @@ function resolveMasterProduct(value) {
 const masterCostOf = (p) => Number((p && (p.cost || (p.prices && p.prices.COST))) || 0);      // ต้นทุนจริง (LINE MAN COST)
 const masterLinemanOf = (p) => Number((p && p.prices && p.prices.LINEMAN) || 0);                // ราคา LINE MAN (= MLP คิด CKNC)
 
+// ===== ทะเบียนเจ้า (collection suppliers) — port จาก lineman-mgr เพื่อให้ CKNC เรียกเจ้าชื่อ/โค้ดเดียวกัน =====
+// reserved key ใน prices ที่ไม่ใช่ชื่อบริษัท (เป็นราคาขาย/ต้นทุนของ LINE MAN) ดู [[fkb-master-supplier-schema]]
+const MASTER_RESERVED_PRICE_KEYS = ["LINEMAN", "COST", "RETAIL", "WHOLESALE", "STICKER"];
+let supplierRegistry = [];
+let supplierAliasToCode = new Map();
+
+function supplierKeyOf(value) {
+  return (value || "").toString().trim().toUpperCase().replace(/\s+/g, " ");
+}
+
+async function syncSuppliers() {
+  if (!window.db) return;
+  try {
+    const snapshot = await window.db.collection("suppliers").get();
+    supplierRegistry = snapshot.docs.map((doc) => ({ code: doc.id, ...doc.data() }));
+    supplierAliasToCode = new Map();
+    supplierRegistry.forEach((s) => {
+      (s.aliasKeys && s.aliasKeys.length ? s.aliasKeys : [s.code]).forEach((k) => {
+        supplierAliasToCode.set(supplierKeyOf(k), s.code);
+      });
+    });
+    updateCkncSupplierDatalist();
+  } catch (err) {
+    console.warn("Supplier sync failed", err);
+  }
+}
+
+// ชื่อดิบ -> โค้ดเจ้า; ไม่รู้จัก = คืนชื่อเดิม (ห้ามกลืนหาย ผู้ใช้ต้องเห็นว่ายังไม่มีในทะเบียน)
+function normalizeSupplierName(raw) {
+  const key = supplierKeyOf(raw);
+  if (!key) return "";
+  return supplierAliasToCode.get(key) || (raw || "").toString().trim();
+}
+
+// เจ้าที่ทุนต่ำสุดของสินค้า master (จาก prices["บริษัท_หน่วย"] ข้าม reserved; fallback suppliers[]) → โค้ด normalize
+function masterSupplierOf(master) {
+  if (!master) return "";
+  let best = null;
+  const prices = master.prices;
+  if (prices && typeof prices === "object") {
+    Object.keys(prices).forEach((key) => {
+      const cost = prices[key];
+      if (typeof cost !== "number" || !(cost > 0)) return;   // ข้าม 0 และ nested map เสียรูป
+      const head = key.split("_")[0];
+      if (MASTER_RESERVED_PRICE_KEYS.includes(head) || head === ":") return;
+      const parts = key.split("_");
+      const rawName = (parts.length > 1 ? parts.slice(0, -1).join("_") : parts[0]).trim();
+      if (!rawName) return;
+      if (!best || cost < best.cost) best = { name: normalizeSupplierName(rawName), cost };
+    });
+  }
+  if (Array.isArray(master.suppliers)) {
+    master.suppliers.forEach((s) => {
+      const cost = Number(s && s.cost) || 0;
+      const name = normalizeSupplierName(s && s.name);
+      if (!name) return;
+      if (s && s.primary) { best = { name, cost, primary: true }; return; }
+      if (cost > 0 && (!best || (!best.primary && cost < best.cost))) best = { name, cost };
+    });
+  }
+  return best ? best.name : "";
+}
+
+// datalist โค้ดเจ้าจากทะเบียน suppliers สำหรับ autocomplete ช่อง "เจ้า" ในแถวยา
+function updateCkncSupplierDatalist() {
+  const dl = document.getElementById("cknc-supplier-list");
+  if (!dl) return;
+  const seen = new Set();
+  const options = [];
+  supplierRegistry.forEach((s) => {
+    const code = clean(s.code);
+    if (!code || seen.has(code)) return;
+    seen.add(code);
+    const label = clean(s.name);
+    options.push(`<option value="${htmlEscape(code)}">${label ? htmlEscape(label) : ""}</option>`);
+  });
+  dl.innerHTML = options.join("");
+}
+
 // datalist ชื่อยาจาก master สำหรับ autocomplete แถวยาในดรอเวอร์ (1 ชื่อ/สินค้า)
 function updateCkncMasterDatalist() {
   const dl = document.getElementById("cknc-master-list");
@@ -7746,6 +7825,7 @@ function openDetailDrawer(billKey) {
     cost: toNumeric(line.cost),
     realCost: toNumeric(line.realCost),
     realCostEdited: toNumeric(line.realCost) > 0, // ต้นทุนที่เคยเซฟ = ถือว่าผู้ใช้กำหนดแล้ว ไม่ให้ autofill ทับ
+    supplier: line.supplier || "",                // เจ้า/ผู้ขาย (โค้ดทะเบียน suppliers หรือชื่อดิบ)
   }));
   renderDrawerMedicines(bill);
 
@@ -7789,6 +7869,10 @@ function renderDrawerMedicines(bill) {
       <input class="inline-cell-input med-input med-price med-price-mlp" type="text" inputmode="decimal" value="${mlpUnit > 0 ? mlpUnit : ""}" placeholder="ราคา" data-drawer-med-index="${index}" data-drawer-med-field="mlpUnitPrice" aria-label="ราคา MLP ต่อหน่วย ${name || "ยาใหม่"}" title="ราคา MLP คิด CKNC (ต่อหน่วย)" />
       <span class="med-tag med-tag-cost" title="ต้นทุนจริงต่อหน่วย (ดึงจาก master COST)">ทุน</span>
       <input class="inline-cell-input med-input med-price med-price-cost" type="text" inputmode="decimal" value="${costUnit > 0 ? costUnit : ""}" placeholder="ทุน" ${line.realCostEdited ? 'data-user-edited="1"' : ""} data-drawer-med-index="${index}" data-drawer-med-field="realCost" aria-label="ต้นทุนจริงต่อหน่วย ${name || "ยาใหม่"}" title="ต้นทุนจริง (ต่อหน่วย) ดึงจาก master" />
+      <span class="med-supplier-cell">
+        <span class="med-tag med-tag-supplier" title="เจ้า/ผู้ขายของยานี้ (ทะเบียน suppliers)">เจ้า</span>
+        <input class="inline-cell-input med-input med-supplier-input" type="text" value="${htmlEscape(line.supplier || "")}" placeholder="เจ้า" list="cknc-supplier-list" data-drawer-med-index="${index}" data-drawer-med-field="supplier" aria-label="เจ้า/ผู้ขาย ${name || "ยาใหม่"}" title="เจ้า/ผู้ขาย — เลือกจากทะเบียน หรือพิมพ์เอง (ชื่อดิบจะแปลงเป็นโค้ดให้)" />
+      </span>
       <span class="med-line-total" title="กำไรบรรทัด = MLP คิด CKNC − ต้นทุนจริง">${realCost > 0 ? `กำไร ${money(lineProfit)}` : (mlp > 0 ? `= ${money(mlp)}` : "")}</span>
       <button class="icon-button med-remove-btn" type="button" data-drawer-med-remove="${index}" title="ลบรายการนี้" aria-label="ลบ ${name || "ยาใหม่"}">×</button>
     </div>`;
@@ -7821,6 +7905,7 @@ function autofillDrawerMedicinesFromMaster() {
       const mc = masterCostOf(master);
       if (mc > 0) line.realCost = round2(qtyN * mc);
     }
+    if (!line.supplier) { const sup = masterSupplierOf(master); if (sup) line.supplier = sup; } // เจ้าทุนต่ำสุดจาก master
   });
   const mlpTotal = round2(lines.reduce((s, l) => s + toNumeric(l.cost), 0));
   if (mlpTotal > 0) elements.editSale.value = fixed2(mlpTotal);
@@ -8477,13 +8562,18 @@ function saveBillOverride() {
   // รายการยาจาก drawer: แถวว่าง (ไม่มีชื่อและไม่มียอด) ถูกตัดทิ้ง; ลบจนหมดก็บันทึกเป็นว่างได้ถ้าบิลเคยมีรายการ
   const drawerMeds = (state.drawerMedicines || [])
     .filter((line) => clean(line.medicine) || toNumeric(line.sale) > 0)
-    .map((line) => ({
-      medicine: clean(line.medicine) || "-",
-      qty: toNumeric(line.qty) || 1,
-      sale: toNumeric(line.sale),
-      cost: toNumeric(line.cost),
-      realCost: toNumeric(line.realCost),
-    }));
+    .map((line) => {
+      const med = {
+        medicine: clean(line.medicine) || "-",
+        qty: toNumeric(line.qty) || 1,
+        sale: toNumeric(line.sale),
+        cost: toNumeric(line.cost),
+        realCost: toNumeric(line.realCost),
+      };
+      const supplier = clean(line.supplier);
+      if (supplier) med.supplier = supplier; // เก็บเฉพาะเมื่อมีค่า กัน noise บิลที่ไม่เคยระบุเจ้า
+      return med;
+    });
   const hadMedicines = Boolean((bill.medicines || []).length)
     || Boolean(clean(bill.medicinesText) && clean(bill.medicinesText) !== "-");
   if (drawerMeds.length || hadMedicines) {
@@ -9237,11 +9327,17 @@ elements.drawerMedicines.addEventListener("change", (event) => {
         const mc = masterCostOf(master);
         if (mc > 0) line.realCost = round2(qtyN * mc);
       }
+      if (!line.supplier) { const sup = masterSupplierOf(master); if (sup) line.supplier = sup; } // เจ้าทุนต่ำสุดจาก master
       const mlpTotal = round2(lines.reduce((sum, item) => sum + toNumeric(item.cost), 0));
       if (mlpTotal > 0) elements.editSale.value = fixed2(mlpTotal);
     }
     renderDrawerMedicines(currentDetailBill());
     updateEditProfitPreview();
+    return;
+  }
+  if (input.dataset.drawerMedField === "supplier") {
+    line.supplier = normalizeSupplierName(input.value); // ชื่อดิบ -> โค้ดทะเบียน (ไม่รู้จัก = คงชื่อเดิม)
+    renderDrawerMedicines(currentDetailBill());
     return;
   }
   const pricedBefore = lines.some((item) => toNumeric(item.sale) > 0);
@@ -9282,7 +9378,7 @@ elements.drawerAddMedicineBtn?.addEventListener("click", () => {
   const bill = currentDetailBill();
   if (!bill) return;
   state.drawerMedicines = state.drawerMedicines || [];
-  state.drawerMedicines.push({ medicine: "", qty: 1, sale: 0, cost: 0, realCost: 0 });
+  state.drawerMedicines.push({ medicine: "", qty: 1, sale: 0, cost: 0, realCost: 0, supplier: "" });
   renderDrawerMedicines(bill);
   elements.drawerMedicines.querySelector(`[data-drawer-med-index="${state.drawerMedicines.length - 1}"][data-drawer-med-field="medicine"]`)?.focus();
 });
@@ -10077,7 +10173,7 @@ elements.sessionList.addEventListener("click", (event) => {
 });
 loadRuleConfigFromStorage();
 populateRuleEditor();
-verifyCkncAccess().then(loadMasterProductMappings).then(loadCkncAliases);
+verifyCkncAccess().then(loadMasterProductMappings).then(loadCkncAliases).then(syncSuppliers);
 renderTabs();
 renderAuditTrail();
 renderMasterMappingStatus();

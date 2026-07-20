@@ -2434,6 +2434,35 @@ html.dark .inline-cell-input.med-price-cost {
   color: #fb7185;
 }
 
+/* เจ้า/ผู้ขายต่อบรรทัดยา (ทะเบียน suppliers) — โทนฟ้า */
+.med-supplier-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.med-tag-supplier {
+  color: #0369a1;
+}
+
+html.dark .med-tag-supplier {
+  color: #7dd3fc;
+}
+
+.inline-cell-input.med-supplier-input {
+  width: 88px;
+  text-align: left;
+  border-color: #bae6fd;
+  color: #0369a1;
+  font-weight: 700;
+}
+
+html.dark .inline-cell-input.med-supplier-input {
+  border-color: #3b6a8a;
+  color: #7dd3fc;
+}
+
 /* แถวสรุปต้นทุนจริงรวม + ปุ่มคัดลอกไปช่อง "ต้นทุน CKNC" */
 .med-costsum-row {
   display: flex;
