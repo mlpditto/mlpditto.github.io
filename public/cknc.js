@@ -3334,8 +3334,10 @@ function renderMedsCell(bill) {
     const qty = toNumeric(line.qty);
     const sale = toNumeric(line.sale);
     const mlp = toNumeric(line.cost);
+    const realCost = toNumeric(line.realCost);
     const unit = qty > 0 ? Math.round((sale / qty) * 100) / 100 : Math.round(sale * 100) / 100;
     const mlpUnit = qty > 0 ? Math.round((mlp / qty) * 100) / 100 : Math.round(mlp * 100) / 100;
+    const costUnit = qty > 0 ? Math.round((realCost / qty) * 100) / 100 : Math.round(realCost * 100) / 100;
     const name = htmlEscape(line.medicine || "-");
     const linked = state.medicineAliasMap.has(normalizeMedicineKey(line.medicine || ""));
     const linkBtn = `<button class="med-link-btn${linked ? " linked" : ""}" type="button" data-med-link="${htmlEscape(bill.billKey)}" data-med-index="${index}" data-med-name="${htmlEscape(line.medicine || "")}" title="${linked ? "ลิงก์ master แล้ว · คลิกเพื่อเปลี่ยน" : "ลิงก์ยานี้เข้า master"}" aria-label="ลิงก์เข้า master"><i class="fa-solid fa-link"></i></button>`;
@@ -3349,6 +3351,8 @@ function renderMedsCell(bill) {
         <input class="inline-cell-input med-input med-price" type="text" inputmode="decimal" value="${unit > 0 ? unit : ""}" placeholder="ราคา" data-med-key="${htmlEscape(bill.billKey)}" data-med-index="${index}" data-med-field="unitPrice" aria-label="ราคา CKNC ต่อหน่วย ${name}" title="ราคา CKNC เรียกประกัน (ต่อหน่วย)" />
         <span class="med-tag med-tag-mlp" title="ราคาที่ MLP คิดกับ CKNC">MLP</span>
         <input class="inline-cell-input med-input med-price med-price-mlp" type="text" inputmode="decimal" value="${mlpUnit > 0 ? mlpUnit : ""}" placeholder="ราคา" data-med-key="${htmlEscape(bill.billKey)}" data-med-index="${index}" data-med-field="mlpUnitPrice" aria-label="ราคา MLP ต่อหน่วย ${name}" title="ราคา MLP คิด CKNC (ต่อหน่วย)" />
+        <span class="med-tag med-tag-cost" title="ต้นทุนจริงต่อหน่วย (จาก master COST / ดรอเวอร์)">ทุน</span>
+        <input class="inline-cell-input med-input med-price med-price-cost" type="text" inputmode="decimal" value="${costUnit > 0 ? costUnit : ""}" placeholder="ทุน" data-med-key="${htmlEscape(bill.billKey)}" data-med-index="${index}" data-med-field="realCost" aria-label="ต้นทุนจริงต่อหน่วย ${name}" title="ต้นทุนจริง (ต่อหน่วย)" />
         <span class="med-line-total" title="รวมบรรทัดนี้ CKNC / MLP">= ${sale > 0 ? money(sale) : "—"}${mlp > 0 ? ` <span class="med-mlp-val">/ ${money(mlp)}</span>` : ""}</span>
       </div>
     `;
@@ -3358,12 +3362,15 @@ function renderMedsCell(bill) {
   const round2 = (value) => Math.round(value * 100) / 100;
   const totalCk = round2(lines.reduce((sum, line) => sum + toNumeric(line.sale), 0));
   const totalMlp = round2(lines.reduce((sum, line) => sum + toNumeric(line.cost), 0));
+  const totalCost = round2(lines.reduce((sum, line) => sum + toNumeric(line.realCost), 0));
   const sumParts = [];
   if (totalCk > 0) sumParts.push(`<span class="med-sum-ck">CKNC ${money(totalCk)}</span>`);
   if (totalMlp > 0) sumParts.push(`<span class="med-sum-mlp">MLP ${money(totalMlp)}</span>`);
-  if (totalCk > 0 && totalMlp > 0) sumParts.push(`ส่วนต่าง ${money(round2(totalCk - totalMlp))}`);
+  if (totalCost > 0) sumParts.push(`<span class="med-sum-cost">ทุน ${money(totalCost)}</span>`);
+  if (totalMlp > 0 && totalCost > 0) sumParts.push(`กำไร ${money(round2(totalMlp - totalCost))}`);
+  else if (totalCk > 0 && totalMlp > 0) sumParts.push(`ส่วนต่าง ${money(round2(totalCk - totalMlp))}`);
   const sumNote = sumParts.length
-    ? `<div class="med-sum-note" title="รวมฝั่ง CKNC เรียกประกัน / ฝั่ง MLP คิด CKNC">${sumParts.join(" · ")}</div>`
+    ? `<div class="med-sum-note" title="รวมฝั่ง CKNC เรียกประกัน / MLP คิด CKNC / ต้นทุนจริง / กำไร = MLP − ทุน">${sumParts.join(" · ")}</div>`
     : "";
   return `
     <div class="med-lines${collapsible ? " collapsible" : ""}" data-meds-body>${rowsHtml}</div>
@@ -3379,32 +3386,42 @@ function quickUpdateMedicineLine(billKey, index, field, rawValue) {
   const baseLines = (bill.medicines && bill.medicines.length) ? bill.medicines : parseMedicinesTextLines(bill.medicinesText);
   if (!baseLines[index]) return;
   const round2 = (value) => Math.round(value * 100) / 100;
-  const lines = baseLines.map((line) => ({
-    medicine: line.medicine || "",
-    qty: toNumeric(line.qty),
-    sale: toNumeric(line.sale),
-    cost: toNumeric(line.cost),
-  }));
+  const lines = baseLines.map((line) => {
+    const o = {
+      medicine: line.medicine || "",
+      qty: toNumeric(line.qty),
+      sale: toNumeric(line.sale),
+      cost: toNumeric(line.cost),
+      realCost: toNumeric(line.realCost), // คงต้นทุนจริงไว้ (เดิม map ตกไป → แก้ในตารางแล้วทุนหาย)
+    };
+    if (clean(line.supplier)) o.supplier = clean(line.supplier); // คงเจ้าไว้ด้วย
+    return o;
+  });
   const pricedBefore = lines.some((line) => line.sale > 0);
   const line = lines[index];
   const originalQty = line.qty;
   const originalSale = line.sale;
   const originalMlp = line.cost;
+  const originalRealCost = line.realCost;
   const prevUnit = originalQty > 0 ? originalSale / originalQty : 0;
   const prevMlpUnit = originalQty > 0 ? originalMlp / originalQty : 0;
+  const prevCostUnit = originalQty > 0 ? originalRealCost / originalQty : 0;
   const value = Math.max(0, toNumeric(rawValue));
   if (field === "qty") {
     line.qty = value;
     line.sale = round2(value * prevUnit);
     line.cost = round2(value * prevMlpUnit);
+    line.realCost = round2(value * prevCostUnit); // ทุนสเกลตามจำนวนด้วย
   } else if (field === "unitPrice") {
     line.sale = round2((originalQty || 1) * value);
   } else if (field === "mlpUnitPrice") {
     line.cost = round2((originalQty || 1) * value);
+  } else if (field === "realCost") {
+    line.realCost = round2((originalQty || 1) * value);
   } else {
     return;
   }
-  if (line.qty === originalQty && line.sale === originalSale && line.cost === originalMlp) return;
+  if (line.qty === originalQty && line.sale === originalSale && line.cost === originalMlp && line.realCost === originalRealCost) return;
   const newSale = round2(lines.reduce((sum, item) => sum + toNumeric(item.sale), 0));
   const newMlpTotal = round2(lines.reduce((sum, item) => sum + toNumeric(item.cost), 0));
   // ยอดขายบิล = ยอดที่ MLP เรียกเก็บ: ถ้ามีราคา MLP ต่อบรรทัด ให้ตามผลรวมฝั่ง MLP ก่อนเสมอ

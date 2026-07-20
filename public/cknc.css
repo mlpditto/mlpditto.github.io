@@ -2423,6 +2423,15 @@ html.dark .med-tag-cost {
   color: #fb7185;
 }
 
+.med-sum-cost {
+  color: #e11d48;
+  font-weight: 700;
+}
+
+html.dark .med-sum-cost {
+  color: #fb7185;
+}
+
 .med-price-cost {
   border-color: #f4b8c4;
   color: #e11d48;
