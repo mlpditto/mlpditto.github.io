@@ -916,9 +916,30 @@
         let uniqueUnits = new Set();
         let uniqueCompanies = new Set();
 
+        // ===== ทะเบียนเจ้า (collection suppliers) — badge โค้ดคู่ชื่อดิบ ให้ตรง CKNC/LINE MAN (อ่านอย่างเดียว ไม่แตะ data/grouping) =====
+        let supplierRegistry = [];
+        let supplierAliasToCode = new Map();
+        function supplierKeyOf(v) { return (v || '').toString().trim().toUpperCase().replace(/\s+/g, ' '); }
+        async function syncSuppliers() {
+            try {
+                const snap = await db.collection('suppliers').get();
+                supplierRegistry = snap.docs.map(d => ({ code: d.id, ...d.data() }));
+                supplierAliasToCode = new Map();
+                supplierRegistry.forEach(s => {
+                    (s.aliasKeys && s.aliasKeys.length ? s.aliasKeys : [s.code]).forEach(k => supplierAliasToCode.set(supplierKeyOf(k), s.code));
+                });
+            } catch (e) { console.warn('supplier sync failed', e); }
+        }
+        // คืนโค้ดเจ้าถ้าชื่อดิบตรงทะเบียน + โค้ดต่างจากชื่อที่โชว์ (ไม่งั้นคืน '' = ไม่ต้อง badge)
+        function supplierCodeBadge(rawName) {
+            const code = supplierAliasToCode.get(supplierKeyOf(rawName));
+            return (code && code !== (rawName || '').toString().trim()) ? code : '';
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             loadState(); // LOAD DATA ON STARTUP
             renderProducts(products); refreshDashboard();
+            syncSuppliers().then(() => { if (Object.keys(companyGroups).length) filterJumpBar(currentFilterChar); }); // โหลดทะเบียนเจ้า → re-render badge ถ้า dashboard เปิดอยู่
             window.onclick = function (event) {
                 if (!event.target.matches('.relative button') && !event.target.matches('.relative button *')) {
                     var dropdowns = document.getElementsByClassName("dropdown-content");
@@ -2007,6 +2028,8 @@
             let cH = '';
             compKeys.forEach(c => {
                 let ct = 0, l = ''; const sub = companyGroups[c]; if (sortMode === 'az') sub.sort((a, b) => a.name.localeCompare(b.name));
+                const _supCode = supplierCodeBadge(c);
+                const supBadge = _supCode ? `<span class="text-[9px] font-black text-teal-600 bg-teal-50 border border-teal-200 px-1.5 py-0.5 rounded-full ml-1 shrink-0" title="โค้ดทะเบียนเจ้า — ตรงกับ CKNC/LINE MAN">${_supCode}</span>` : '';
                 sub.forEach((x, k) => {
                     const s = x.price * x.qty; ct += s;
                     const safeName = x.name.replace(/'/g, "\\'");
@@ -2024,7 +2047,7 @@
                 const safeComp = c.replace(/'/g, "\\'"); const compId = 'comp-' + c.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-_\u0E00-\u0E7F]/g, '');
                 const isOpen = expandedCompanies.has(safeComp.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-_\u0E00-\u0E7F]/g, ''));
                 const hiddenClass = isOpen ? '' : 'hidden-el'; const rotateStyle = isOpen ? 'rotate(90deg)' : 'rotate(0deg)';
-                cH += `<div id="${compId}" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"><div class="bg-indigo-50 px-3 py-2 border-b border-indigo-100 flex justify-between items-center cursor-pointer select-none group hover:bg-indigo-100 transition" onclick="toggleCompanyList('${compId.replace('comp-', '')}', this)"><div class="flex items-center gap-2 overflow-hidden text-indigo-900"><i class="fas fa-chevron-right text-indigo-400 text-[10px] rotate-icon transition-transform duration-200 group-hover:text-indigo-600" style="transform: ${rotateStyle}"></i><i class="fas fa-building text-indigo-500 text-xs"></i><span class="font-bold text-sm truncate">${c}</span><span class="text-[10px] text-indigo-400 font-normal">(${sub.length} รายการ)</span></div><div class="flex items-center gap-2 shrink-0"><span class="font-bold text-indigo-700 text-xs">${ct.toLocaleString()} ฿</span><div class="flex gap-1"><button onclick="event.stopPropagation(); copySingleCompany('${safeComp}')" class="text-[9px] bg-white border border-gray-300 text-gray-500 hover:border-indigo-300 hover:text-indigo-600 px-2 py-0.5 rounded shadow-sm font-bold tracking-wide uppercase transition">Copy</button><button onclick="event.stopPropagation(); copySingleCompanyClean('${safeComp}')" class="text-[9px] bg-white border border-teal-300 text-teal-600 hover:border-teal-400 hover:text-teal-700 px-2 py-0.5 rounded shadow-sm font-bold tracking-wide uppercase transition">Clean</button><button onclick="event.stopPropagation(); deleteCompany('${safeComp}')" class="text-[9px] bg-white border border-gray-300 text-gray-400 hover:border-red-300 hover:text-red-500 px-2 py-0.5 rounded shadow-sm transition" title="ลบบริษัทนี้"><i class="fas fa-trash-alt"></i></button></div></div></div><div id="list-${compId.replace('comp-', '')}" class="${hiddenClass} p-3 bg-white"><ul class="space-y-0.5">${l}</ul></div></div>`;
+                cH += `<div id="${compId}" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"><div class="bg-indigo-50 px-3 py-2 border-b border-indigo-100 flex justify-between items-center cursor-pointer select-none group hover:bg-indigo-100 transition" onclick="toggleCompanyList('${compId.replace('comp-', '')}', this)"><div class="flex items-center gap-2 overflow-hidden text-indigo-900"><i class="fas fa-chevron-right text-indigo-400 text-[10px] rotate-icon transition-transform duration-200 group-hover:text-indigo-600" style="transform: ${rotateStyle}"></i><i class="fas fa-building text-indigo-500 text-xs"></i><span class="font-bold text-sm truncate">${c}</span>${supBadge}<span class="text-[10px] text-indigo-400 font-normal">(${sub.length} รายการ)</span></div><div class="flex items-center gap-2 shrink-0"><span class="font-bold text-indigo-700 text-xs">${ct.toLocaleString()} ฿</span><div class="flex gap-1"><button onclick="event.stopPropagation(); copySingleCompany('${safeComp}')" class="text-[9px] bg-white border border-gray-300 text-gray-500 hover:border-indigo-300 hover:text-indigo-600 px-2 py-0.5 rounded shadow-sm font-bold tracking-wide uppercase transition">Copy</button><button onclick="event.stopPropagation(); copySingleCompanyClean('${safeComp}')" class="text-[9px] bg-white border border-teal-300 text-teal-600 hover:border-teal-400 hover:text-teal-700 px-2 py-0.5 rounded shadow-sm font-bold tracking-wide uppercase transition">Clean</button><button onclick="event.stopPropagation(); deleteCompany('${safeComp}')" class="text-[9px] bg-white border border-gray-300 text-gray-400 hover:border-red-300 hover:text-red-500 px-2 py-0.5 rounded shadow-sm transition" title="ลบบริษัทนี้"><i class="fas fa-trash-alt"></i></button></div></div></div><div id="list-${compId.replace('comp-', '')}" class="${hiddenClass} p-3 bg-white"><ul class="space-y-0.5">${l}</ul></div></div>`;
             });
             document.getElementById('dContent-company').innerHTML = cH;
         }
