@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="เครื่องคิดกำไร LINE MAN จำลองทุกระดับ GP — กรอกทุน+ราคาขาย ไม่ต้องล็อกอิน ไม่บันทึกค่า">
-<title>คำนวณกำไร LINE MAN</title>
+<title>คำนวณกำไร</title>
 <style>
   :root{
     --bg:#eef2f7; --surface:#ffffff; --surface2:#f7f9fc;
@@ -51,14 +51,15 @@
   .tog:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
   .lab{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin:0 0 7px}
-  .lab.cost{color:var(--loss)} .lab.sell{color:var(--accent)}
+  .lab.cost{color:var(--loss)} .lab.sell{color:var(--accent)} .lab.store{color:var(--profit)}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   .field input{width:100%;border:none;border-bottom:2px solid var(--border);background:transparent;
     font:inherit;font-size:26px;font-weight:800;color:var(--ink);padding:2px 0 6px;outline:none;
     font-variant-numeric:tabular-nums;transition:border-color .15s}
   .field.cost input:focus{border-color:var(--loss)} .field.sell input:focus{border-color:var(--accent)}
+  .field.store input:focus{border-color:var(--profit)}
   .field input::placeholder{color:var(--faint);font-weight:700}
-  .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
   .stat{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:11px 9px;text-align:center}
   .stat .k{font-size:10px;font-weight:800;color:var(--soft);letter-spacing:.02em;margin-bottom:5px;white-space:nowrap}
   .stat .v{font-size:19px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1.05}
@@ -97,7 +98,7 @@
   .foot{font-size:11px;color:var(--faint);font-weight:600;text-align:center;line-height:1.7;padding:2px 6px}
   .empty{color:var(--faint);font-weight:700;text-align:center;padding:14px;font-size:13px}
   @media (prefers-reduced-motion: reduce){*{transition:none!important}}
-  @media (max-width:360px){.stats{grid-template-columns:1fr 1fr}}
+  @media (max-width:430px){.stats{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
@@ -105,7 +106,7 @@
   <div class="wrap">
     <div class="head">
       <div>
-        <h1 class="title"><span aria-hidden="true">🧮</span> คำนวณกำไร LINE MAN</h1>
+        <h1 class="title"><span aria-hidden="true">🧮</span> คำนวณกำไร</h1>
         <p class="sub">กรอกทุน + ราคาขาย ดูกำไรทุกระดับ GP — ไม่ต้องล็อกอิน ไม่บันทึกค่า</p>
       </div>
       <button class="tog" id="tog" aria-label="สลับธีมสว่าง/มืด">◐</button>
@@ -118,8 +119,12 @@
           <input id="cost" inputmode="decimal" placeholder="0" aria-label="ต้นทุน">
         </div>
         <div class="field sell">
-          <p class="lab sell">ราคาขาย (LINE MAN)</p>
-          <input id="sell" inputmode="decimal" placeholder="0" aria-label="ราคาขาย">
+          <p class="lab sell">ราคาขาย (TELE)</p>
+          <input id="sell" inputmode="decimal" placeholder="0" aria-label="ราคาขาย TELE">
+        </div>
+        <div class="field store">
+          <p class="lab store">ราคาขาย (หน้าร้าน)</p>
+          <input id="store" inputmode="decimal" placeholder="0" aria-label="ราคาขายหน้าร้าน">
         </div>
       </div>
     </div>
@@ -163,7 +168,7 @@
     function n(id){var v=parseFloat($(id).value);return isFinite(v)?v:0;}
 
     function render(){
-      var cost=n('cost'), sell=n('sell'), cgp=parseInt($('cgp').value,10);
+      var cost=n('cost'), sell=n('sell'), store=n('store'), cgp=parseInt($('cgp').value,10);
       $('cgpv').textContent=cgp;
       var margin=Math.min(95,Math.max(1,n('margin')||30))/100;
 
@@ -186,6 +191,13 @@
           '<div class="v '+cls+'">'+(ready?(pf<0?'':'+')+money(pf):'—')+'</div>'+
           '<div class="p '+cls+'">'+(ready?mg.toFixed(1)+'%':'')+'</div></div>';
       }).join('');
+      // การ์ดหน้าร้าน: ขายหน้าร้านไม่โดนหัก GP — ใช้ราคาหน้าร้านของตัวเอง
+      var readyStore=cost>0&&store>0;
+      var spf=store-cost, smg=store>0?spf/store*100:0;
+      var scls=!readyStore?'':(spf<0?'neg':'pos');
+      s+='<div class="stat"><div class="k">หน้าร้าน</div>'+
+        '<div class="v '+scls+'">'+(readyStore?(spf<0?'':'+')+money(spf):'—')+'</div>'+
+        '<div class="p '+scls+'">'+(readyStore?smg.toFixed(1)+'%':'')+'</div></div>';
       $('stats').innerHTML=s;
 
       if(ready){
@@ -220,7 +232,7 @@
       $('tgrid').innerHTML=tg;
     }
 
-    ['cost','sell','cgp','margin'].forEach(function(id){
+    ['cost','sell','store','cgp','margin'].forEach(function(id){
       $(id).addEventListener('input',render);
     });
 
