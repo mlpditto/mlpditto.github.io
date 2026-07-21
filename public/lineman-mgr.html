@@ -1244,7 +1244,7 @@
     <div id="masterModal"
         class="fixed inset-0 bg-black/50 z-[140] hidden flex items-center justify-center backdrop-blur-sm p-4">
             <div
-                class="bg-white dark:bg-slate-800 p-6 rounded-2xl w-full max-w-xl shadow-2xl transform transition-all scale-100 flex flex-col max-h-[90vh]">
+                class="bg-white dark:bg-slate-800 p-6 rounded-2xl w-full max-w-xl md:max-w-3xl shadow-2xl transform transition-all scale-100 flex flex-col max-h-[90vh]">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-lg font-black text-slate-700 dark:text-white flex items-center gap-2">
                         <i class="fas fa-boxes text-blue-500"></i> จัดการสินค้า (Master)
@@ -1255,7 +1255,9 @@
                     </button>
                 </div>
                 <input type="hidden" id="m-originalName">
-                <div class="space-y-4 overflow-y-auto pr-1">
+                <!-- จอ ≥768px: 2 คอลัมน์ ฟอร์มซ้าย / คาดการณ์กำไร sticky ขวา; มือถือ: เรียงตาม DOM เหมือนเดิม -->
+                <div class="space-y-4 overflow-y-auto pr-1 md:grid md:grid-cols-[minmax(0,1fr)_320px] md:gap-x-6 md:gap-y-4 md:space-y-0">
+                    <div class="space-y-4 md:col-start-1">
                     <div>
                         <label class="vibrant-label">ชื่อสินค้า</label>
                         <input type="text" id="m-name" class="minimal-input font-bold" placeholder="ชื่อสินค้า">
@@ -1299,9 +1301,11 @@
                         <input type="number" id="m-sticker" class="minimal-input" placeholder="0.00"
                             oninput="updateMasterProfit()">
                     </div>
+                    </div>
 
                     <!-- คาดการณ์กำไร: เทียบทุกช่องทาง + ราคาขั้นต่ำ/ราคาเป้า — คำนวณสด ไม่แตะ Firestore -->
-                    <div class="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-3 mb-2">
+                    <div class="md:col-start-2 md:row-start-1 md:row-span-2">
+                    <div class="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-3 mb-2 md:sticky md:top-0">
                         <div class="flex items-baseline justify-between mb-2">
                             <span class="vibrant-label !mb-0 !ml-0 !text-slate-500">คาดการณ์กำไร</span>
                             <span class="flex items-baseline gap-2">
@@ -1321,7 +1325,6 @@
                                 <thead>
                                     <tr class="text-[9px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
                                         <th class="text-left font-black pb-1">ช่องทาง</th>
-                                        <th class="text-right font-black pb-1">ราคา</th>
                                         <th class="text-right font-black pb-1">รับจริง</th>
                                         <th class="text-right font-black pb-1">กำไร</th>
                                         <th class="text-right font-black pb-1 pl-2">%</th>
@@ -1343,7 +1346,9 @@
                             </div>
                         </div>
                     </div>
+                    </div>
 
+                    <div class="space-y-4 md:col-start-1">
                     <div class="mb-2">
                         <label class="vibrant-label">หน่วยสินค้า</label>
                         <input type="text" id="m-unit" class="minimal-input" placeholder="เช่น กล่อง">
@@ -1357,6 +1362,7 @@
                             <label class="vibrant-label">MLP Code</label>
                             <input type="text" id="m-mlpCode" class="minimal-input" placeholder="รหัสภายใน">
                         </div>
+                    </div>
                     </div>
                 </div>
                 <div class="flex gap-3 mt-6 pt-4 border-t border-slate-100 dark:border-slate-700">
@@ -4349,10 +4355,11 @@
             if (!(cost > 0)) return show('ใส่ราคาทุนเพื่อดูกำไร');
             if (!(lm > 0 || retail > 0 || wholesale > 0 || sticker > 0)) return show('ใส่ราคาขายเพื่อดูกำไร');
 
+            // label สั้น ให้ตารางพอดีคอลัมน์ข้าง (จอกว้าง 320px) — ชื่อชุดเดียวกับการ์ดสรุปด้านบน
             const rows = [
-                { label: `LINE MAN (GP ${GP_RATE_ALT * 100}%)`, price: lm, net: lm * (1 - GP_RATE_ALT) },
-                { label: `LINE MAN (GP ${GP_RATE * 100}%)`, price: lm, net: lm * (1 - GP_RATE) },
-                { label: 'LINE MAN (NO FEE)', price: lm, net: lm },
+                { label: `GP ${GP_RATE_ALT * 100}%`, price: lm, net: lm * (1 - GP_RATE_ALT) },
+                { label: `GP ${GP_RATE * 100}%`, price: lm, net: lm * (1 - GP_RATE) },
+                { label: 'NO FEE', price: lm, net: lm },
                 { label: 'ปลีก', price: retail, net: retail },
                 { label: 'ส่ง', price: wholesale, net: wholesale },
                 { label: 'ราคาแปะ', price: sticker, net: sticker },
@@ -4397,7 +4404,6 @@
                         <td class="py-1.5 pl-1 pr-2 font-bold text-slate-600 dark:text-slate-300 whitespace-nowrap">
                             ${isBest ? '<i class="fas fa-check text-emerald-500 mr-1 text-[9px]"></i>' : ''}${r.label}
                         </td>
-                        <td class="py-1.5 text-right tabular-nums text-slate-400 dark:text-slate-500">${money(r.price)}</td>
                         <td class="py-1.5 text-right tabular-nums text-slate-600 dark:text-slate-300">${money(r.net)}</td>
                         <td class="py-1.5 text-right tabular-nums font-black ${pColor} whitespace-nowrap">${loss ? '' : '+'}${money(r.profit)}</td>
                         <td class="py-1.5 pl-2 pr-1 text-right whitespace-nowrap">
