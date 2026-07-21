@@ -561,10 +561,6 @@
                                     class="px-4 py-2.5 rounded-xl bg-emerald-50 text-emerald-600 font-bold hover:bg-emerald-600 hover:text-white transition-all text-xs border border-emerald-200">
                                     <i class="fas fa-receipt mr-2"></i> สรุปยอดโอน
                                 </button>
-                                <button onclick="openMergeModal()" title="รวมสินค้าซ้ำใน MASTER"
-                                    class="px-4 py-2.5 rounded-xl bg-purple-50 text-purple-600 font-bold hover:bg-purple-600 hover:text-white transition-all text-xs border border-purple-200">
-                                    <i class="fas fa-object-group mr-2"></i> รวมซ้ำ
-                                </button>
                                 <div
                                     class="flex items-center bg-slate-100 dark:bg-slate-800 rounded-xl p-1 border border-slate-200 dark:border-slate-700">
                                     <button onclick="exportSalesCSV()"
@@ -1244,9 +1240,15 @@
         class="fixed inset-0 bg-black/50 z-[140] hidden flex items-center justify-center backdrop-blur-sm p-4">
             <div
                 class="bg-white dark:bg-slate-800 p-6 rounded-2xl w-full max-w-xl shadow-2xl transform transition-all scale-100 flex flex-col max-h-[90vh]">
-                <h3 class="text-lg font-black text-slate-700 dark:text-white mb-4 flex items-center gap-2">
-                    <i class="fas fa-boxes text-blue-500"></i> จัดการสินค้า (Master)
-                </h3>
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-black text-slate-700 dark:text-white flex items-center gap-2">
+                        <i class="fas fa-boxes text-blue-500"></i> จัดการสินค้า (Master)
+                    </h3>
+                    <button type="button" onclick="openMergeFromMaster()" title="รวมสินค้าซ้ำใน MASTER ทั้งฐาน (จับกลุ่มรหัส [NNNN] / ชื่อตรงกัน)"
+                        class="px-3 py-1.5 rounded-xl bg-purple-50 text-purple-600 font-bold hover:bg-purple-600 hover:text-white transition-all text-[11px] border border-purple-200">
+                        <i class="fas fa-object-group mr-1"></i> รวมซ้ำ
+                    </button>
+                </div>
                 <input type="hidden" id="m-originalName">
                 <div class="space-y-4 overflow-y-auto pr-1">
                     <div>
@@ -1726,6 +1728,13 @@
             mergeGroups = scanDuplicateMasters();
             renderMergeGroups();
             document.getElementById('mergeModal').classList.remove('hidden');
+        }
+
+        // ทางเข้าเดียวของ "รวมซ้ำ" อยู่ใน header ของ popup จัดการสินค้า —
+        // ต้องปิด masterModal (z-140) ก่อน ไม่งั้นบัง mergeModal (z-135)
+        function openMergeFromMaster() {
+            document.getElementById('masterModal').classList.add('hidden');
+            openMergeModal();
         }
 
         // ค่าเริ่มต้นต่อกลุ่ม: ตัวหลัก = ข้อมูลครบสุด (ทุน+ราคา+บิล), ทุน/ราคา = ตัวแรกที่มีค่า > 0
