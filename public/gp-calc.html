@@ -96,6 +96,11 @@
   .tbox{background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:10px 11px}
   .tbox .k{font-size:10.5px;font-weight:800;color:var(--soft);margin-bottom:3px}
   .tbox .v{font-size:18px;font-weight:900;color:var(--accent);font-variant-numeric:tabular-nums}
+  .tbox .sub{font-size:10px;font-weight:700;color:var(--faint);margin-top:2px;font-variant-numeric:tabular-nums}
+  .copybtn{border:1px solid var(--border);background:var(--surface);color:var(--soft);font:inherit;font-size:12.5px;
+    font-weight:800;padding:9px 14px;border-radius:11px;cursor:pointer;align-self:flex-start}
+  .copybtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .copybtn.done{color:var(--profit);border-color:var(--profit)}
   .foot{font-size:11px;color:var(--faint);font-weight:600;text-align:center;line-height:1.7;padding:2px 6px}
   .empty{color:var(--faint);font-weight:700;text-align:center;padding:14px;font-size:13px}
   @media (prefers-reduced-motion: reduce){*{transition:none!important}}
@@ -133,6 +138,7 @@
     <div class="stats" id="stats"></div>
     <div class="note" id="verdict"></div>
     <div class="note" id="be"></div>
+    <button class="copybtn" id="copybtn" type="button" hidden>📋 คัดลอกสรุป</button>
 
     <div class="card">
       <div class="sechead">
@@ -168,6 +174,12 @@
     var REAL={0:'NO FEE',30:'LINE MAN',35:'LINE MAN'};
     function money(v){return v.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});}
     function n(id){var v=parseFloat($(id).value);return isFinite(v)?v:0;}
+    function fmtSign(p){return (p<0?'−':'+')+money(Math.abs(p));}
+    // 3 ช่องทางขายจริง เรียงกำไรมาก→น้อย (NO FEE เป็นค่าอ้างอิง ไม่ร่วมแข่ง)
+    function channels(cost,sell,store){
+      return [{k:'หน้าร้าน',p:store-cost},{k:'GP 30%',p:sell*0.70-cost},{k:'GP 35%',p:sell*0.65-cost}]
+        .sort(function(a,b){return b.p-a.p;});
+    }
 
     function render(){
       var cost=n('cost'), sell=n('sell'), store=n('store'), cgp=parseInt($('cgp').value,10);
@@ -202,20 +214,20 @@
         '<div class="p '+scls+'">'+(readyStore?smg.toFixed(1)+'%':'')+'</div></div>';
       $('stats').innerHTML=s;
 
-      // ตัดสินช่องทางคุ้มสุด: เทียบเฉพาะช่องทางจริง (หน้าร้าน / TELE GP30 / TELE GP35) — NO FEE เป็นค่าอ้างอิง ไม่ร่วมแข่ง
+      // ตัดสินช่องทางคุ้มสุด: เทียบเฉพาะช่องทางจริง (หน้าร้าน / TELE GP30 / TELE GP35)
       if(cost>0 && sell>0 && store>0){
-        var opts=[{k:'หน้าร้าน',p:store-cost},{k:'GP 30%',p:sell*0.70-cost},{k:'GP 35%',p:sell*0.65-cost}];
-        opts.sort(function(a,b){return b.p-a.p;});
-        var fmt=function(p){return (p<0?'−':'+')+money(Math.abs(p));};
+        var opts=channels(cost,sell,store);
         if(opts[0].p<0){
           $('verdict').className='note warn';
-          $('verdict').innerHTML='<span aria-hidden="true">⚠️</span><span>ขาดทุนทุกช่องทาง — เจ็บน้อยสุด: <b>'+opts[0].k+'</b> ('+fmt(opts[0].p)+')</span>';
+          $('verdict').innerHTML='<span aria-hidden="true">⚠️</span><span>ขาดทุนทุกช่องทาง — เจ็บน้อยสุด: <b>'+opts[0].k+'</b> ('+fmtSign(opts[0].p)+')</span>';
         }else{
           $('verdict').className='note';
           $('verdict').innerHTML='<span aria-hidden="true">🏆</span>'+
-            '<span>คุ้มสุด: <b>'+opts[0].k+'</b> ('+fmt(opts[0].p)+') · มากกว่า '+opts[1].k+' อยู่ <b>฿'+money(opts[0].p-opts[1].p)+'</b></span>';
+            '<span>คุ้มสุด: <b>'+opts[0].k+'</b> ('+fmtSign(opts[0].p)+') · มากกว่า '+opts[1].k+' อยู่ <b>฿'+money(opts[0].p-opts[1].p)+'</b></span>';
         }
       } else { $('verdict').className='note'; $('verdict').innerHTML=''; }
+
+      $('copybtn').hidden = !(cost>0 && (sell>0 || store>0));
 
       // เส้นขาดทุน: TELE คิดที่ GP 35% (โดนหักเยอะสุด), หน้าร้าน = ต่ำกว่าทุนตรง ๆ
       if(cost>0 && (sell>0 || store>0)){
@@ -244,17 +256,55 @@
       }).join('');
       $('tblwrap').innerHTML='<table><thead><tr><th>GP</th><th>รับจริง</th><th>กำไร</th><th>%</th></tr></thead><tbody>'+body+'</tbody></table>';
 
+      // ราคาแนะนำ = ปัดขึ้นขั้นละ ฿5 (เลขตั้งจริงได้ + margin ไม่หด) โชว์ค่าเป๊ะกำกับเมื่อไม่เท่ากัน
+      var tbox=function(label,price){
+        var np=Math.ceil(price/5 - 1e-9)*5;
+        var sub=(np-price>0.005)?'<div class="sub">เป้าเป๊ะ ฿'+money(price)+'</div>':'';
+        return '<div class="tbox"><div class="k">'+label+' → ตั้งราคา</div><div class="v">฿'+np.toLocaleString()+'</div>'+sub+'</div>';
+      };
       var tg=[[30,'GP 30%'],[35,'GP 35%']].map(function(t){
-        var price=cost/((1-t[0]/100)*(1-margin));
-        return '<div class="tbox"><div class="k">'+t[1]+' → ตั้งราคา</div><div class="v">฿'+money(price)+'</div></div>';
+        return tbox(t[1], cost/((1-t[0]/100)*(1-margin)));
       }).join('');
       // หน้าร้านไม่โดนหัก GP: ตั้งราคา = ทุน ÷ (1 − เป้ากำไร)
-      tg+='<div class="tbox"><div class="k">หน้าร้าน → ตั้งราคา</div><div class="v">฿'+money(cost/(1-margin))+'</div></div>';
+      tg+=tbox('หน้าร้าน', cost/(1-margin));
       $('tgrid').innerHTML=tg;
     }
 
     ['cost','sell','store','cgp','margin'].forEach(function(id){
       $(id).addEventListener('input',render);
+    });
+
+    // ---- ปุ่มคัดลอกสรุป: ข้อความสั้น ๆ เอาไปวางใน LINE ได้เลย ----
+    function summaryText(){
+      var cost=n('cost'), sell=n('sell'), store=n('store');
+      var L=['คำนวณกำไร — ทุน ฿'+money(cost)];
+      if(sell>0){
+        L.push('TELE ฿'+money(sell)+' → GP30 รับ ฿'+money(sell*0.70)+' ('+fmtSign(sell*0.70-cost)+') · GP35 รับ ฿'+money(sell*0.65)+' ('+fmtSign(sell*0.65-cost)+')');
+      }
+      if(store>0) L.push('หน้าร้าน ฿'+money(store)+' → '+fmtSign(store-cost));
+      if(sell>0 && store>0){
+        var opts=channels(cost,sell,store);
+        L.push(opts[0].p<0 ? 'ขาดทุนทุกช่องทาง (เจ็บน้อยสุด: '+opts[0].k+')' : 'คุ้มสุด: '+opts[0].k+' ('+fmtSign(opts[0].p)+')');
+      }
+      return L.join('\n');
+    }
+    function fallbackCopy(txt){
+      var ta=document.createElement('textarea');
+      ta.value=txt; ta.setAttribute('readonly',''); ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select();
+      try{document.execCommand('copy');}catch(e){}
+      document.body.removeChild(ta);
+    }
+    $('copybtn').addEventListener('click',function(){
+      var txt=summaryText();
+      var btn=$('copybtn');
+      var done=function(){
+        btn.classList.add('done'); btn.textContent='✓ คัดลอกแล้ว';
+        setTimeout(function(){btn.classList.remove('done'); btn.textContent='📋 คัดลอกสรุป';},1600);
+      };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(txt).then(done,function(){fallbackCopy(txt);done();});
+      }else{ fallbackCopy(txt); done(); }
     });
 
     $('tog').addEventListener('click',function(){
