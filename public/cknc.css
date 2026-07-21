@@ -6392,7 +6392,8 @@ html.dark .visit-dx-tag {
 }
 
 /* ---- Import result modal: สรุปผลนำเข้าไฟล์ (สไตล์เดียวกับ LINE MAN) ---- */
-#importResultModal {
+#importResultModal,
+#dupWarnModal {
   width: min(400px, calc(100vw - 28px));
 }
 
@@ -6500,4 +6501,25 @@ html.dark .import-result-check {
 
 html.dark .import-result-files strong {
   color: #a78bfa;
+}
+
+/* dupWarnModal: กล่องเตือนไฟล์ซ้ำ ใช้โครงเดียวกับ import-result แต่โทนเหลืองเตือน */
+.import-result-check.warn {
+  border-color: #f6ddb0;
+  color: #e8a23c;
+}
+
+.import-result-sub {
+  margin: 8px 14px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.import-result-row .warn {
+  color: #d97706;
+}
+
+html.dark .import-result-check.warn {
+  border-color: rgba(232, 162, 60, 0.35);
 }

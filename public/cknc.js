@@ -273,6 +273,10 @@ const elements = {
   importModeClose: $("importModeClose"),
   importResultModal: $("importResultModal"),
   importResultBody: $("importResultBody"),
+  dupWarnModal: $("dupWarnModal"),
+  dupWarnBody: $("dupWarnBody"),
+  dupWarnOk: $("dupWarnOk"),
+  dupWarnCancel: $("dupWarnCancel"),
   pasteAnalyzeModal: $("pasteAnalyzeModal"),
   closePasteAnalyze: $("closePasteAnalyze"),
   cancelPasteAnalyze: $("cancelPasteAnalyze"),
@@ -1342,21 +1346,55 @@ function showImportResultModal(stats, fileNames = []) {
   if (!elements.importResultModal.open) elements.importResultModal.showModal();
 }
 
-// STEP ที่ซ้ำเกินเกณฑ์ → ถ้ามี ถามยืนยันก่อนนำเข้า (คืน true = ไปต่อ, false = ยกเลิก)
+// STEP ที่ซ้ำเกินเกณฑ์ → ถ้ามี เปิด modal ยืนยันก่อนนำเข้า (resolve true = ไปต่อ, false = ยกเลิก)
 function confirmIfMostlyDuplicate(stats) {
   const flagged = ["clicknic", "mlp", "billing"]
-    .map((kind) => ({ label: IMPORT_KIND_LABEL[kind], s: stats[kind] }))
+    .map((kind) => ({ label: IMPORT_RESULT_LABEL[kind], s: stats[kind] }))
     .filter(({ s }) => s && s.raw >= DUP_WARN_MIN_ROWS && s.dup / s.raw >= DUP_WARN_RATIO);
-  if (!flagged.length) return true;
-  const lines = flagged.map(({ label, s }) =>
-    `- ${label}: ซ้ำ ${Math.round((s.dup / s.raw) * 100)}% (${number(s.dup)}/${number(s.raw)} แถวมีอยู่แล้ว) → เพิ่มของใหม่ ${number(s.added)} แถว`);
-  return confirm([
-    "ไฟล์ที่อัปโหลดซ้ำกับข้อมูลเดิมเป็นส่วนใหญ่ — อาจเผลออัปไฟล์เดิมซ้ำ",
-    "",
-    ...lines,
-    "",
-    "กด OK เพื่อนำเข้าเฉพาะแถวใหม่ (แถวซ้ำถูกตัดอัตโนมัติอยู่แล้ว) · Cancel เพื่อยกเลิกทั้งหมด",
-  ].join("\n"));
+  if (!flagged.length) return Promise.resolve(true);
+  if (!elements.dupWarnModal || !elements.dupWarnBody) {
+    // fallback confirm() เดิม เผื่อหน้าเก่าที่ยังไม่มี modal
+    const lines = flagged.map(({ label, s }) =>
+      `- ${label}: ซ้ำ ${Math.round((s.dup / s.raw) * 100)}% (${number(s.dup)}/${number(s.raw)} แถวมีอยู่แล้ว) → เพิ่มของใหม่ ${number(s.added)} แถว`);
+    return Promise.resolve(confirm([
+      "ไฟล์ที่อัปโหลดซ้ำกับข้อมูลเดิมเป็นส่วนใหญ่ — อาจเผลออัปไฟล์เดิมซ้ำ",
+      "",
+      ...lines,
+      "",
+      "กด OK เพื่อนำเข้าเฉพาะแถวใหม่ (แถวซ้ำถูกตัดอัตโนมัติอยู่แล้ว) · Cancel เพื่อยกเลิกทั้งหมด",
+    ].join("\n")));
+  }
+  const groups = flagged.map(({ label, s }) => [
+    `<section class="import-result-group">`,
+    `<h3>${label}</h3>`,
+    `<div class="import-result-row"><span>ซ้ำกับของเดิม:</span><strong class="warn">${number(s.dup)}/${number(s.raw)} แถว (${Math.round((s.dup / s.raw) * 100)}%)</strong></div>`,
+    `<div class="import-result-row"><span>จะเพิ่มของใหม่:</span><strong class="ok">${number(s.added)}</strong></div>`,
+    `</section>`,
+  ].join("")).join("");
+  elements.dupWarnBody.innerHTML = `<div class="import-result-box">${groups}</div>`;
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (goOn) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      if (elements.dupWarnModal.open) elements.dupWarnModal.close();
+      resolve(goOn);
+    };
+    const onOk = () => finish(true);
+    const onCancel = () => finish(false);
+    // close event เป็น async — เช็ค open กัน event ค้างท่อจากรอบก่อนมาปิดรอบใหม่
+    const onClose = () => { if (!elements.dupWarnModal.open) finish(false); };
+    function cleanup() {
+      elements.dupWarnOk.removeEventListener("click", onOk);
+      elements.dupWarnCancel.removeEventListener("click", onCancel);
+      elements.dupWarnModal.removeEventListener("close", onClose);
+    }
+    elements.dupWarnOk.addEventListener("click", onOk);
+    elements.dupWarnCancel.addEventListener("click", onCancel);
+    elements.dupWarnModal.addEventListener("close", onClose);
+    elements.dupWarnModal.showModal();
+  });
 }
 
 // STEP 2 (MLP) นำเข้าเฉพาะรายการของ บริษัท คลิกนิก เฮลท์ จำกัด — รายงาน MLP รวมทุกช่องทาง
@@ -4931,7 +4969,7 @@ async function importClipboardText(kind, text) {
     mode === "append" ? { clicknic: state.clicknicRows, mlp: state.mlpRows, billing: state.billingRows } : { clicknic: [], mlp: [], billing: [] },
     imported,
   );
-  if (mode === "append" && !confirmIfMostlyDuplicate(importStats)) {
+  if (mode === "append" && !(await confirmIfMostlyDuplicate(importStats))) {
     elements.statusText.textContent = "ยกเลิกการนำเข้า (ข้อมูลซ้ำกับของเดิมเป็นส่วนใหญ่)";
     return false;
   }
@@ -6157,7 +6195,7 @@ async function handleFiles() {
       imported,
     );
     // ซ้ำเกินเกณฑ์ (น่าจะอัปไฟล์เดิม) → ถามยืนยันก่อน; ยกเลิก = ไม่แตะข้อมูลเดิม
-    if (mode === "append" && !confirmIfMostlyDuplicate(importStats)) {
+    if (mode === "append" && !(await confirmIfMostlyDuplicate(importStats))) {
       elements.statusText.textContent = "ยกเลิกการนำเข้า (ไฟล์ซ้ำกับข้อมูลเดิมเป็นส่วนใหญ่)";
       return;
     }
