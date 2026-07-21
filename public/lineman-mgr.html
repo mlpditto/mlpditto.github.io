@@ -234,6 +234,20 @@
             white-space: nowrap;
         }
         .dark .date-dmy > .dmy-overlay { color: #e2e8f0; }
+        /* ซ่อน indicator ของ browser (โดนซ่อน/ไม่แสดงอยู่แล้วบางเครื่อง) แล้วใช้ปุ่มของเราแทน */
+        .date-dmy > input[type="date"]::-webkit-calendar-picker-indicator { display: none; }
+        .date-dmy > .dmy-cal-btn {
+            position: absolute;
+            right: 0; top: 50%; transform: translateY(-50%);
+            color: #10b981; font-size: 14px;
+            padding: 4px 6px; cursor: pointer; line-height: 1;
+        }
+        .date-dmy > .dmy-cal-btn:hover { color: #059669; }
+        .dark .date-dmy > .dmy-cal-btn { color: #34d399; }
+        /* จอแคบ: ย่อตัวเลขวันที่กันชนปุ่มปฏิทิน (วัดแล้ว 375px ทับ "2026") */
+        @media (max-width: 480px) {
+            .date-dmy > .dmy-overlay { font-size: .875rem; }
+        }
 
         /* Segmented GP control ในหัวข้อการชำระเงิน */
         .gp-seg-group { display: inline-flex; background: #f1f5f9; border-radius: 9999px; padding: 2px; }
@@ -863,6 +877,10 @@
                                         <div class="date-dmy">
                                             <input type="date" id="paidDate"
                                                 class="minimal-input !border-emerald-200 dark:!border-emerald-900/40 text-sm font-bold">
+                                            <button type="button" class="dmy-cal-btn" tabindex="-1"
+                                                onclick="openDatePicker('paidDate')" aria-label="เปิดปฏิทิน">
+                                                <i class="fas fa-calendar-days"></i>
+                                            </button>
                                         </div>
                                     </div>
                                     <div>
@@ -1172,6 +1190,10 @@
                                             <div class="date-dmy">
                                                 <input type="date" id="e-paidDate"
                                                     class="minimal-input !border-emerald-200 dark:!border-emerald-900/40 text-sm font-bold">
+                                                <button type="button" class="dmy-cal-btn" tabindex="-1"
+                                                    onclick="openDatePicker('e-paidDate')" aria-label="เปิดปฏิทิน">
+                                                    <i class="fas fa-calendar-days"></i>
+                                                </button>
                                             </div>
                                         </div>
                                         <div>
@@ -2238,6 +2260,15 @@
             if (!el) return;
             el.value = iso || '';
             refreshDateOverlay(el);
+        }
+        // เปิดปฏิทินของ browser จากปุ่ม (showPicker ต้องเรียกใน user gesture)
+        function openDatePicker(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (typeof el.showPicker === 'function') {
+                try { el.showPicker(); return; } catch (_) { /* ตกไป focus แทน */ }
+            }
+            el.focus();
         }
         function initDateOverlays() {
             document.querySelectorAll('.date-dmy > input[type="date"]').forEach(el => {
