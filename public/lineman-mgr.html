@@ -1277,7 +1277,6 @@
                             class="mt-2 text-xs font-bold text-rose-500 hover:text-rose-600 flex items-center gap-1.5">
                             <i class="fas fa-plus-circle"></i> เพิ่มเจ้า
                         </button>
-                        <datalist id="m-supplier-datalist"></datalist>
                     </div>
                     <div class="mb-2">
                         <label class="vibrant-label !text-blue-500">ราคาขาย (LINE MAN)</label>
@@ -4451,7 +4450,8 @@
             return `
                 <div class="supplier-row flex items-center gap-2">
                     <input type="radio" name="m-primary-supplier" class="s-primary shrink-0 w-4 h-4 accent-rose-500 cursor-pointer" title="ตั้งเป็นทุนหลัก" ${primary} onchange="updateMasterProfit()">
-                    <input type="text" class="s-name minimal-input !mb-0 flex-1 min-w-0" list="m-supplier-datalist" placeholder="ชื่อบริษัท" value="${name}">
+                    <input type="text" class="s-name minimal-input !mb-0 flex-1 min-w-0" autocomplete="off" placeholder="ชื่อบริษัท" value="${name}"
+                        oninput="supplierSuggestShow(this)" onfocus="supplierSuggestShow(this)" onkeydown="supplierSuggestKey(event, this)" onblur="supplierSuggestBlur()">
                     <input type="number" class="s-cost minimal-input !mb-0 w-24 shrink-0" placeholder="ทุน" value="${cost}" oninput="updateMasterProfit()">
                     <button type="button" onclick="removeSupplierRow(this)" class="shrink-0 text-slate-300 hover:text-rose-500 transition-colors" title="ลบเจ้านี้">
                         <i class="fas fa-trash-alt"></i>
@@ -4513,20 +4513,115 @@
             return 0;
         }
 
-        // datalist ชื่อเจ้า = ทะเบียน suppliers (โค้ด + ชื่อเต็มไว้ให้ค้นเจอ) เรียงตามความถี่ที่ใช้จริงใน master
-        // เดิมรวบชื่อจาก suppliers[] ของ master ทุกตัว → ได้ชื่อดิบ/ชื่อที่กรอกมั่วปนมาด้วย และไม่มีเจ้าที่ยังไม่เคยใช้
+        // รายการเจ้าสำหรับ dropdown ค้นหาเอง (แทน datalist — กติกา match ของ datalist ต่างกันตามเบราว์เซอร์
+        // พิมพ์โค้ด "YA" บางเครื่องไม่เจอ YAPAIBOON) — จับทั้งโค้ด/ชื่อเต็ม/aliases/aliasKeys เรียงตามความถี่ใช้จริง
+        let supplierSuggestItems = [];
         function buildSupplierDatalist() {
             const freq = {};
             (masterProducts || []).forEach(m => (m.suppliers || []).forEach(s => {
                 const n = normalizeSupplierName(s && s.name);
                 if (n) freq[n] = (freq[n] || 0) + 1;
             }));
-            const fromRegistry = supplierRegistry.map(s => ({ code: s.code, label: s.name || '' }));
+            const fromRegistry = supplierRegistry.map(s => ({
+                code: s.code,
+                label: s.name || '',
+                keys: [s.code, s.name, ...(s.aliases || []), ...(s.aliasKeys || [])].map(supplierKeyOf).filter(Boolean),
+            }));
             // เจ้าที่อยู่ใน master แต่ยังไม่มีในทะเบียน — ต้องโชว์ด้วย ไม่งั้นของเดิมหายไปจากตัวเลือกเงียบ ๆ
-            const unknown = Object.keys(freq).filter(n => !supplierAliasToCode.has(supplierKeyOf(n))).map(n => ({ code: n, label: 'ยังไม่มีในทะเบียนเจ้า' }));
-            const options = [...fromRegistry, ...unknown].sort((a, b) => (freq[b.code] || 0) - (freq[a.code] || 0) || a.code.localeCompare(b.code));
-            const dl = document.getElementById('m-supplier-datalist');
-            if (dl) dl.innerHTML = options.map(o => `<option value="${o.code.replace(/"/g, '&quot;')}">${o.label.replace(/"/g, '&quot;')}</option>`).join('');
+            const unknown = Object.keys(freq).filter(n => !supplierAliasToCode.has(supplierKeyOf(n)))
+                .map(n => ({ code: n, label: 'ยังไม่มีในทะเบียนเจ้า', keys: [supplierKeyOf(n)] }));
+            supplierSuggestItems = [...fromRegistry, ...unknown]
+                .map(o => ({ ...o, freq: freq[o.code] || 0 }))
+                .sort((a, b) => b.freq - a.freq || a.code.localeCompare(b.code));
+        }
+
+        // ===== dropdown แนะนำชื่อเจ้า (singleton ระดับ body, z สูงกว่า masterModal z-[140]) =====
+        let supplierSuggestFor = null;    // input ที่ dropdown ผูกอยู่
+        let supplierSuggestIndex = -1;    // แถวที่เลือกด้วยลูกศร
+        function supplierSuggestEl() {
+            let el = document.getElementById('supplier-suggest');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'supplier-suggest';
+                el.className = 'fixed z-[150] hidden rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-xl overflow-y-auto max-h-52 text-sm';
+                document.body.appendChild(el);
+                // pointerdown มาก่อน blur → เลือกได้ทั้งเมาส์และนิ้ว โดย input ไม่เสีย focus
+                el.addEventListener('pointerdown', (e) => {
+                    const item = e.target.closest('[data-code]');
+                    if (!item) return;
+                    e.preventDefault();
+                    supplierSuggestPick(item.dataset.code);
+                });
+                // เลื่อน scroll ที่ไหนก็ตาม (รวม container ใน modal) → ตำแหน่ง dropdown เพี้ยน ปิดทิ้ง
+                document.addEventListener('scroll', () => supplierSuggestHide(), true);
+            }
+            return el;
+        }
+        function supplierSuggestMatches(q) {
+            const key = supplierKeyOf(q);
+            if (!key) return supplierSuggestItems.slice(0, 8);   // ยังไม่พิมพ์ = โชว์เจ้าที่ใช้บ่อย
+            return supplierSuggestItems
+                .map(o => {
+                    const starts = o.keys.some(k => k.startsWith(key));
+                    if (!starts && !o.keys.some(k => k.includes(key))) return null;
+                    return { o, rank: starts ? 0 : 1 };
+                })
+                .filter(Boolean)
+                .sort((a, b) => a.rank - b.rank || b.o.freq - a.o.freq || a.o.code.localeCompare(b.o.code))
+                .slice(0, 8).map(x => x.o);
+        }
+        function supplierSuggestShow(input) {
+            const el = supplierSuggestEl();
+            const list = supplierSuggestMatches(input.value);
+            if (!list.length) return supplierSuggestHide();
+            supplierSuggestFor = input;
+            supplierSuggestIndex = -1;
+            const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+            el.innerHTML = list.map(o => `
+                <div data-code="${esc(o.code)}" class="px-3 py-2 cursor-pointer flex items-baseline gap-2 hover:bg-blue-50 dark:hover:bg-slate-700">
+                    <span class="font-black text-slate-700 dark:text-slate-100 whitespace-nowrap">${esc(o.code)}</span>
+                    <span class="text-[11px] text-slate-400 dark:text-slate-500 truncate">${esc(o.label)}</span>
+                </div>`).join('');
+            const r = input.getBoundingClientRect();
+            el.style.left = `${Math.round(r.left)}px`;
+            el.style.top = `${Math.round(r.bottom + 4)}px`;
+            el.style.width = `${Math.round(Math.max(r.width, 230))}px`;
+            el.classList.remove('hidden');
+        }
+        function supplierSuggestHide() {
+            const el = document.getElementById('supplier-suggest');
+            if (el) el.classList.add('hidden');
+            supplierSuggestFor = null;
+            supplierSuggestIndex = -1;
+        }
+        function supplierSuggestPick(code) {
+            if (supplierSuggestFor) {
+                supplierSuggestFor.value = code;
+                supplierSuggestFor.focus();
+            }
+            supplierSuggestHide();
+        }
+        function supplierSuggestBlur() { setTimeout(supplierSuggestHide, 150); }
+        function supplierSuggestKey(e, input) {
+            const el = document.getElementById('supplier-suggest');
+            if (!el || el.classList.contains('hidden')) return;
+            const items = [...el.querySelectorAll('[data-code]')];
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                supplierSuggestIndex = (supplierSuggestIndex + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+                items.forEach((it, i) => {
+                    it.classList.toggle('bg-blue-50', i === supplierSuggestIndex);
+                    it.classList.toggle('dark:bg-slate-700', i === supplierSuggestIndex);
+                });
+                items[supplierSuggestIndex]?.scrollIntoView({ block: 'nearest' });
+            } else if (e.key === 'Enter') {
+                if (supplierSuggestIndex >= 0) {
+                    e.preventDefault();
+                    supplierSuggestPick(items[supplierSuggestIndex].dataset.code);
+                } else supplierSuggestHide();
+            } else if (e.key === 'Escape') {
+                supplierSuggestHide();
+            }
         }
 
         // Read-time sync: ดึงต้นทุนต่อเจ้าจาก prices["บริษัท_หน่วย"] ของ ProOrder (เฉพาะ >0) มาเป็นแถว supplier

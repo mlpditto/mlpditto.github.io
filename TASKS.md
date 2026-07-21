@@ -1,5 +1,13 @@
 # 📝 Task Log - FKB Front Kanban
 
+## 📅 22 กรกฎาคม 2026 (3) — ช่องชื่อเจ้าใน Master modal: dropdown ค้นหาเอง แทน datalist
+
+*   **ปัญหา (user รายงาน):** พิมพ์ "YA" ไม่เจอ YAPAIBOON ต้องพิมพ์ "ยาไพ" — datalist ให้เบราว์เซอร์ match เอง กติกาต่างกันตามเครื่อง/มือถือ ควบคุมไม่ได้ และไม่ match aliases ในทะเบียน
+*   **แก้:** ถอด `<datalist id="m-supplier-datalist">` เปลี่ยนเป็น dropdown singleton `#supplier-suggest` (body-level, `z-[150]` สูงกว่า masterModal 140) — match กับ **โค้ด / ชื่อเต็ม / aliases / aliasKeys** จากทะเบียน `suppliers` (normalize ด้วย `supplierKeyOf` เดิม): พิมพ์ YA, ยาไพ, YPB, ya เจอ YAPAIBOON หมด; เรียง prefix-match ก่อน → ความถี่ใช้จริง; focus เปล่า = เจ้าที่ใช้บ่อย 8 ตัวแรก; เจ้านอกทะเบียนยังโชว์ป้าย "ยังไม่มีในทะเบียนเจ้า" เหมือนเดิม
+*   **การใช้งาน:** คลิก/แตะเลือก (pointerdown ก่อน blur), คีย์บอร์ด ↑↓ + Enter + Escape, เลื่อน scroll = ปิด (กันตำแหน่งเพี้ยน), เลือกแล้วใส่**โค้ด**ลงช่องเหมือน datalist เดิม — รูปแบบข้อมูลที่บันทึกไม่เปลี่ยน
+*   **`buildSupplierDatalist()` ชื่อเดิม แต่เปลี่ยนหน้าที่:** สร้าง `supplierSuggestItems[]` (code/label/keys/freq) แทนการเขียน `<option>`
+*   **ทดสอบ Playwright:** stub ทะเบียน 4 เจ้า → ค้น YA/ยาไพ/YPB/ya, คลิกเลือก, ↑↓+Enter, Escape, พิมพ์ไม่ match = ซ่อน — ผ่านครบ ไม่มี pageerror
+
 ## 📅 22 กรกฎาคม 2026 (2) — Master modal เป็น 2 คอลัมน์: ฟอร์มซ้าย / กำไร sticky ขวา
 
 *   **จอ ≥768px (md):** card `max-w-xl`→`md:max-w-3xl`; scroll container เป็น `md:grid md:grid-cols-[minmax(0,1fr)_320px]` แบ่ง 3 ก้อน — ฟอร์มบน (ชื่อ→แปะ) col1, กล่องคาดการณ์กำไร col2 `row-span-2` + `md:sticky md:top-0` (ลอยติดบนขณะเลื่อนฟอร์ม), ฟอร์มล่าง (หน่วย+codes) col1
