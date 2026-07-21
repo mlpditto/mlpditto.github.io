@@ -1304,13 +1304,19 @@
                     <div class="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-3 mb-2">
                         <div class="flex items-baseline justify-between mb-2">
                             <span class="vibrant-label !mb-0 !ml-0 !text-slate-500">คาดการณ์กำไร</span>
-                            <span class="text-[9px] font-bold text-slate-400 dark:text-slate-500">% = กำไร ÷ รับจริง</span>
+                            <span class="flex items-baseline gap-2">
+                                <span class="text-[9px] font-bold text-slate-400 dark:text-slate-500">% = กำไร ÷ รับจริง</span>
+                                <button type="button" onclick="openGpCalc()" title="เปิดเครื่องคิดกำไรเต็มจอ พร้อมเติมทุน+ราคาให้"
+                                    class="text-[10px] font-black text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap">🧮 GP-Calc ↗</button>
+                            </span>
                         </div>
                         <div id="m-profit-empty"
                             class="text-xs font-bold text-slate-400 dark:text-slate-500 text-center py-3">
                             ใส่ราคาทุนเพื่อดูกำไร
                         </div>
                         <div id="m-profit-body" class="hidden">
+                            <!-- การ์ดสรุปกำไรแบบ gp-calc: NO FEE / GP หลัก / GP ทางเลือก / หน้าร้าน (ราคาปลีก) -->
+                            <div id="m-profit-cards" class="grid grid-cols-4 gap-1.5 mb-2"></div>
                             <table class="w-full text-xs">
                                 <thead>
                                     <tr class="text-[9px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
@@ -4355,6 +4361,30 @@
             const best = Math.max(...rows.map(r => r.profit));
             const money = (v) => v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+            // การ์ดสรุป 4 ใบแบบ gp-calc — ช่องทางไหนยังไม่กรอกราคา = ขีด
+            const cardsEl = document.getElementById('m-profit-cards');
+            if (cardsEl) {
+                const card = (label, price) => {
+                    const has = price > 0;
+                    const profit = has ? price - cost : 0;
+                    // การ์ด GP คิด profit จากรับจริง (price ที่ส่งเข้ามาหัก GP แล้ว)
+                    const marginPct = has && price > 0 ? (profit / price) * 100 : 0;
+                    const pColor = !has ? 'text-slate-300 dark:text-slate-600'
+                        : profit < 0 ? 'text-rose-500' : 'text-emerald-600 dark:text-emerald-400';
+                    return `
+                        <div class="rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 px-1 py-1.5 text-center">
+                            <div class="text-[8px] font-black uppercase tracking-wide text-slate-400 dark:text-slate-500 whitespace-nowrap">${label}</div>
+                            <div class="text-[13px] font-black tabular-nums leading-tight ${pColor}">${has ? (profit < 0 ? '' : '+') + money(profit) : '—'}</div>
+                            <div class="text-[8px] font-bold tabular-nums ${has ? 'text-slate-400 dark:text-slate-500' : 'text-slate-300 dark:text-slate-600'}">${has ? marginPct.toFixed(1) + '%' : ''}</div>
+                        </div>`;
+                };
+                cardsEl.innerHTML =
+                    card('NO FEE', lm) +
+                    card(`GP ${GP_RATE * 100}%`, lm * (1 - GP_RATE)) +
+                    card(`GP ${GP_RATE_ALT * 100}%`, lm * (1 - GP_RATE_ALT)) +
+                    card('หน้าร้าน', retail);
+            }
+
             rowsEl.innerHTML = rows.map(r => {
                 const loss = r.profit < 0;
                 const isBest = !loss && r.profit === best && rows.length > 1;
@@ -4393,6 +4423,18 @@
 
             emptyEl.classList.add('hidden');
             bodyEl.classList.remove('hidden');
+        }
+
+        // เปิด gp-calc.html แท็บใหม่ พร้อมเติมค่าจากโมดัล: cost=ทุนหลัก, sell=ราคา LINE MAN, store=ราคาปลีก
+        function openGpCalc() {
+            const num = (id) => parseFloat(document.getElementById(id)?.value) || 0;
+            const params = new URLSearchParams();
+            const cost = getPrimaryCost();
+            if (cost > 0) params.set('cost', cost);
+            if (num('m-price') > 0) params.set('sell', num('m-price'));
+            if (num('m-retail') > 0) params.set('store', num('m-retail'));
+            const qs = params.toString();
+            window.open('gp-calc.html' + (qs ? '?' + qs : ''), '_blank', 'noopener');
         }
 
         // ===== ทุนหลายเจ้า (supplier costs) — ⭐ = ทุนหลักที่ใช้คำนวณกำไร/autofill =====

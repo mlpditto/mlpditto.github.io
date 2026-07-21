@@ -314,6 +314,15 @@
       document.documentElement.setAttribute('data-theme', cur==='dark'?'light':'dark');
     });
 
+    // เติมค่าจาก URL (?cost=&sell=&store=) — ให้แอปอื่นลิงก์มาพร้อมตัวเลข เช่น modal Master ใน lineman-mgr
+    (function(){
+      var q=new URLSearchParams(location.search);
+      ['cost','sell','store'].forEach(function(id){
+        var v=parseFloat(q.get(id));
+        if(isFinite(v)&&v>0) $(id).value=v;
+      });
+    })();
+
     render();
   })();
 </script>

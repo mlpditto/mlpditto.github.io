@@ -1,5 +1,12 @@
 # 📝 Task Log - FKB Front Kanban
 
+## 📅 22 กรกฎาคม 2026 — Master modal โชว์กำไรแบบ GP-Calc + ลิงก์ส่งค่าไป gp-calc
+
+*   **การ์ดสรุปกำไร 4 ใบ (แบบ gp-calc):** เพิ่ม `#m-profit-cards` ใน `m-profit-body` เหนือตารางเทียบช่องทาง — NO FEE / GP 30% / GP 35% / หน้าร้าน (ราคาปลีก) โชว์กำไร + % margin ตัวเลขใหญ่; ช่องทางที่ยังไม่กรอกราคา = ขีด; render ต่อท้ายใน `updateMasterProfit()` ใช้ทุนหลัก `getPrimaryCost()` + ค่าคงที่ `GP_RATE/GP_RATE_ALT` เดิม (ไม่แตะการคำนวณ/บันทึกข้อมูลใด ๆ)
+*   **ปุ่ม "🧮 GP-Calc ↗" หัวกล่องคาดการณ์กำไร:** ฟังก์ชันใหม่ `openGpCalc()` เปิด `gp-calc.html?cost=<ทุนหลัก>&sell=<ราคา LINE MAN>&store=<ราคาปลีก>` แท็บใหม่ (`noopener`) — ใส่เฉพาะ param ที่มีค่า > 0
+*   **gp-calc.html รับค่าจาก URL:** อ่าน `?cost=&sell=&store=` ตอนโหลด (ก่อน `render()` แรก) เติมช่องแล้วคำนวณทันที; ไม่มี param = ว่างเหมือนเดิม
+*   **ทดสอบ Playwright headless ผ่านครบ:** ตัวเลขการ์ดใน modal ตรงกับ gp-calc ทุกใบ (ทุน 140 / TELE 450 / ปลีก 350 → +310/+175/+152.50/+210), URL จากปุ่มถูกต้อง, ไม่กรอกปลีก → การ์ดหน้าร้านเป็นขีด, จอ 375px ไม่ overflow, ไม่มี pageerror; ไฟล์ inline ทั้งคู่ไม่ต้อง bump `?v=`
+
 ## 📅 14 กรกฎาคม 2026 — LINE MAN Master modal: ทุนหลายเจ้า + popup กว้างขึ้น
 
 *   **Popup กว้างขึ้น:** `masterModal` card `max-w-md`→`max-w-xl` (มือถือยังเต็มจอ)
