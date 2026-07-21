@@ -78,6 +78,7 @@
   td{font-size:13.5px;padding:9px 0;border-top:1px solid var(--border);text-align:right;font-weight:700}
   td:first-child{text-align:left;font-weight:800}
   tr.loss td{background:var(--loss-soft)} tr.best td{background:var(--profit-soft)}
+  tr.real td{background:var(--accent-soft)}
   .gpbadge{font-size:8.5px;font-weight:900;padding:1px 5px;border-radius:5px;margin-left:5px;vertical-align:middle;
     background:var(--accent-soft);color:var(--accent)}
   .gpbadge.free{background:var(--star);color:#3a2600}
@@ -247,7 +248,7 @@
       var body=calc.map(function(r){
         var loss=r.profit<0, isBest=!loss&&r.profit===best;
         var badge=REAL[r.gp]?('<span class="gpbadge'+(r.gp===0?' free':'')+'">'+REAL[r.gp]+'</span>'):(r.isCustom?'<span class="gpbadge">กำหนดเอง</span>':'');
-        var cls=loss?'loss':(isBest?'best':'');
+        var cls=loss?'loss':(isBest?'best':(REAL[r.gp]&&r.gp!==0?'real':''));
         var pc=loss?'neg':'pos';
         return '<tr class="'+cls+'"><td>GP '+r.gp+'%'+badge+'</td>'+
           '<td class="money">'+money(r.net)+'</td>'+
