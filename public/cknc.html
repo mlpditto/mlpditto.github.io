@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="./cknc.css?v=20260720140023" />
+    <link rel="stylesheet" href="./cknc.css?v=20260721095729" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -591,6 +591,19 @@
       </form>
     </dialog>
 
+    <dialog id="importResultModal" class="clipboard-modal">
+      <form method="dialog" class="clipboard-card import-result-card">
+        <div class="import-result-head">
+          <div class="import-result-check" aria-hidden="true"><i class="fa-solid fa-check"></i></div>
+          <h2>นำเข้าข้อมูลเรียบร้อย</h2>
+        </div>
+        <div id="importResultBody" class="import-result-body"></div>
+        <div class="modal-actions import-result-actions">
+          <button id="importResultOk" class="primary" type="submit">OK</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog id="caseSeqModal" class="clipboard-modal">
       <form method="dialog" class="clipboard-card case-seq-card">
         <div class="modal-head">
@@ -1006,7 +1019,7 @@
       </div>
     </dialog>
 
-    <script src="./cknc.js?v=20260720140023"></script>
+    <script src="./cknc.js?v=20260721095729"></script>
     <script>
       (function () {
         const btn = document.getElementById("themeToggleBtn");

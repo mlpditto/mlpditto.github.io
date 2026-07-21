@@ -271,6 +271,8 @@ const elements = {
   importModeReplace: $("importModeReplace"),
   importModeCancel: $("importModeCancel"),
   importModeClose: $("importModeClose"),
+  importResultModal: $("importResultModal"),
+  importResultBody: $("importResultBody"),
   pasteAnalyzeModal: $("pasteAnalyzeModal"),
   closePasteAnalyze: $("closePasteAnalyze"),
   cancelPasteAnalyze: $("cancelPasteAnalyze"),
@@ -1313,6 +1315,31 @@ function importSummaryText(stats) {
       return `${IMPORT_KIND_LABEL[kind]}: +${number(s.added)} ใหม่${s.dup ? ` · ตัดซ้ำ ${number(s.dup)}` : ""}`;
     })
     .join("  ·  ");
+}
+
+// Modal สรุปผลนำเข้า (สไตล์เดียวกับ LINE MAN) — แสดงเฉพาะ STEP ที่มีแถวในไฟล์
+const IMPORT_RESULT_LABEL = { clicknic: "CLICKNIC", mlp: "MEDLIFE PLUS", billing: "ใบวางบิล" };
+
+function showImportResultModal(stats, fileNames = []) {
+  if (!elements.importResultModal || !elements.importResultBody) return;
+  const groups = ["clicknic", "mlp", "billing"]
+    .filter((kind) => stats[kind] && stats[kind].raw > 0)
+    .map((kind) => {
+      const s = stats[kind];
+      return [
+        `<section class="import-result-group">`,
+        `<h3>${IMPORT_RESULT_LABEL[kind]}</h3>`,
+        `<div class="import-result-row"><span>เพิ่มใหม่:</span><strong class="ok">${number(s.added)}</strong></div>`,
+        `<div class="import-result-row"><span>ข้าม (ซ้ำ):</span><strong class="skip">${number(s.dup)}</strong></div>`,
+        `</section>`,
+      ].join("");
+    });
+  if (!groups.length) return;
+  const filesHtml = fileNames.length
+    ? `<div class="import-result-files"><span>ไฟล์ที่นำเข้า:</span><strong>${fileNames.map((name) => htmlEscape(name)).join("<br>")}</strong></div>`
+    : "";
+  elements.importResultBody.innerHTML = `<div class="import-result-box">${groups.join("")}${filesHtml}</div>`;
+  if (!elements.importResultModal.open) elements.importResultModal.showModal();
 }
 
 // STEP ที่ซ้ำเกินเกณฑ์ → ถ้ามี ถามยืนยันก่อนนำเข้า (คืน true = ไปต่อ, false = ยกเลิก)
@@ -6160,8 +6187,7 @@ async function handleFiles() {
 
     renderAll();
     scheduleAutosave("file-import");
-    const summary = importSummaryText(importStats);
-    if (summary) showToast(`นำเข้าไฟล์แล้ว — ${summary}`);
+    showImportResultModal(importStats, [...clickFiles, ...mlpFiles, ...billingFiles].map((file) => file.name));
   } catch (error) {
     console.error(error);
     elements.statusText.textContent = error.message || "อ่านไฟล์ไม่สำเร็จ";
