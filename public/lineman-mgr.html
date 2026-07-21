@@ -248,6 +248,9 @@
         @media (max-width: 480px) {
             .date-dmy > .dmy-overlay { font-size: .875rem; }
         }
+        /* วาเรียนต์ในกล่อง SweetAlert (บันทึกการชำระเงิน): input มี padding/กรอบของ swal2 เอง */
+        .date-dmy-swal > .dmy-overlay { left: 14px; font-size: 14px; font-weight: 700; }
+        .date-dmy-swal > .dmy-cal-btn { right: 12px; }
 
         /* Segmented GP control ในหัวข้อการชำระเงิน */
         .gp-seg-group { display: inline-flex; background: #f1f5f9; border-radius: 9999px; padding: 2px; }
@@ -3745,7 +3748,13 @@
                         <div class="p-2 space-y-4 text-left">
                             <div>
                                 <label class="text-[10px] font-black text-slate-400 uppercase mb-1 block">วันที่ได้รับเงิน</label>
-                                <input id="swal-p-date" type="date" value="${defaultDate}" class="swal2-input !m-0 w-full text-sm font-bold !rounded-xl !border-slate-100">
+                                <div class="date-dmy date-dmy-swal">
+                                    <input id="swal-p-date" type="date" value="${defaultDate}" class="swal2-input !m-0 w-full text-sm font-bold !rounded-xl !border-slate-100">
+                                    <button type="button" class="dmy-cal-btn" tabindex="-1"
+                                        onclick="openDatePicker('swal-p-date')" aria-label="เปิดปฏิทิน">
+                                        <i class="fas fa-calendar-days"></i>
+                                    </button>
+                                </div>
                             </div>
                             <div class="flex gap-4">
                                 <div class="flex-1">
@@ -3761,6 +3770,7 @@
                     `,
                     focusConfirm: false,
                     showCancelButton: true,
+                    didOpen: () => initDateOverlays(),
                     confirmButtonText: '<i class="fas fa-check-circle mr-2"></i> บันทึก PAID',
                     confirmButtonColor: '#10b981',
                     cancelButtonText: 'ยกเลิก',
