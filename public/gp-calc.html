@@ -91,7 +91,8 @@
   .target input[type=number]{width:64px;border:1px solid var(--border);background:var(--surface2);border-radius:9px;
     font:inherit;font-weight:800;font-size:15px;color:var(--ink);text-align:center;padding:6px 4px;outline:none;font-variant-numeric:tabular-nums}
   .target input:focus{border-color:var(--accent)}
-  .tgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+  .tgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:12px}
+  @media (max-width:430px){.tgrid{grid-template-columns:1fr 1fr}}
   .tbox{background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:10px 11px}
   .tbox .k{font-size:10.5px;font-weight:800;color:var(--soft);margin-bottom:3px}
   .tbox .v{font-size:18px;font-weight:900;color:var(--accent);font-variant-numeric:tabular-nums}
@@ -130,6 +131,7 @@
     </div>
 
     <div class="stats" id="stats"></div>
+    <div class="note" id="verdict"></div>
     <div class="note" id="be"></div>
 
     <div class="card">
@@ -200,11 +202,28 @@
         '<div class="p '+scls+'">'+(readyStore?smg.toFixed(1)+'%':'')+'</div></div>';
       $('stats').innerHTML=s;
 
-      if(ready){
-        var be35=cost/(1-0.35), under=sell<be35;
+      // ตัดสินช่องทางคุ้มสุด: เทียบเฉพาะช่องทางจริง (หน้าร้าน / TELE GP30 / TELE GP35) — NO FEE เป็นค่าอ้างอิง ไม่ร่วมแข่ง
+      if(cost>0 && sell>0 && store>0){
+        var opts=[{k:'หน้าร้าน',p:store-cost},{k:'GP 30%',p:sell*0.70-cost},{k:'GP 35%',p:sell*0.65-cost}];
+        opts.sort(function(a,b){return b.p-a.p;});
+        var fmt=function(p){return (p<0?'−':'+')+money(Math.abs(p));};
+        if(opts[0].p<0){
+          $('verdict').className='note warn';
+          $('verdict').innerHTML='<span aria-hidden="true">⚠️</span><span>ขาดทุนทุกช่องทาง — เจ็บน้อยสุด: <b>'+opts[0].k+'</b> ('+fmt(opts[0].p)+')</span>';
+        }else{
+          $('verdict').className='note';
+          $('verdict').innerHTML='<span aria-hidden="true">🏆</span>'+
+            '<span>คุ้มสุด: <b>'+opts[0].k+'</b> ('+fmt(opts[0].p)+') · มากกว่า '+opts[1].k+' อยู่ <b>฿'+money(opts[0].p-opts[1].p)+'</b></span>';
+        }
+      } else { $('verdict').className='note'; $('verdict').innerHTML=''; }
+
+      // เส้นขาดทุน: TELE คิดที่ GP 35% (โดนหักเยอะสุด), หน้าร้าน = ต่ำกว่าทุนตรง ๆ
+      if(cost>0 && (sell>0 || store>0)){
+        var be35=cost/(1-0.35);
+        var under=(sell>0 && sell<be35) || (store>0 && store<cost);
         $('be').className='note'+(under?' warn':'');
         $('be').innerHTML='<span aria-hidden="true">'+(under?'⚠️':'📉')+'</span>'+
-          '<span>ต่ำกว่า <b>฿'+money(be35)+'</b> = ขาดทุน <span class="m">(คิดที่ GP 35%)</span></span>';
+          '<span>ขาดทุนเมื่อ: TELE ต่ำกว่า <b>฿'+money(be35)+'</b> <span class="m">(GP 35%)</span> · หน้าร้านต่ำกว่า <b>฿'+money(cost)+'</b></span>';
       } else { $('be').className='note'; $('be').innerHTML=''; }
 
       if(!ready){
@@ -229,6 +248,8 @@
         var price=cost/((1-t[0]/100)*(1-margin));
         return '<div class="tbox"><div class="k">'+t[1]+' → ตั้งราคา</div><div class="v">฿'+money(price)+'</div></div>';
       }).join('');
+      // หน้าร้านไม่โดนหัก GP: ตั้งราคา = ทุน ÷ (1 − เป้ากำไร)
+      tg+='<div class="tbox"><div class="k">หน้าร้าน → ตั้งราคา</div><div class="v">฿'+money(cost/(1-margin))+'</div></div>';
       $('tgrid').innerHTML=tg;
     }
 
