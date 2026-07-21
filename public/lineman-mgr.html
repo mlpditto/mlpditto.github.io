@@ -2926,13 +2926,24 @@
                 // วันไหนมีรายการกำไร 100% (net > 0 แต่ต้นทุน 0 = ยังไม่กรอกต้นทุน) → กรอบปุ่มวันที่แดงเข้มเตือน
                 const fullProfitDates = new Set(filtered.filter(r => (r.net || 0) > 0 && (r.cost || 0) <= 0).map(r => String(r.date || '')));
 
+                // วันไหนทุกบิล PAID ครบ (นับตามวันขาย r.date ไม่สน paidDate) → ปุ่มพื้นทองอ่อน
+                const paidCompleteDates = new Set(uniqueDates.filter(d => filtered.filter(r => String(r.date || '') === d).every(r => r.isPaid)));
+
                 uniqueDates.forEach(d => {
                     const isActive = currentSelectedDate === d;
                     const warnCost = fullProfitDates.has(d);
+                    const paidDay = paidCompleteDates.has(d);
                     try {
-                        const baseClass = isActive ? 'bg-lineman text-white shadow-lg shadow-green-500/20 scale-105' : 'bg-white dark:bg-slate-800 text-slate-400 hover:bg-slate-100';
-                        const borderClass = warnCost ? 'border-2 border-red-800 dark:border-red-500' : (isActive ? '' : 'border border-slate-100 dark:border-slate-700');
-                        paginHTML += `<button onclick="setDateFilter('${d}')" ${warnCost ? 'title="มีรายการกำไร 100% (ต้นทุน 0 — ยังไม่กรอกต้นทุน)"' : ''} class="px-5 py-2.5 rounded-2xl text-xs font-black transition-all whitespace-nowrap ${baseClass} ${borderClass}">${formatDate(d)}</button>`;
+                        const baseClass = isActive ? 'bg-lineman text-white shadow-lg shadow-green-500/20 scale-105'
+                            : paidDay ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50'
+                                : 'bg-white dark:bg-slate-800 text-slate-400 hover:bg-slate-100';
+                        const borderClass = warnCost ? 'border-2 border-red-800 dark:border-red-500'
+                            : isActive ? ''
+                                : paidDay ? 'border border-amber-200 dark:border-amber-700'
+                                    : 'border border-slate-100 dark:border-slate-700';
+                        const titleAttr = warnCost ? 'title="มีรายการกำไร 100% (ต้นทุน 0 — ยังไม่กรอกต้นทุน)"'
+                            : paidDay ? 'title="PAID ครบทุกบิลแล้ว"' : '';
+                        paginHTML += `<button onclick="setDateFilter('${d}')" ${titleAttr} class="px-5 py-2.5 rounded-2xl text-xs font-black transition-all whitespace-nowrap ${baseClass} ${borderClass}">${formatDate(d)}</button>`;
                     } catch (e) { }
                 });
                 if (pagin) pagin.innerHTML = paginHTML;
