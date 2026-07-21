@@ -1285,7 +1285,6 @@ function dedupeBillingRows(rows) {
 // ---- สถิติ/เตือน การนำเข้าซ้ำ (STEP 1/2/3) --------------------------------
 const DUP_WARN_RATIO = 0.8;      // ซ้ำ ≥ 80% ของไฟล์ = น่าจะเผลออัปไฟล์เดิม → เตือน
 const DUP_WARN_MIN_ROWS = 5;     // ไฟล์เล็กกว่านี้ไม่เตือน (กันสัญญาณหลอกจากไฟล์ 1-2 แถว)
-const IMPORT_KIND_LABEL = { clicknic: "CLICKNIC", mlp: "MLP", billing: "BILLING" };
 
 // raw = แถวที่อ่านได้, added = แถวใหม่ที่ยังไม่มี, dup = ซ้ำ (ในไฟล์เอง + ซ้ำกับของเดิม)
 function computeImportStats(kind, existingRows, importedRows) {
@@ -1310,21 +1309,10 @@ function importStatsFor(existing, imported) {
   };
 }
 
-// ข้อความสรุป toast: "CLICKNIC: +380 ใหม่ · ตัดซ้ำ 16  ·  MLP: +120" (เฉพาะ STEP ที่มีแถว)
-function importSummaryText(stats) {
-  return ["clicknic", "mlp", "billing"]
-    .filter((kind) => stats[kind] && stats[kind].raw > 0)
-    .map((kind) => {
-      const s = stats[kind];
-      return `${IMPORT_KIND_LABEL[kind]}: +${number(s.added)} ใหม่${s.dup ? ` · ตัดซ้ำ ${number(s.dup)}` : ""}`;
-    })
-    .join("  ·  ");
-}
-
 // Modal สรุปผลนำเข้า (สไตล์เดียวกับ LINE MAN) — แสดงเฉพาะ STEP ที่มีแถวในไฟล์
 const IMPORT_RESULT_LABEL = { clicknic: "CLICKNIC", mlp: "MEDLIFE PLUS", billing: "ใบวางบิล" };
 
-function showImportResultModal(stats, fileNames = []) {
+function showImportResultModal(stats, fileNames = [], { sourceLabel = "ไฟล์ที่นำเข้า:" } = {}) {
   if (!elements.importResultModal || !elements.importResultBody) return;
   const groups = ["clicknic", "mlp", "billing"]
     .filter((kind) => stats[kind] && stats[kind].raw > 0)
@@ -1340,7 +1328,7 @@ function showImportResultModal(stats, fileNames = []) {
     });
   if (!groups.length) return;
   const filesHtml = fileNames.length
-    ? `<div class="import-result-files"><span>ไฟล์ที่นำเข้า:</span><strong>${fileNames.map((name) => htmlEscape(name)).join("<br>")}</strong></div>`
+    ? `<div class="import-result-files"><span>${sourceLabel}</span><strong>${fileNames.map((name) => htmlEscape(name)).join("<br>")}</strong></div>`
     : "";
   elements.importResultBody.innerHTML = `<div class="import-result-box">${groups.join("")}${filesHtml}</div>`;
   if (!elements.importResultModal.open) elements.importResultModal.showModal();
@@ -4995,8 +4983,7 @@ async function importClipboardText(kind, text) {
   renderAll();
   scheduleAutosave(`clipboard-${kind}`);
   elements.statusText.textContent = `Imported ${clipboardKindLabel(kind)} from clipboard`;
-  const summary = importSummaryText(importStats);
-  if (summary) showToast(`วางข้อมูลแล้ว — ${summary}`);
+  showImportResultModal(importStats, [`Clipboard — ${clipboardKindLabel(kind)}`], { sourceLabel: "นำเข้าจาก:" });
   return true;
 }
 
@@ -6265,6 +6252,13 @@ async function loadSampleFiles() {
     updateSourceMeta("billing", SAMPLE_FILES.billing);
     renderAll();
     scheduleAutosave("sample-import");
+    const sampleStats = importStatsFor(
+      { clicknic: [], mlp: [], billing: [] },
+      { clicknicRows: clicknicImportedRows, mlpRows: state.mlpRows, billingRows: state.billingRows },
+    );
+    const sampleNames = [...SAMPLE_FILES.clicknic, SAMPLE_FILES.mlp, ...SAMPLE_FILES.billing]
+      .map((path) => String(path).split("/").pop());
+    showImportResultModal(sampleStats, sampleNames);
   } catch (error) {
     console.error(error);
     elements.statusText.textContent = "โหลดไฟล์ตัวอย่างไม่ได้ กรุณาอัปโหลดไฟล์แทน";
