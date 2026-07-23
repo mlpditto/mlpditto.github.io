@@ -533,6 +533,9 @@
                             <span class="text-3xl font-black text-amber-600" id="stat-avg-time">--</span>
                             <span class="text-[9px] font-bold text-slate-400 uppercase mt-1">เวลาเตรียมและจัดส่ง</span>
                         </div>
+                        <div id="stat-avg-history"
+                            class="hidden grid-cols-4 gap-2 mt-3 pt-2 border-t border-slate-50 dark:border-slate-800/50 h-[76px]">
+                        </div>
                     </div>
                     <div class="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                         <div id="stat-avg-progress" class="h-full bg-amber-400 transition-all duration-1000"
@@ -2429,19 +2432,29 @@
             return doc.exists ? (doc.data().records || []) : [];
         }
 
-        // ── Order-count history: มินิกราฟแท่ง 3 เดือนก่อนหน้า + เดือนที่เลือก ──
-        // ข้อมูลเก็บแยก doc รายเดือน (salesData มีแค่เดือนที่เลือก) → เดือนอื่นต้องดึงมานับแล้ว cache
-        const histCountCache = {};          // key = getMonthDocId(เดือน) → จำนวนออเดอร์
-        const histCountLoading = new Set(); // กันยิงซ้ำระหว่างรอโหลด
-        function renderCountHistory(termMonth, currentCount) {
-            const histEl = document.getElementById('stat-count-history');
-            if (!histEl) return;
+        // ── Stats history: มินิกราฟแท่ง 3 เดือนก่อนหน้า + เดือนที่เลือก (จำนวนออเดอร์ + เวลาเฉลี่ย) ──
+        // ข้อมูลเก็บแยก doc รายเดือน (salesData มีแค่เดือนที่เลือก) → เดือนอื่นต้องดึงมาคำนวณแล้ว cache
+        const histStatsCache = {};          // key = getMonthDocId(เดือน) → {count, perfSum, perfCount}
+        const histStatsLoading = new Set(); // กันยิงซ้ำระหว่างรอโหลด
+        function computeMonthStats(recs, monthKey) {
+            let count = 0, perfSum = 0, perfCount = 0;
+            (recs || []).forEach(r => {
+                if (!r || !String(r.date || '').startsWith(monthKey)) return;
+                count++;
+                if (r.receivedTime) {
+                    const perf = calculatePerformance(r.date, r.orderTime, r.receivedDate || r.date, r.receivedTime);
+                    if (perf) { perfSum += perf.totalMins; perfCount++; }
+                }
+            });
+            return { count, perfSum, perfCount };
+        }
+        function renderStatsHistory(termMonth, liveStats) {
+            const countEl = document.getElementById('stat-count-history');
+            const avgEl = document.getElementById('stat-avg-history');
+            if (!countEl && !avgEl) return;
+            const hide = el => { if (el) { el.classList.add('hidden'); el.classList.remove('grid'); } };
             const tmMatch = /^(\d{4})-(\d{2})$/.exec(termMonth || '');
-            if (!tmMatch) {
-                histEl.classList.add('hidden');
-                histEl.classList.remove('grid');
-                return;
-            }
+            if (!tmMatch) { hide(countEl); hide(avgEl); return; }
             const thMnShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
             const selY = parseInt(tmMatch[1], 10);
             const histMonths = [];
@@ -2452,46 +2465,69 @@
                     y: d0.getFullYear(), m: d0.getMonth(), current: back === 0
                 });
             }
-            histCountCache[getMonthDocId(termMonth)] = currentCount; // เดือนที่เลือกนับสดจาก salesData เสมอ
+            histStatsCache[getMonthDocId(termMonth)] = liveStats; // เดือนที่เลือกคำนวณสดจาก salesData เสมอ
             const missing = [];
             histMonths.forEach(mo => {
-                mo.count = mo.current ? currentCount : histCountCache[getMonthDocId(mo.key)];
-                if (mo.count === undefined && !histCountLoading.has(getMonthDocId(mo.key))) missing.push(mo.key);
+                mo.stats = mo.current ? liveStats : histStatsCache[getMonthDocId(mo.key)];
+                mo.label = thMnShort[mo.m] + (mo.y !== selY ? ' ' + ((mo.y + 543) % 100) : '');
+                if (mo.stats === undefined && !histStatsLoading.has(getMonthDocId(mo.key))) missing.push(mo.key);
             });
             // วาดจากที่มีก่อน — เดือนที่ยังไม่โหลด/ไม่มีข้อมูล = "–"
-            const histMax = Math.max.apply(null, histMonths.map(mo => mo.count || 0));
-            histEl.innerHTML = histMonths.map(mo => {
-                const label = thMnShort[mo.m] + (mo.y !== selY ? ' ' + ((mo.y + 543) % 100) : '');
-                const barPx = mo.count > 0 ? Math.max(4, Math.round(mo.count / histMax * 40)) : 0;
-                return `<div class="flex flex-col justify-end items-center gap-0.5">
-                    <p class="text-[9px] font-black ${mo.current ? 'text-purple-600' : 'text-slate-400'}">${mo.count > 0 ? mo.count : '–'}</p>
-                    <div class="w-full rounded-t-sm ${mo.current ? 'bg-purple-500' : 'bg-purple-200 dark:bg-purple-900/70'}" style="height:${barPx}px"></div>
-                    <p class="text-[8px] font-bold ${mo.current ? 'text-purple-600' : 'text-slate-400'} uppercase whitespace-nowrap">${label}</p>
-                </div>`;
-            }).join('');
-            histEl.classList.remove('hidden');
-            histEl.classList.add('grid');
+            if (countEl) {
+                const maxC = Math.max.apply(null, histMonths.map(mo => (mo.stats && mo.stats.count) || 0));
+                countEl.innerHTML = histMonths.map(mo => {
+                    const c = mo.stats ? mo.stats.count : 0;
+                    const barPx = c > 0 ? Math.max(4, Math.round(c / maxC * 40)) : 0;
+                    return `<div class="flex flex-col justify-end items-center gap-0.5">
+                        <p class="text-[9px] font-black ${mo.current ? 'text-purple-600' : 'text-slate-400'}">${c > 0 ? c : '–'}</p>
+                        <div class="w-full rounded-t-sm ${mo.current ? 'bg-purple-500' : 'bg-purple-200 dark:bg-purple-900/70'}" style="height:${barPx}px"></div>
+                        <p class="text-[8px] font-bold ${mo.current ? 'text-purple-600' : 'text-slate-400'} uppercase whitespace-nowrap">${mo.label}</p>
+                    </div>`;
+                }).join('');
+                countEl.classList.remove('hidden');
+                countEl.classList.add('grid');
+            }
+            if (avgEl) {
+                const avgs = histMonths.map(mo => (mo.stats && mo.stats.perfCount > 0) ? Math.round(mo.stats.perfSum / mo.stats.perfCount) : null);
+                const maxA = Math.max.apply(null, avgs.map(a => a || 0));
+                avgEl.innerHTML = histMonths.map((mo, i) => {
+                    const a = avgs[i];
+                    // เกณฑ์สีเดียวกับแถบ progress: ≤45 เขียว / ≤90 ส้ม / เกิน แดง
+                    const tone = a === null ? 'slate' : (a > 90 ? 'rose' : (a > 45 ? 'amber' : 'emerald'));
+                    const barCls = mo.current ? `bg-${tone}-500` : `bg-${tone}-200 dark:bg-${tone}-900/70`;
+                    const numCls = mo.current ? `text-${tone}-600` : 'text-slate-400';
+                    const txt = a === null ? '–' : (a >= 60 ? `${Math.floor(a / 60)}h ${a % 60}m` : `${a}m`);
+                    const barPx = a > 0 ? Math.max(4, Math.round(a / maxA * 40)) : 0;
+                    return `<div class="flex flex-col justify-end items-center gap-0.5">
+                        <p class="text-[9px] font-black ${numCls} whitespace-nowrap">${txt}</p>
+                        <div class="w-full rounded-t-sm ${barCls}" style="height:${barPx}px"></div>
+                        <p class="text-[8px] font-bold ${mo.current ? 'text-amber-600' : 'text-slate-400'} uppercase whitespace-nowrap">${mo.label}</p>
+                    </div>`;
+                }).join('');
+                avgEl.classList.remove('hidden');
+                avgEl.classList.add('grid');
+            }
             if (missing.length && window.db) {
-                missing.forEach(k => histCountLoading.add(getMonthDocId(k)));
+                missing.forEach(k => histStatsLoading.add(getMonthDocId(k)));
                 Promise.all(missing.map(async k => {
                     const docKey = getMonthDocId(k);
                     try {
                         const recs = await getMonthRecords(k);
-                        histCountCache[docKey] = recs.filter(r => r && String(r.date || '').startsWith(k)).length;
+                        histStatsCache[docKey] = computeMonthStats(recs, k);
                     } catch (e) {
-                        console.warn('[CountHistory] โหลดเดือน ' + k + ' ไม่สำเร็จ:', e);
-                        histCountCache[docKey] = 0;
+                        console.warn('[StatsHistory] โหลดเดือน ' + k + ' ไม่สำเร็จ:', e);
+                        histStatsCache[docKey] = { count: 0, perfSum: 0, perfCount: 0 };
                     } finally {
-                        histCountLoading.delete(docKey);
+                        histStatsLoading.delete(docKey);
                     }
                 })).then(() => {
                     // วาดซ้ำเฉพาะเมื่อ user ยังอยู่เดือนเดิม (ถ้าเปลี่ยนเดือน renderUI รอบใหม่จัดการเอง)
                     const nowTerm = document.getElementById('monthFilter') ? document.getElementById('monthFilter').value : '';
-                    if (nowTerm === termMonth) renderCountHistory(termMonth, currentCount);
+                    if (nowTerm === termMonth) renderStatsHistory(termMonth, liveStats);
                 });
             }
         }
-        // ── end order-count history ──
+        // ── end stats history ──
 
         async function saveMonthRecords(month, records) {
             await window.db.collection('system').doc(getMonthDocId(month)).set({ records });
@@ -2963,8 +2999,8 @@
                 safeSetText('stat-count-month', countMonth);
                 safeSetText('stat-count-year', countYear);
 
-                // มินิกราฟแท่ง 3 เดือนก่อนหน้า — เดือนอื่นอยู่คนละ doc ต้องดึงนับผ่าน cache (ดู renderCountHistory)
-                renderCountHistory(termMonth, countMonth);
+                // มินิกราฟแท่ง 3 เดือนก่อนหน้า (ออเดอร์ + เวลาเฉลี่ย) — เดือนอื่นอยู่คนละ doc ดึงผ่าน cache (ดู renderStatsHistory)
+                renderStatsHistory(termMonth, { count: countMonth, perfSum: totalPerfMins, perfCount: perfCount });
                 safeSetText('stat-net-month', `฿${netPaidMonth.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
                 
                 // Update FEE / NO FEE breakdown
