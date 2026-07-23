@@ -2429,6 +2429,70 @@
             return doc.exists ? (doc.data().records || []) : [];
         }
 
+        // ── Order-count history: มินิกราฟแท่ง 3 เดือนก่อนหน้า + เดือนที่เลือก ──
+        // ข้อมูลเก็บแยก doc รายเดือน (salesData มีแค่เดือนที่เลือก) → เดือนอื่นต้องดึงมานับแล้ว cache
+        const histCountCache = {};          // key = getMonthDocId(เดือน) → จำนวนออเดอร์
+        const histCountLoading = new Set(); // กันยิงซ้ำระหว่างรอโหลด
+        function renderCountHistory(termMonth, currentCount) {
+            const histEl = document.getElementById('stat-count-history');
+            if (!histEl) return;
+            const tmMatch = /^(\d{4})-(\d{2})$/.exec(termMonth || '');
+            if (!tmMatch) {
+                histEl.classList.add('hidden');
+                histEl.classList.remove('grid');
+                return;
+            }
+            const thMnShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+            const selY = parseInt(tmMatch[1], 10);
+            const histMonths = [];
+            for (let back = 3; back >= 0; back--) {
+                const d0 = new Date(selY, parseInt(tmMatch[2], 10) - 1 - back, 1);
+                histMonths.push({
+                    key: `${d0.getFullYear()}-${(d0.getMonth() + 1).toString().padStart(2, '0')}`,
+                    y: d0.getFullYear(), m: d0.getMonth(), current: back === 0
+                });
+            }
+            histCountCache[getMonthDocId(termMonth)] = currentCount; // เดือนที่เลือกนับสดจาก salesData เสมอ
+            const missing = [];
+            histMonths.forEach(mo => {
+                mo.count = mo.current ? currentCount : histCountCache[getMonthDocId(mo.key)];
+                if (mo.count === undefined && !histCountLoading.has(getMonthDocId(mo.key))) missing.push(mo.key);
+            });
+            // วาดจากที่มีก่อน — เดือนที่ยังไม่โหลด/ไม่มีข้อมูล = "–"
+            const histMax = Math.max.apply(null, histMonths.map(mo => mo.count || 0));
+            histEl.innerHTML = histMonths.map(mo => {
+                const label = thMnShort[mo.m] + (mo.y !== selY ? ' ' + ((mo.y + 543) % 100) : '');
+                const barPx = mo.count > 0 ? Math.max(4, Math.round(mo.count / histMax * 40)) : 0;
+                return `<div class="flex flex-col justify-end items-center gap-0.5">
+                    <p class="text-[9px] font-black ${mo.current ? 'text-purple-600' : 'text-slate-400'}">${mo.count > 0 ? mo.count : '–'}</p>
+                    <div class="w-full rounded-t-sm ${mo.current ? 'bg-purple-500' : 'bg-purple-200 dark:bg-purple-900/70'}" style="height:${barPx}px"></div>
+                    <p class="text-[8px] font-bold ${mo.current ? 'text-purple-600' : 'text-slate-400'} uppercase whitespace-nowrap">${label}</p>
+                </div>`;
+            }).join('');
+            histEl.classList.remove('hidden');
+            histEl.classList.add('grid');
+            if (missing.length && window.db) {
+                missing.forEach(k => histCountLoading.add(getMonthDocId(k)));
+                Promise.all(missing.map(async k => {
+                    const docKey = getMonthDocId(k);
+                    try {
+                        const recs = await getMonthRecords(k);
+                        histCountCache[docKey] = recs.filter(r => r && String(r.date || '').startsWith(k)).length;
+                    } catch (e) {
+                        console.warn('[CountHistory] โหลดเดือน ' + k + ' ไม่สำเร็จ:', e);
+                        histCountCache[docKey] = 0;
+                    } finally {
+                        histCountLoading.delete(docKey);
+                    }
+                })).then(() => {
+                    // วาดซ้ำเฉพาะเมื่อ user ยังอยู่เดือนเดิม (ถ้าเปลี่ยนเดือน renderUI รอบใหม่จัดการเอง)
+                    const nowTerm = document.getElementById('monthFilter') ? document.getElementById('monthFilter').value : '';
+                    if (nowTerm === termMonth) renderCountHistory(termMonth, currentCount);
+                });
+            }
+        }
+        // ── end order-count history ──
+
         async function saveMonthRecords(month, records) {
             await window.db.collection('system').doc(getMonthDocId(month)).set({ records });
             await ensureMonthInIndex(month);
@@ -2899,43 +2963,8 @@
                 safeSetText('stat-count-month', countMonth);
                 safeSetText('stat-count-year', countYear);
 
-                // มินิกราฟแท่ง: 3 เดือนก่อนหน้า + เดือนที่เลือก (เลื่อนตาม monthFilter, เดือนไม่มีข้อมูล = "–")
-                const histEl = document.getElementById('stat-count-history');
-                if (histEl) {
-                    const tmMatch = /^(\d{4})-(\d{2})$/.exec(termMonth || '');
-                    if (!tmMatch) {
-                        histEl.classList.add('hidden');
-                        histEl.classList.remove('grid');
-                    } else {
-                        const thMnShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-                        const selY = parseInt(tmMatch[1], 10);
-                        const histMonths = [];
-                        for (let back = 3; back >= 0; back--) {
-                            const d0 = new Date(selY, parseInt(tmMatch[2], 10) - 1 - back, 1);
-                            histMonths.push({
-                                key: `${d0.getFullYear()}-${(d0.getMonth() + 1).toString().padStart(2, '0')}`,
-                                y: d0.getFullYear(), m: d0.getMonth(), count: 0, current: back === 0
-                            });
-                        }
-                        salesData.forEach(r => {
-                            if (!r) return;
-                            const rDate = String(r.date || '');
-                            histMonths.forEach(mo => { if (rDate.startsWith(mo.key)) mo.count++; });
-                        });
-                        const histMax = Math.max.apply(null, histMonths.map(mo => mo.count));
-                        histEl.innerHTML = histMonths.map(mo => {
-                            const label = thMnShort[mo.m] + (mo.y !== selY ? ' ' + ((mo.y + 543) % 100) : '');
-                            const barPx = mo.count > 0 ? Math.max(4, Math.round(mo.count / histMax * 40)) : 0;
-                            return `<div class="flex flex-col justify-end items-center gap-0.5">
-                                <p class="text-[9px] font-black ${mo.current ? 'text-purple-600' : 'text-slate-400'}">${mo.count > 0 ? mo.count : '–'}</p>
-                                <div class="w-full rounded-t-sm ${mo.current ? 'bg-purple-500' : 'bg-purple-200 dark:bg-purple-900/70'}" style="height:${barPx}px"></div>
-                                <p class="text-[8px] font-bold ${mo.current ? 'text-purple-600' : 'text-slate-400'} uppercase whitespace-nowrap">${label}</p>
-                            </div>`;
-                        }).join('');
-                        histEl.classList.remove('hidden');
-                        histEl.classList.add('grid');
-                    }
-                }
+                // มินิกราฟแท่ง 3 เดือนก่อนหน้า — เดือนอื่นอยู่คนละ doc ต้องดึงนับผ่าน cache (ดู renderCountHistory)
+                renderCountHistory(termMonth, countMonth);
                 safeSetText('stat-net-month', `฿${netPaidMonth.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
                 
                 // Update FEE / NO FEE breakdown
