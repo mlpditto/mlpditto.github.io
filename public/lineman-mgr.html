@@ -2434,19 +2434,20 @@
 
         // ── Stats history: มินิกราฟแท่ง 3 เดือนก่อนหน้า + เดือนที่เลือก (จำนวนออเดอร์ + เวลาเฉลี่ย) ──
         // ข้อมูลเก็บแยก doc รายเดือน (salesData มีแค่เดือนที่เลือก) → เดือนอื่นต้องดึงมาคำนวณแล้ว cache
-        const histStatsCache = {};          // key = getMonthDocId(เดือน) → {count, perfSum, perfCount}
+        const histStatsCache = {};          // key = getMonthDocId(เดือน) → {count, perfSum, perfCount, netPaid}
         const histStatsLoading = new Set(); // กันยิงซ้ำระหว่างรอโหลด
         function computeMonthStats(recs, monthKey) {
-            let count = 0, perfSum = 0, perfCount = 0;
+            let count = 0, perfSum = 0, perfCount = 0, netPaid = 0;
             (recs || []).forEach(r => {
                 if (!r || !String(r.date || '').startsWith(monthKey)) return;
                 count++;
+                if (r.isPaid) netPaid += (r.net || 0);
                 if (r.receivedTime) {
                     const perf = calculatePerformance(r.date, r.orderTime, r.receivedDate || r.date, r.receivedTime);
                     if (perf) { perfSum += perf.totalMins; perfCount++; }
                 }
             });
-            return { count, perfSum, perfCount };
+            return { count, perfSum, perfCount, netPaid };
         }
         function renderStatsHistory(termMonth, liveStats) {
             const countEl = document.getElementById('stat-count-history');
@@ -2472,6 +2473,23 @@
                 mo.label = thMnShort[mo.m] + (mo.y !== selY ? ' ' + ((mo.y + 543) % 100) : '');
                 if (mo.stats === undefined && !histStatsLoading.has(getMonthDocId(mo.key))) missing.push(mo.key);
             });
+
+            // ยอดรวม "ปีนี้" = ทุกเดือนของปีเดียวกับเดือนที่เลือก (รายชื่อเดือนจาก index) — เดือนที่ยังไม่โหลดถูกดึงรอบเดียวกัน
+            const yearMonths = [...new Set([termMonth].concat(
+                ((typeof globalMonthList !== 'undefined' && globalMonthList) || []).filter(m => String(m).startsWith(tmMatch[1] + '-'))
+            ))];
+            let yearCount = 0, yearNet = 0;
+            yearMonths.forEach(k => {
+                const s = (k === termMonth) ? liveStats : histStatsCache[getMonthDocId(k)];
+                if (s === undefined) {
+                    if (!histStatsLoading.has(getMonthDocId(k)) && missing.indexOf(k) < 0) missing.push(k);
+                    return;
+                }
+                yearCount += (s.count || 0);
+                yearNet += (s.netPaid || 0);
+            });
+            safeSetText('stat-count-year', yearCount);
+            safeSetText('stat-net-year', `฿${yearNet.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
             // วาดจากที่มีก่อน — เดือนที่ยังไม่โหลด/ไม่มีข้อมูล = "–"
             if (countEl) {
                 const maxC = Math.max.apply(null, histMonths.map(mo => (mo.stats && mo.stats.count) || 0));
@@ -2950,11 +2968,9 @@
                 const m = (now.getMonth() + 1).toString().padStart(2, '0');
                 const d = now.getDate().toString().padStart(2, '0');
                 const todayStr = `${y}-${m}-${d}`;
-                const currentYearStr = y.toString();
-
-                // Stats Calculation
-                let countToday = 0, countMonth = 0, countYear = 0;
-                let netPaidMonth = 0, netPaidYear = 0;
+                // Stats Calculation — ยอด "ปีนี้" ไม่นับจาก salesData (มีแค่เดือนเดียว) แต่รวมใน renderStatsHistory
+                let countToday = 0, countMonth = 0;
+                let netPaidMonth = 0;
                 let netPaidMonthFEE = 0, netPaidMonthNoFEE = 0;
                 let totalProfitMonth = 0;
                 let totalPerfMins = 0, perfCount = 0;
@@ -2978,10 +2994,6 @@
                             }
                         }
                     }
-                    if (rDate.startsWith(currentYearStr)) {
-                        countYear++;
-                        if (r.isPaid) netPaidYear += (r.net || 0);
-                    }
 
                     if (r.receivedTime) {
                         const perf = calculatePerformance(r.date, r.orderTime, r.receivedDate || r.date, r.receivedTime);
@@ -2997,10 +3009,9 @@
                 // Update Header Stats
                 safeSetText('stat-count-today', countToday);
                 safeSetText('stat-count-month', countMonth);
-                safeSetText('stat-count-year', countYear);
 
-                // มินิกราฟแท่ง 3 เดือนก่อนหน้า (ออเดอร์ + เวลาเฉลี่ย) — เดือนอื่นอยู่คนละ doc ดึงผ่าน cache (ดู renderStatsHistory)
-                renderStatsHistory(termMonth, { count: countMonth, perfSum: totalPerfMins, perfCount: perfCount });
+                // มินิกราฟแท่ง 3 เดือนก่อนหน้า + ยอดรวม "ปีนี้" ทั้งสองการ์ด — เดือนอื่นอยู่คนละ doc ดึงผ่าน cache (ดู renderStatsHistory)
+                renderStatsHistory(termMonth, { count: countMonth, perfSum: totalPerfMins, perfCount: perfCount, netPaid: netPaidMonth });
                 safeSetText('stat-net-month', `฿${netPaidMonth.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
                 
                 // Update FEE / NO FEE breakdown
@@ -3019,7 +3030,6 @@
                 safeSetClass('summary-profit', `text-xl font-black ${totalProfitMonth < 0 ? 'text-rose-600' : 'text-emerald-600'}`);
                 safeSetClass('summary-profit-percent', `text-[9px] font-bold leading-none ${totalProfitMonth < 0 ? 'text-rose-500/60' : 'text-emerald-600/60'}`);
 
-                safeSetText('stat-net-year', `฿${netPaidYear.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
 
                 if (perfCount > 0) {
                     const avgMins = Math.round(totalPerfMins / perfCount);
