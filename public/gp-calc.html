@@ -106,6 +106,50 @@
   .empty{color:var(--faint);font-weight:700;text-align:center;padding:14px;font-size:13px}
   @media (prefers-reduced-motion: reduce){*{transition:none!important}}
   @media (max-width:430px){.stats{grid-template-columns:1fr 1fr}}
+  /* ===== tabs + tab ใกล้หมดอายุ ===== */
+  .tabs{display:flex;gap:5px;background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:5px}
+  .tabs button{flex:1;border:none;background:transparent;color:var(--soft);font:inherit;font-size:13.5px;
+    font-weight:800;padding:9px 6px;border-radius:9px;cursor:pointer}
+  .tabs button.on{background:var(--accent-soft);color:var(--accent)}
+  .tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .panel{display:flex;flex-direction:column;gap:14px}
+  .hide{display:none!important}
+  .seg{display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:4px;gap:4px;margin-top:12px}
+  .seg button{flex:1;border:none;background:transparent;color:var(--soft);font:inherit;font-size:12.5px;
+    font-weight:800;padding:8px 4px;border-radius:8px;cursor:pointer;white-space:nowrap}
+  .seg button.on{background:var(--accent);color:#fff}
+  .seg button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .exprow{display:flex;align-items:flex-end;gap:12px;margin-top:12px;flex-wrap:wrap}
+  .exprow .field{flex:1;min-width:170px}
+  .grid2 .field{min-width:0} /* กัน date input ดันกริดล้นจอแคบ */
+  .field input[type=date]{font-size:18px;padding:6px 0}
+  .daysbadge{font-size:12.5px;font-weight:900;padding:6px 12px;border-radius:9px;background:var(--accent-soft);
+    color:var(--accent);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .daysbadge.warn{background:var(--loss-soft);color:var(--loss)}
+  .bigbox{background:var(--accent-soft);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center}
+  .bigbox .k{font-size:11px;font-weight:800;color:var(--soft);margin-bottom:4px}
+  .bigbox .v{font-size:32px;font-weight:900;color:var(--accent);font-variant-numeric:tabular-nums;line-height:1.05}
+  .bigbox .sub{font-size:11px;font-weight:700;color:var(--soft);margin-top:4px;font-variant-numeric:tabular-nums}
+  .bigbox.bad{background:var(--loss-soft)} .bigbox.bad .v{color:var(--loss)}
+  .floorline{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;font-weight:700;
+    color:var(--soft);padding:8px 2px 0}
+  .floorline b{font-variant-numeric:tabular-nums;color:var(--ink)}
+  /* ไทม์ไลน์อายุสินค้า: รับเข้า = 0% → หมดอายุ = 100% */
+  .tl{position:relative;height:78px;margin:4px 2px 0}
+  .tl .track{position:absolute;left:0;right:0;top:34px;height:12px;border-radius:7px}
+  .tl .mk{position:absolute;transform:translateX(-50%);text-align:center;white-space:nowrap;
+    font-size:10.5px;font-weight:800;font-variant-numeric:tabular-nums}
+  .tl .mk .tick{width:2px;margin:2px auto;background:currentColor;border-radius:2px}
+  .tl .mk.up{top:0;color:var(--ink)} .tl .mk.up .tick{height:16px}
+  .tl .mk.dn{top:48px;color:var(--soft)} .tl .mk.dn .tick{height:14px;margin-top:0}
+  .tl .mk.dn .tick{order:-1}
+  .tl .mk.dn{display:flex;flex-direction:column;align-items:center;top:46px}
+  .tlnote{font-size:11.5px;font-weight:700;color:var(--soft);padding:6px 2px 0}
+  .tlnote.warn{color:var(--loss)}
+  .tl .edge{position:absolute;top:28px;width:2.5px;height:24px;background:var(--faint);border-radius:2px}
+  .tl .qt{position:absolute;top:32px;width:1.5px;height:16px;background:rgba(255,255,255,.85);transform:translateX(-50%)}
+  .tlends{display:flex;justify-content:space-between;font-size:10.5px;font-weight:800;color:var(--soft);
+    padding:2px 0 0;font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
@@ -118,6 +162,13 @@
       </div>
       <button class="tog" id="tog" aria-label="สลับธีมสว่าง/มืด">◐</button>
     </div>
+
+    <div class="tabs" role="tablist">
+      <button id="tabbtn-gp" class="on" role="tab" aria-selected="true">🧮 คำนวณกำไร</button>
+      <button id="tabbtn-exp" role="tab" aria-selected="false">⏳ ใกล้หมดอายุ</button>
+    </div>
+
+    <div class="panel" id="panel-gp">
 
     <div class="card">
       <div class="grid2">
@@ -163,6 +214,86 @@
       </div>
       <div class="tgrid" id="tgrid"></div>
     </div>
+
+    </div><!-- /panel-gp -->
+
+    <!-- ================= TAB 2 : ใกล้หมดอายุ ================= -->
+    <div class="panel hide" id="panel-exp">
+      <div class="card">
+        <div class="grid2">
+          <div class="field cost">
+            <p class="lab cost">ต้นทุน (COST)</p>
+            <input id="xcost" inputmode="decimal" placeholder="0" aria-label="ต้นทุน">
+          </div>
+          <div class="field sell">
+            <p class="lab sell">ราคาขายปกติ</p>
+            <input id="xnorm" inputmode="decimal" placeholder="0" aria-label="ราคาขายปกติ">
+          </div>
+        </div>
+        <div class="grid2" style="margin-top:12px">
+          <div class="field">
+            <p class="lab">วันที่รับเข้า</p>
+            <input type="date" id="xin" aria-label="วันที่รับเข้าสินค้า">
+          </div>
+          <div class="field">
+            <p class="lab">วันลงประกาศขาย</p>
+            <input type="date" id="xpost" aria-label="วันที่ลงประกาศขาย">
+          </div>
+        </div>
+        <div class="exprow">
+          <div class="field store">
+            <p class="lab store">วันหมดอายุ (EXP)</p>
+            <input type="date" id="xexp" aria-label="วันหมดอายุ">
+          </div>
+          <span class="daysbadge hide" id="xdays"></span>
+        </div>
+        <div class="seg" id="xseg" role="group" aria-label="ช่องทางขาย">
+          <button data-gp="0" class="on">🏪 หน้าร้าน</button>
+          <button data-gp="30">GP 30%</button>
+          <button data-gp="35">GP 35%</button>
+        </div>
+      </div>
+
+      <div class="stats hide" id="xlife" style="grid-template-columns:repeat(3,1fr)"></div>
+
+      <div class="card hide" id="xtlcard">
+        <div class="sechead"><h2>ไทม์ไลน์อายุสินค้า</h2><span class="hint" id="xtlhint"></span></div>
+        <div class="tl" id="xtl"></div>
+        <div class="tlends" id="xtlends"></div>
+        <div class="tlnote" id="xtlnote"></div>
+        <div class="tgrid" id="xtlprice" style="grid-template-columns:1fr 1fr;margin-top:10px"></div>
+      </div>
+
+      <div id="xout" class="panel hide">
+        <div class="bigbox" id="xrec">
+          <div class="k" id="xreck"></div>
+          <div class="v" id="xrecv"></div>
+          <div class="sub" id="xrecsub"></div>
+        </div>
+        <div class="note" id="xwarn"></div>
+
+        <div class="card">
+          <div class="sechead"><h2>ขั้นบันไดตามวันเหลือ</h2><span class="hint" id="xladhint"></span></div>
+          <div id="xladder"></div>
+          <div class="floorline">
+            <span>🛡️ ราคาพื้น (กันขาดทุน)</span><span><b id="xfloor"></b> <span class="m" id="xfloorwhy"></span></span>
+          </div>
+        </div>
+
+        <div class="card target">
+          <div class="sechead"><h2>เป้าคืนทุน</h2><span class="hint">อยากได้เงินทุนกลับกี่ %</span></div>
+          <div class="custom" style="margin-top:0;padding-top:0;border-top:none">
+            <label for="xtarget">เป้า</label>
+            <input type="range" id="xtarget" min="50" max="150" step="5" value="100" aria-label="เป้าคืนทุน %">
+            <span class="cv"><span id="xtargetv">100</span>%</span>
+          </div>
+          <div class="tgrid" id="xtgrid" style="grid-template-columns:1fr 1fr"></div>
+        </div>
+
+        <button class="copybtn" id="xcopybtn" type="button">📋 คัดลอกสรุป</button>
+      </div>
+      <div class="empty" id="xempty">ใส่ทุน + ราคาขายปกติ + วันหมดอายุ เพื่อดูราคาแนะนำ</div>
+    </div><!-- /panel-exp -->
 
     <p class="foot">กำไร ÷ รับจริง = % margin · Break-even = ทุน ÷ (1 − GP)<br>เครื่องมือช่วยคิดเร็ว ไม่เชื่อมฐานข้อมูล ทุกค่าลบทิ้งเมื่อปิดหน้า</p>
   </div>
@@ -324,6 +455,253 @@
     })();
 
     render();
+
+    /* ================= TABS ================= */
+    function showTab(which){
+      var gp=which==='gp';
+      $('panel-gp').classList.toggle('hide',!gp);
+      $('panel-exp').classList.toggle('hide',gp);
+      $('tabbtn-gp').classList.toggle('on',gp);
+      $('tabbtn-exp').classList.toggle('on',!gp);
+      $('tabbtn-gp').setAttribute('aria-selected',gp?'true':'false');
+      $('tabbtn-exp').setAttribute('aria-selected',gp?'false':'true');
+    }
+    $('tabbtn-gp').addEventListener('click',function(){showTab('gp');});
+    $('tabbtn-exp').addEventListener('click',function(){showTab('exp');});
+
+    /* ================= TAB ใกล้หมดอายุ ================= */
+    // ขั้นบันไดส่วนลด (แก้ % ที่นี่ที่เดียว): [วันเหลือขั้นต่ำ, ส่วนลด, ป้าย]
+    var LADDER=[
+      {min:8,  disc:0.00, lab:'เกิน 7 วัน',  note:'ขายราคาปกติ'},
+      {min:4,  disc:0.15, lab:'4–7 วัน',     note:'ลด 15%'},
+      {min:2,  disc:0.30, lab:'2–3 วัน',     note:'ลด 30%'},
+      {min:-9999,disc:0.50,lab:'วันสุดท้าย', note:'ลด 50%'}
+    ];
+    var XGP=0; // GP ช่องทางที่เลือก (0/30/35)
+
+    function xTier(days){
+      for(var i=0;i<LADDER.length;i++){ if(days>=LADDER[i].min) return LADDER[i]; }
+      return LADDER[LADDER.length-1];
+    }
+    function up5(p){return Math.ceil(p/5 - 1e-9)*5;}
+    function thDate(d){return d.toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric'});}
+
+    function xDaysLeft(){
+      var dv=$('xexp').value;
+      if(!dv) return null;
+      var now=new Date(); var today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+      var exp=new Date(dv+'T00:00:00');
+      return Math.round((exp-today)/864e5);
+    }
+    function xDate(id){var v=$(id).value; return v?new Date(v+'T00:00:00'):null;}
+    function xToday(){var n=new Date(); return new Date(n.getFullYear(),n.getMonth(),n.getDate());}
+    function dayDiff(a,b){return Math.round((b-a)/864e5);}
+
+    // แถวสถิติอายุสินค้า: ถือครองมา / ประกาศมาแล้ว / ใช้อายุไป % (โชว์เฉพาะช่องที่มีข้อมูล)
+    function xLifeStats(){
+      var today=xToday(), rin=xDate('xin'), post=xDate('xpost'), exp=xDate('xexp');
+      var boxes=[];
+      if(rin){
+        var held=dayDiff(rin,today);
+        boxes.push('<div class="stat"><div class="k">ถือครองมา</div><div class="v">'+
+          (held<0?'—':held)+'</div><div class="p m">วัน</div></div>');
+      }
+      if(post){
+        var pdays=dayDiff(post,today);
+        boxes.push('<div class="stat"><div class="k">ประกาศมาแล้ว</div><div class="v">'+
+          (pdays<0?'—':pdays)+'</div><div class="p m">วัน</div></div>');
+      }
+      if(rin&&exp){
+        var total=dayDiff(rin,exp), used=dayDiff(rin,today);
+        if(total>0&&used>=0){
+          var pct=Math.min(100,used/total*100);
+          boxes.push('<div class="stat"><div class="k">ใช้อายุไปแล้ว</div><div class="v '+
+            (pct>=75?'neg':'pos')+'">'+pct.toFixed(0)+'%</div><div class="p m">จากช่วงที่ถือ '+total+' วัน</div></div>');
+        }
+      }
+      $('xlife').innerHTML=boxes.join('');
+      $('xlife').style.gridTemplateColumns='repeat('+Math.max(boxes.length,1)+',1fr)';
+      $('xlife').classList.toggle('hide',boxes.length===0);
+    }
+
+    // ไทม์ไลน์: รับเข้า = 0% → หมดอายุ = 100% · โซนสีตามขั้นบันได · หมุด "วันนี้" + "ประกาศ"
+    function xTimeline(){
+      var rin=xDate('xin'), exp=xDate('xexp'), post=xDate('xpost'), today=xToday();
+      var total=(rin&&exp)?dayDiff(rin,exp):0;
+      var show=total>0;
+      $('xtlcard').classList.toggle('hide',!show);
+      if(!show) return;
+      var pc=function(d){return Math.max(0,Math.min(100,dayDiff(rin,d)/total*100));};
+      var z=function(db){return Math.max(0,(total-db)/total*100);};   // ขอบโซน: เหลือ db วัน
+      var z7=z(7), z3=z(3), z1=z(1);
+      var tP=pc(today), pP=post?pc(post):null;
+      var lp=function(p){return Math.max(4,Math.min(96,p));}          // กันป้ายตกขอบ
+      var h='<div class="track" style="background:linear-gradient(to right,'+
+        'var(--profit) 0 '+z7+'%,var(--star) '+z7+'% '+z3+'%,#fb923c '+z3+'% '+z1+'%,var(--loss) '+z1+'% 100%)"></div>';
+      h+='<div class="edge" style="left:0"></div><div class="edge" style="right:0"></div>';
+      h+=[25,50,75].map(function(q){return '<div class="qt" style="left:'+q+'%" title="'+q+'%"></div>';}).join('');
+      h+='<div class="mk up" style="left:'+lp(tP)+'%"><div>วันนี้ '+tP.toFixed(0)+'%</div><div class="tick"></div></div>';
+      if(pP!==null) h+='<div class="mk dn" style="left:'+lp(pP)+'%"><div class="tick"></div><div>ประกาศ '+pP.toFixed(0)+'%</div></div>';
+      $('xtl').innerHTML=h;
+      $('xtlends').innerHTML='<span>📥 รับเข้า '+thDate(rin)+' · Day 1</span><span>หมดอายุ '+thDate(exp)+' ⛔</span>';
+      $('xtlhint').textContent='รวม '+total+' วัน';
+      var note, warn=false;
+      if(pP===null){ note='ใส่วันลงประกาศขาย เพื่อดูว่าเริ่มขายตอนกี่ % ของอายุ'; }
+      else{
+        note='ลงประกาศตอนใช้อายุไป '+pP.toFixed(0)+'% · ขายมาแล้ว '+Math.max(0,dayDiff(post,today))+
+          ' วัน (กิน '+Math.max(0,tP-pP).toFixed(0)+'% ของอายุ)';
+        if(pP>50){ note+=' — ประกาศช้า เกินครึ่งอายุแล้วเพิ่งเริ่มขาย'; warn=true; }
+      }
+      $('xtlnote').textContent=note;
+      $('xtlnote').className='tlnote'+(warn?' warn':'');
+
+      // ราคาตามสัดส่วนอายุคงเหลือ: ราคาปกติ × เหลือ% — โชว์คู่ ไม่กันพื้น / กันพื้น
+      var cost=n('xcost'), norm=n('xnorm');
+      var remain=Math.max(0,100-tP);
+      var pbox='';
+      if(cost>0 && norm>0){
+        var gp=XGP/100, floor=cost/(1-gp);
+        if(remain<=0){
+          pbox='<div class="tbox" style="grid-column:1/-1"><div class="k">ราคาตามสัดส่วนอายุ</div>'+
+            '<div class="v" style="color:var(--loss)">หมดอายุ — ห้ามขาย</div></div>';
+        }else{
+          var lifeP=norm*remain/100;
+          var bumped=lifeP<floor;
+          var rawFin=up5(lifeP), rawPf=rawFin*(1-gp)-cost;
+          var flrFin=up5(Math.max(lifeP,floor)), flrPf=flrFin*(1-gp)-cost;
+          pbox='<div class="tbox"><div class="k">ตามสัดส่วนอายุ · ไม่กันพื้น</div>'+
+            '<div class="v"'+(rawPf<0?' style="color:var(--loss)"':'')+'>฿'+rawFin.toLocaleString()+'</div>'+
+            '<div class="sub">฿'+money(norm)+' × '+remain.toFixed(1)+'% = ฿'+money(lifeP)+' · '+
+              (rawPf<0?'ขาดทุน ':'กำไร ')+fmtSign(rawPf)+'</div></div>'+
+            '<div class="tbox"><div class="k">กันขาดทุน · ไม่ต่ำกว่าพื้น</div>'+
+            '<div class="v">฿'+flrFin.toLocaleString()+'</div>'+
+            '<div class="sub">'+(bumped
+              ?'ดีดขึ้นราคาพื้น ฿'+money(floor)+(XGP>0?' (หลังหัก GP '+XGP+'%)':' (= ทุน)')+' · กำไร '+fmtSign(flrPf)
+              :'ยังไม่แตะพื้น ฿'+money(floor)+' · กำไร '+fmtSign(flrPf))+'</div></div>';
+        }
+      }
+      $('xtlprice').innerHTML=pbox;
+    }
+
+    function xrender(){
+      var cost=n('xcost'), norm=n('xnorm'), days=xDaysLeft();
+      var gp=XGP/100, gpLab=XGP===0?'หน้าร้าน':'LINE MAN GP '+XGP+'%';
+      var target=parseInt($('xtarget').value,10);
+      $('xtargetv').textContent=target;
+
+      xLifeStats();
+      xTimeline();
+
+      // ป้ายวันเหลือ โชว์ทันทีที่เลือกวัน
+      if(days===null){ $('xdays').classList.add('hide'); }
+      else{
+        $('xdays').classList.remove('hide');
+        $('xdays').className='daysbadge'+(days<=3?' warn':'');
+        $('xdays').textContent=days<0?('หมดอายุแล้ว '+Math.abs(days)+' วัน'):days===0?'หมดอายุวันนี้!':('เหลือ '+days+' วัน');
+      }
+
+      var ready=cost>0 && norm>0 && days!==null;
+      $('xout').classList.toggle('hide',!ready);
+      $('xempty').classList.toggle('hide',ready);
+      if(!ready) return;
+
+      var floor=cost/(1-gp);            // ราคาพื้น: ขายเท่านี้ = คืนทุนพอดี (โดน GP แล้ว)
+      var tier=xTier(days);
+      var raw=norm*(1-tier.disc);       // ราคาตามขั้นบันได
+      var bumped=raw<floor;             // ต่ำกว่าพื้น → ดีดขึ้นมาที่พื้น
+      var rec=up5(Math.max(raw,floor));
+      var recNet=rec*(1-gp), recProfit=recNet-cost;
+      var expired=days<0;
+
+      // กล่องราคาแนะนำ
+      $('xrec').className='bigbox'+(expired?' bad':'');
+      $('xreck').textContent=expired?'สินค้าหมดอายุแล้ว — ห้ามขาย':'ราคาแนะนำวันนี้ · '+gpLab;
+      $('xrecv').textContent=expired?'✕':'฿'+rec.toLocaleString();
+      $('xrecsub').innerHTML=expired?('หมดอายุ '+thDate(new Date($('xexp').value+'T00:00:00')))
+        :(tier.lab+' → '+tier.note+(bumped?' (แท้ ฿'+up5(raw).toLocaleString()+' → ดีดขึ้นราคาพื้น)':'')+
+          ' · กำไร '+fmtSign(recProfit)+(gp>0?' <span class="m">(รับจริง ฿'+money(recNet)+')</span>':''));
+
+      // เตือน
+      if(expired){ $('xwarn').className='note warn';
+        $('xwarn').innerHTML='<span aria-hidden="true">⛔</span><span>เลยวันหมดอายุแล้ว — คัดออกจากชั้น อย่าขายต่อ</span>';
+      }else if(bumped){ $('xwarn').className='note warn';
+        $('xwarn').innerHTML='<span aria-hidden="true">⚠️</span><span>ลดตามขั้นบันไดแล้วจะ<b>ต่ำกว่าราคาพื้น ฿'+money(floor)+'</b> — ระบบดีดราคาขึ้นมากันขาดทุนให้แล้ว</span>';
+      }else if(norm<floor){ $('xwarn').className='note warn';
+        $('xwarn').innerHTML='<span aria-hidden="true">⚠️</span><span>ราคาปกติ ฿'+money(norm)+' ก็ยัง<b>ต่ำกว่าราคาพื้น ฿'+money(floor)+'</b> ของช่องทางนี้ — ขายเมื่อไหร่ขาดทุนเมื่อนั้น</span>';
+      }else{ $('xwarn').className='note'; $('xwarn').innerHTML=''; }
+
+      // ตารางขั้นบันได (ไฮไลต์ขั้นปัจจุบัน)
+      $('xladhint').textContent='ฐานราคา ฿'+money(norm)+' · '+gpLab;
+      var body=LADDER.map(function(t){
+        var p=norm*(1-t.disc), bump=p<floor, fin=up5(Math.max(p,floor));
+        var pf=fin*(1-gp)-cost;
+        var cur=(t===tier)&&!expired;
+        var cls=cur?'real':(pf<0?'loss':'');
+        return '<tr class="'+cls+'"><td>'+t.lab+(cur?'<span class="gpbadge">วันนี้</span>':'')+'</td>'+
+          '<td class="m">−'+(t.disc*100).toFixed(0)+'%</td>'+
+          '<td class="money">฿'+fin.toLocaleString()+(bump?' <span class="gpbadge free">พื้น</span><br><span class="m" style="font-size:10px">แท้ ฿'+up5(p).toLocaleString()+'</span>':'')+'</td>'+
+          '<td class="'+(pf<0?'neg':'pos')+'">'+fmtSign(pf)+'</td></tr>';
+      }).join('');
+      $('xladder').innerHTML='<table><thead><tr><th>วันเหลือ</th><th>ลด</th><th>ตั้งราคา</th><th>กำไร</th></tr></thead><tbody>'+body+'</tbody></table>';
+      $('xfloor').textContent='฿'+money(floor);
+      $('xfloorwhy').textContent=gp>0?('= ทุน ÷ (1−'+XGP+'%)'):'= ทุน';
+
+      // เป้าคืนทุน
+      var tp=cost*(target/100)/(1-gp), tpr=up5(tp);
+      var tnet=tpr*(1-gp);
+      $('xtgrid').innerHTML=
+        '<div class="tbox"><div class="k">คืนทุน '+target+'% → ตั้งราคา</div><div class="v">฿'+tpr.toLocaleString()+'</div>'+
+          (tpr-tp>0.005?'<div class="sub">เป้าเป๊ะ ฿'+money(tp)+'</div>':'')+'</div>'+
+        '<div class="tbox"><div class="k">ได้เงินกลับ</div><div class="v '+(tnet-cost<0?'neg':'pos')+'">฿'+money(tnet)+'</div>'+
+          '<div class="sub">'+fmtSign(tnet-cost)+' จากทุน ฿'+money(cost)+'</div></div>';
+    }
+
+    // สรุปสำหรับก๊อปวางใน LINE
+    function xSummaryText(){
+      var cost=n('xcost'), norm=n('xnorm'), days=xDaysLeft();
+      var gp=XGP/100, tier=xTier(days), floor=cost/(1-gp);
+      var rec=up5(Math.max(norm*(1-tier.disc),floor));
+      var L=['ใกล้หมดอายุ — ทุน ฿'+money(cost)+' · ปกติ ฿'+money(norm)];
+      L.push('หมดอายุ '+thDate(new Date($('xexp').value+'T00:00:00'))+' (เหลือ '+days+' วัน)');
+      var rin=xDate('xin'), post=xDate('xpost'), today=xToday();
+      if(rin||post){
+        var P=[];
+        if(rin) P.push('รับเข้า '+thDate(rin)+' (ถือมา '+dayDiff(rin,today)+' วัน)');
+        if(post) P.push('ประกาศมาแล้ว '+dayDiff(post,today)+' วัน');
+        L.push(P.join(' · '));
+      }
+      L.push((XGP===0?'หน้าร้าน':'LINE MAN GP'+XGP)+' → แนะนำ ฿'+rec.toLocaleString()+' ('+tier.note+') · ราคาพื้น ฿'+money(floor));
+      if(rin){
+        var total=dayDiff(rin,xDate('xexp')), used=dayDiff(rin,today);
+        if(total>0&&used>=0&&used<total){
+          var remain=Math.max(0,100-used/total*100);
+          L.push('ตามสัดส่วนอายุ (เหลือ '+remain.toFixed(0)+'%) → ฿'+up5(Math.max(norm*remain/100,floor)).toLocaleString());
+        }
+      }
+      return L.join('\n');
+    }
+    $('xcopybtn').addEventListener('click',function(){
+      var txt=xSummaryText();
+      var btn=$('xcopybtn');
+      var done=function(){
+        btn.classList.add('done'); btn.textContent='✓ คัดลอกแล้ว';
+        setTimeout(function(){btn.classList.remove('done'); btn.textContent='📋 คัดลอกสรุป';},1600);
+      };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(txt).then(done,function(){fallbackCopy(txt);done();});
+      }else{ fallbackCopy(txt); done(); }
+    });
+
+    // segmented ช่องทาง
+    Array.prototype.forEach.call(document.querySelectorAll('#xseg button'),function(b){
+      b.addEventListener('click',function(){
+        XGP=parseInt(b.getAttribute('data-gp'),10);
+        Array.prototype.forEach.call(document.querySelectorAll('#xseg button'),function(x){x.classList.toggle('on',x===b);});
+        xrender();
+      });
+    });
+    ['xcost','xnorm','xexp','xin','xpost','xtarget'].forEach(function(id){ $(id).addEventListener('input',xrender); });
+    xrender();
   })();
 </script>
 </body>
