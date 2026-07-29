@@ -71,7 +71,7 @@
 | `RB-HEALTH` | Reckitt — RB Health | 1 | — | `DKSH TEI RB HEALTH` |
 | `MUNDIPHARMA` | Mundipharma | 1 | — | `DKSH UD3 MUNDIPHARMA-OTHERS` |
 | `AZ` | AstraZeneca | 1 | — | `DKSH UE5 AZ-SEROQUEL` |
-| `TMP` | TMP | 1 | — | `DKSH TSM TMP`<br>⚠️ ไม่รู้ว่า TMP ย่อจากอะไร — ช่วยเติมชื่อเต็ม |
+| `TMP` | DKSH TSM TMP | 1 | — | `DKSH TSM TMP`<br>เติมชื่อแล้ว 29 ก.ค. 2026 (ใช้ชื่อดิบไปก่อน ยังไม่รู้ TMP ย่อจากอะไร) |
 | `ALCON` | Alcon Pharma | 1 | — | `DKSH TT2 ALCON PHARMA` |
 | `BLACKMORES` | Blackmores | 1 | — | `DKSH T61 BLACKMORES` |
 | `TEVA` | Teva Pharm-Med | 1 | — | `DKLL TEP TEVA PHARM-MED` |
@@ -95,7 +95,7 @@
    - ตรวจ data แล้ว: สินค้าขึ้นต้น PNCP มี 4 ตัว (`[225] I-NOX`, `[2657] PROPOLIS spray`, `[5327] DILUECA`, `[5579] MULTINUTRA`) — **ไม่มีตัวไหนมีเจ้าใน `prices` เลย** และมี `[5327]` ตัวเดียวที่ `suppliers[]` กรอกคำว่า `PNCP` ไว้
    - **เสนอ: แก้ที่ data 1 doc ดีกว่าตั้ง alias ถาวร** — เปลี่ยน `suppliers[0].name` ของ `[5327]` จาก `PNCP` เป็น `NUT` (ทุน 113.2433 คงเดิม) แล้วเลิกใช้ alias `PNCP` ไปเลย เพราะถ้าปล่อยให้ `PNCP` เป็น alias ของเจ้า วันหลังใครกรอกชื่อนำสินค้าลงช่องเจ้าอีกก็จะกลายเป็น "เจ้า" ที่ถูกต้องขึ้นมาเงียบ ๆ
    - ⚠️ ต้องยืนยันก่อน: `[5327] DILUECA` ล็อตนั้น**ซื้อจาก NUT จริงไหม** (คุณบอกว่า "โดยมาก" ไม่ใช่ "ทุกตัว") ถ้าใช่ผมแก้ให้ ถ้าไม่แน่ใจ ปล่อยไว้ก่อนได้ ไม่กระทบอะไร
-2. **`DKSH TSM TMP`** — ยังไม่รู้ว่า TMP ย่อจากอะไร (คุณก็ยังไม่ทราบ) — **คงโค้ด `TMP` ไว้ตามชื่อดิบ** ใช้งานได้ปกติ ไว้เจอบิลจริงค่อยเติมชื่อเต็มทีหลัง
+2. ~~**`DKSH TSM TMP`** — ยังไม่รู้ว่า TMP ย่อจากอะไร~~ **เติมชื่อแล้ว 29 ก.ค. 2026** — user เคาะใช้ "DKSH TSM TMP" เป็น `name` ไปก่อน (PATCH ใน Firestore แล้ว) ถ้าวันหน้ารู้ชื่อเต็มจริงค่อยแก้อีกรอบ
 3. ~~Abbott / Reckitt / Takeda / MONTANA-FUTURO+NEXCARE / OREX-NEOPLAST~~ **ตอบแล้ว 17 ก.ค. 2026: แยกทั้งหมด** (สะท้อนในตารางแล้ว)
 
 ## ถ้าตารางนี้โอเค ขั้นต่อไปที่เสนอ
