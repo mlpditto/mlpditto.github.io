@@ -1340,6 +1340,17 @@
                         <div id="m-profit-body" class="hidden">
                             <!-- การ์ดสรุปกำไรแบบ gp-calc: NO FEE / GP หลัก / GP ทางเลือก / หน้าร้าน (ราคาปลีก) -->
                             <div id="m-profit-cards" class="grid grid-cols-4 gap-1.5 mb-2"></div>
+                            <!-- สไลเดอร์ GP กำหนดเอง: จำลอง % หักอิสระจากราคา LINE MAN (แสดงอย่างเดียว ไม่บันทึก) -->
+                            <div id="m-gp-slider-box" class="rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 px-2 py-1.5 mb-2">
+                                <div class="flex items-center justify-between text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                                    <span><i class="fas fa-sliders-h mr-1"></i>GP กำหนดเอง</span>
+                                    <span id="m-gp-slider-val" class="font-black tabular-nums text-slate-700 dark:text-slate-200">-30%</span>
+                                </div>
+                                <input type="range" id="m-gp-slider" min="0" max="50" step="1" value="30"
+                                    oninput="updateMasterProfit()"
+                                    class="w-full h-1.5 mt-1 cursor-pointer" style="accent-color:#00B14F">
+                                <div id="m-gp-slider-result" class="text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-0.5"></div>
+                            </div>
                             <table class="w-full text-xs">
                                 <thead>
                                     <tr class="text-[9px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
@@ -4562,6 +4573,26 @@
                     card('หน้าร้าน', retail);
             }
 
+            // สไลเดอร์ GP กำหนดเอง — จำลองเปอร์เซ็นต์หักเองจากราคา LINE MAN (ไม่บันทึกลง data)
+            const gpSlider = document.getElementById('m-gp-slider');
+            if (gpSlider) {
+                const sRate = (parseFloat(gpSlider.value) || 0) / 100;
+                const valEl = document.getElementById('m-gp-slider-val');
+                if (valEl) valEl.textContent = `-${Math.round(sRate * 100)}%`;
+                const resEl = document.getElementById('m-gp-slider-result');
+                if (resEl) {
+                    if (lm > 0) {
+                        const sNet = lm * (1 - sRate);
+                        const sProfit = sNet - cost;
+                        const sPct = sNet > 0 ? (sProfit / sNet) * 100 : 0;
+                        const sColor = sProfit < 0 ? 'text-rose-500' : 'text-emerald-600 dark:text-emerald-400';
+                        resEl.innerHTML = `รับจริง <b class="tabular-nums text-slate-700 dark:text-slate-200">฿${money(sNet)}</b> · กำไร <b class="tabular-nums ${sColor}">${sProfit < 0 ? '' : '+'}฿${money(sProfit)} (${sPct.toFixed(1)}%)</b>`;
+                    } else {
+                        resEl.innerHTML = `<span class="text-slate-400 dark:text-slate-500">ใส่ราคา LINE MAN เพื่อลองเลื่อน</span>`;
+                    }
+                }
+            }
+
             rowsEl.innerHTML = rows.map(r => {
                 const loss = r.profit < 0;
                 const isBest = !loss && r.profit === best && rows.length > 1;
@@ -4888,6 +4919,7 @@
                 document.getElementById('m-mlpCode').value = m.mlpId || '';
                 document.getElementById('m-aliases').value = splitMasterAliases(m.aliases).join('\n');
                 document.getElementById('m-target-margin').value = (m.targetMargin > 0 ? m.targetMargin : 30);
+                const gpS = document.getElementById('m-gp-slider'); if (gpS) gpS.value = 30;
             } else {
                 document.getElementById('m-name').value = name;
                 document.getElementById('m-originalName').value = name;
@@ -4902,6 +4934,7 @@
                 document.getElementById('m-mlpCode').value = '';
                 document.getElementById('m-aliases').value = '';
                 document.getElementById('m-target-margin').value = 30;
+                const gpS2 = document.getElementById('m-gp-slider'); if (gpS2) gpS2.value = 30;
             }
             updateMasterProfit();
             masterFormInitial = masterFormSnapshot();   // จุดอ้างอิง dirty-check ของปุ่ม X
