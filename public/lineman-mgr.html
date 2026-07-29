@@ -3220,12 +3220,19 @@
                                     const costHtml = unitCost > 0
                                         ? `<span class="text-[9px] font-bold text-rose-400/90" title="${costFromMaster ? 'ทุนปัจจุบันจาก Master (ไม่ใช่ทุน ณ วันขาย)' : 'ทุน/ชิ้นที่บันทึกในบิล'}">ทุน ฿${unitCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${costFromMaster ? '<span class="text-rose-300">*</span>' : ''}</span>`
                                         : `<span class="text-[9px] font-bold text-slate-300" title="ไม่มีข้อมูลทุน">ทุน -</span>`;
+                                    // ราคาหลังหัก GP ต่อบรรทัด = ยอดบรรทัด × (NET/GROSS ของบิล) — NO FEE/ไม่มีฐานคำนวณ = โชว์ราคาเดิมอย่างเดียว
+                                    const lineTotal = i.qty * i.price;
+                                    const gpFactor = (!record.isNoFee && (record.gross || 0) > 0 && (record.net || 0) > 0) ? (record.net / record.gross) : null;
+                                    const fmt2 = v => v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                                    const priceHtml = (gpFactor !== null && lineTotal > 0)
+                                        ? `<span class="font-bold text-indigo-500 dark:text-indigo-400" title="ราคาหลังหัก GP (ตามสัดส่วน NET/GROSS ของบิลนี้)">฿${fmt2(lineTotal * gpFactor)}</span><span class="text-slate-300 font-bold"> / </span><span class="font-bold text-slate-400">฿${fmt2(lineTotal)}</span>`
+                                        : `<span class="font-bold text-slate-400">฿${fmt2(lineTotal)}</span>`;
                                     return `
                                     <div class="flex justify-between items-start gap-1 text-[10px]">
                                         <span class="text-slate-500">${i.name} x${i.qty}</span>
                                         <span class="flex flex-col items-end flex-shrink-0 leading-tight">
                                             <span class="flex items-center gap-1.5">
-                                                <span class="font-bold text-slate-400">฿${(i.qty * i.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                ${priceHtml}
                                                 <button onclick="openMasterEditFromBill(this)" data-item-name="${String(i.name || '').replace(/"/g, '&quot;')}" data-bill-uid="${record.recordedAt}" tabindex="-1" title="แก้ข้อมูล MASTER ของสินค้านี้ (ราคา/ต้นทุน)" class="text-slate-300 hover:text-blue-500 transition-colors"><i class="fas fa-info-circle"></i></button>
                                             </span>
                                             ${costHtml}
