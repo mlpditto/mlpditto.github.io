@@ -1394,6 +1394,12 @@
                         </div>
                     </div>
                     </div>
+                    <!-- แถบสรุปกำไรย่อ sticky ล่าง (เฉพาะมือถือ) — ชุดเดียวกับการ์ดในกล่องคาดการณ์กำไร อัปเดตสดตอนแก้ทุน/ราคา -->
+                    <div id="m-profit-sticky" class="md:hidden hidden sticky bottom-0 -mx-1 px-1">
+                        <div id="m-profit-sticky-cards"
+                            class="grid grid-cols-4 gap-1 rounded-t-xl border border-b-0 border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm px-2 py-1.5 shadow-[0_-4px_14px_rgba(0,0,0,.08)]">
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -4532,6 +4538,7 @@
                 emptyEl.textContent = msg;
                 emptyEl.classList.remove('hidden');
                 bodyEl.classList.add('hidden');
+                document.getElementById('m-profit-sticky')?.classList.add('hidden');
             };
             if (!(cost > 0)) return show('ใส่ราคาทุนเพื่อดูกำไร');
             if (!(lm > 0 || retail > 0 || wholesale > 0 || sticker > 0)) return show('ใส่ราคาขายเพื่อดูกำไร');
@@ -4571,6 +4578,31 @@
                     card(`GP ${GP_RATE * 100}%`, lm * (1 - GP_RATE)) +
                     card(`GP ${GP_RATE_ALT * 100}%`, lm * (1 - GP_RATE_ALT)) +
                     card('หน้าร้าน', retail);
+            }
+
+            // แถบสรุปกำไรย่อ sticky ล่างจอ (มือถือ) — ตัวเลขชุดเดียวกับการ์ดด้านบน
+            const stickyEl = document.getElementById('m-profit-sticky');
+            const stickyCardsEl = document.getElementById('m-profit-sticky-cards');
+            if (stickyEl && stickyCardsEl) {
+                const mini = (label, price) => {
+                    const has = price > 0;
+                    const profit = has ? price - cost : 0;
+                    const pct = has && price > 0 ? (profit / price) * 100 : 0;
+                    const pColor = !has ? 'text-slate-300 dark:text-slate-600'
+                        : profit < 0 ? 'text-rose-500' : 'text-emerald-600 dark:text-emerald-400';
+                    return `
+                        <div class="text-center">
+                            <div class="text-[7px] font-black uppercase tracking-wide text-slate-400 dark:text-slate-500 whitespace-nowrap">${label}</div>
+                            <div class="text-[11px] font-black tabular-nums leading-tight ${pColor}">${has ? (profit < 0 ? '' : '+') + money(profit) : '—'}</div>
+                            <div class="text-[7px] font-bold tabular-nums ${has ? 'text-slate-400 dark:text-slate-500' : 'text-slate-300 dark:text-slate-600'}">${has ? pct.toFixed(1) + '%' : ''}</div>
+                        </div>`;
+                };
+                stickyCardsEl.innerHTML =
+                    mini('NO FEE', lm) +
+                    mini(`GP ${GP_RATE * 100}%`, lm * (1 - GP_RATE)) +
+                    mini(`GP ${GP_RATE_ALT * 100}%`, lm * (1 - GP_RATE_ALT)) +
+                    mini('หน้าร้าน', retail);
+                stickyEl.classList.remove('hidden');
             }
 
             // สไลเดอร์ GP กำหนดเอง — จำลองเปอร์เซ็นต์หักเองจากราคา LINE MAN (ไม่บันทึกลง data)
