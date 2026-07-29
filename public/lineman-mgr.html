@@ -256,8 +256,12 @@
         .gp-seg-group { display: inline-flex; background: #f1f5f9; border-radius: 9999px; padding: 2px; }
         .dark .gp-seg-group { background: #0f172a; }
         .gp-seg { padding: 3px 10px; font-size: 11px; font-weight: 900; letter-spacing: -.02em;
-                  border-radius: 9999px; color: #94a3b8; transition: all .15s; line-height: 1.4; cursor: pointer; }
+                  border-radius: 9999px; color: #94a3b8; transition: all .15s; line-height: 1.4; cursor: pointer;
+                  display: inline-flex; flex-direction: column; align-items: center; }
         .gp-seg:hover { color: #475569; }
+        /* บรรทัดยอดเงินใน chip — โชว์เมื่อมี Gross เท่านั้น (JS คุม display) */
+        .gp-seg-amt { font-size: 8px; font-weight: 700; letter-spacing: 0; line-height: 1.15; opacity: .75; }
+        @media (max-width: 379px) { .gp-seg-amt { display: none !important; } }
         .gp-seg-active { background: #fff; color: #0f172a; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
         .dark .gp-seg-active { background: #334155; color: #fff; }
         .gp-seg-active[data-rate="0"]  { color: #e11d48; }  /* rose  = -0% */
@@ -2268,6 +2272,7 @@
             }
 
             updateItemNetHints('items-container');
+            updateGpSegAmounts('add');
         }
 
         // ---- DD/MM/YYYY overlay สำหรับ native date input (paidDate / e-paidDate) ----
@@ -2340,6 +2345,30 @@
             const mp = document.querySelector(`.net-pill[data-scope="${scope}"]`);
             if (mp) mp.classList.toggle('net-pill-active',
                 !!document.getElementById(`${p}isManualNet`)?.checked);
+        }
+
+        // อัปเดตบรรทัดยอดเงินในทุก chip GP ตาม Gross ปัจจุบัน (-30% → -฿73.20) — Gross 0 = ซ่อน chip กลับทรงเดิม
+        function updateGpSegAmounts(mode) {
+            const p = mode === 'edit' ? 'e-' : '';
+            const scope = mode === 'edit' ? 'edit' : 'add';
+            const gross = parseFloat(document.getElementById(`${p}grossAmount`)?.value) || 0;
+            document.querySelectorAll(`.gp-seg[data-scope="${scope}"]`).forEach(b => {
+                let amt = b.querySelector('.gp-seg-amt');
+                if (!amt) {
+                    amt = document.createElement('span');
+                    amt.className = 'gp-seg-amt';
+                    b.appendChild(amt);
+                }
+                if (gross > 0) {
+                    const rate = (parseInt(b.dataset.rate, 10) || 0) / 100;
+                    amt.textContent = rate > 0
+                        ? `-฿${(gross * rate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        : '฿0.00';
+                    amt.style.display = '';
+                } else {
+                    amt.style.display = 'none';
+                }
+            });
         }
 
         function initDefaults() {
@@ -3850,6 +3879,7 @@
             }
 
             updateItemNetHints('e-items-container');
+            updateGpSegAmounts('edit');
         }
 
         function cancelEdit() {
