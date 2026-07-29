@@ -6523,3 +6523,58 @@ html.dark .import-result-files strong {
 html.dark .import-result-check.warn {
   border-color: rgba(232, 162, 60, 0.35);
 }
+
+/* dropdown แนะนำเจ้า #cknc-supplier-suggest (แทน datalist ช่อง "เจ้า" — ค้นข้ามภาษา/alias)
+   singleton ระดับ body ตำแหน่ง fixed ตาม input; z สูงกว่า drawer/modal (9000) */
+#cknc-supplier-suggest {
+  position: fixed;
+  z-index: 9500;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  font-size: 13px;
+}
+
+#cknc-supplier-suggest .suggest-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+#cknc-supplier-suggest .suggest-item:hover,
+#cknc-supplier-suggest .suggest-item.active {
+  background: var(--mint);
+}
+
+#cknc-supplier-suggest .suggest-code {
+  font-weight: 800;
+  color: var(--ink);
+}
+
+#cknc-supplier-suggest .suggest-label {
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+html.dark #cknc-supplier-suggest {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+html.dark #cknc-supplier-suggest .suggest-item:hover,
+html.dark #cknc-supplier-suggest .suggest-item.active {
+  background: #334155;
+}
+
+html.dark #cknc-supplier-suggest .suggest-code {
+  color: #e2e8f0;
+}

@@ -578,20 +578,114 @@ function masterSupplierOf(master) {
   return best ? best.name : "";
 }
 
-// datalist โค้ดเจ้าจากทะเบียน suppliers สำหรับ autocomplete ช่อง "เจ้า" ในแถวยา
+// รายการเจ้าสำหรับ dropdown ค้นหาเอง (แทน datalist — กติกา match ของ datalist ต่างกันตามเบราว์เซอร์
+// และไม่รู้จัก aliases เช่นพิมพ์ "ยาไพ" ไม่เจอ YAPAIBOON) — port แนวเดียวกับ #supplier-suggest ใน lineman-mgr
+let supplierSuggestItems = [];
 function updateCkncSupplierDatalist() {
-  const dl = document.getElementById("cknc-supplier-list");
-  if (!dl) return;
-  const seen = new Set();
-  const options = [];
-  supplierRegistry.forEach((s) => {
-    const code = clean(s.code);
-    if (!code || seen.has(code)) return;
-    seen.add(code);
-    const label = clean(s.name);
-    options.push(`<option value="${htmlEscape(code)}">${label ? htmlEscape(label) : ""}</option>`);
-  });
-  dl.innerHTML = options.join("");
+  const freq = {};
+  ((state.masterProducts) || []).forEach((m) => (m.suppliers || []).forEach((s) => {
+    const n = normalizeSupplierName(s && s.name);
+    if (n) freq[n] = (freq[n] || 0) + 1;
+  }));
+  const fromRegistry = supplierRegistry.map((s) => ({
+    code: s.code,
+    label: s.name || "",
+    keys: [s.code, s.name, ...(s.aliases || []), ...(s.aliasKeys || [])].map(supplierKeyOf).filter(Boolean),
+  }));
+  // เจ้าที่อยู่ใน master แต่ยังไม่มีในทะเบียน — ต้องโชว์ด้วย ไม่งั้นของเดิมหายจากตัวเลือกเงียบ ๆ
+  const unknown = Object.keys(freq).filter((n) => !supplierAliasToCode.has(supplierKeyOf(n)))
+    .map((n) => ({ code: n, label: "ยังไม่มีในทะเบียนเจ้า", keys: [supplierKeyOf(n)] }));
+  supplierSuggestItems = [...fromRegistry, ...unknown]
+    .map((o) => ({ ...o, freq: freq[o.code] || 0 }))
+    .sort((a, b) => b.freq - a.freq || a.code.localeCompare(b.code));
+}
+
+// ===== dropdown แนะนำชื่อเจ้า (singleton ระดับ body, z สูงกว่า drawer/modal 9000) =====
+let supplierSuggestFor = null;    // input ที่ dropdown ผูกอยู่
+let supplierSuggestIndex = -1;    // แถวที่เลือกด้วยลูกศร
+function supplierSuggestEl() {
+  let el = document.getElementById("cknc-supplier-suggest");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "cknc-supplier-suggest";
+    el.hidden = true;
+    document.body.appendChild(el);
+    // pointerdown มาก่อน blur → เลือกได้ทั้งเมาส์และนิ้ว
+    el.addEventListener("pointerdown", (e) => {
+      const item = e.target.closest("[data-code]");
+      if (!item) return;
+      e.preventDefault();
+      supplierSuggestPick(item.dataset.code);
+    });
+    // เลื่อน scroll ที่ไหนก็ตาม → ตำแหน่ง dropdown เพี้ยน ปิดทิ้ง
+    document.addEventListener("scroll", () => supplierSuggestHide(), true);
+  }
+  return el;
+}
+function supplierSuggestMatches(q) {
+  const key = supplierKeyOf(q);
+  if (!key) return supplierSuggestItems.slice(0, 8);   // ยังไม่พิมพ์ = โชว์เจ้าที่ใช้บ่อย
+  return supplierSuggestItems
+    .map((o) => {
+      const starts = o.keys.some((k) => k.startsWith(key));
+      if (!starts && !o.keys.some((k) => k.includes(key))) return null;
+      return { o, rank: starts ? 0 : 1 };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.rank - b.rank || b.o.freq - a.o.freq || a.o.code.localeCompare(b.o.code))
+    .slice(0, 8).map((x) => x.o);
+}
+function supplierSuggestShow(input) {
+  const el = supplierSuggestEl();
+  const list = supplierSuggestMatches(input.value);
+  if (!list.length) return supplierSuggestHide();
+  supplierSuggestFor = input;
+  supplierSuggestIndex = -1;
+  el.innerHTML = list.map((o) => `
+    <div data-code="${htmlEscape(o.code)}" class="suggest-item">
+      <span class="suggest-code">${htmlEscape(o.code)}</span>
+      <span class="suggest-label">${htmlEscape(o.label)}</span>
+    </div>`).join("");
+  const r = input.getBoundingClientRect();
+  el.style.left = `${Math.round(r.left)}px`;
+  el.style.top = `${Math.round(r.bottom + 4)}px`;
+  el.style.width = `${Math.round(Math.max(r.width, 230))}px`;
+  el.hidden = false;
+}
+function supplierSuggestHide() {
+  const el = document.getElementById("cknc-supplier-suggest");
+  if (el) el.hidden = true;
+  supplierSuggestFor = null;
+  supplierSuggestIndex = -1;
+}
+function supplierSuggestPick(code) {
+  const input = supplierSuggestFor;
+  supplierSuggestHide();
+  if (input) {
+    input.value = code;
+    // ให้ delegation change เดิมอัปเดต state + re-render แถว (เส้นทางเดียวกับผู้ใช้พิมพ์เอง)
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+}
+function supplierSuggestBlur() { setTimeout(supplierSuggestHide, 150); }
+function supplierSuggestKey(e, input) {
+  const el = document.getElementById("cknc-supplier-suggest");
+  if (!el || el.hidden) return;
+  const items = [...el.querySelectorAll("[data-code]")];
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    e.preventDefault();
+    supplierSuggestIndex = (supplierSuggestIndex + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+    items.forEach((it, i) => it.classList.toggle("active", i === supplierSuggestIndex));
+    items[supplierSuggestIndex]?.scrollIntoView({ block: "nearest" });
+  } else if (e.key === "Enter") {
+    if (supplierSuggestIndex >= 0) {
+      e.preventDefault();
+      supplierSuggestPick(items[supplierSuggestIndex].dataset.code);
+    } else supplierSuggestHide();
+  } else if (e.key === "Escape") {
+    e.stopPropagation(); // กัน Escape ทะลุไปปิด drawer ทั้งบาน
+    supplierSuggestHide();
+  }
 }
 
 // datalist ชื่อยาจาก master สำหรับ autocomplete แถวยาในดรอเวอร์ (1 ชื่อ/สินค้า)
@@ -7946,7 +8040,7 @@ function renderDrawerMedicines(bill) {
       <input class="inline-cell-input med-input med-price med-price-cost" type="text" inputmode="decimal" value="${costUnit > 0 ? costUnit : ""}" placeholder="ทุน" ${line.realCostEdited ? 'data-user-edited="1"' : ""} data-drawer-med-index="${index}" data-drawer-med-field="realCost" aria-label="ต้นทุนจริงต่อหน่วย ${name || "ยาใหม่"}" title="ต้นทุนจริง (ต่อหน่วย) ดึงจาก master" />
       <span class="med-supplier-cell">
         <span class="med-tag med-tag-supplier" title="เจ้า/ผู้ขายของยานี้ (ทะเบียน suppliers)">เจ้า</span>
-        <input class="inline-cell-input med-input med-supplier-input" type="text" value="${htmlEscape(line.supplier || "")}" placeholder="เจ้า" list="cknc-supplier-list" data-drawer-med-index="${index}" data-drawer-med-field="supplier" aria-label="เจ้า/ผู้ขาย ${name || "ยาใหม่"}" title="เจ้า/ผู้ขาย — เลือกจากทะเบียน หรือพิมพ์เอง (ชื่อดิบจะแปลงเป็นโค้ดให้)" />
+        <input class="inline-cell-input med-input med-supplier-input" type="text" value="${htmlEscape(line.supplier || "")}" placeholder="เจ้า" autocomplete="off" data-drawer-med-index="${index}" data-drawer-med-field="supplier" aria-label="เจ้า/ผู้ขาย ${name || "ยาใหม่"}" title="เจ้า/ผู้ขาย — เลือกจากทะเบียน หรือพิมพ์เอง (ชื่อดิบจะแปลงเป็นโค้ดให้)" />
       </span>
       <span class="med-line-total" title="กำไรบรรทัด = MLP คิด CKNC − ต้นทุนจริง">${realCost > 0 ? `กำไร ${money(lineProfit)}` : (mlp > 0 ? `= ${money(mlp)}` : "")}</span>
       <button class="icon-button med-remove-btn" type="button" data-drawer-med-remove="${index}" title="ลบรายการนี้" aria-label="ลบ ${name || "ยาใหม่"}">×</button>
@@ -9493,6 +9587,19 @@ elements.drawerMedicines.addEventListener("click", (event) => {
   }
   renderDrawerMedicines(currentDetailBill());
   updateEditProfitPreview();
+});
+// dropdown แนะนำเจ้าในช่อง "เจ้า" — delegation เพราะแถวยา re-render บ่อย (แทน datalist เดิม)
+elements.drawerMedicines.addEventListener("focusin", (e) => {
+  if (e.target.classList?.contains("med-supplier-input")) supplierSuggestShow(e.target);
+});
+elements.drawerMedicines.addEventListener("input", (e) => {
+  if (e.target.classList?.contains("med-supplier-input")) supplierSuggestShow(e.target);
+});
+elements.drawerMedicines.addEventListener("focusout", (e) => {
+  if (e.target.classList?.contains("med-supplier-input")) supplierSuggestBlur();
+});
+elements.drawerMedicines.addEventListener("keydown", (e) => {
+  if (e.target.classList?.contains("med-supplier-input")) supplierSuggestKey(e, e.target);
 });
 // งานวางบิลใน drawer เป็น chips กดเลือกได้ทันที — ค่าจริงยังเก็บใน select เดิม (ซ่อนไว้)
 function renderEditBillingStageChips() {
