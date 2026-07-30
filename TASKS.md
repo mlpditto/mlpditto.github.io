@@ -1,5 +1,10 @@
 # 📝 Task Log - FKB Front Kanban
 
+## 📅 30 กรกฎาคม 2026 (3) — chip GP: ขยายขนาดอีกขั้น (ใช้ space บนล่างใน header)
+
+*   **ขยายตาม feedback ของ user:** ยอดคงเหลือ 12→**13px**, ป้าย % 8.5→**9px**, padding chip `4px 12px`→`6px 14px`; จอ ≤480px ยอด 11→**12px**, % 8→**8.5px**, padding `2px 8px`→`3px 9px`; ≤379px พฤติกรรมเดิม (ซ่อนยอด คืน % ปกติ)
+*   **ทดสอบ chromium headless ซ้ำ:** 1280/519/480/414/375/360px overflow 0 ทุกจอ (headerH โต ~7px ตามที่ตั้งใจ), ฟอนต์จริงตรงสเปก
+
 ## 📅 30 กรกฎาคม 2026 (2) — chip GP: ยอดเงินเป็นตัวเด่น % เป็นป้ายเล็ก
 
 *   **สลับลำดับความสำคัญใน chip (user เลือกแบบ B):** เมื่อมี Gross ป้าย `%` หดเป็นตัวเล็กบน (8.5px) ยอดคงเหลือเป็นตัวหนาเด่น (12px) — ห่อป้าย % ด้วย `span.gp-seg-rate` ทั้ง 6 ปุ่ม (add+edit), JS ติดคลาส `gp-seg-has-amt` ใน `updateGpSegAmounts()` เมื่อ Gross > 0; Gross 0 = ถอดคลาส chip กลับทรง % ปกติ; padding chip ขยับ `3px 10px`→`4px 12px`
