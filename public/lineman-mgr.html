@@ -255,12 +255,14 @@
         /* Segmented GP control ในหัวข้อการชำระเงิน */
         .gp-seg-group { display: inline-flex; background: #f1f5f9; border-radius: 9999px; padding: 2px; }
         .dark .gp-seg-group { background: #0f172a; }
-        .gp-seg { padding: 3px 10px; font-size: 11px; font-weight: 900; letter-spacing: -.02em;
+        .gp-seg { padding: 4px 12px; font-size: 11px; font-weight: 900; letter-spacing: -.02em;
                   border-radius: 9999px; color: #94a3b8; transition: all .15s; line-height: 1.4; cursor: pointer;
                   display: inline-flex; flex-direction: column; align-items: center; }
         .gp-seg:hover { color: #475569; }
-        /* บรรทัดยอดเงินใน chip — โชว์เมื่อมี Gross เท่านั้น (JS คุม display) */
-        .gp-seg-amt { font-size: 8px; font-weight: 700; letter-spacing: 0; line-height: 1.15; opacity: .75; }
+        /* มียอดเงิน (JS ใส่ gp-seg-has-amt เมื่อ Gross > 0): ยอดคงเหลือเป็นตัวเด่น % หดเป็นป้ายเล็กบน
+           ไม่มียอด (Gross 0): เหลือแต่ % ขนาดปกติ ทรงเดิม */
+        .gp-seg-has-amt .gp-seg-rate { font-size: 8.5px; font-weight: 800; line-height: 1.1; opacity: .8; }
+        .gp-seg-amt { font-size: 12px; font-weight: 900; letter-spacing: -.02em; line-height: 1.2; }
         @media (max-width: 379px) { .gp-seg-amt { display: none !important; } }
         .gp-seg-active { background: #fff; color: #0f172a; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
         .dark .gp-seg-active { background: #334155; color: #fff; }
@@ -278,8 +280,14 @@
         @media (max-width: 519px) { .jp-label { display: none; } }      /* ซ่อน "支払い" ก่อน */
         @media (max-width: 429px) { .title-label { display: none; } }   /* แคบมาก: เหลือไอคอน */
         @media (max-width: 480px) {
-            .gp-seg  { padding: 2px 7px; font-size: 10px; }
+            .gp-seg  { padding: 2px 8px; font-size: 10px; }
+            .gp-seg-has-amt .gp-seg-rate { font-size: 8px; }
+            .gp-seg-amt { font-size: 11px; }
             .net-pill { padding: 2px 7px; font-size: 10px; }
+        }
+        /* ≤379px บรรทัดยอดถูกซ่อน — คืน % เป็นตัวหลักขนาดปกติ (ต้องอยู่หลังบล็อก 480px ไม่งั้นโดนทับ) */
+        @media (max-width: 379px) {
+            .gp-seg-has-amt .gp-seg-rate { font-size: inherit; opacity: 1; }
         }
 
         .minimal-input {
@@ -813,9 +821,9 @@
                         </div>
                         <div class="flex items-center gap-2 ml-auto mr-2 shrink-0" onclick="event.stopPropagation()">
                             <div class="gp-seg-group">
-                                <button type="button" class="gp-seg" data-scope="add" data-rate="0" onclick="setGpMode(0,'add')">-0%</button>
-                                <button type="button" class="gp-seg" data-scope="add" data-rate="30" onclick="setGpMode(30,'add')">-30%</button>
-                                <button type="button" class="gp-seg" data-scope="add" data-rate="35" onclick="setGpMode(35,'add')">-35%</button>
+                                <button type="button" class="gp-seg" data-scope="add" data-rate="0" onclick="setGpMode(0,'add')"><span class="gp-seg-rate">-0%</span></button>
+                                <button type="button" class="gp-seg" data-scope="add" data-rate="30" onclick="setGpMode(30,'add')"><span class="gp-seg-rate">-30%</span></button>
+                                <button type="button" class="gp-seg" data-scope="add" data-rate="35" onclick="setGpMode(35,'add')"><span class="gp-seg-rate">-35%</span></button>
                             </div>
                             <button type="button" class="net-pill" data-scope="add" onclick="toggleManualNetUI('add')">
                                 <i class="fas fa-pencil"></i> NET
@@ -1124,9 +1132,9 @@
                             </div>
                             <div class="flex items-center gap-2 ml-auto mr-2 shrink-0" onclick="event.stopPropagation()">
                                 <div class="gp-seg-group">
-                                    <button type="button" class="gp-seg" data-scope="edit" data-rate="0" onclick="setGpMode(0,'edit')">-0%</button>
-                                    <button type="button" class="gp-seg" data-scope="edit" data-rate="30" onclick="setGpMode(30,'edit')">-30%</button>
-                                    <button type="button" class="gp-seg" data-scope="edit" data-rate="35" onclick="setGpMode(35,'edit')">-35%</button>
+                                    <button type="button" class="gp-seg" data-scope="edit" data-rate="0" onclick="setGpMode(0,'edit')"><span class="gp-seg-rate">-0%</span></button>
+                                    <button type="button" class="gp-seg" data-scope="edit" data-rate="30" onclick="setGpMode(30,'edit')"><span class="gp-seg-rate">-30%</span></button>
+                                    <button type="button" class="gp-seg" data-scope="edit" data-rate="35" onclick="setGpMode(35,'edit')"><span class="gp-seg-rate">-35%</span></button>
                                 </div>
                                 <button type="button" class="net-pill" data-scope="edit" onclick="toggleManualNetUI('edit')">
                                     <i class="fas fa-pencil"></i> NET
@@ -2377,6 +2385,7 @@
                     amt.className = 'gp-seg-amt';
                     b.appendChild(amt);
                 }
+                b.classList.toggle('gp-seg-has-amt', gross > 0);
                 if (gross > 0) {
                     const rate = (parseInt(b.dataset.rate, 10) || 0) / 100;
                     amt.textContent = `฿${(gross * (1 - rate)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
