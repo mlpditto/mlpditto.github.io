@@ -1051,31 +1051,24 @@ function countsInRevenue(bill) {
   return stage === "paid" || (stage === "billed" && Boolean(clean(bill.barNo)));
 }
 
+// วันที่ของบิลตามโหมด dateField ปัจจุบัน — "primary" = วันบิลหลัก (CLICKNIC ถ้าไม่มีใช้ MLP)
+// ให้ตรงกับการนับเดือนในการ์ด; โหมด any บิลหนึ่งใบมีได้หลายวัน
+function dateKeysForRange(bill) {
+  if (elements.dateField.value === "primary") {
+    const key = primaryBillDate(bill);
+    return key ? [key] : [];
+  }
+  const fields = elements.dateField.value === "any"
+    ? ["clicknicDate", "mlpDate", "billingDueDate"]
+    : [elements.dateField.value];
+  return [...new Set(fields.map((field) => dateKey(bill[field])).filter(Boolean))];
+}
+
 function isWithinDateRange(bill) {
   const from = elements.dateFrom.value;
   const to = elements.dateTo.value;
   if (!from && !to) return true;
-
-  // "primary" = วันบิลหลัก (CLICKNIC ถ้าไม่มีใช้ MLP) — ให้ตรงกับการนับเดือนในการ์ด
-  if (elements.dateField.value === "primary") {
-    const key = primaryBillDate(bill);
-    if (!key) return false;
-    if (from && key < from) return false;
-    if (to && key > to) return false;
-    return true;
-  }
-
-  const fields = elements.dateField.value === "any"
-    ? ["clicknicDate", "mlpDate", "billingDueDate"]
-    : [elements.dateField.value];
-
-  return fields.some((field) => {
-    const key = dateKey(bill[field]);
-    if (!key) return false;
-    if (from && key < from) return false;
-    if (to && key > to) return false;
-    return true;
-  });
+  return dateKeysForRange(bill).some((key) => (!from || key >= from) && (!to || key <= to));
 }
 
 function findOrderId(value) {
@@ -2445,6 +2438,21 @@ function monthRangeOf(monthKey) {
   return { from: `${monthKey}-01`, to: `${monthKey}-${String(lastDay).padStart(2, "0")}` };
 }
 
+// จำนวนบิลที่ตรงตัวกรอง (ไม่รวมช่วงวันที่) แยกตามวันที่ในโหมด dateField ปัจจุบัน
+// คืน null เมื่อไม่มีตัวกรองทำงาน = ชิปโชว์ครบทุกวันแบบเดิม
+function filteredDateChipCounts() {
+  const query = clean(elements.searchInput.value).toLowerCase();
+  const caseType = elements.caseTypeFilter?.value || "all";
+  const billingStage = elements.billingStageFilter?.value || "all";
+  if (state.activeStatus === "all" && caseType === "all" && billingStage === "all" && !query) return null;
+  const counts = new Map();
+  state.bills.forEach((bill) => {
+    if (!billMatchesNonDateFilters(bill, { status: state.activeStatus, caseType, billingStage, query })) return;
+    dateKeysForRange(bill).forEach((key) => counts.set(key, (counts.get(key) || 0) + 1));
+  });
+  return counts;
+}
+
 function renderQuickDateFilters() {
   if (!elements.quickDateFilters) return;
   const buckets = clicknicDateBuckets();
@@ -2457,7 +2465,20 @@ function renderQuickDateFilters() {
   // เดือน/ปีที่กำลังกรอง: ช่วงจาก-ถึงตกอยู่ในเดือน/ปีเดียวกัน (เลือกทั้งเดือนหรือเจาะรายวันก็นับ)
   const activeYear = activeFrom && activeTo && activeFrom.slice(0, 4) === activeTo.slice(0, 4) ? activeFrom.slice(0, 4) : "";
   const activeMonth = activeFrom && activeTo && activeFrom.slice(0, 7) === activeTo.slice(0, 7) ? activeFrom.slice(0, 7) : "";
-  const allMonths = clicknicMonthBuckets(buckets);
+  let allMonths = clicknicMonthBuckets(buckets);
+
+  // ตัวกรองอื่นทำงานอยู่ (เช่นประเภทเคส ประกัน) → ซ่อนวัน/เดือน/ปีที่กดแล้วจะว่างเปล่า
+  // และเปลี่ยนตัวเลขในชิปเป็นจำนวนบิลที่ตรงตัวกรอง (แทนจำนวนออเดอร์ CLICKNIC ทั้งหมด)
+  const activeCounts = filteredDateChipCounts();
+  if (activeCounts) {
+    const monthCounts = new Map();
+    activeCounts.forEach((count, date) => {
+      const monthKey = date.slice(0, 7);
+      monthCounts.set(monthKey, (monthCounts.get(monthKey) || 0) + count);
+    });
+    allMonths = allMonths.filter((item) => monthCounts.has(item.month))
+      .map((item) => ({ ...item, orders: monthCounts.get(item.month) }));
+  }
   const years = [...new Set(allMonths.map((item) => item.month.slice(0, 4)))];
 
   // แถวปี: โชว์เฉพาะเมื่อข้อมูลคร่อมหลายปี
@@ -2483,8 +2504,9 @@ function renderQuickDateFilters() {
       `).join("")}
     </div>` : "";
 
-  // แถววัน: เลือกเดือน/ปีแล้วเหลือเฉพาะวันในช่วงนั้น
+  // แถววัน: เลือกเดือน/ปีแล้วเหลือเฉพาะวันในช่วงนั้น; ตัวกรองอื่นทำงาน = ตัดวันที่ไม่มีบิลตรงตัวกรอง
   const days = buckets.filter((bucket) => {
+    if (activeCounts && !activeCounts.has(bucket.date)) return false;
     if (activeMonth) return bucket.date.startsWith(activeMonth);
     if (activeYear) return bucket.date.startsWith(activeYear);
     return true;
@@ -2502,7 +2524,7 @@ function renderQuickDateFilters() {
           : "";
         return `
         <button class="date-chip ${done ? "paid-complete" : ""} ${dated ? "dates-complete" : ""} ${activeFrom === bucket.date && activeTo === bucket.date ? "active" : ""}" type="button" data-clicknic-date="${bucket.date}"${chipTitle ? ` title="${chipTitle}"` : ""}>
-          ${formatDisplayDate(bucket.date)} <span>(${number(bucket.orders.size)})</span>
+          ${formatDisplayDate(bucket.date)} <span>(${number(activeCounts ? activeCounts.get(bucket.date) : bucket.orders.size)})</span>
         </button>
       `;
       }).join("")}
@@ -3194,6 +3216,43 @@ function autoCostBtnHtml(bill) {
   return `<button type="button" class="auto-cost-btn" data-auto-cost="${htmlEscape(bill.billKey)}" title="เติมต้นทุนจาก master = ฿${number(master)}" aria-label="เติมต้นทุนจาก master"><i class="fa-solid fa-wand-magic-sparkles"></i></button>`;
 }
 
+// เงื่อนไขตัวกรองที่ไม่ใช่ช่วงวันที่ (แท็บสถานะ/ประเภทเคส/งานวางบิล/ค้นหา)
+// แยกออกมาให้ชิปวัน-เดือนใช้กติกาเดียวกับตาราง (filteredDateChipCounts)
+function billMatchesNonDateFilters(bill, { status, caseType, billingStage, query }) {
+  const matchesStatus = status === "all"
+    || (status === "excluded" ? bill.excluded
+      : status === "paid" ? (bill.billingStage || "") === "paid"
+        : status === "case-insurance" ? (bill.caseType || "unknown") === "insurance"
+          : status === "case-nhso" ? (bill.caseType || "unknown") === "nhso"
+            : status === "repeat-customers" ? (bill.customerVisitCount >= 2 && !bill.excluded)
+              : status === "pending-billing" ? (bill.status === "pending-billing" && !BILLING_WORKFLOW_STAGES.has(bill.billingStage || "pending-review"))
+                : status === "clicknic-only" ? (bill.status === "clicknic-only" && !isReconciledNhsoClicknic(bill))
+                  : status === "matched" ? (bill.status === "matched" || isReconciledNhsoClicknic(bill))
+                    : bill.status === status);
+  if (!matchesStatus) return false;
+  if (!(caseType === "all" || (bill.caseType || "unknown") === caseType)) return false;
+  if (!(billingStage === "all" || (bill.billingStage || "pending-review") === billingStage)) return false;
+  if (!query) return true;
+  const haystack = [
+    bill.orderId,
+    bill.orw,
+    bill.invoice,
+    bill.billingNo,
+    bill.barNo,
+    bill.creditNos,
+    bill.billingRefs,
+    bill.mlpReferenceNos,
+    bill.mlpMemoOrderIds,
+    caseTypeLabel(bill.caseType),
+    billingStageLabel(bill.billingStage),
+    bill.medicinesText,
+    bill.medicineRawText,
+    bill.patient,
+    bill.phone,
+  ].join(" ").toLowerCase();
+  return haystack.includes(query);
+}
+
 function filteredBills() {
   const query = clean(elements.searchInput.value).toLowerCase();
   const status = state.activeStatus;
@@ -3201,38 +3260,8 @@ function filteredBills() {
   const billingStage = elements.billingStageFilter?.value || "all";
   const sortBy = elements.sortBy.value;
 
-  const filtered = state.bills.filter((bill) => {
-    const matchesStatus = status === "all"
-      || (status === "excluded" ? bill.excluded
-        : status === "paid" ? (bill.billingStage || "") === "paid"
-          : status === "case-insurance" ? (bill.caseType || "unknown") === "insurance"
-            : status === "case-nhso" ? (bill.caseType || "unknown") === "nhso"
-              : status === "repeat-customers" ? (bill.customerVisitCount >= 2 && !bill.excluded)
-                : status === "pending-billing" ? (bill.status === "pending-billing" && !BILLING_WORKFLOW_STAGES.has(bill.billingStage || "pending-review"))
-                  : status === "clicknic-only" ? (bill.status === "clicknic-only" && !isReconciledNhsoClicknic(bill))
-                    : status === "matched" ? (bill.status === "matched" || isReconciledNhsoClicknic(bill))
-                      : bill.status === status);
-    const matchesCaseType = caseType === "all" || (bill.caseType || "unknown") === caseType;
-    const matchesBillingStage = billingStage === "all" || (bill.billingStage || "pending-review") === billingStage;
-    const haystack = [
-      bill.orderId,
-      bill.orw,
-      bill.invoice,
-      bill.billingNo,
-      bill.barNo,
-      bill.creditNos,
-      bill.billingRefs,
-      bill.mlpReferenceNos,
-      bill.mlpMemoOrderIds,
-      caseTypeLabel(bill.caseType),
-      billingStageLabel(bill.billingStage),
-      bill.medicinesText,
-      bill.medicineRawText,
-      bill.patient,
-      bill.phone,
-    ].join(" ").toLowerCase();
-    return matchesStatus && matchesCaseType && matchesBillingStage && isWithinDateRange(bill) && (!query || haystack.includes(query));
-  });
+  const filtered = state.bills.filter((bill) =>
+    billMatchesNonDateFilters(bill, { status, caseType, billingStage, query }) && isWithinDateRange(bill));
 
   const sorters = {
     profitAsc: (a, b) => a.profit - b.profit,
@@ -8845,6 +8874,7 @@ function setActiveStatus(status) {
   state.activeStatus = status;
   renderTabs();
   renderTable();
+  renderQuickDateFilters(); // แท็บก็เป็นตัวกรอง — ชิปวันต้องซ่อน/นับใหม่ตาม
 }
 
 function clearFilters() {
@@ -8939,9 +8969,14 @@ elements.clipboardExpectedTotal?.addEventListener("input", () => {
 elements.confirmClipboardImport.addEventListener("click", confirmClipboardImport);
 elements.cancelClipboardImport.addEventListener("click", closeClipboardImport);
 elements.closeClipboardModal.addEventListener("click", closeClipboardImport);
-elements.searchInput.addEventListener("input", renderTable);
-elements.caseTypeFilter.addEventListener("change", renderTable);
-elements.billingStageFilter.addEventListener("change", renderTable);
+// ตัวกรองที่ไม่ใช่วันที่เปลี่ยน = ตารางและชิปวัน/เดือนต้องตามกัน (ชิปซ่อนวันที่ไม่มีบิลตรงตัวกรอง)
+function renderFilterScopedViews() {
+  renderTable();
+  renderQuickDateFilters();
+}
+elements.searchInput.addEventListener("input", renderFilterScopedViews);
+elements.caseTypeFilter.addEventListener("change", renderFilterScopedViews);
+elements.billingStageFilter.addEventListener("change", renderFilterScopedViews);
 // เปลี่ยนช่วงวันที่ = ตัวเลขทุกจุดต้องนับใหม่ (การ์ด chips แท็บ ตาราง)
 function renderDateScopedViews() {
   renderMetrics();
