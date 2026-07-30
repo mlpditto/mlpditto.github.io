@@ -5007,10 +5007,34 @@ function confirmIfChecksumMismatch(text) {
   ].join("\n"));
 }
 
+// พรีวิว BILLING NOTE: โชว์ record ที่ parser ประกอบเสร็จแล้ว ไม่ใช่บรรทัดดิบ —
+// หน้าใบวางบิลลูกหนี้ copy มา 1 แถวเว็บแตกเป็น 3 บรรทัด (AR / ORW+INV / วันที่+ยอด)
+// โชว์บรรทัดดิบดูเหมือนข้อมูลพังทั้งที่ import ถูก; ตารางนี้ = สิ่งที่จะถูก import จริง
+function previewBillingRecords(text) {
+  const records = billingRowsFromText(text);
+  elements.confirmClipboardImport.disabled = !records.length;
+  const total = records.reduce((sum, row) => sum + toNumeric(row.amount), 0);
+  elements.clipboardSummary.textContent = records.length
+    ? `${number(records.length)} รายการเครดิต · รวม ${money(total)}`
+    : "No clipboard data yet";
+  if (!records.length) {
+    elements.clipboardPreviewHead.innerHTML = "";
+    elements.clipboardPreviewBody.innerHTML = `<tr><td class="empty">No preview data</td></tr>`;
+    return records;
+  }
+  const headers = ["ที่", "BAR", "เลขที่เครดิต (AR)", "ORW", "INV", "วันที่", "ยอดชำระ"];
+  elements.clipboardPreviewHead.innerHTML = `<tr>${headers.map((h) => `<th>${h}</th>`).join("")}</tr>`;
+  elements.clipboardPreviewBody.innerHTML = records.map((row, index) => (
+    `<tr><td>${number(index + 1)}</td><td>${htmlEscape(row.bar)}</td><td>${htmlEscape(row.ar)}</td><td>${htmlEscape(row.orw)}</td><td>${htmlEscape(row.inv)}</td><td>${htmlEscape(row.dueDate)}</td><td>${money(toNumeric(row.amount))}</td></tr>`
+  )).join("");
+  return records;
+}
+
 function previewClipboardText(text) {
   if (state.activeClipboardKind === "billing") {
     autofillBillingHead(text);
     renderBillingChecksum(text);
+    return previewBillingRecords(text);
   }
   const rows = clipboardTextToRows(text);
   // MLP: บอกจำนวนที่จะนำเข้าจริงหลังกรองเฉพาะ คลิกนิก เฮลท์ ให้เห็นก่อนกด Import
@@ -8905,6 +8929,12 @@ elements.clipboardPreview.addEventListener("input", () => {
 });
 elements.clipboardExpectedTotal?.addEventListener("input", () => {
   renderBillingChecksum(elements.clipboardPreview.value);
+});
+// แก้ BAR/วันครบกำหนดที่หัวโมดัล → คอลัมน์ BAR/วันที่ในพรีวิว billing ต้องตามทันที
+[elements.clipboardBarNo, elements.clipboardDueDate].forEach((input) => {
+  input?.addEventListener("input", () => {
+    if (state.activeClipboardKind === "billing") previewClipboardText(elements.clipboardPreview.value);
+  });
 });
 elements.confirmClipboardImport.addEventListener("click", confirmClipboardImport);
 elements.cancelClipboardImport.addEventListener("click", closeClipboardImport);

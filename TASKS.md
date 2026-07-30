@@ -1,5 +1,10 @@
 # 📝 Task Log - FKB Front Kanban
 
+## 📅 30 กรกฎาคม 2026 (6) — CKNC: พรีวิว Paste BILLING NOTE โชว์ record ประกอบเสร็จ แทนบรรทัดดิบ
+
+*   **ปัญหา (user รายงาน "แสดงผลไม่สมบูรณ์"):** หน้าใบวางบิลลูกหนี้ copy มา 1 แถวเว็บแตกเป็น 3 บรรทัด (AR / ORW+INV / วันที่+ยอด) — parser นำเข้าจริง (`parseBillingWorkbook`) merge ถูกอยู่แล้ว (ยืนยันด้วย chromium: 3 บรรทัด → 1 record ครบทุกช่อง) แต่**ตารางพรีวิว**โชว์บรรทัดดิบ เลยเห็น "40 rows" แถวแตกกระจาย
+*   **แก้:** เพิ่ม `previewBillingRecords()` — โหมด billing พรีวิวเป็นตาราง record ที่ parser ประกอบแล้ว (ที่/BAR/AR/ORW/INV/วันที่/ยอดชำระ ใช้ `billingRowsFromText` ตัวเดียวกับ checksum) + summary "N รายการเครดิต · รวม ฿X"; สิ่งที่เห็น = สิ่งที่จะ import จริง; เพิ่ม listener ช่อง BAR/วันครบกำหนด → พรีวิวอัปเดตตาม (autofill ไม่ทับค่าที่พิมพ์เอง — guard เดิมใน `autofillBillingHead`); โหมด CLICKNIC/MLP พรีวิวดิบแบบเดิม
+*   **ทดสอบ chromium:** 10 บรรทัดดิบ → 3 แถว record ครบช่อง, summary+ยอดรวมถูก, พิมพ์ BAR → คอลัมน์ BAR ตามทุกแถว, ปุ่ม Import เปิด, โหมด clicknic ยังนับบรรทัดดิบ (กัน regression); bump `?v=20260730154239`
 ## 📅 30 กรกฎาคม 2026 (5) — lean รายละเอียดการสั่งซื้อ: 4 หลักท้าย + เบอร์โทร เป็น chip กรอกได้บน header
 
 *   **chip เป็นช่องกรอกในตัว (user เลือกแบบ A):** ย้าย input `orderId`/`customerPhone` (และ `e-` ฝั่ง edit) ขึ้น header ของ section รายละเอียดการสั่งซื้อ เป็น pill `[# 0065] [📞 0972763163]` — id เดิมทุกตัว โค้ด save/draft/autofill ไม่ต้องแตะ; ตัดแถวล่างเดิมทิ้งทั้งแถว (section สั้นลง 1 แถว); เห็นค่าได้แม้หุบ section
