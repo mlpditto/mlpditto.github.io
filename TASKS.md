@@ -1,6 +1,10 @@
 # 📝 Task Log - FKB Front Kanban
 
-## 📅 30 กรกฎาคม 2026 (3) — chip GP: ขยายขนาดอีกขั้น (ใช้ space บนล่างใน header)
+## 📅 30 กรกฎาคม 2026 (4) — chip GP: ขยายอีกนิด + ตัว active เป็นพื้นทึบสีประจำโหมด
+
+*   **ขนาด (รอบ 2 ตาม feedback):** ยอด 13→**14px**, % 9→**9.5px**, padding `6px 14px`→`7px 16px`; ≤480px ยอด 13px / % 9px / padding `4px 10px`
+*   **สี active ใหม่ (user ขอให้ต่างจากเดิม):** เดิมพื้นขาวตัวสี → เป็น**พื้นทึบตัวหนังสือขาว**: -30% เขียว LINE MAN `#00B14F` (สีแบรนด์จาก tailwind config), -0% rose `#e11d48`, -35% amber `#d97706` + เงาสีตามโหมด; ใช้ทั้ง light/dark (กติกา `[data-rate]` อยู่หลัง `.dark` ชนะทั้งสองธีม)
+*   **ทดสอบ:** chromium headless — ฟอนต์/สี active ทั้ง 3 โหมด + dark mode ตรงสเปก, overflow 0 ทุกจอ 1280–360px; **กับดักเทสต์:** `.gp-seg` มี `transition: all .15s` → getComputedStyle ทันทีหลังใส่คลาสได้ค่าต้นทาง ต้องปิด transition ใน harness ก่อนวัดสี
 
 *   **ขยายตาม feedback ของ user:** ยอดคงเหลือ 12→**13px**, ป้าย % 8.5→**9px**, padding chip `4px 12px`→`6px 14px`; จอ ≤480px ยอด 11→**12px**, % 8→**8.5px**, padding `2px 8px`→`3px 9px`; ≤379px พฤติกรรมเดิม (ซ่อนยอด คืน % ปกติ)
 *   **ทดสอบ chromium headless ซ้ำ:** 1280/519/480/414/375/360px overflow 0 ทุกจอ (headerH โต ~7px ตามที่ตั้งใจ), ฟอนต์จริงตรงสเปก
