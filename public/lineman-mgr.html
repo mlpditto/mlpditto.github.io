@@ -2364,7 +2364,8 @@
                 !!document.getElementById(`${p}isManualNet`)?.checked);
         }
 
-        // อัปเดตบรรทัดยอดเงินในทุก chip GP ตาม Gross ปัจจุบัน (-30% → -฿73.20) — Gross 0 = ซ่อน chip กลับทรงเดิม
+        // อัปเดตบรรทัดยอดเงินในทุก chip GP ตาม Gross ปัจจุบัน — โชว์ยอดคงเหลือหลังหัก (-30% → ฿91.00)
+        // ให้ตรงกับบรรทัด "→ รับจริง" รายชิ้น; Gross 0 = ซ่อน chip กลับทรงเดิม
         function updateGpSegAmounts(mode) {
             const p = mode === 'edit' ? 'e-' : '';
             const scope = mode === 'edit' ? 'edit' : 'add';
@@ -2378,9 +2379,7 @@
                 }
                 if (gross > 0) {
                     const rate = (parseInt(b.dataset.rate, 10) || 0) / 100;
-                    amt.textContent = rate > 0
-                        ? `-฿${(gross * rate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                        : '฿0.00';
+                    amt.textContent = `฿${(gross * (1 - rate)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                     amt.style.display = '';
                 } else {
                     amt.style.display = 'none';
