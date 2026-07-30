@@ -248,6 +248,8 @@ const elements = {
   editBarPickerBtn: $("editBarPickerBtn"),
   barPickerModal: $("barPickerModal"),
   barPickerInput: $("barPickerInput"),
+  barPickerSmartPaste: $("barPickerSmartPaste"),
+  barPickerSummary: $("barPickerSummary"),
   barPickerSearch: $("barPickerSearch"),
   barPickerShowAll: $("barPickerShowAll"),
   barPickerBody: $("barPickerBody"),
@@ -9823,10 +9825,20 @@ elements.bulkBarNo?.addEventListener("keydown", (event) => {
 // ปุ่มลัด "ใส่ BAR ให้หลายบิล" — พิมพ์ BAR ครั้งเดียว แล้วติ๊กเลือกบิล (ตาม AR) ในตัว modal
 // default: โชว์เฉพาะบิลที่มี AR แต่ยังไม่มี BAR (มี toggle แสดงทุกบิล)
 const barPickerSelected = new Set();
+// บิลที่ smart paste เจอแต่ติด BAR อื่นอยู่ — ไฮไลต์เตือน ไม่ติ๊กอัตโนมัติ (ติ๊กมือได้ถ้าตั้งใจย้าย)
+const barPickerSmartWarn = new Set();
+
+function setBarPickerSummary(html) {
+  if (!elements.barPickerSummary) return;
+  elements.barPickerSummary.innerHTML = html;
+  elements.barPickerSummary.hidden = !html;
+}
 
 function openBarPicker(prefillBar, preselectKey) {
   if (!elements.barPickerModal) return;
   barPickerSelected.clear();
+  barPickerSmartWarn.clear();
+  setBarPickerSummary("");
   if (elements.barPickerInput) elements.barPickerInput.value = clean(prefillBar);
   if (elements.barPickerSearch) elements.barPickerSearch.value = "";
   if (elements.barPickerShowAll) elements.barPickerShowAll.checked = false;
@@ -9878,15 +9890,23 @@ function renderBarPicker() {
         <th>ผู้รับบริการ</th><th>เลขที่เครดิต (AR)</th><th>ออเดอร์ / ORW</th><th>วันที่</th><th>BAR เดิม</th>
       </tr></thead>
       <tbody>
-        ${rows.map((bill) => `
-        <tr class="${barPickerSelected.has(bill.billKey) ? "case-seq-row-active" : ""}">
+        ${rows.map((bill) => {
+          // ออเดอร์/ORW โชว์ทั้งสองค่า: ORW เด่น (ตรงกับเลขในใบวางบิล) / เลขออเดอร์ตัวเล็กจาง
+          const orderCell = [
+            clean(bill.orw) ? `<div class="bar-pick-orw">${htmlEscape(bill.orw)}</div>` : "",
+            clean(bill.orderId) ? `<div class="bar-pick-order">${htmlEscape(bill.orderId)}</div>` : "",
+          ].join("") || "-";
+          const warn = barPickerSmartWarn.has(bill.billKey);
+          return `
+        <tr class="${barPickerSelected.has(bill.billKey) ? "case-seq-row-active" : ""}${warn ? " bar-pick-warn-row" : ""}"${warn ? ` title="Smart Paste เจอบิลนี้ แต่มี BAR อื่นอยู่แล้ว — ติ๊กเองถ้าตั้งใจย้าย"` : ""}>
           <td class="seq-col"><input type="checkbox" data-bar-pick="${htmlEscape(bill.billKey)}" ${barPickerSelected.has(bill.billKey) ? "checked" : ""} aria-label="เลือกบิลนี้" /></td>
           <td>${htmlEscape(bill.patient || "-")}</td>
           <td class="case-seq-code">${htmlEscape(bill.creditNos || "-")}</td>
-          <td>${htmlEscape(bill.orderId || bill.orw || "-")}</td>
+          <td>${orderCell}</td>
           <td class="case-seq-date">${htmlEscape(formatDisplayDate(bill.clicknicDate || bill.mlpDate) || "-")}</td>
           <td>${clean(bill.barNo) ? `<span class="case-seq-chip case-${htmlEscape(bill.caseType || "unknown")}">${htmlEscape(bill.barNo)}</span>` : '<span class="bar-pick-nobar">— ยังไม่มี</span>'}</td>
-        </tr>`).join("")}
+        </tr>`;
+        }).join("")}
       </tbody>
     </table>
     <p class="case-seq-hint">ติ๊กเลือกบิลที่ต้องใส่ BAR นี้ · BAR+AR ครบ = สถานะเปลี่ยนเป็น "วางบิลแล้ว" · แก้แล้วลง audit trail</p>
@@ -9917,6 +9937,95 @@ function applyBarPickerSelection() {
   // drawer เปิดอยู่ = โหลดค่าใหม่ (BAR/สถานะอาจเปลี่ยน)
   if (elements.detailDrawer?.open && state.currentDetailKey) openDetailDrawer(state.currentDetailKey);
 }
+
+// Smart Paste: วางทั้งหน้า "วางบิลลูกหนี้" (Ctrl+A จากระบบ AR — แหล่งเดียวกับ Paste BILLING NOTE)
+// → เติม BAR จากหัวใบ + ติ๊กบิลที่ตรงตามลำดับความแม่น AR → ORW → INV + สรุปตัวที่หาไม่เจอ
+function barPickerApplySmartText(text) {
+  let records = [];
+  try {
+    records = parseBillingWorkbook(workbookFromClipboardText(text, "Smart paste"), "barpicker-smartpaste", {});
+  } catch (error) {
+    records = [];
+  }
+  if (!records.length) {
+    setBarPickerSummary(`<span class="bar-pick-sum-warn">ไม่พบรายการเครดิต (AR/ORW/INV) ในข้อความที่วาง</span>`);
+    return;
+  }
+  const norm = (value) => clean(value).toUpperCase();
+  const bar = norm(records.find((r) => clean(r.bar))?.bar || extractBarNo(text));
+  if (bar && elements.barPickerInput) elements.barPickerInput.value = bar;
+
+  const byAr = new Map();
+  const byOrw = new Map();
+  const byInv = new Map();
+  state.bills.forEach((bill) => {
+    if (bill.excluded) return;
+    String(bill.creditNos || "").split(/[\s,]+/).map(norm).filter(Boolean)
+      .forEach((ar) => { if (!byAr.has(ar)) byAr.set(ar, bill); });
+    if (norm(bill.orw) && !byOrw.has(norm(bill.orw))) byOrw.set(norm(bill.orw), bill);
+    if (norm(bill.invoice) && !byInv.has(norm(bill.invoice))) byInv.set(norm(bill.invoice), bill);
+  });
+
+  barPickerSmartWarn.clear();
+  const seen = new Set();
+  let matchedCount = 0;
+  const blocked = [];
+  const unmatched = [];
+  records.forEach((record) => {
+    const bill = byAr.get(norm(record.ar)) || byOrw.get(norm(record.orw)) || byInv.get(norm(record.inv));
+    if (!bill) {
+      unmatched.push(record.ar || record.orw || record.inv);
+      return;
+    }
+    if (seen.has(bill.billKey)) return;
+    seen.add(bill.billKey);
+    const existingBar = norm(bill.barNo);
+    if (existingBar && bar && existingBar !== bar) {
+      blocked.push(bill);
+      barPickerSmartWarn.add(bill.billKey);
+      return;
+    }
+    barPickerSelected.add(bill.billKey);
+    matchedCount += 1;
+  });
+
+  // บิลที่เจอแต่ตัวกรอง default (มี AR + ยังไม่มี BAR) ซ่อนอยู่ → เปิดแสดงทุกบิลให้เห็นครบ
+  const needShowAll = [...barPickerSelected, ...barPickerSmartWarn].some((key) => {
+    const bill = state.bills.find((item) => item.billKey === key);
+    return bill && (!clean(bill.creditNos) || clean(bill.barNo));
+  });
+  if (needShowAll && elements.barPickerShowAll) elements.barPickerShowAll.checked = true;
+
+  const parts = [`<span class="bar-pick-sum-ok">จับคู่ได้ ${number(matchedCount)}/${number(records.length)} รายการ</span>`];
+  if (bar) parts.push(`BAR: <strong>${htmlEscape(bar)}</strong>`);
+  if (blocked.length) parts.push(`<span class="bar-pick-sum-warn">ติด BAR อื่น ${number(blocked.length)} บิล (ไฮไลต์เหลือง — ติ๊กเองถ้าตั้งใจย้าย)</span>`);
+  if (unmatched.length) {
+    const shown = unmatched.slice(0, 6).map((ref) => htmlEscape(ref)).join(", ");
+    parts.push(`<span class="bar-pick-sum-warn">ไม่เจอในระบบ ${number(unmatched.length)} รายการ: ${shown}${unmatched.length > 6 ? ` และอีก ${number(unmatched.length - 6)}` : ""}</span>`);
+  }
+  setBarPickerSummary(parts.join(" · "));
+  renderBarPicker();
+}
+
+elements.barPickerSmartPaste?.addEventListener("click", async () => {
+  try {
+    const text = navigator.clipboard?.readText ? await navigator.clipboard.readText() : "";
+    if (!clean(text)) throw new Error("clipboard empty");
+    barPickerApplySmartText(text);
+  } catch (error) {
+    setBarPickerSummary(`<span class="bar-pick-sum-warn">อ่านคลิปบอร์ดอัตโนมัติไม่ได้ — กด Ctrl+V ในหน้าต่างนี้แทน</span>`);
+  }
+});
+// Ctrl+V ที่ไหนก็ได้ในโมดัล: ถ้าข้อความมีเลขอ้างอิงหลายตัวหรือมี BAR = smart paste
+// (วางเลขเดี่ยวในช่องค้นหา/ช่อง BAR ยังทำงานปกติ)
+elements.barPickerModal?.addEventListener("paste", (event) => {
+  const text = event.clipboardData?.getData("text") || "";
+  const refs = extractRefs(text);
+  if ((refs.ar.length + refs.orw.length + refs.inv.length) >= 2 || extractBarNo(text)) {
+    event.preventDefault();
+    barPickerApplySmartText(text);
+  }
+});
 
 elements.bulkBarPickerBtn?.addEventListener("click", () => openBarPicker(clean(elements.bulkBarNo?.value)));
 elements.editBarPickerBtn?.addEventListener("click", () => openBarPicker(clean(elements.editBarNo?.value)));
