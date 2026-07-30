@@ -1792,11 +1792,21 @@ function pushIssue(issues, level, code, text) {
   issues.push({ level, code, text });
 }
 
-// สปสช ที่มีรายการยา (clicknic-only) แต่วางบิลครบ (BAR+AR) = reconcile แล้ว
-// — MLP ที่หายไปไม่กระทบ เพราะ สปสช ต้นทุน/ต้นทุน MLP = 0 อยู่แล้ว → ไม่ต้องเตือน/ไม่นับเป็นปัญหา
-function isReconciledNhsoClicknic(bill) {
-  return bill.status === "clicknic-only" && bill.caseType === "nhso"
-    && Boolean(clean(bill.barNo)) && Boolean(clean(bill.creditNos));
+// มีข้อมูลต้นทุนแล้วไหม — ระดับบิล (cost/mlpCost จาก import หรือ drawer) หรือทุนจริงรายบรรทัด (realCost)
+function billHasCostData(bill) {
+  if (toNumeric(bill.cost) + toNumeric(bill.mlpCost) > 0) return true;
+  return (bill.medicines || []).some((line) => toNumeric(line.realCost) > 0);
+}
+
+// บิล clicknic-only ที่วางบิลครบ (BAR+AR) = reconcile แล้ว นับเป็นจับคู่แล้ว ไม่เตือน "รายการยาไม่มี MLP"
+// — สปสช: BAR+AR ก็พอ (MLP หายไม่กระทบ เพราะต้นทุน MLP = 0 โดยธรรมเนียม)
+// — ประกัน: ต้องมีข้อมูลต้นทุนแล้วด้วย กันบิลทุนยังว่าง (กำไรเวอร์) หลุดจากเรดาร์ทั้งที่งานยังไม่จบ
+function isReconciledClicknicOnly(bill) {
+  if (bill.status !== "clicknic-only") return false;
+  if (!clean(bill.barNo) || !clean(bill.creditNos)) return false;
+  if (bill.caseType === "nhso") return true;
+  if (bill.caseType === "insurance") return billHasCostData(bill);
+  return false;
 }
 
 function validationRulesForBill(bill) {
@@ -1813,7 +1823,7 @@ function validationRulesForBill(bill) {
   if (bill.status === "billing-only") {
     pushIssue(issues, "danger", "BILLING_NOT_IN_MLP", "ใบวางบิลไม่เจอ MLP");
   }
-  if (bill.status === "clicknic-only" && !isReconciledNhsoClicknic(bill)) {
+  if (bill.status === "clicknic-only" && !isReconciledClicknicOnly(bill)) {
     pushIssue(issues, "danger", "CLICKNIC_NOT_IN_MLP", "รายการยาไม่มี MLP");
   }
   if (bill.profit < -Math.max(0, toNumeric(activeRuleConfig().negativeProfitTolerance))) {
@@ -2553,7 +2563,7 @@ function renderMergeAssistant() {
     .filter((b) => b.status === "pending-billing" && !BILLING_WORKFLOW_STAGES.has(b.billingStage || "pending-review")).length;
   // รายการยาไม่มี MLP: ไม่นับ สปสช ที่วางบิลครบ (BAR+AR) — reconcile แล้ว (ให้ตรงกับ filteredBills)
   const clicknicOnlyIssues = state.bills.filter(isWithinDateRange)
-    .filter((b) => b.status === "clicknic-only" && !isReconciledNhsoClicknic(b)).length;
+    .filter((b) => b.status === "clicknic-only" && !isReconciledClicknicOnly(b)).length;
   const matchGroup = [
     { status: "mlp-only", label: "ไม่พบรายการยา", value: counts["mlp-only"] || 0, tone: "warning", active: state.activeStatus === "mlp-only" },
     { status: "clicknic-only", label: "รายการยาไม่มี MLP", value: clicknicOnlyIssues, tone: "danger", active: state.activeStatus === "clicknic-only" },
@@ -3057,7 +3067,7 @@ function statusCounts() {
     counts.all += 1;
     counts[bill.status] = (counts[bill.status] || 0) + 1;
     // สปสช clicknic-only ที่วางบิลครบ (BAR+AR) = reconcile แล้ว → นับเป็น "จับคู่แล้ว" ด้วย
-    if (isReconciledNhsoClicknic(bill)) counts.matched += 1;
+    if (isReconciledClicknicOnly(bill)) counts.matched += 1;
     if ((bill.billingStage || "") === "paid") counts.paid += 1;
     if ((bill.caseType || "unknown") === "insurance") counts["case-insurance"] += 1;
     if ((bill.caseType || "unknown") === "nhso") counts["case-nhso"] += 1;
@@ -3226,8 +3236,8 @@ function billMatchesNonDateFilters(bill, { status, caseType, billingStage, query
           : status === "case-nhso" ? (bill.caseType || "unknown") === "nhso"
             : status === "repeat-customers" ? (bill.customerVisitCount >= 2 && !bill.excluded)
               : status === "pending-billing" ? (bill.status === "pending-billing" && !BILLING_WORKFLOW_STAGES.has(bill.billingStage || "pending-review"))
-                : status === "clicknic-only" ? (bill.status === "clicknic-only" && !isReconciledNhsoClicknic(bill))
-                  : status === "matched" ? (bill.status === "matched" || isReconciledNhsoClicknic(bill))
+                : status === "clicknic-only" ? (bill.status === "clicknic-only" && !isReconciledClicknicOnly(bill))
+                  : status === "matched" ? (bill.status === "matched" || isReconciledClicknicOnly(bill))
                     : bill.status === status);
   if (!matchesStatus) return false;
   if (!(caseType === "all" || (bill.caseType || "unknown") === caseType)) return false;
