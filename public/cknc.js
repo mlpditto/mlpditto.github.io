@@ -1047,6 +1047,15 @@ function primaryBillDate(bill) {
   return dateKey(bill.clicknicDate || bill.mlpDate || bill.billingDueDate);
 }
 
+// เซลล์ "ออเดอร์ / ORW" โชว์ทั้งสองค่า: ORW เด่น (ตรงกับเลขในใบวางบิล) / เลขออเดอร์ตัวเล็กจาง
+// ใช้ร่วมกันใน bar picker + WARN popup (ตาราง case-seq-table)
+function orderOrwCellHtml(bill) {
+  return [
+    clean(bill.orw) ? `<div class="bar-pick-orw">${htmlEscape(bill.orw)}</div>` : "",
+    clean(bill.orderId) ? `<div class="bar-pick-order">${htmlEscape(bill.orderId)}</div>` : "",
+  ].join("") || "-";
+}
+
 // นับเข้ายอดขาย/ต้นทุน/กำไร เฉพาะบิลที่ PAID หรือ วางบิลแล้วและมีเลข BAR (รายได้ที่เกิดขึ้นจริง)
 function countsInRevenue(bill) {
   const stage = bill.billingStage || "";
@@ -6038,7 +6047,7 @@ function renderMergeWarnBody() {
         <tr data-nhso-row="${htmlEscape(bill.billKey)}" class="${on ? "case-seq-row-active" : ""}">
           <td class="seq-col"><input type="checkbox" data-nhso-check="${htmlEscape(bill.billKey)}" ${on ? "checked" : ""} aria-label="เลือกบิลนี้" /></td>
           <td>${htmlEscape(bill.patient || "-")}</td>
-          <td>${htmlEscape(bill.orderId || bill.orw || "-")}</td>
+          <td>${orderOrwCellHtml(bill)}</td>
           <td>${money(bill.cost)}</td>
           <td>${money(bill.sale)}</td>
           <td class="case-seq-code" style="color:#a12626">${money(bill.mlpCost)}</td>
@@ -9891,11 +9900,7 @@ function renderBarPicker() {
       </tr></thead>
       <tbody>
         ${rows.map((bill) => {
-          // ออเดอร์/ORW โชว์ทั้งสองค่า: ORW เด่น (ตรงกับเลขในใบวางบิล) / เลขออเดอร์ตัวเล็กจาง
-          const orderCell = [
-            clean(bill.orw) ? `<div class="bar-pick-orw">${htmlEscape(bill.orw)}</div>` : "",
-            clean(bill.orderId) ? `<div class="bar-pick-order">${htmlEscape(bill.orderId)}</div>` : "",
-          ].join("") || "-";
+          const orderCell = orderOrwCellHtml(bill);
           const warn = barPickerSmartWarn.has(bill.billKey);
           return `
         <tr class="${barPickerSelected.has(bill.billKey) ? "case-seq-row-active" : ""}${warn ? " bar-pick-warn-row" : ""}"${warn ? ` title="Smart Paste เจอบิลนี้ แต่มี BAR อื่นอยู่แล้ว — ติ๊กเองถ้าตั้งใจย้าย"` : ""}>
