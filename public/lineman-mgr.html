@@ -3024,6 +3024,16 @@
             } catch (e) { return null; }
         }
 
+        // ป้าย "รอโอน" ของบิลที่ยังไม่ PAID: นับวันค้างจากวันขาย (record.date) ถึงวันนี้
+        // ≤1 วัน = รอปกติ (amber), ≥2 วัน = ค้างนาน (ส้มเข้ม) ให้สะดุดตาว่าต้องตามเงิน
+        function unpaidWaitInfo(record) {
+            const ms = Date.parse(`${record.date}T00:00:00`);
+            if (!isFinite(ms)) return { days: 0, label: 'รอโอน', overdue: false };
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            const days = Math.max(0, Math.round((today - ms) / 86400000));
+            return { days, label: days > 0 ? `รอ ${days} วัน` : 'รอโอน', overdue: days >= 2 };
+        }
+
         function renderUI() {
             try {
                 if (!salesData) salesData = [];
@@ -3350,11 +3360,17 @@
                                     <button onclick="quickUnsetPaid(${record.recordedAt})" class="h-8 rounded-lg cursor-pointer bg-emerald-100/80 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 text-[9px] font-black shadow-sm flex items-center justify-center gap-1 border border-emerald-200 dark:border-emerald-700 hover:scale-105 active:scale-95 transition-all whitespace-nowrap">
                                         <i class="fas fa-check-circle"></i> PAID
                                     </button>
-                                ` : `
-                                    <button onclick="quickSetPaid(${record.recordedAt})" class="h-8 rounded-lg cursor-pointer bg-slate-100/50 dark:bg-slate-800/50 text-slate-400 text-[9px] font-black border border-slate-200 dark:border-slate-700 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 hover:scale-105 active:scale-95 transition-all whitespace-nowrap">
-                                        UNPAID
+                                ` : (() => {
+                                    const wait = unpaidWaitInfo(record);
+                                    const cls = wait.overdue
+                                        ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border-orange-300 dark:border-orange-700'
+                                        : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800';
+                                    return `
+                                    <button onclick="quickSetPaid(${record.recordedAt})" title="ยังไม่ได้รับโอน — กดเพื่อบันทึก PAID" class="h-8 rounded-lg cursor-pointer ${cls} text-[9px] font-black border hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 hover:scale-105 active:scale-95 transition-all whitespace-nowrap flex items-center justify-center gap-1">
+                                        <i class="fas fa-clock"></i> ${wait.label}
                                     </button>
-                                `}
+                                `;
+                                })()}
                                 <button onclick="editRecord(${record.recordedAt})" class="h-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-400 hover:text-blue-600 transition-all flex items-center justify-center">
                                     <i class="fas fa-edit"></i>
                                 </button>
