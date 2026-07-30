@@ -1,5 +1,10 @@
 # 📝 Task Log - FKB Front Kanban
 
+## 📅 30 กรกฎาคม 2026 (5) — lean รายละเอียดการสั่งซื้อ: 4 หลักท้าย + เบอร์โทร เป็น chip กรอกได้บน header
+
+*   **chip เป็นช่องกรอกในตัว (user เลือกแบบ A):** ย้าย input `orderId`/`customerPhone` (และ `e-` ฝั่ง edit) ขึ้น header ของ section รายละเอียดการสั่งซื้อ เป็น pill `[# 0065] [📞 0972763163]` — id เดิมทุกตัว โค้ด save/draft/autofill ไม่ต้องแตะ; ตัดแถวล่างเดิมทิ้งทั้งแถว (section สั้นลง 1 แถว); เห็นค่าได้แม้หุบ section
+*   **โครง chip:** ห่อ `<label class="info-chip">` กดตรงไหนก็ focus input, `focus-within` ขอบฟ้า, `onclick="event.stopPropagation()"` ที่ container กัน toggle section ตอนกดพิมพ์; header title ใส่ `truncate title-label` (ซ่อนที่ ≤429px แบบเดียวกับหัวการชำระเงิน ให้ที่ chip บนจอแคบ)
+*   **ทดสอบ chromium headless:** id ไม่ซ้ำ (แถวเดิมลบจริง), autofill จากเลขเต็มลง chip ทั้ง add/edit (รวม uppercase), คลิก chip → section ไม่หุบ + focus เข้า input, คลิกหัวข้อ → หุบปกติ, overflow 0 ทุกจอ 1280–360px
 ## 📅 30 กรกฎาคม 2026 (4) — chip GP: ขยายอีกนิด + ตัว active เป็นพื้นทึบสีประจำโหมด
 
 *   **ขนาด (รอบ 2 ตาม feedback):** ยอด 13→**14px**, % 9→**9.5px**, padding `6px 14px`→`7px 16px`; ≤480px ยอด 13px / % 9px / padding `4px 10px`

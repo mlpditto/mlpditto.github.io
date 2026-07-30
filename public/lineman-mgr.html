@@ -278,6 +278,24 @@
         .net-pill-active { background: #dbeafe; color: #2563eb; }
         .dark .net-pill-active { background: #1e3a5f; color: #93c5fd; }
 
+        /* Chip ช่องกรอกในหัวข้อรายละเอียดการสั่งซื้อ (4 หลักท้าย + เบอร์โทร) — input จริงใน pill
+           ห่อด้วย <label> ให้กดตรงไหนของ chip ก็ focus; เห็นค่าได้แม้หุบ section */
+        .info-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px;
+                     background: #f1f5f9; border-radius: 9999px; border: 1.5px solid transparent;
+                     transition: all .15s; min-width: 0; cursor: text; }
+        .dark .info-chip { background: #0f172a; }
+        .info-chip:focus-within { border-color: #93c5fd; background: #eff6ff; }
+        .dark .info-chip:focus-within { border-color: #1d4ed8; background: #172554; }
+        .info-chip-ico { font-size: 10px; font-weight: 900; color: #94a3b8; flex: none; }
+        .info-chip-input { background: transparent; border: none; outline: none; min-width: 0;
+                           font-size: 12px; font-weight: 900; color: #0f172a; }
+        .dark .info-chip-input { color: #f8fafc; }
+        .info-chip-input::placeholder { color: #cbd5e1; font-weight: 700; }
+        @media (max-width: 480px) {
+            .info-chip { padding: 4px 9px; gap: 4px; }
+            .info-chip-input { font-size: 11px; }
+        }
+
         /* จอแคบ: กันหัวข้อ+segmented ล้น (วัดแล้ว 375/360px ล้นถ้าไม่ทำ) */
         @media (max-width: 519px) { .jp-label { display: none; } }      /* ซ่อน "支払い" ก่อน */
         @media (max-width: 429px) { .title-label { display: none; } }   /* แคบมาก: เหลือไอคอน */
@@ -695,12 +713,24 @@
                 <!-- Section 1: รายละเอียดการสั่งซื้อ -->
                 <div class="collapsible-section">
                     <div class="section-header active" onclick="toggleSection(this)">
-                        <div class="flex items-center gap-3">
-                            <i class="fas fa-info-circle text-lineman"></i>
-                            <span class="text-sm font-black uppercase tracking-wider">รายละเอียดการสั่งซื้อ</span>
+                        <div class="flex items-center gap-3 min-w-0">
+                            <i class="fas fa-info-circle text-lineman shrink-0"></i>
+                            <span class="text-sm font-black uppercase tracking-wider truncate title-label">รายละเอียดการสั่งซื้อ</span>
+                        </div>
+                        <div class="flex items-center gap-2 ml-auto mr-2 min-w-0" onclick="event.stopPropagation()">
+                            <label class="info-chip shrink-0" title="4 หลักท้าย">
+                                <span class="info-chip-ico">#</span>
+                                <input type="text" id="orderId" maxlength="4" placeholder="----"
+                                    class="info-chip-input w-[4.5ch] text-center tracking-widest">
+                            </label>
+                            <label class="info-chip" title="เบอร์โทร">
+                                <i class="fas fa-phone info-chip-ico"></i>
+                                <input type="tel" id="customerPhone" placeholder="0xx-xxx-xxxx"
+                                    class="info-chip-input w-[11ch]">
+                            </label>
                         </div>
                         <i
-                            class="fas fa-chevron-down text-slate-300 transition-transform duration-300 transform rotate-180"></i>
+                            class="fas fa-chevron-down text-slate-300 transition-transform duration-300 transform rotate-180 shrink-0"></i>
                     </div>
                     <div class="section-content active">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -760,19 +790,6 @@
                                 <input type="text" id="ref2" class="minimal-input font-bold text-indigo-600" placeholder="ระบุเลขที่ใบกำกับภาษี">
                             </div>
 
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="vibrant-label">4 หลักท้าย</label>
-                                    <input type="text" id="orderId" maxlength="4"
-                                        class="minimal-input text-center text-lg font-black tracking-widest"
-                                        placeholder="0001">
-                                </div>
-                                <div>
-                                    <label class="vibrant-label">เบอร์โทร</label>
-                                    <input type="tel" id="customerPhone" class="minimal-input"
-                                        placeholder="0xx-xxx-xxxx">
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -1000,12 +1017,24 @@
                     <!-- Section 1: รายละเอียดการสั่งซื้อ -->
                     <div class="collapsible-section">
                         <div class="section-header active" onclick="toggleSection(this)">
-                            <div class="flex items-center gap-3">
-                                <i class="fas fa-info-circle text-blue-500"></i>
-                                <span class="text-sm font-black uppercase tracking-wider">รายละเอียดการสั่งซื้อ</span>
+                            <div class="flex items-center gap-3 min-w-0">
+                                <i class="fas fa-info-circle text-blue-500 shrink-0"></i>
+                                <span class="text-sm font-black uppercase tracking-wider truncate title-label">รายละเอียดการสั่งซื้อ</span>
+                            </div>
+                            <div class="flex items-center gap-2 ml-auto mr-2 min-w-0" onclick="event.stopPropagation()">
+                                <label class="info-chip shrink-0" title="4 หลักท้าย">
+                                    <span class="info-chip-ico">#</span>
+                                    <input type="text" id="e-orderId" maxlength="4" placeholder="----"
+                                        class="info-chip-input w-[4.5ch] text-center tracking-widest">
+                                </label>
+                                <label class="info-chip" title="เบอร์โทร">
+                                    <i class="fas fa-phone info-chip-ico"></i>
+                                    <input type="tel" id="e-customerPhone" placeholder="0xx-xxx-xxxx"
+                                        class="info-chip-input w-[11ch]">
+                                </label>
                             </div>
                             <i
-                                class="fas fa-chevron-down text-slate-300 transition-transform duration-300 transform rotate-180"></i>
+                                class="fas fa-chevron-down text-slate-300 transition-transform duration-300 transform rotate-180 shrink-0"></i>
                         </div>
                         <div class="section-content active">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1066,18 +1095,6 @@
                                     <input type="text" id="e-ref2" class="minimal-input font-bold text-indigo-600" placeholder="ระบุเลขที่ใบกำกับภาษี">
                                 </div>
 
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="vibrant-label">4 หลักท้าย</label>
-                                        <input type="text" id="e-orderId" maxlength="4"
-                                            class="minimal-input text-center text-lg font-black tracking-widest">
-                                    </div>
-                                    <div>
-                                        <label class="vibrant-label">เบอร์โทร</label>
-                                        <input type="tel" id="e-customerPhone" class="minimal-input"
-                                            placeholder="0xx-xxx-xxxx">
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </div>
