@@ -40,7 +40,11 @@
         @media (min-width: 1024px) {
             html {
                 font-size: 18px;
-                /* Further increased for comfort */
+                /* Further increased for comfort
+                   ⚠ ผลข้างเคียงที่มองไม่เห็น: rem ทุกตัวบนเดสก์ท็อปโตขึ้น 12.5% ตามไปด้วย
+                   รวมถึง utility ของ Tailwind ที่เป็น rem (max-w-*, p-*, text-*, rounded-*)
+                   เช่น max-w-4xl = 56rem ได้จริง 1008px ไม่ใช่ 896px
+                   เวลาคำนวณ/ทดสอบขนาด อย่าคิดที่ฐาน 16px — หรือเขียนเป็น px ไปเลยจะไม่ต้องเดา */
             }
             /* 1024px = เส้นแบ่ง "จอเดสก์ท็อป" ของหน้านี้ ตรงกับ lg: ของ Tailwind
                ถ้าจะขยับเลขนี้ ต้องขยับบล็อก @media (min-width: 1024px) อีกก้อนด้วย
@@ -317,16 +321,24 @@
            เดิมความกว้างคุมด้วยคลาส max-w-2xl lg:max-w-4xl ของ Tailwind (เส้นแบ่ง 1024px) แต่ CSS
            ตัวเลขไปตัดที่ 900px → ช่วง 900–1023px โมดัลยังแคบแต่ตัวเลขใหญ่แล้ว หัวโมดัลเลยล้น 35px
            ย้ายความกว้างมาไว้ที่ .edit-modal-card เพื่อให้ทั้งสองอย่างสลับพร้อมกันแน่นอน
-           rem: html เป็น 16px จอแคบ / 18px ที่ >=1024px → 42rem=672px, 56rem=1008px เท่าของเดิมเป๊ะ
-           ส่วนขนาดตัวเลขใช้ px ตั้งใจ จะได้ไม่โตซ้ำซ้อนกับ root font-size ที่โตอยู่แล้ว */
-        .edit-modal-card { max-width: 42rem; }
+
+           หน่วยเป็น px ทั้งหมดโดยตั้งใจ: หน้านี้ตั้ง html { font-size: 18px } ที่ >=1024px (ฐาน 16px)
+           rem ทุกตัวเลยโตขึ้น 12.5% บนเดสก์ท็อปแบบมองไม่เห็น — 42rem/56rem ของ Tailwind
+           จึงกลายเป็น 672px/1008px ไม่ใช่ 672/896 อย่างที่คิดกันตอนแรก ในบล็อกนี้เขียน px ตรง ๆ
+           ตัวเลขที่เห็นคือพิกเซลจริงบนจอ ไม่ต้องคูณ 1.125 ในหัว
+           (ค่า 672/1008 = เท่ากับ max-w-2xl / lg:max-w-4xl เดิมเป๊ะ ๆ) */
+        .edit-modal-card { max-width: 672px; }
         @media (min-width: 1024px) {
-            .edit-modal-card { max-width: 56rem; }
+            .edit-modal-card { max-width: 1008px; }
             .hsum-lbl { font-size: 9px; }
             .hsum-val { font-size: 15px; }
             .hsum-val--mid  { font-size: 17px; }
             .hsum-val--hero { font-size: 21px; }
         }
+        /* ตาข่ายกันตก: ถ้าวันหลังใครขยับ root font-size / เพิ่มช่องในแถบสรุป / ตัวเลขยาวขึ้น
+           ให้หัวโมดัลตกบรรทัดแทนที่จะล้นออกนอกกรอบ (เดิมล้นแล้วเงียบ ต้องวัดถึงจะรู้) */
+        .edit-modal-head { flex-wrap: wrap; row-gap: 10px; }
+        .edit-modal-head > * { min-width: 0; }
         @media (max-width: 480px) {
             .info-chip { padding: 4px 9px; gap: 4px; }
             .info-chip-input { font-size: 11px; }
@@ -1020,7 +1032,7 @@
         <div
             class="glass edit-modal-card rounded-[2.5rem] shadow-2xl w-full border border-white/20 max-h-[90vh] flex flex-col overflow-hidden">
             <!-- Modal Header -->
-            <div class="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center shrink-0">
+            <div class="edit-modal-head p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center shrink-0">
                 <div class="flex items-center gap-4">
                     <div class="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500">
                         <i class="fas fa-edit text-xl"></i>
