@@ -298,6 +298,24 @@
         .info-chip--hero .info-chip-ico { font-size: 13px; color: #60a5fa; }
         .info-chip--hero .info-chip-input { font-size: 18px; font-variant-numeric: tabular-nums; }
         .info-chip--quiet .info-chip-input { font-size: 12px; }
+
+        /* แถบสรุปบนหัวโมดัลแก้ไข (ยอดรวม/สุทธิ/ต้นทุน/กำไร)
+           เดิมตัวเลข 14px เท่ากันหมด 4 ตัว ต้องอ่านทีละตัวว่าอันไหนคืออะไร
+           ไล่ลำดับใหม่: กำไร (ตัวตัดสินใจ) > สุทธิ > ยอดรวม/ต้นทุน (ตัวประกอบ) */
+        .hsum-lbl { font-size: 9px; font-weight: 900; line-height: 1; margin-bottom: 3px;
+                    text-transform: uppercase; letter-spacing: .03em; }
+        .hsum-val { font-size: 15px; font-weight: 900; line-height: 1.1; white-space: nowrap;
+                    font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+        .hsum-val--mid  { font-size: 17px; }
+        .hsum-val--hero { font-size: 21px; }
+        /* ต้องเป็น 1023px ให้ตรงกับ lg: ของ Tailwind — โมดัลกว้างขึ้น (max-w-2xl -> 4xl) ที่ 1024px
+           ถ้าตัดที่ 900px หัวโมดัลจะล้น 35px ในช่วง 900–1023px (วัดเจอตอนทดสอบ) */
+        @media (max-width: 1023px) {
+            .hsum-lbl { font-size: 8px; }
+            .hsum-val { font-size: 12px; }
+            .hsum-val--mid  { font-size: 13px; }
+            .hsum-val--hero { font-size: 16px; }
+        }
         @media (max-width: 480px) {
             .info-chip { padding: 4px 9px; gap: 4px; }
             .info-chip-input { font-size: 11px; }
@@ -1003,23 +1021,23 @@
                 <div class="flex items-center">
                     <div class="hidden sm:flex items-center gap-2 md:gap-4 px-3 py-2 bg-slate-50 dark:bg-slate-800/50 rounded-2xl mr-4 border border-slate-100 dark:border-slate-700">
                         <div class="text-center px-1 md:px-2">
-                            <p class="text-[7px] md:text-[8px] font-black text-slate-400 uppercase leading-none mb-1">ยอดรวม</p>
-                            <p id="h-e-gross" class="text-[10px] md:text-sm font-black text-slate-600 dark:text-slate-300">฿0.00</p>
+                            <p class="hsum-lbl text-slate-400">ยอดรวม</p>
+                            <p id="h-e-gross" class="hsum-val text-slate-600 dark:text-slate-300">฿0.00</p>
                         </div>
-                        <div class="w-px h-6 bg-slate-200 dark:bg-slate-700"></div>
+                        <div class="w-px h-9 bg-slate-200 dark:bg-slate-700"></div>
                         <div class="text-center px-1 md:px-2">
-                            <p class="text-[7px] md:text-[8px] font-black text-blue-400 uppercase leading-none mb-1">สุทธิ</p>
-                            <p id="h-e-net" class="text-[10px] md:text-sm font-black text-blue-600">฿0.00</p>
+                            <p class="hsum-lbl text-blue-400">สุทธิ</p>
+                            <p id="h-e-net" class="hsum-val hsum-val--mid text-blue-600">฿0.00</p>
                         </div>
-                        <div class="w-px h-6 bg-slate-200 dark:bg-slate-700"></div>
+                        <div class="w-px h-9 bg-slate-200 dark:bg-slate-700"></div>
                         <div class="text-center px-1 md:px-2">
-                            <p class="text-[7px] md:text-[8px] font-black text-rose-400 uppercase leading-none mb-1">ต้นทุน</p>
-                            <p id="h-e-cost" class="text-[10px] md:text-sm font-black text-rose-500">฿0.00</p>
+                            <p class="hsum-lbl text-rose-400">ต้นทุน</p>
+                            <p id="h-e-cost" class="hsum-val text-rose-500">฿0.00</p>
                         </div>
-                        <div class="w-px h-6 bg-slate-200 dark:bg-slate-700"></div>
+                        <div class="w-px h-9 bg-slate-200 dark:bg-slate-700"></div>
                         <div class="text-center px-1 md:px-2">
-                            <p class="text-[7px] md:text-[8px] font-black text-emerald-400 uppercase leading-none mb-1">กำไร</p>
-                            <p id="h-e-profit" class="text-[10px] md:text-sm font-black text-emerald-600">฿0.00</p>
+                            <p class="hsum-lbl text-emerald-400">กำไร</p>
+                            <p id="h-e-profit" class="hsum-val hsum-val--hero text-emerald-600">฿0.00</p>
                         </div>
                     </div>
                     <button onclick="closeEditModal()"
@@ -3945,7 +3963,7 @@
             
             const hProfitEl = document.getElementById('h-e-profit');
             if (hProfitEl) {
-                hProfitEl.className = profit < 0 ? "text-[10px] md:text-sm font-black text-rose-500" : "text-[10px] md:text-sm font-black text-emerald-600";
+                hProfitEl.className = "hsum-val hsum-val--hero " + (profit < 0 ? "text-rose-500" : "text-emerald-600");
             }
 
             const profitEl = document.getElementById('e-calc-profit');
