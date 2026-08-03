@@ -84,6 +84,11 @@ body.auth-pending .auth-gate {
   text-decoration: none;
 }
 
+/* display: inline-flex ชนะ [hidden] ของ UA stylesheet → ต้องปิดเอง ไม่งั้นปุ่มโผล่ตอนไม่ควรโผล่ */
+.auth-action[hidden] {
+  display: none;
+}
+
 button,
 input,
 select {
@@ -802,6 +807,11 @@ html.dark .card-quick-chip.active {
   padding: 0 18px 10px;
 }
 
+/* display: flex ชนะ [hidden] ของ UA stylesheet → ต้องปิดเอง ไม่งั้นเหลือช่องว่างค้างตอนไม่มีชิป */
+.card-detail-chips[hidden] {
+  display: none;
+}
+
 /* แถบแบ่งหน้าใต้ตาราง Card Detail */
 .card-detail-pager {
   display: flex;
@@ -809,6 +819,11 @@ html.dark .card-quick-chip.active {
   justify-content: center;
   gap: 12px;
   padding: 10px 18px 14px;
+}
+
+/* display: flex ชนะ [hidden] ของ UA stylesheet → ต้องปิดเอง ไม่งั้นแถบแบ่งหน้าโผล่ค้างตอนมีหน้าเดียว */
+.card-detail-pager[hidden] {
+  display: none;
 }
 
 .card-detail-pager span {
@@ -3086,6 +3101,35 @@ html.dark .bar-pick-warn-row { background: rgba(180, 83, 9, 0.15); }
   white-space: nowrap;
 }
 
+/* บรรทัดสรุปใต้ช่อง BAR — เป็น <button> แต่ต้องดูเหมือนข้อความประกอบ ไม่ใช่ปุ่มเต็มตัว */
+.bar-usage-note {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bar-usage-note:hover:not(:disabled) {
+  color: var(--green-dark);
+  text-decoration: underline;
+}
+
+.bar-usage-note:disabled {
+  cursor: default;
+}
+
+/* ช่อง BAR ว่าง = ข้อความว่าง = ไม่กินที่ (label เป็น grid มี gap 6px ถ้าไม่ซ่อนจะเหลือช่องว่างค้าง)
+   ใช้ :empty ไม่ใช้ [hidden] เพราะคลาสที่ตั้ง display ชนะ [hidden] */
+.bar-usage-note:empty {
+  display: none;
+}
+
 #suggestPairModal {
   width: min(940px, calc(100vw - 28px));
 }
@@ -3180,6 +3224,12 @@ html.dark .bar-pick-warn-row { background: rgba(180, 83, 9, 0.15); }
   font-weight: 800;
 }
 
+/* ต้องมีคู่กับ .cknc-undo-toast ที่ตั้ง display: flex ไว้ ไม่งั้น toast.hidden = true ไม่มีผล
+   → ปุ่ม × กดไม่ปิด และหมดเวลา 9 วิ ก็ไม่หาย (ยืนยันด้วยการทดลองบน live 2026-08-03) */
+.cknc-undo-toast[hidden] {
+  display: none;
+}
+
 .cknc-undo-toast .cknc-undo-btn {
   min-height: 0;
   padding: 5px 13px;
@@ -3261,6 +3311,18 @@ html.dark .suggest-pair-table td.pair-diff {
 .input-empty-warn {
   background: var(--amber-soft, #fdf3d8);
   border-color: #f0d6a4;
+}
+
+/* ช่องเลขใบวางบิลรูปแบบผิด = แดง (บันทึกไม่ผ่าน) — ต้องประกาศหลัง .input-empty-warn
+   เพราะสองคลาสนี้ specificity เท่ากัน ตัวหลังชนะ และช่องว่างจะไม่มีทางติดสองคลาสพร้อมกันอยู่แล้ว */
+.input-bad-format {
+  background: #fdecec;
+  border-color: #e58a8a;
+}
+
+html.dark .input-bad-format {
+  background: rgba(220, 38, 55, 0.16);
+  border-color: #8a3b3b;
 }
 
 html.dark .input-empty-warn {

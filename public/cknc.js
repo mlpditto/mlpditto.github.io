@@ -168,6 +168,7 @@ const elements = {
   editOrw: $("editOrw"),
   editInvoice: $("editInvoice"),
   editBarNo: $("editBarNo"),
+  editBarUsage: $("editBarUsage"),
   editCreditNos: $("editCreditNos"),
   caseSeqModal: $("caseSeqModal"),
   caseSeqModalTitle: $("caseSeqModalTitle"),
@@ -1589,6 +1590,30 @@ function extractBarNo(value) {
   return match ? match[0] : "";
 }
 
+// ตรวจ/normalize ค่าที่พิมพ์มือลงช่องใบวางบิล — ยึดรูปแบบเดียวกับทาง import (extractBarNo) เท่านั้น
+// เหตุผลที่ต้องกัน: เจอจริง 8 บิลที่มี "AR-00003-26-3099" ค้างในช่อง BAR (ก๊อป AR วางผิดช่อง)
+// 2 ใบในนั้นถูกเลื่อนเป็น "วางบิลแล้ว" เองแล้วไหลเข้ายอดขาย = รายได้ปลอม
+// ผ่านแล้วคืนเฉพาะเลข BAR ที่ตัดออกมา — วางทั้งบรรทัดจากชีตมาก็ใช้ได้ ตัวพิมพ์เล็กก็ normalize ให้
+function normalizeBarInput(value) {
+  const raw = clean(value);
+  if (!raw) return { ok: true, empty: true, value: "", bad: [] };
+  const parts = raw.split(",").map(clean).filter(Boolean);
+  const found = parts.map((part) => ({ part, bar: extractBarNo(part) }));
+  // ชิ้นที่ไม่มี BAR นับเป็น "ผิด" เฉพาะเมื่อหน้าตาเป็นเลขอ้างอิง (AR-... / ORW-...) ที่ตั้งใจใส่มา
+  // เศษข้อความจากการวางทั้งบรรทัดไม่นับ — เลขเงินหลักพันมีจุลภาคของตัวเอง ("ยอด 6,395.00")
+  // ถ้านับหมดจะบล็อกการวางทั้งบรรทัดซึ่งเป็นวิธีใช้งานที่ตั้งใจรองรับ
+  const bad = found.filter((item) => !item.bar && /[A-Z]{1,5}-\d/i.test(item.part)).map((item) => item.part);
+  const value2 = [...new Set(found.filter((item) => item.bar).map((item) => item.bar))].join(", ");
+  // ไม่มีทั้งเลขที่ใช้ได้และไม่มีชิ้นที่ระบุว่าผิด (เช่นพิมพ์ข้อความเปล่า ๆ) = ผิดทั้งก้อน
+  if (!bad.length && !value2) return { ok: false, empty: false, value: "", bad: [raw] };
+  return { ok: !bad.length && Boolean(value2), empty: false, value: value2, bad };
+}
+
+function barInputErrorText(check) {
+  const bad = check.bad.join(", ");
+  return `เลขใบวางบิลไม่ถูกรูปแบบ: ${bad} — ต้องเป็น BAR-00003-26-xxxx เท่านั้น (ถ้าเป็น AR-... นั่นคือเลขที่เครดิต ให้ใส่ช่อง AR)`;
+}
+
 // fallbackBar / dueDateOverride = ค่าที่กรอกในโมดัล paste (หัวใบวางบิล copy ไม่ติดมา)
 // BAR: ใช้ต่อท้ายสุด — ที่เจอในไฟล์/ข้อความจริงชนะเสมอ
 // วันครบกำหนด: ทับค่าในแถว เพราะคอลัมน์ "วันกำหนดชำระ" ของหน้า BAR คือวันที่ทำรายการ ไม่ใช่วันครบกำหนด
@@ -2654,7 +2679,17 @@ function openMonthDrill(metric, caseType, month) {
   openCardDetail("monthDrill");
 }
 
+// เลข BAR ที่กำลังเปิดดูอยู่ใน Card Detail (ตั้งตอนกดบรรทัดใต้ช่อง BAR ในโมดัลบิล)
+let barBillsFocus = "";
+
 const cardDetailConfigs = {
+  barBills: {
+    get title() { return `บิลในใบวางบิล ${barBillsFocus}`; },
+    // ยึด activeBills() ไม่ผูกตัวกรองวันที่ — ให้ตรงกับตัวเลขที่โชว์ใต้ช่อง BAR เป๊ะ
+    rows: () => activeBills().filter((bill) => clean(bill.barNo).split(",").map(clean)
+      .some((bar) => bar.toUpperCase() === barBillsFocus)),
+    // ไม่มี apply: ตัวกรองตารางใหญ่ไม่มีมิติ BAR → ปุ่ม "กรองตารางตามนี้" ซ่อนเอง
+  },
   monthDrill: {
     get title() {
       const drill = state.monthDrill || {};
@@ -7944,10 +7979,37 @@ function currentDetailBill() {
   return state.bills.find((bill) => bill.billKey === state.currentDetailKey);
 }
 
-// ช่อง BAR ว่าง = พื้นส้มอ่อน เตือนให้ไล่เก็บเลขใบวางบิล
+// สรุปว่าเลข BAR ที่พิมพ์อยู่มีของเกาะอยู่เท่าไหร่ — 1 BAR : N AR โดยการออกแบบ
+// นับรวมบิลใบที่เปิดอยู่ และไม่ผูกตัวกรองวันที่ ให้ตรงกับรายการที่กดเข้าไปดู
+function barUsageSummary(value) {
+  const bars = clean(value).split(",").map(clean).filter(Boolean).map((bar) => bar.toUpperCase());
+  if (!bars.length) return { text: "", bills: 0 };
+  const credits = new Set();
+  let billCount = 0;
+  activeBills().forEach((bill) => {
+    const own = clean(bill.barNo).split(",").map(clean).filter(Boolean).map((bar) => bar.toUpperCase());
+    if (!bars.some((bar) => own.includes(bar))) return;
+    billCount += 1;
+    clean(bill.creditNos).split(",").map(clean).filter(Boolean).forEach((ar) => credits.add(ar.toUpperCase()));
+  });
+  if (!billCount) return { text: "ยังไม่มีบิลไหนใช้เลขนี้", bills: 0 };
+  return { text: `ใบวางบิลนี้: ${number(credits.size)} เครดิต (AR) · ${number(billCount)} บิล`, bills: billCount };
+}
+
+// ช่อง BAR ว่าง = พื้นส้มอ่อน เตือนให้ไล่เก็บเลขใบวางบิล · รูปแบบผิด = พื้นแดง (บันทึกไม่ผ่าน)
+// บรรทัดใต้ช่องบอกจำนวน AR/บิลที่เกาะเลขนี้ — AR ≠ บิล เมื่อไหร่ = สัญญาณว่าเลขผิด
 function updateBarEmptyHint() {
   if (!elements.editBarNo) return;
-  elements.editBarNo.classList.toggle("input-empty-warn", !clean(elements.editBarNo.value));
+  const check = normalizeBarInput(elements.editBarNo.value);
+  elements.editBarNo.classList.toggle("input-empty-warn", check.empty);
+  elements.editBarNo.classList.toggle("input-bad-format", !check.empty && !check.ok);
+  elements.editBarNo.title = check.ok ? "" : barInputErrorText(check);
+  if (elements.editBarUsage) {
+    const usage = barUsageSummary(elements.editBarNo.value);
+    elements.editBarUsage.textContent = usage.text;
+    // ไม่มีบิลให้ดู = ปุ่มกดไม่ได้ (ยังโชว์ข้อความอยู่)
+    elements.editBarUsage.disabled = usage.bills === 0;
+  }
 }
 
 // ช่องลำดับเคสใน drawer: label บอกเดือน/ปี + chip โค้ดเต็ม + เตือนแดงถ้าลำดับซ้ำกับบิลอื่น (เช็คสดตอนพิมพ์)
@@ -8772,6 +8834,14 @@ function quickUpdateInlineField(billKey, field, rawValue, type) {
 function saveBillOverride() {
   const bill = currentDetailBill();
   if (!bill) return;
+  // เลขใบวางบิลผิดรูปแบบ = ไม่บันทึกทั้งใบ (ปล่อยผ่าน = ได้ BAR ปลอมที่นับเป็นรายได้จริง)
+  const barCheck = normalizeBarInput(elements.editBarNo?.value);
+  if (!barCheck.ok) {
+    updateBarEmptyHint();
+    elements.editBarNo?.focus();
+    alert(barInputErrorText(barCheck));
+    return;
+  }
   const values = {
     status: elements.editStatus.value,
     caseType: bill.caseType || "unknown",
@@ -8787,7 +8857,7 @@ function saveBillOverride() {
     expectedClaim: elements.editExpectedClaim ? toNumeric(elements.editExpectedClaim.value) : toNumeric(bill.expectedClaim),
     orw: clean(elements.editOrw.value),
     invoice: clean(elements.editInvoice.value),
-    barNo: elements.editBarNo ? clean(elements.editBarNo.value) : clean(bill.barNo),
+    barNo: elements.editBarNo ? barCheck.value : clean(bill.barNo),
     creditNos: elements.editCreditNos ? clean(elements.editCreditNos.value) : clean(bill.creditNos),
     // 0 = กลับไปนับอัตโนมัติ
     caseSeqManual: elements.editCaseSeq ? Math.max(0, Math.round(toNumeric(elements.editCaseSeq.value))) : toNumeric(bill.caseSeqManual),
@@ -9103,11 +9173,14 @@ elements.cardBulkCaseType?.addEventListener("change", () => {
   elements.cardBulkCaseType.value = "";
 });
 function applyCardBulkBarNo() {
-  const barValue = clean(elements.cardBulkBarNo?.value);
-  if (!barValue) {
+  // ที่นี่ใช้ alert เพราะ Card Detail เป็นโมดัลเต็มจอ — statusText อยู่หลังโมดัล มองไม่เห็น
+  const check = normalizeBarInput(elements.cardBulkBarNo?.value);
+  if (check.empty || !check.ok) {
+    if (!check.ok) alert(barInputErrorText(check));
     elements.cardBulkBarNo?.focus();
     return;
   }
+  const barValue = check.value;
   applyCardBulk((bill, existing) => {
     const values = { barNo: barValue };
     if ((existing.values?.billingStageSource || bill.billingStageSource) !== "manual") {
@@ -9756,6 +9829,14 @@ elements.editSale?.addEventListener("input", updateEditProfitPreview);
 elements.editCost?.addEventListener("input", updateEditProfitPreview);
 elements.editMlpCost?.addEventListener("input", updateEditProfitPreview);
 elements.editBarNo?.addEventListener("input", updateBarEmptyHint);
+// กดบรรทัดสรุป = เปิด Card Detail ทับโมดัลบิล (ทั้งคู่เป็น <dialog> ซ้อนกันได้ ปิดแล้วกลับมาที่โมดัลบิลเดิม
+// ค่าที่พิมพ์ค้างไว้ไม่หาย — ทดสอบกับของจริงแล้ว) จึงไม่ปิด drawer
+elements.editBarUsage?.addEventListener("click", () => {
+  const bars = clean(elements.editBarNo?.value).split(",").map(clean).filter(Boolean);
+  if (!bars.length) return;
+  barBillsFocus = bars[0].toUpperCase(); // หลาย BAR ในช่องเดียว: ดูใบแรกก่อน
+  openCardDetail("barBills");
+});
 elements.editCaseSeq?.addEventListener("input", () => {
   const bill = currentDetailBill();
   if (bill) updateCaseSeqDrawerHint(bill);
@@ -9803,13 +9884,20 @@ elements.bulkCaseType?.addEventListener("change", () => {
   elements.bulkCaseType.value = "";
 });
 function applyBulkBarNo() {
-  const barValue = clean(elements.bulkBarNo.value);
-  if (!barValue) {
+  const check = normalizeBarInput(elements.bulkBarNo.value);
+  if (check.empty) {
     // ช่องว่างแล้วกดปุ่ม: บอกให้รู้แทนการเงียบเฉย ๆ (ดูเหมือนปุ่มพัง)
     elements.statusText.textContent = "พิมพ์เลขใบวางบิล (BAR-...) ในช่องก่อน แล้วกด ใส่ BAR";
     elements.bulkBarNo.focus();
     return;
   }
+  // อยู่หน้าหลัก statusText เห็นชัดอยู่แล้ว ไม่ต้อง alert
+  if (!check.ok) {
+    elements.statusText.textContent = barInputErrorText(check);
+    elements.bulkBarNo.focus();
+    return;
+  }
+  const barValue = check.value;
   const count = state.selectedBillKeys.size;
   applyBulkOverride((bill, existing) => {
     const values = { barNo: barValue };
@@ -9883,8 +9971,14 @@ function barPickerCandidates() {
 function updateBarPickerApplyBtn() {
   if (!elements.barPickerApply) return;
   const n = barPickerSelected.size;
+  const check = normalizeBarInput(elements.barPickerInput?.value);
   elements.barPickerApply.textContent = `ใส่ BAR ให้ ${number(n)} บิล`;
-  elements.barPickerApply.disabled = n === 0 || !clean(elements.barPickerInput?.value);
+  elements.barPickerApply.disabled = n === 0 || check.empty || !check.ok;
+  // บอกเหตุผลที่ปุ่มกดไม่ได้ ไม่งั้นดูเหมือนปุ่มพัง
+  elements.barPickerApply.title = check.empty || check.ok ? "" : barInputErrorText(check);
+  if (elements.barPickerInput) {
+    elements.barPickerInput.classList.toggle("input-bad-format", !check.empty && !check.ok);
+  }
 }
 
 function renderBarPicker() {
@@ -9920,11 +10014,14 @@ function renderBarPicker() {
 }
 
 function applyBarPickerSelection() {
-  const bar = clean(elements.barPickerInput?.value);
-  if (!bar) {
+  // ปุ่มถูก disable ไว้แล้วเมื่อรูปแบบผิด — ด่านนี้กันทาง Enter/โค้ดเรียกตรง
+  const check = normalizeBarInput(elements.barPickerInput?.value);
+  if (check.empty || !check.ok) {
+    if (!check.ok) alert(barInputErrorText(check));
     elements.barPickerInput?.focus();
     return;
   }
+  const bar = check.value;
   if (!barPickerSelected.size) return;
   const keys = new Set(barPickerSelected);
   applyBulkOverride((bill, existing) => {
