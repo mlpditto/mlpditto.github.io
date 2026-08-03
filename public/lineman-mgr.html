@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="th" class="light">
 
 <head>
@@ -291,14 +291,32 @@
                            font-size: 12px; font-weight: 900; color: #0f172a; }
         .dark .info-chip-input { color: #f8fafc; }
         .info-chip-input::placeholder { color: #cbd5e1; font-weight: 700; }
+        /* ลำดับสายตาในแถวหัวข้อ: เลข 4 หลักท้าย = ตัวเด่น (อ่านบ่อยสุด) เบอร์โทร = ตัวรอง
+           ตั้งใจให้ต่างกันชัด ๆ จะได้ไม่ต้องกวาดตาหาว่าอันไหนคือเลขออเดอร์ */
+        .info-chip--hero { padding: 6px 16px; background: #eff6ff; }
+        .dark .info-chip--hero { background: #172554; }
+        .info-chip--hero .info-chip-ico { font-size: 13px; color: #60a5fa; }
+        .info-chip--hero .info-chip-input { font-size: 18px; font-variant-numeric: tabular-nums; }
+        .info-chip--quiet .info-chip-input { font-size: 12px; }
         @media (max-width: 480px) {
             .info-chip { padding: 4px 9px; gap: 4px; }
             .info-chip-input { font-size: 11px; }
+            .info-chip--hero { padding: 5px 13px; gap: 6px; }
+            .info-chip--hero .info-chip-input { font-size: 17px; }
+            .info-chip--quiet .info-chip-input { font-size: 12px; }
         }
 
         /* จอแคบ: กันหัวข้อ+segmented ล้น (วัดแล้ว 375/360px ล้นถ้าไม่ทำ) */
         @media (max-width: 519px) { .jp-label { display: none; } }      /* ซ่อน "支払い" ก่อน */
         @media (max-width: 429px) { .title-label { display: none; } }   /* แคบมาก: เหลือไอคอน */
+        /* หัวข้อที่มีชิป (รายละเอียดการสั่งซื้อ): จอแคบให้ชิปตกลงบรรทัดล่างเต็มความกว้าง
+           แถวบนเลยเหลือที่พอโชว์ชื่อหัวข้อ ไม่ต้องหดเหลือแต่ไอคอน
+           display: block เพราะ .truncate ต้องการ block (flex item เดิมถูก blockify ให้อยู่แล้ว) */
+        .section-header { flex-wrap: wrap; row-gap: 8px; }
+        @media (max-width: 480px) {
+            .section-header.has-chips .chip-group { order: 3; width: 100%; margin-left: 0; margin-right: 0; }
+            .section-header.has-chips .title-label { display: block !important; }
+        }
         @media (max-width: 480px) {
             .gp-seg  { padding: 4px 10px; font-size: 10px; }
             .gp-seg-has-amt .gp-seg-rate { font-size: 9px; }
@@ -712,18 +730,18 @@
             <form id="salesForm" class="space-y-4" novalidate>
                 <!-- Section 1: รายละเอียดการสั่งซื้อ -->
                 <div class="collapsible-section">
-                    <div class="section-header active" onclick="toggleSection(this)">
+                    <div class="section-header active has-chips" onclick="toggleSection(this)">
                         <div class="flex items-center gap-3 min-w-0">
                             <i class="fas fa-info-circle text-lineman shrink-0"></i>
                             <span class="text-sm font-black uppercase tracking-wider truncate title-label">รายละเอียดการสั่งซื้อ</span>
                         </div>
-                        <div class="flex items-center gap-2 ml-auto mr-2 min-w-0" onclick="event.stopPropagation()">
-                            <label class="info-chip shrink-0" title="4 หลักท้าย">
+                        <div class="chip-group flex items-center gap-2 ml-auto mr-2 min-w-0" onclick="event.stopPropagation()">
+                            <label class="info-chip info-chip--hero shrink-0" title="4 หลักท้าย">
                                 <span class="info-chip-ico">#</span>
                                 <input type="text" id="orderId" maxlength="4" placeholder="----"
-                                    class="info-chip-input w-[4.5ch] text-center tracking-widest">
+                                    class="info-chip-input w-[5.5ch] text-center tracking-widest">
                             </label>
-                            <label class="info-chip" title="เบอร์โทร">
+                            <label class="info-chip info-chip--quiet" title="เบอร์โทร">
                                 <i class="fas fa-phone info-chip-ico"></i>
                                 <input type="tel" id="customerPhone" placeholder="0xx-xxx-xxxx"
                                     class="info-chip-input w-[11ch]">
@@ -1016,18 +1034,18 @@
                 <form id="editForm" class="space-y-4" novalidate>
                     <!-- Section 1: รายละเอียดการสั่งซื้อ -->
                     <div class="collapsible-section">
-                        <div class="section-header active" onclick="toggleSection(this)">
+                        <div class="section-header active has-chips" onclick="toggleSection(this)">
                             <div class="flex items-center gap-3 min-w-0">
                                 <i class="fas fa-info-circle text-blue-500 shrink-0"></i>
                                 <span class="text-sm font-black uppercase tracking-wider truncate title-label">รายละเอียดการสั่งซื้อ</span>
                             </div>
-                            <div class="flex items-center gap-2 ml-auto mr-2 min-w-0" onclick="event.stopPropagation()">
-                                <label class="info-chip shrink-0" title="4 หลักท้าย">
+                            <div class="chip-group flex items-center gap-2 ml-auto mr-2 min-w-0" onclick="event.stopPropagation()">
+                                <label class="info-chip info-chip--hero shrink-0" title="4 หลักท้าย">
                                     <span class="info-chip-ico">#</span>
                                     <input type="text" id="e-orderId" maxlength="4" placeholder="----"
-                                        class="info-chip-input w-[4.5ch] text-center tracking-widest">
+                                        class="info-chip-input w-[5.5ch] text-center tracking-widest">
                                 </label>
-                                <label class="info-chip" title="เบอร์โทร">
+                                <label class="info-chip info-chip--quiet" title="เบอร์โทร">
                                     <i class="fas fa-phone info-chip-ico"></i>
                                     <input type="tel" id="e-customerPhone" placeholder="0xx-xxx-xxxx"
                                         class="info-chip-input w-[11ch]">
