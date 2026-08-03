@@ -42,6 +42,10 @@
                 font-size: 18px;
                 /* Further increased for comfort */
             }
+            /* 1024px = เส้นแบ่ง "จอเดสก์ท็อป" ของหน้านี้ ตรงกับ lg: ของ Tailwind
+               ถ้าจะขยับเลขนี้ ต้องขยับบล็อก @media (min-width: 1024px) อีกก้อนด้วย
+               (ก้อนที่คุมความกว้างโมดัลแก้ไข + ขนาดตัวเลขแถบสรุป — ค้นคำว่า .edit-modal-card)
+               แยกกันเพราะกฎฐานของมันประกาศทีหลัง ถ้าเอามารวมตรงนี้จะโดนกฎฐานทับ */
 
             .vibrant-label {
                 font-size: 14px !important;
@@ -302,19 +306,26 @@
         /* แถบสรุปบนหัวโมดัลแก้ไข (ยอดรวม/สุทธิ/ต้นทุน/กำไร)
            เดิมตัวเลข 14px เท่ากันหมด 4 ตัว ต้องอ่านทีละตัวว่าอันไหนคืออะไร
            ไล่ลำดับใหม่: กำไร (ตัวตัดสินใจ) > สุทธิ > ยอดรวม/ต้นทุน (ตัวประกอบ) */
-        .hsum-lbl { font-size: 9px; font-weight: 900; line-height: 1; margin-bottom: 3px;
+        .hsum-lbl { font-size: 8px; font-weight: 900; line-height: 1; margin-bottom: 3px;
                     text-transform: uppercase; letter-spacing: .03em; }
-        .hsum-val { font-size: 15px; font-weight: 900; line-height: 1.1; white-space: nowrap;
+        .hsum-val { font-size: 12px; font-weight: 900; line-height: 1.1; white-space: nowrap;
                     font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
-        .hsum-val--mid  { font-size: 17px; }
-        .hsum-val--hero { font-size: 21px; }
-        /* ต้องเป็น 1023px ให้ตรงกับ lg: ของ Tailwind — โมดัลกว้างขึ้น (max-w-2xl -> 4xl) ที่ 1024px
-           ถ้าตัดที่ 900px หัวโมดัลจะล้น 35px ในช่วง 900–1023px (วัดเจอตอนทดสอบ) */
-        @media (max-width: 1023px) {
-            .hsum-lbl { font-size: 8px; }
-            .hsum-val { font-size: 12px; }
-            .hsum-val--mid  { font-size: 13px; }
-            .hsum-val--hero { font-size: 16px; }
+        .hsum-val--mid  { font-size: 13px; }
+        .hsum-val--hero { font-size: 16px; }
+
+        /* === ความกว้างโมดัลแก้ไข + สเต็ปขนาดตัวเลข ต้องอยู่ใน @media ก้อนเดียวกันเสมอ ===
+           เดิมความกว้างคุมด้วยคลาส max-w-2xl lg:max-w-4xl ของ Tailwind (เส้นแบ่ง 1024px) แต่ CSS
+           ตัวเลขไปตัดที่ 900px → ช่วง 900–1023px โมดัลยังแคบแต่ตัวเลขใหญ่แล้ว หัวโมดัลเลยล้น 35px
+           ย้ายความกว้างมาไว้ที่ .edit-modal-card เพื่อให้ทั้งสองอย่างสลับพร้อมกันแน่นอน
+           rem: html เป็น 16px จอแคบ / 18px ที่ >=1024px → 42rem=672px, 56rem=1008px เท่าของเดิมเป๊ะ
+           ส่วนขนาดตัวเลขใช้ px ตั้งใจ จะได้ไม่โตซ้ำซ้อนกับ root font-size ที่โตอยู่แล้ว */
+        .edit-modal-card { max-width: 42rem; }
+        @media (min-width: 1024px) {
+            .edit-modal-card { max-width: 56rem; }
+            .hsum-lbl { font-size: 9px; }
+            .hsum-val { font-size: 15px; }
+            .hsum-val--mid  { font-size: 17px; }
+            .hsum-val--hero { font-size: 21px; }
         }
         @media (max-width: 480px) {
             .info-chip { padding: 4px 9px; gap: 4px; }
@@ -326,14 +337,16 @@
 
         /* จอแคบ: กันหัวข้อ+segmented ล้น (วัดแล้ว 375/360px ล้นถ้าไม่ทำ) */
         @media (max-width: 519px) { .jp-label { display: none; } }      /* ซ่อน "支払い" ก่อน */
-        @media (max-width: 429px) { .title-label { display: none; } }   /* แคบมาก: เหลือไอคอน */
+        /* แคบมาก: หัวข้อเหลือแต่ไอคอน — ยกเว้นหัวข้อที่มีชิป เพราะชิปตกไปบรรทัดล่างแล้ว
+           ที่ต้อง :not() แทนการ override กลับ เพราะ .title-label มี .truncate ของ Tailwind อยู่
+           พอสั่ง display: none แล้วสั่งกลับ ต้องเดาให้ถูกว่าค่าเดิมคือ block (flex item ถูก blockify)
+           ถ้าเดาเป็น inline ellipsis จะพังเงียบ ๆ — เลี่ยงด้วยการไม่ซ่อนตั้งแต่แรก */
+        @media (max-width: 429px) { .section-header:not(.has-chips) .title-label { display: none; } }
         /* หัวข้อที่มีชิป (รายละเอียดการสั่งซื้อ): จอแคบให้ชิปตกลงบรรทัดล่างเต็มความกว้าง
-           แถวบนเลยเหลือที่พอโชว์ชื่อหัวข้อ ไม่ต้องหดเหลือแต่ไอคอน
-           display: block เพราะ .truncate ต้องการ block (flex item เดิมถูก blockify ให้อยู่แล้ว) */
+           แถวบนเลยเหลือที่พอโชว์ชื่อหัวข้อ */
         .section-header { flex-wrap: wrap; row-gap: 8px; }
         @media (max-width: 480px) {
             .section-header.has-chips .chip-group { order: 3; width: 100%; margin-left: 0; margin-right: 0; }
-            .section-header.has-chips .title-label { display: block !important; }
         }
         @media (max-width: 480px) {
             .gp-seg  { padding: 4px 10px; font-size: 10px; }
@@ -1005,7 +1018,7 @@
     <div id="editModal"
         class="fixed inset-0 bg-black/70 z-[120] hidden flex items-center justify-center p-4 backdrop-blur-md transition-all duration-300">
         <div
-            class="glass rounded-[2.5rem] shadow-2xl w-full max-w-2xl lg:max-w-4xl border border-white/20 max-h-[90vh] flex flex-col overflow-hidden">
+            class="glass edit-modal-card rounded-[2.5rem] shadow-2xl w-full border border-white/20 max-h-[90vh] flex flex-col overflow-hidden">
             <!-- Modal Header -->
             <div class="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center shrink-0">
                 <div class="flex items-center gap-4">
@@ -3963,7 +3976,9 @@
             
             const hProfitEl = document.getElementById('h-e-profit');
             if (hProfitEl) {
-                hProfitEl.className = "hsum-val hsum-val--hero " + (profit < 0 ? "text-rose-500" : "text-emerald-600");
+                // สลับเฉพาะคลาสสี ห้ามเขียนทับ className ทั้งก้อน ไม่งั้นคลาสขนาด (hsum-val*) หายตอนคำนวณใหม่
+                hProfitEl.classList.toggle('text-rose-500', profit < 0);
+                hProfitEl.classList.toggle('text-emerald-600', profit >= 0);
             }
 
             const profitEl = document.getElementById('e-calc-profit');
