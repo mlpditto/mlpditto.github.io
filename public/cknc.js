@@ -6143,13 +6143,24 @@ function nhsoCostIssues() {
   return activeBills().filter((bill) => bill.caseType === "nhso" && Math.abs(toNumeric(bill.mlpCost)) >= 0.005);
 }
 
+// สถานะ "รอ..." ที่ยกขึ้นเป็นวางบิลแล้วได้เมื่อเลขครบ — ไม่รวม paid/billed/cancelled/billing-only/no-mlp
+// (paid = ปลายทางแล้ว, cancelled = ตั้งใจยกเลิก, อีกสองตัวเป็นผลการจับคู่ไม่ใช่สถานะงาน)
+const BILLED_PROMOTABLE_STAGES = new Set(["pending-review", "insurance-review", "nhso-pending", "general-pending"]);
+
+// บิลที่มีเลขครบทั้ง BAR และ AR แล้ว แต่สถานะงานยังค้างที่ "รอ..." — ปกติ deriveBillingStage ยกให้เอง
+// แต่ถ้า billingStageSource เป็น manual ทุกจุด re-derive จะข้ามไป ค่าจึงค้างอยู่อย่างนั้นตลอด
+function billedReadyBills() {
+  return activeBills().filter((bill) => clean(bill.barNo) && clean(bill.creditNos)
+    && BILLED_PROMOTABLE_STAGES.has(bill.billingStage || ""));
+}
+
 // จำนวนคู่แนะนำจริง (ไม่ตัดเหลือ 8) — ใช้โชว์ progress ให้เห็นว่าลดลงจริงตอนรวม
 function mergeSuggestTotal() {
   return state.mergeSuggestionsTotal != null ? state.mergeSuggestionsTotal : state.mergeSuggestions.length;
 }
 
 function warnTotalCount() {
-  return mergeSuggestTotal() + nhsoCostIssues().length;
+  return mergeSuggestTotal() + nhsoCostIssues().length + billedReadyBills().length;
 }
 
 function renderMergeSuggestions() {
@@ -6171,7 +6182,9 @@ function renderMergeWarnBody() {
   const suggestions = state.mergeSuggestions;
   const nhsoIssues = nhsoCostIssues();
   const suggTotal = mergeSuggestTotal(); // จำนวนคู่จริง (ไม่ตัดเหลือ 8)
-  if (elements.mergeWarnTitle) elements.mergeWarnTitle.textContent = `รายการที่ต้องตรวจ (${number(suggTotal + nhsoIssues.length)})`;
+  const billedReady = billedReadyBills();
+  // ใช้ warnTotalCount() ตัวเดียวกับที่อื่น จะได้ไม่มีสูตรนับสองชุดให้หลุดกันทีหลัง
+  if (elements.mergeWarnTitle) elements.mergeWarnTitle.textContent = `รายการที่ต้องตรวจ (${number(warnTotalCount())})`;
   if (!elements.mergeWarnBody) return;
   const certainCount = certainMergeGroups().length; // คู่/กลุ่มที่ ORW+BAR+AR ตรงครบ = แน่นอนซ้ำ
   const orwCount = orwComplementGroups().length;     // คู่ ORW ใบวางบิล↔ฝั่งยา
@@ -6256,7 +6269,26 @@ function renderMergeWarnBody() {
       </tbody>
     </table>
     <p class="case-seq-hint">ติ๊กเลือกบิล → กรอกค่า (เว้นว่าง = ไม่แก้) → "ใช้กับที่เลือก" · เช่น ต้นทุน 0 · ยอดขาย 10 · MLP 0 = กำไร 10 · หรือ "Set MLP cost 0" แก้ MLP ทั้งหมด · ดินสอ = แก้รายบิล</p>` : "";
-  elements.mergeWarnBody.innerHTML = pairSection + nhsoSection;
+  // ส่วนที่ 3 วางท้ายสุดตั้งใจ — เป็นงานกดปุ่มเดียวจบ ไม่ต้องแย่งที่กับรายการที่ต้องอ่านทีละแถว
+  const billedSection = billedReady.length ? `
+    <h3 class="warn-section-title">BAR+AR ครบแต่ยังไม่ "วางบิลแล้ว" — ${number(billedReady.length)} บิล
+      <button class="ghost small" type="button" data-billed-fix-all title="ปรับงานวางบิลเป็น วางบิลแล้ว ให้ทุกใบในรายการนี้">ปรับเป็นวางบิลแล้ว</button>
+    </h3>
+    <table class="case-seq-table">
+      <thead><tr><th>ผู้รับบริการ</th><th>ออเดอร์ / ORW</th><th>ใบวางบิล (BAR)</th><th>งานวางบิลตอนนี้</th><th class="act-col">จัดการ</th></tr></thead>
+      <tbody>
+        ${billedReady.map((bill) => `
+        <tr>
+          <td>${htmlEscape(bill.patient || "-")}</td>
+          <td>${orderOrwCellHtml(bill)}</td>
+          <td class="case-seq-code">${htmlEscape(bill.barNo || "-")}</td>
+          <td>${htmlEscape(billingStageLabel(bill.billingStage))}${(bill.billingStageSource || "") === "manual" ? ' <span class="case-source">แก้มือ</span>' : ""}</td>
+          <td class="act-col"><button type="button" class="row-action icon-action" data-billed-open="${htmlEscape(bill.billKey)}" title="เปิดรายละเอียด / แก้ไขบิลนี้" aria-label="เปิดรายละเอียด / แก้ไขบิลนี้"><i class="fa-solid fa-pen-to-square"></i></button></td>
+        </tr>`).join("")}
+      </tbody>
+    </table>
+    <p class="case-seq-hint">มีเลขใบวางบิล (BAR) และเลขที่เครดิต (AR) ครบแล้ว = วางบิลเสร็จจริง · ป้าย "แก้มือ" คือใบที่เคยเลือกสถานะเองไว้ ระบบจึงไม่ยกให้อัตโนมัติ · ปรับแล้วบิลจะถูกนับเป็นรายได้</p>` : "";
+  elements.mergeWarnBody.innerHTML = pairSection + nhsoSection + billedSection;
   if (nhsoIssues.length) { updateNhsoApplyBtn(); updateNhsoPreview(); }
 }
 
@@ -10561,6 +10593,35 @@ elements.mergeWarnBody?.addEventListener("click", (event) => {
   }
   if (event.target.closest("[data-merge-orw]")) {
     mergeOrwComplementGroups();
+    return;
+  }
+  const billedFixAll = event.target.closest("[data-billed-fix-all]");
+  if (billedFixAll) {
+    const ready = billedReadyBills();
+    if (!ready.length) return;
+    // ต่างจากปุ่ม Set MLP cost 0 ตรงที่อันนี้ขยับตัวเลขรายได้ (countsInRevenue นับ billed+BAR) → ต้องเห็นจำนวนก่อน
+    const ok = confirm([
+      `ปรับงานวางบิลเป็น "วางบิลแล้ว" ให้ ${number(ready.length)} บิล?`,
+      "",
+      "ทุกใบมีเลขใบวางบิล (BAR) และเลขที่เครดิต (AR) ครบแล้ว",
+      `ในนี้เป็นใบที่เคยเลือกสถานะเองไว้ ${number(ready.filter((bill) => (bill.billingStageSource || "") === "manual").length)} ใบ — ค่าที่เลือกไว้จะถูกแทนที่`,
+      "",
+      "ผลข้างเคียง: บิลเหล่านี้จะถูกนับเป็นรายได้ ยอดขาย/กำไรบนการ์ดจะเพิ่มขึ้น",
+    ].join("\n"));
+    if (!ok) return;
+    const keys = new Set(ready.map((bill) => bill.billKey));
+    // ตั้ง source เป็น auto-billing ไม่ใช่ manual = คืนบิลให้ระบบดูแลต่อ (ถ้าลบ BAR/AR ทีหลัง สถานะจะถอยกลับเอง)
+    applyBulkOverride(() => ({ billingStage: "billed", billingStageSource: "auto-billing" }), "ปรับเป็นวางบิลแล้ว (BAR+AR ครบ)", keys);
+    elements.statusText.textContent = `ปรับเป็น "วางบิลแล้ว" ให้ ${number(keys.size)} บิลแล้ว`;
+    // drawer เปิดอยู่ = โหลดค่าใหม่ · ส่วนโมดัล WARN ไม่ต้องสั่งเอง:
+    // applyBulkOverride → renderTable() → renderMergeSuggestions() รีเฟรช/ปิด popup ให้แล้ว (กติกาเดียวกับปุ่ม Set MLP cost 0)
+    if (elements.detailDrawer?.open && state.currentDetailKey) openDetailDrawer(state.currentDetailKey);
+    return;
+  }
+  const billedOpen = event.target.closest("[data-billed-open]");
+  if (billedOpen) {
+    elements.mergeWarnModal?.close();
+    openDetailDrawer(billedOpen.dataset.billedOpen);
     return;
   }
   const fixAll = event.target.closest("[data-nhso-fix-all]");
