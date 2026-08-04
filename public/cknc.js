@@ -4374,6 +4374,9 @@ function renderAuditTrail() {
         <span class="audit-kicker">หลักฐาน</span>
         <strong>${entry.screenshotName}</strong>
         <p>${entry.note || "-"}</p>
+        ${mergeGroupExists(entry.mergeGroupId)
+          ? `<button class="ghost small audit-unmerge-btn" type="button" data-unmerge-group="${htmlEscape(entry.mergeGroupId)}">เลิกรวมบิลนี้</button>`
+          : ""}
       </div>
     </article>
   `).join("");
@@ -5384,6 +5387,11 @@ function applyManualMergeGroups() {
   });
 }
 
+// กลุ่มยังรวมอยู่ไหม — ใช้ตัดสินว่าจะโชว์ปุ่ม "เลิกรวม" ในแถวประวัติหรือไม่ (เลิกรวมไปแล้ว = ไม่ต้องโชว์)
+function mergeGroupExists(groupId) {
+  return Boolean(groupId) && (state.billMergeGroups || []).some((group) => group.id === groupId);
+}
+
 // ตัดบิลที่ผู้ใช้สั่งลบออกจากจอ — เก็บเป็นรายการคีย์เพราะบิลถูกสร้างใหม่จาก source rows ทุกครั้ง
 function applyDeletedBills() {
   if (!state.deletedBillKeys?.length) return;
@@ -5485,12 +5493,15 @@ function mergeSelectedBills(skipConfirm = false) {
     ].join("\n"));
     if (!ok) return;
   }
-  // สำเนาบิลต้นฉบับก่อนรวม ไว้ให้ปุ่ม "เลิกรวม" ดึงกลับได้ (โดยเฉพาะโหมด snapshot ที่ rebuild ไม่สร้างบิลใหม่จาก source)
-  const originalMembers = ordered.map((bill) => ({ ...bill }));
+  // สำเนาบิลต้นฉบับก่อนรวม — เก็บไว้ "ในตัวกลุ่ม" ไม่ใช่ใน closure ของ toast
+  // กลุ่มถูกเซฟลง session (payload.billMergeGroups) → เลิกรวมได้ข้ามวัน/ข้ามเครื่อง แม้ในโหมด snapshot ที่ rebuild ไม่สร้างบิลใหม่จาก source
+  // ตัด validationIssues ทิ้ง: ฟิลด์ยาวสุดและถูกคำนวณใหม่ทุก rebuild อยู่แล้ว เก็บไปก็โดนทับ
+  const originalMembers = ordered.map(({ validationIssues, ...bill }) => bill);
   const groupId = `merge-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
   state.billMergeGroups.push({
     id: groupId,
     memberKeys: ordered.map((bill) => bill.billKey),
+    members: originalMembers,
     createdAt: new Date().toISOString(),
   });
   state.selectedBillKeys.clear();
@@ -5509,6 +5520,8 @@ function mergeSelectedBills(skipConfirm = false) {
     replacedLineCount: 0,
     note: `รวมบิล ${number(ordered.length)} ใบ → ${label(ordered[0])}`,
     medicines: [],
+    // ผูกแถวประวัติกับกลุ่ม → ปุ่ม "เลิกรวม" ในประวัติหาเจอแม้ toast หายไปนานแล้ว
+    mergeGroupId: groupId,
   });
   rebuildBillsForCurrentMode();
   renderMetrics();
@@ -5517,20 +5530,30 @@ function mergeSelectedBills(skipConfirm = false) {
   renderAuditTrail();
   scheduleAutosave("merge-bills");
   elements.statusText.textContent = `รวม ${number(ordered.length)} บิลเป็นบิลเดียว: ${label(ordered[0])}`;
-  showUndoToast(`รวม ${number(ordered.length)} บิลเป็นบิลเดียวแล้ว`, () => unmergeGroup(groupId, originalMembers));
+  showUndoToast(`รวม ${number(ordered.length)} บิลเป็นบิลเดียวแล้ว`, () => unmergeGroup(groupId));
   return ordered[0].billKey; // คีย์บิลที่รวมแล้ว (บิลหลัก) — ให้ผู้เรียกเปิด drawer แก้ต่อได้
 }
 
-// เลิกรวมบิล — เอาบิลต้นฉบับกลับเข้า state.bills แล้ว rebuild (undo ชั่วคราวจาก toast เท่านั้น ไม่เก็บลง session)
-function unmergeGroup(groupId, originalMembers) {
-  state.billMergeGroups = (state.billMergeGroups || []).filter((group) => group.id !== groupId);
-  const primaryKey = originalMembers[0]?.billKey;
-  const idx = state.bills.findIndex((bill) => bill.billKey === primaryKey);
-  const rest = state.bills.filter((bill) => bill.billKey !== primaryKey);
-  const restored = originalMembers.map((bill) => ({ ...bill }));
-  if (idx >= 0) rest.splice(idx, 0, ...restored);
-  else rest.push(...restored);
-  state.bills = rest;
+// เลิกรวมบิล — อ่านสำเนาสมาชิกจากตัวกลุ่ม (ไม่ใช่ closure ของ toast) → เรียกจากที่ไหนเมื่อไหร่ก็ได้
+function unmergeGroup(groupId) {
+  const group = (state.billMergeGroups || []).find((item) => item.id === groupId);
+  if (!group) return false;
+  const originalMembers = (group.members || []).map((bill) => ({ ...bill }));
+  // กลุ่มที่บันทึกไว้ก่อนแพตช์นี้ไม่มีสำเนา — โหมด snapshot ไม่มี source ให้สร้างบิลใหม่ = กู้ไม่ได้ บอกไปตรง ๆ ดีกว่าลบกลุ่มทิ้งแล้วบิลหาย
+  if (!originalMembers.length && state.snapshotMode) {
+    alert("กลุ่มนี้ถูกรวมไว้ก่อนระบบเก็บสำเนาสมาชิก — เลิกรวมได้เฉพาะตอนโหลดไฟล์ต้นทาง (STEP 1-3) เข้ามาก่อน แล้วลองใหม่");
+    return false;
+  }
+  state.billMergeGroups = (state.billMergeGroups || []).filter((item) => item.id !== groupId);
+  if (originalMembers.length) {
+    // ตัดทั้งบิลที่รวมแล้วและสมาชิกที่อาจค้างอยู่ออกก่อน แล้วแทรกต้นฉบับกลับที่ตำแหน่งเดิม
+    const memberKeys = new Set(originalMembers.map((bill) => bill.billKey));
+    const idx = state.bills.findIndex((bill) => memberKeys.has(bill.billKey));
+    const rest = state.bills.filter((bill) => !memberKeys.has(bill.billKey));
+    if (idx >= 0) rest.splice(idx, 0, ...originalMembers);
+    else rest.push(...originalMembers);
+    state.bills = rest;
+  }
   state.auditTrail.unshift({
     id: makeAuditId(),
     action: "unmerge_bills",
@@ -5554,6 +5577,7 @@ function unmergeGroup(groupId, originalMembers) {
   renderAuditTrail();
   scheduleAutosave("unmerge-bills");
   elements.statusText.textContent = `เลิกรวม ${number(originalMembers.length)} บิลแล้ว`;
+  return true;
 }
 
 // toast แจ้งเตือนมุมล่าง — สร้าง element ครั้งเดียว, ซ่อนอัตโนมัติ; actionLabel = ปุ่มลัดเสริม (เช่น "เลิกรวม")
@@ -10603,6 +10627,12 @@ elements.exportCsvBtn.addEventListener("click", exportCsv);
 elements.exportXlsxBtn.addEventListener("click", exportXlsxReport);
 elements.exportPdfBtn.addEventListener("click", exportPdfReportV2);
 elements.exportAuditBtn.addEventListener("click", exportAuditCsv);
+// ปุ่ม "เลิกรวมบิลนี้" ในแถวประวัติ — delegate เพราะรายการถูก re-render ทุกครั้งที่ข้อมูลเปลี่ยน
+elements.auditList?.addEventListener("click", (event) => {
+  const btn = event.target.closest("[data-unmerge-group]");
+  if (!btn) return;
+  unmergeGroup(btn.dataset.unmergeGroup);
+});
 elements.loadSampleBtn.addEventListener("click", loadSampleFiles);
 elements.saveSessionBtn.addEventListener("click", saveCurrentSession);
 elements.openSessionsBtn.addEventListener("click", openSessionsModal);
