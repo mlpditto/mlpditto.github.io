@@ -2664,11 +2664,39 @@ html.dark .med-costsum-label strong {
 .modal-actions {
   border-top: 1px solid var(--line);
   border-bottom: 0;
+  /* เป็น grid item ของ .modal-card ซึ่ง min-width ปริยาย = auto (หดต่ำกว่า min-content ไม่ได้)
+     → ข้อความ nowrap ฝั่งซ้ายยาว ๆ จะดันแถวล้นออกนอกกรอบโมดัลแทนที่จะโดนตัดท้าย
+     กับดักเดียวกับที่เคยเจอตอนปุ่ม AR2BAR ล้นช่อง AR (commit 758009d) */
+  min-width: 0;
 }
 
+/* กล่องปุ่มห้ามหด — ของเดิมได้ flex-shrink: 1 ตาม default พอข้อความฝั่งซ้ายยาว ปุ่มจะถูกบีบจนตัวอักษรห่อบรรทัด
+   (ใส่ที่นี่ = ได้ผลกับทุกโมดัลที่ใช้ .modal-actions ไม่ใช่แค่ paste analyze) */
 .modal-actions > div {
   display: flex;
   gap: 10px;
+  flex-shrink: 0;
+}
+
+.modal-actions > div button {
+  white-space: nowrap;
+}
+
+/* ข้อความสรุปฝั่งซ้าย: ยอมให้หดและตัดท้ายด้วย … แทนที่จะไปดันปุ่ม */
+.modal-actions-note {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* บรรทัดชื่อบิลใต้หัวข้อโมดัล */
+.modal-sub {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .icon-button {

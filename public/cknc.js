@@ -289,6 +289,7 @@ const elements = {
   pasteAnalyzeWarnings: $("pasteAnalyzeWarnings"),
   pasteAnalyzeResults: $("pasteAnalyzeResults"),
   pasteAnalyzeSummary: $("pasteAnalyzeSummary"),
+  pasteAnalyzeTarget: $("pasteAnalyzeTarget"),
   applyPasteAnalyzeBtn: $("applyPasteAnalyzeBtn"),
   authGateTitle: $("authGateTitle"),
   authGateMessage: $("authGateMessage"),
@@ -8404,6 +8405,16 @@ function currentPasteAnalyzeBill() {
   return state.bills.find((bill) => bill.billKey === state.pasteAnalyzeKey);
 }
 
+// ชื่อบิลที่กำลังแก้ — อยู่ใต้หัวข้อโมดัล (มีที่ให้ยาว) ไม่ใช่ในแถวปุ่มที่จะไปเบียดปุ่มจนห่อบรรทัด
+// เลขที่ออเดอร์มาก่อนชื่อคน เพราะเป็นตัวระบุที่สั้นและไม่ซ้ำ ส่วนชื่อบางใบปนข้อความดิบมาทั้งบรรทัด
+function setPasteAnalyzeTarget(bill) {
+  if (!elements.pasteAnalyzeTarget) return;
+  const id = clean(bill.orderId) || clean(bill.orw) || "-";
+  const name = clean(bill.patient);
+  elements.pasteAnalyzeTarget.textContent = name ? `${id} · ${name}` : id;
+  elements.pasteAnalyzeTarget.title = name ? `${id} · ${name}` : id;
+}
+
 function openPasteAnalyze(billKey) {
   const bill = state.bills.find((item) => item.billKey === billKey);
   if (!bill) return;
@@ -8411,9 +8422,10 @@ function openPasteAnalyze(billKey) {
   elements.pasteAnalyzeText.value = "";
   elements.pasteAnalyzeWarnings.innerHTML = "";
   elements.pasteAnalyzeResults.innerHTML = `<div class="empty">วางข้อความแล้วผลวิเคราะห์จะแสดงที่นี่</div>`;
-  elements.pasteAnalyzeSummary.textContent = `บิล: ${bill.patient || bill.orderId || bill.orw || "-"}`;
+  setPasteAnalyzeTarget(bill);
   elements.pasteAnalyzeStatus.textContent = "วางข้อความรายการจาก CLICKNIC แล้วระบบจะวิเคราะห์อัตโนมัติ";
-  elements.applyPasteAnalyzeBtn.disabled = true;
+  // ใช้ตัวเดียวกับตอนติ๊ก/เอาติ๊กออก — ผลวิเคราะห์เพิ่งถูกล้าง นับได้ 0 → ปุ่ม disabled + ป้ายกลับเป็นค่าเริ่มต้นเอง
+  updatePasteApplyState();
   if (!elements.pasteAnalyzeModal.open) elements.pasteAnalyzeModal.showModal();
   elements.pasteAnalyzeText.focus();
 }
@@ -8452,9 +8464,14 @@ function renderPasteAnalyzeWarnings(bill, parsed) {
   elements.pasteAnalyzeWarnings.innerHTML = chips.join("");
 }
 
+// ปุ่มหลักบอก "จะเกิดอะไร" ไม่ใช่แค่ "ทำอะไร" — และตอบในตัวว่าทำไมตอนนี้ถึงกดไม่ได้
 function updatePasteApplyState() {
-  const anyChecked = Boolean(elements.pasteAnalyzeResults.querySelector("[data-paste-apply]:checked"));
-  elements.applyPasteAnalyzeBtn.disabled = !anyChecked;
+  const count = elements.pasteAnalyzeResults.querySelectorAll("[data-paste-apply]:checked").length;
+  elements.applyPasteAnalyzeBtn.disabled = count === 0;
+  elements.applyPasteAnalyzeBtn.textContent = count ? `นำไปใช้ ${number(count)} ช่อง` : "เลือกช่องที่จะใช้";
+  if (elements.pasteAnalyzeSummary) {
+    elements.pasteAnalyzeSummary.textContent = count ? `เลือกไว้ ${number(count)} ช่อง` : "ยังไม่ได้เลือกช่อง";
+  }
 }
 
 function runPasteAnalyze() {
@@ -8465,7 +8482,7 @@ function runPasteAnalyze() {
     elements.pasteAnalyzeWarnings.innerHTML = "";
     elements.pasteAnalyzeResults.innerHTML = `<div class="empty">วางข้อความแล้วผลวิเคราะห์จะแสดงที่นี่</div>`;
     elements.pasteAnalyzeStatus.textContent = "วางข้อความรายการจาก CLICKNIC แล้วระบบจะวิเคราะห์อัตโนมัติ";
-    elements.applyPasteAnalyzeBtn.disabled = true;
+    updatePasteApplyState();
     return;
   }
   renderPasteAnalyzeWarnings(bill, parsed);
@@ -8513,7 +8530,7 @@ function switchPasteAnalyzeTarget(billKey) {
   const bill = state.bills.find((item) => item.billKey === billKey);
   if (!bill) return;
   state.pasteAnalyzeKey = billKey;
-  elements.pasteAnalyzeSummary.textContent = `บิล: ${bill.patient || bill.orderId || bill.orw || "-"}`;
+  setPasteAnalyzeTarget(bill);
   runPasteAnalyze();
 }
 

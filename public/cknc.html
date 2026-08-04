@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="./cknc.css?v=20260804074158" />
+    <link rel="stylesheet" href="./cknc.css?v=20260804083750" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -804,6 +804,7 @@
           <div>
             <p class="eyebrow">Paste &amp; analyze</p>
             <h2>แก้ไขบิลจากข้อความ paste</h2>
+            <p id="pasteAnalyzeTarget" class="modal-sub"></p>
           </div>
           <button id="closePasteAnalyze" class="icon-button" type="button" aria-label="ปิด">×</button>
         </div>
@@ -819,7 +820,7 @@
           </div>
         </div>
         <div class="modal-actions">
-          <span id="pasteAnalyzeSummary">ยังไม่มีผลวิเคราะห์</span>
+          <span id="pasteAnalyzeSummary" class="modal-actions-note">ยังไม่มีผลวิเคราะห์</span>
           <div>
             <button id="cancelPasteAnalyze" class="ghost" type="button">ยกเลิก</button>
             <button id="applyPasteAnalyzeBtn" class="primary" type="button" disabled>นำไปใช้กับบิลนี้</button>
@@ -1040,7 +1041,7 @@
       </div>
     </dialog>
 
-    <script src="./cknc.js?v=20260804074158"></script>
+    <script src="./cknc.js?v=20260804083750"></script>
     <script>
       (function () {
         const btn = document.getElementById("themeToggleBtn");
