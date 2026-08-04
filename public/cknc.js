@@ -1848,6 +1848,20 @@ function billHasCostData(bill) {
 // บิล clicknic-only ที่วางบิลครบ (BAR+AR) = reconcile แล้ว นับเป็นจับคู่แล้ว ไม่เตือน "รายการยาไม่มี MLP"
 // — สปสช: BAR+AR ก็พอ (MLP หายไม่กระทบ เพราะต้นทุน MLP = 0 โดยธรรมเนียม)
 // — ประกัน: ต้องมีข้อมูลต้นทุนแล้วด้วย กันบิลทุนยังว่าง (กำไรเวอร์) หลุดจากเรดาร์ทั้งที่งานยังไม่จบ
+// "รอใบวางบิล" ที่ยังรอจริง — ใช้กับชิปและแท็บเท่านั้น (ตัวนับดิบ metrics.mlpNoBilling ไม่แตะ)
+// ตัดออก 2 กลุ่ม:
+//   1. บิลที่ถูกจัดเข้าหมวดงานวางบิลเฉพาะแล้ว (กันนับซ้ำกับชิปกลุ่มงานวางบิลค้าง)
+//   2. บิลที่มีเลข BAR+AR ครบแล้ว = วางบิลเสร็จจริง (กรอกมือ/AR2BAR) แม้ status จะยังเป็น pending-billing
+// ข้อ 2 จำเป็นเพราะ status คำนวณครั้งเดียวตอน build จากการจับคู่ไฟล์ ไม่เคย re-derive จาก BAR/AR
+// ถ้าไม่ตัด: กดปุ่ม "ปรับเป็นวางบิลแล้ว" (BAR+AR ครบ) แล้ว stage เป็น billed ซึ่งไม่อยู่ใน
+// BILLING_WORKFLOW_STAGES → บิลจะเด้งเข้าชิป "รอใบวางบิล" แทนที่จะหายไป = ตัวเลขเพิ่มขึ้นสวนความคาดหมาย
+// เลือกแก้ที่ชั้นแสดงผล ไม่แตะ status เอง เพราะกฎ validation + ตัวนับ/export ผูกกับ status อยู่หลายที่
+function isPendingBillingOpen(bill) {
+  if (bill.status !== "pending-billing") return false;
+  if (BILLING_WORKFLOW_STAGES.has(bill.billingStage || "pending-review")) return false;
+  return !(clean(bill.barNo) && clean(bill.creditNos));
+}
+
 function isReconciledClicknicOnly(bill) {
   if (bill.status !== "clicknic-only") return false;
   if (!clean(bill.barNo) || !clean(bill.creditNos)) return false;
@@ -2606,9 +2620,8 @@ function renderMergeAssistant() {
     return `<button type="button" class="gap-chip ${chip.tone}${chip.active ? " active" : ""}" ${attr} title="กดเพื่อกรองดูเฉพาะกลุ่มนี้">${htmlEscape(chip.label)} <strong>${number(chip.value)}</strong></button>`;
   };
   // กลุ่ม 1: จับคู่ 3 ฝั่ง (กรองด้วยสถานะ)
-  // รอใบวางบิล: นับเฉพาะที่ยังไม่ถูกจัดเข้าหมวดงานวางบิลเฉพาะ (กันนับซ้ำกับกลุ่มงานวางบิลค้าง) — ให้ตรงกับ filteredBills
-  const pendingBillingDedup = state.bills.filter(isWithinDateRange)
-    .filter((b) => b.status === "pending-billing" && !BILLING_WORKFLOW_STAGES.has(b.billingStage || "pending-review")).length;
+  // รอใบวางบิล: เกณฑ์เดียวกับแท็บ (ดู isPendingBillingOpen) — ให้ตรงกับ filteredBills
+  const pendingBillingDedup = state.bills.filter(isWithinDateRange).filter(isPendingBillingOpen).length;
   // รายการยาไม่มี MLP: ไม่นับ สปสช ที่วางบิลครบ (BAR+AR) — reconcile แล้ว (ให้ตรงกับ filteredBills)
   const clicknicOnlyIssues = state.bills.filter(isWithinDateRange)
     .filter((b) => b.status === "clicknic-only" && !isReconciledClicknicOnly(b)).length;
@@ -3339,7 +3352,7 @@ function billMatchesNonDateFilters(bill, { status, caseType, billingStage, query
         : status === "case-insurance" ? (bill.caseType || "unknown") === "insurance"
           : status === "case-nhso" ? (bill.caseType || "unknown") === "nhso"
             : status === "repeat-customers" ? (bill.customerVisitCount >= 2 && !bill.excluded)
-              : status === "pending-billing" ? (bill.status === "pending-billing" && !BILLING_WORKFLOW_STAGES.has(bill.billingStage || "pending-review"))
+              : status === "pending-billing" ? isPendingBillingOpen(bill)
                 : status === "clicknic-only" ? (bill.status === "clicknic-only" && !isReconciledClicknicOnly(bill))
                   : status === "matched" ? (bill.status === "matched" || isReconciledClicknicOnly(bill))
                     : bill.status === status);
