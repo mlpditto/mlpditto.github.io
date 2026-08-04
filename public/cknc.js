@@ -1824,9 +1824,13 @@ function expectedBillingForBill(bill) {
   return configured > 0 ? configured : toNumeric(bill.mlpCost);
 }
 
-function pushIssue(issues, level, code, text) {
+// diff (ถ้าส่ง) = ส่วนต่างเป็นบาท เอาไปโชว์ท้าย chip ให้อ่านจบในตาเดียวโดยไม่ต้อง hover
+// ใส่ field เฉพาะตอนเป็นตัวเลขจริงเท่านั้น — กัน undefined หลุดไปกับบิลที่เซฟลง Firestore
+function pushIssue(issues, level, code, text, diff) {
   if (issues.some((issue) => issue.code === code)) return;
-  issues.push({ level, code, text });
+  const issue = { level, code, text };
+  if (Number.isFinite(diff)) issue.diff = diff;
+  issues.push(issue);
 }
 
 // มีข้อมูลต้นทุนแล้วไหม — ระดับบิล (cost/mlpCost จาก import หรือ drawer) หรือทุนจริงรายบรรทัด (realCost)
@@ -1890,21 +1894,22 @@ function validationRulesForBill(bill) {
     }
   }
   if (toNumeric(bill.mlpCost) > 0 && toNumeric(bill.sale) > 0 && toNumeric(bill.mlpCost) > toNumeric(bill.sale) + Math.max(0, toNumeric(activeRuleConfig().mlpCostOverSaleBuffer))) {
-    pushIssue(issues, "danger", "MLP_COST_OVER_SALE", "ค่าใช้จ่าย MLP สูงกว่ายอดขายยา");
+    pushIssue(issues, "danger", "MLP_COST_OVER_SALE", "ค่าใช้จ่าย MLP สูงกว่ายอดขายยา", toNumeric(bill.mlpCost) - toNumeric(bill.sale));
   }
   if (bill.billedAmount > 0) {
     const expected = expectedBillingForBill(bill);
     const tolerance = billingAmountTolerance();
+    // เครื่องหมาย: + = วางบิลมากกว่าค่าที่เทียบ, − = วางบิลน้อยกว่า (ยึด "ยอดวางบิล" เป็นตัวตั้งเสมอทั้ง 3 กติกา)
     if (expected > 0 && moneyDiff(bill.billedAmount, expected) > tolerance) {
-      pushIssue(issues, "warn", "BILLED_AMOUNT_EXPECTED_MISMATCH", `ยอดใบวางบิลไม่ตรงค่าที่คาดไว้ ${money(expected)}`);
+      pushIssue(issues, "warn", "BILLED_AMOUNT_EXPECTED_MISMATCH", `ยอดใบวางบิลไม่ตรงค่าที่คาดไว้ ${money(expected)}`, toNumeric(bill.billedAmount) - expected);
     }
     if (toNumeric(bill.mlpCost) > 0 && moneyDiff(bill.billedAmount, bill.mlpCost) > tolerance) {
-      pushIssue(issues, "info", "BILLED_AMOUNT_MLP_COST_MISMATCH", `ยอดใบวางบิลไม่ตรง MLP cost ${money(bill.mlpCost)}`);
+      pushIssue(issues, "info", "BILLED_AMOUNT_MLP_COST_MISMATCH", `ยอดใบวางบิลไม่ตรง MLP cost ${money(bill.mlpCost)}`, toNumeric(bill.billedAmount) - toNumeric(bill.mlpCost));
     }
   }
   if (toNumeric(bill.expectedClaim) > 0 && toNumeric(bill.billedAmount) > 0
     && moneyDiff(bill.expectedClaim, bill.billedAmount) > billingAmountTolerance()) {
-    pushIssue(issues, "info", "EXPECTED_CLAIM_MISMATCH", `ยอดใบวางบิลไม่ตรงยอดเรียกเก็บ CKNC-INS/NHSO ${money(bill.expectedClaim)}`);
+    pushIssue(issues, "info", "EXPECTED_CLAIM_MISMATCH", `ยอดใบวางบิลไม่ตรงยอดเรียกเก็บ CKNC-INS/NHSO ${money(bill.expectedClaim)}`, toNumeric(bill.billedAmount) - toNumeric(bill.expectedClaim));
   }
   return issues;
 }
@@ -2852,9 +2857,44 @@ const STATUS_ECHO_ISSUE = {
 };
 
 // คอลัมน์ "ตรวจสอบ" ในการ์ด popup ตัด issue ที่แค่ทวนสถานะออก — chip สถานะบอกอยู่แล้ว ไม่ต้องซ้ำ
-function cardIssuesForBill(bill) {
+function cardBaseIssues(bill) {
   const echo = STATUS_ECHO_ISSUE[bill.status];
   return (bill.validationIssues || []).filter((issue) => issue.code !== echo);
+}
+
+// ลายเซ็น issue = code + ข้อความเต็ม — ยุบขึ้นหัวการ์ดได้เฉพาะตัวที่ "เหมือนกันจริง" ทุกแถว
+// (ถ้าเทียบแค่ code ตัวที่พกข้อมูลรายบิล เช่น DMM วันที่ / BCM ส่วนต่าง จะถูกยุบแล้วเหลือค่าของแถวแรกแถวเดียว = ข้อมูลผิด)
+function issueSignature(issue) {
+  return `${issue.code || ""}\u0000${issue.text || ""}`;
+}
+
+// issue ที่ทุกแถวในหน้าเดียวกันติดเหมือนกันเป๊ะ — ยกขึ้นไปโชว์บนหัวการ์ดแทนการซ้ำทุกแถว
+let cardCommonIssueSigs = new Set();
+
+// จำนวน chip สูงสุดต่อแถว ที่เกินยุบเป็นปุ่ม +N
+const CARD_ISSUE_CHIP_LIMIT = 2;
+
+function commonIssueSigsOf(rows) {
+  if (rows.length < 2) return new Set();
+  const sigs = new Set(cardBaseIssues(rows[0]).map(issueSignature));
+  for (const bill of rows.slice(1)) {
+    if (!sigs.size) break;
+    const own = new Set(cardBaseIssues(bill).map(issueSignature));
+    sigs.forEach((sig) => { if (!own.has(sig)) sigs.delete(sig); });
+  }
+  return sigs;
+}
+
+function cardIssuesForBill(bill) {
+  return sortIssuesBySeverity(cardBaseIssues(bill).filter((issue) => !cardCommonIssueSigs.has(issueSignature(issue))));
+}
+
+// chip "ทุกแถวติดเหมือนกัน" บนหัวการ์ด — เอาตัวจริงจากแถวแรกมาใช้ได้ เพราะเงื่อนไขคือ text ตรงกันทุกแถวอยู่แล้ว
+function commonIssueChipsHtml(rows) {
+  if (!cardCommonIssueSigs.size || !rows.length) return "";
+  const issues = sortIssuesBySeverity(cardBaseIssues(rows[0]).filter((issue) => cardCommonIssueSigs.has(issueSignature(issue))));
+  if (!issues.length) return "";
+  return `<span class="chip-note">ทุกแถวติดเหมือนกัน:</span>${issues.map((issue) => issueChipHtml(issue, { count: rows.length })).join("")}`;
 }
 
 const cardDetailColumns = [
@@ -2945,7 +2985,14 @@ const cardDetailColumns = [
     html: (bill) => {
       const issues = cardIssuesForBill(bill);
       if (!issues.length) return "-";
-      return `<div class="issue-chip-list">${issues.map(issueChipHtml).join("")}</div>`;
+      const shown = issues.slice(0, CARD_ISSUE_CHIP_LIMIT);
+      const extra = issues.slice(CARD_ISSUE_CHIP_LIMIT);
+      // chip ส่วนเกินใส่ไว้ใน DOM เลย (ซ่อนด้วย css) — กด +N แล้วกางได้โดยไม่ต้อง re-render ทั้งตาราง
+      const moreBtn = extra.length
+        ? `<button type="button" class="issue-chip tone-gray issue-more" data-issue-more title="${htmlEscape(extra.map(issueChipShortText).join(" · "))}">+${extra.length}</button>`
+        : "";
+      const chips = [...shown.map((issue) => issueChipHtml(issue)), ...extra.map((issue) => issueChipHtml(issue, { extra: true }))].join("");
+      return `<div class="issue-chip-list">${chips}${moreBtn}</div>`;
     },
   },
   {
@@ -3031,6 +3078,8 @@ function openCardDetail(cardKey) {
   const totalPages = Math.max(1, Math.ceil(rows.length / CARD_DETAIL_PAGE_SIZE));
   cardDetailPage = Math.min(Math.max(1, cardDetailPage), totalPages);
   const shownRows = rows.slice((cardDetailPage - 1) * CARD_DETAIL_PAGE_SIZE, cardDetailPage * CARD_DETAIL_PAGE_SIZE);
+  // ต้องคำนวณก่อน visibleCardColumns เสมอ — cardIssuesForBill() ที่ใช้ตัดสินว่าคอลัมน์ซ้ำไหม อ่านค่านี้
+  cardCommonIssueSigs = commonIssueSigsOf(shownRows);
   const { columns, chips } = visibleCardColumns(shownRows);
   elements.cardDetailTitle.textContent = config.title;
   const filterNote = cardQuickFilter !== "all" ? ` · กรอง: ${quickDef.label}` : "";
@@ -3041,10 +3090,12 @@ function openCardDetail(cardKey) {
   elements.cardDetailHeadRow.innerHTML = columns
     .map((column) => `<th class="${cardColumnClass(column, false)}">${column.headHtml ? column.headHtml() : htmlEscape(column.label)}</th>`)
     .join("");
-  elements.cardDetailChips.hidden = !chips.length;
-  elements.cardDetailChips.innerHTML = chips.length
+  const sameValueHtml = chips.length
     ? `<span class="chip-note">ค่าเดียวกันทั้งการ์ด:</span>${chips.map((chip) => `<span class="chip ${htmlEscape(chip.className)}">${htmlEscape(chip.text)}</span>`).join("")}`
     : "";
+  const commonIssueHtml = commonIssueChipsHtml(shownRows);
+  elements.cardDetailChips.hidden = !sameValueHtml && !commonIssueHtml;
+  elements.cardDetailChips.innerHTML = `${sameValueHtml}${commonIssueHtml}`;
   elements.cardDetailBody.innerHTML = shownRows.length
     ? shownRows.map((bill) => cardDetailRowHtml(bill, columns)).join("")
     : `<tr><td colspan="${columns.length}" class="empty">ไม่มีข้อมูลในกลุ่มนี้</td></tr>`;
@@ -6699,17 +6750,35 @@ const issueChipDefs = {
   REPEAT_SAME_MED: { code: "RSM", label: "ยาซ้ำครั้งก่อน", tone: "gray" },
 };
 
+// เรียงตามความรุนแรงก่อนเสมอ (danger → warn → info) ที่เท่ากันคงลำดับ rule เดิม (Array.sort เสถียร)
+const ISSUE_LEVEL_RANK = { danger: 0, warn: 1, info: 2 };
+
+function sortIssuesBySeverity(issues) {
+  return issues.slice().sort((a, b) => (ISSUE_LEVEL_RANK[a.level] ?? 3) - (ISSUE_LEVEL_RANK[b.level] ?? 3));
+}
+
+// ส่วนต่างเป็นบาทท้าย chip — ใช้ − (U+2212) ไม่ใช่ hyphen จะได้ไม่อ่านเป็นขีดคั่น
+function issueDiffText(issue) {
+  if (!Number.isFinite(issue.diff) || Math.abs(issue.diff) < 0.005) return "";
+  return `${issue.diff > 0 ? "+" : "−"}${money(Math.abs(issue.diff))}`;
+}
+
 function issueChipShortText(issue) {
   const def = issueChipDefs[issue.code];
-  return def ? `${def.code} ${def.label}` : issue.text;
+  const base = def ? `${def.code} ${def.label}` : issue.text;
+  const diff = issueDiffText(issue);
+  return diff ? `${base} ${diff}` : base;
 }
 
 // chip ป้ายผลตรวจสอบ — hover เห็นข้อความเต็มเสมอ
-function issueChipHtml(issue) {
+// options.extra = chip ตัวที่เกินลิมิต (ซ่อนไว้รอกด +N) · options.count = จำนวนแถวที่ติดเหมือนกัน (chip บนหัวการ์ด)
+function issueChipHtml(issue, options = {}) {
   const def = issueChipDefs[issue.code];
   const tone = def?.tone || "gray";
   const content = def ? `<b>${def.code}</b> ${def.label}` : htmlEscape(issue.text);
-  return `<span class="issue-chip tone-${tone}" title="${htmlEscape(issue.text)}">${content}</span>`;
+  const diff = issueDiffText(issue);
+  const suffix = `${diff ? `<em>${htmlEscape(diff)}</em>` : ""}${options.count ? `<em>×${number(options.count)}</em>` : ""}`;
+  return `<span class="issue-chip tone-${tone}${options.extra ? " is-extra" : ""}" title="${htmlEscape(issue.text)}">${content}${suffix}</span>`;
 }
 
 function issueText(bill) {
@@ -9382,6 +9451,13 @@ elements.cardDetailModal?.addEventListener("click", (event) => {
       // เปลี่ยนหน้าแล้วเลื่อนกลับไปหัวตาราง
       elements.cardDetailBody?.closest(".card-detail-table")?.scrollTo({ top: 0 });
     }
+    return;
+  }
+  // กาง chip ที่ถูกตัดออกไป — แก้ DOM ตรง ๆ ไม่ re-render (re-render ทีเดียวก็หุบกลับหมด)
+  const moreBtn = event.target.closest("[data-issue-more]");
+  if (moreBtn) {
+    moreBtn.closest(".issue-chip-list")?.classList.add("show-all");
+    moreBtn.remove();
     return;
   }
   const quickChip = event.target.closest("[data-card-quick]");

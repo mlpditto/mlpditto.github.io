@@ -3915,6 +3915,33 @@ html.dark .stage-chip.active {
   letter-spacing: 0.02em;
 }
 
+/* ตัวเลขท้าย chip (ส่วนต่างบาท / จำนวนแถว) — ไม่เอียง ให้อ่านเป็นตัวเลข ไม่ใช่คำ
+   ระยะห่างมาจาก gap: 4px ของ .issue-chip แล้ว ไม่ต้องใส่ margin */
+.issue-chip em {
+  font-style: normal;
+  font-weight: 800;
+  opacity: 0.8;
+}
+
+/* chip ส่วนเกิน: ใช้คลาสคู่ .issue-chip.is-extra ให้ specificity (0,2,0) ชนะ .issue-chip ที่ตั้ง display: inline-flex
+   — เคสเดียวกับที่เคยพลาดเรื่อง [hidden] แพ้คลาสที่ตั้ง display มาแล้ว */
+.issue-chip.is-extra {
+  display: none;
+}
+
+.issue-chip-list.show-all .issue-chip.is-extra {
+  display: inline-flex;
+}
+
+/* +N เป็น <button> ต้องรีเซ็ตสไตล์ปุ่มเอง ไม่งั้นได้ขอบ/ฟอนต์ default ของเบราว์เซอร์ */
+.issue-chip.issue-more {
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  line-height: inherit;
+}
+
 .issue-chip.tone-red {
   background: #fde5e7;
   color: #b3261e;
