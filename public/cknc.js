@@ -1051,10 +1051,16 @@ function primaryBillDate(bill) {
 
 // เซลล์ "ออเดอร์ / ORW" โชว์ทั้งสองค่า: ORW เด่น (ตรงกับเลขในใบวางบิล) / เลขออเดอร์ตัวเล็กจาง
 // ใช้ร่วมกันใน bar picker + WARN popup (ตาราง case-seq-table)
+// ปุ่มคัดลอกท้ายเลขแต่ละบรรทัด — แยกปุ่มต่อบรรทัดเพราะบางงานใช้ ORW บางงานใช้เลขที่ออเดอร์
+// ⚠️ กล่องที่เอาเซลล์นี้ไปใช้ ต้องผ่าน attachCopyDelegate() ไม่งั้นปุ่มกดแล้วเงียบ
+function copyRefBtnHtml(value, label) {
+  return ` <button type="button" class="copy-ref-btn" data-copy-text="${htmlEscape(value)}" title="คัดลอก ${htmlEscape(label)}" aria-label="คัดลอก ${htmlEscape(label)}"><i class="fa-regular fa-copy"></i></button>`;
+}
+
 function orderOrwCellHtml(bill) {
   return [
-    clean(bill.orw) ? `<div class="bar-pick-orw">${htmlEscape(bill.orw)}</div>` : "",
-    clean(bill.orderId) ? `<div class="bar-pick-order">${htmlEscape(bill.orderId)}</div>` : "",
+    clean(bill.orw) ? `<div class="bar-pick-orw">${htmlEscape(bill.orw)}${copyRefBtnHtml(clean(bill.orw), "ORW")}</div>` : "",
+    clean(bill.orderId) ? `<div class="bar-pick-order">${htmlEscape(bill.orderId)}${copyRefBtnHtml(clean(bill.orderId), "เลขที่ออเดอร์")}</div>` : "",
   ].join("") || "-";
 }
 
@@ -10593,6 +10599,26 @@ elements.suggestPairCancel?.addEventListener("click", () => elements.suggestPair
 elements.suggestPairModal?.addEventListener("click", (event) => {
   if (event.target === elements.suggestPairModal) elements.suggestPairModal.close();
 });
+// ตัวจัดการปุ่มคัดลอกแบบ delegate — ก้อนเดียวกับที่ก๊อปวางไว้อีก 5 ที่ในไฟล์นี้
+// ใช้กับกล่องที่เพิ่มใหม่เท่านั้น (ของเดิมปล่อยไว้ ยุบทีเดียวตอน refactor)
+function attachCopyDelegate(el) {
+  el?.addEventListener("click", (event) => {
+    const copyBtn = event.target.closest("[data-copy-text]");
+    if (!copyBtn) return;
+    const value = clean(copyBtn.dataset.copyText);
+    if (!value) return;
+    navigator.clipboard?.writeText(value).then(() => {
+      const icon = copyBtn.querySelector("i");
+      if (icon) {
+        icon.className = "fa-solid fa-check";
+        setTimeout(() => { icon.className = "fa-regular fa-copy"; }, 1200);
+      }
+    }).catch(() => {});
+  });
+}
+attachCopyDelegate(elements.mergeWarnBody);
+attachCopyDelegate(elements.barPickerBody);
+
 elements.suggestPairBody?.addEventListener("click", (event) => {
   const copyBtn = event.target.closest("[data-copy-text]");
   if (copyBtn) {
