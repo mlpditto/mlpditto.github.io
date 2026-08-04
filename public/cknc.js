@@ -6264,10 +6264,14 @@ function openSuggestPairModal(item, origin = "") {
   suggestPairContext = item;
   suggestPairOrigin = origin;
   elements.suggestPairTitle.textContent = item.titleText || `น่าจะเป็นบิลเดียวกัน (${item.score}%)`;
+  // [ป้าย, ดึงค่า, ก๊อปได้, ซ่อนเมื่อว่างทั้งคู่]
+  // เลขระบุตัวเรียงติดกันหมด: ออเดอร์ → Ref-ID → ORW → INV (ตัดสินว่าใบเดียวกันหรือไม่ ดูจากชุดนี้เป็นหลัก)
   const fields = [
     ["ผู้รับบริการ", (bill) => bill.patient || "-"],
     ["เลขที่ออเดอร์", (bill) => bill.orderId || "-", true],
-    ["ORW", (bill) => bill.orw || "-"],
+    ["Ref-ID", (bill) => bill.refId || "-", true, true],
+    ["ORW", (bill) => bill.orw || "-", true],
+    ["INV", (bill) => bill.invoice || "-", true, true],
     ["สถานะ", (bill) => statusLabel(bill.status)],
     ["งานวางบิล", (bill) => billingStageLabel(bill.billingStage)],
     ["ประเภทเคส", (bill) => caseTypeLabel(bill.caseType)],
@@ -6299,14 +6303,20 @@ function openSuggestPairModal(item, origin = "") {
         </tr>
       </thead>
       <tbody>
-        ${fields.map(([label, pick, copyable]) => {
+        ${fields.filter(([, pick, , hideWhenEmpty]) => {
+    if (!hideWhenEmpty) return true;
+    // ว่างทั้งสองใบ = ไม่ช่วยตัดสินอะไร ไม่ต้องกินความสูงตาราง (ผลรวมไม่มีทางมีค่าถ้าต้นทางว่างทั้งคู่)
+    const a = clean(pick(billA));
+    const b = clean(pick(billB));
+    return (a && a !== "-") || (b && b !== "-");
+  }).map(([label, pick, copyable]) => {
     const valueA = pick(billA);
     const valueB = pick(billB);
     const valueM = pick(mergedBill);
     const diff = valueA !== valueB;
     const cell = (value) => {
       const copyBtn = (copyable && value && value !== "-")
-        ? ` <button type="button" class="copy-ref-btn" data-copy-text="${htmlEscape(value)}" title="คัดลอกเลขที่ออเดอร์" aria-label="คัดลอกเลขที่ออเดอร์"><i class="fa-regular fa-copy"></i></button>`
+        ? ` <button type="button" class="copy-ref-btn" data-copy-text="${htmlEscape(value)}" title="คัดลอก ${htmlEscape(label)}" aria-label="คัดลอก ${htmlEscape(label)}"><i class="fa-regular fa-copy"></i></button>`
         : "";
       return `${htmlEscape(value)}${copyBtn}`;
     };
