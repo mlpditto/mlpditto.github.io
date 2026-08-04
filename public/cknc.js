@@ -5989,6 +5989,10 @@ function mergeOrwComplementGroups() {
 }
 
 // หา "คู่ที่น่าจะเป็นบิลเดียวกัน" — จับกลุ่มจากสัญญาณแรง (ORW/เบอร์/ชื่อ) ก่อน แล้วค่อยให้คะแนนรายคู่
+// แบ่งหน้ารายการคู่ซ้ำในโมดัล WARN — module-level เหมือน cardDetailPage ของ Card Detail
+const MERGE_SUGGEST_PAGE_SIZE = 10;
+let mergeSuggestPage = 1;
+
 function computeMergeSuggestions() {
   const bills = state.bills.filter((bill) => !bill.excluded);
   if (bills.length < 2 || bills.length > 800) return [];
@@ -6030,8 +6034,10 @@ function computeMergeSuggestions() {
       }
     }
   });
-  state.mergeSuggestionsTotal = suggestions.length; // จำนวนคู่จริง (ก่อนตัดเหลือ 8) — โชว์ progress
-  return suggestions.sort((a, b) => b.score - a.score).slice(0, 8);
+  state.mergeSuggestionsTotal = suggestions.length; // จำนวนคู่จริง — โชว์ progress (ตอนนี้เท่ากับความยาวที่คืนไป ตั้งแต่เลิกตัดเหลือ 8)
+  // คืนทั้งหมด — การตัดจำนวนที่แสดงเป็นเรื่องของชั้นแสดงผล (แบ่งหน้า) ไม่ใช่ของตัวคำนวณ
+  // state.mergeSuggestionsTotal ด้านบนยังเป็นค่าเดิม → mergeSuggestTotal()/warnTotalCount() ไม่เปลี่ยนพฤติกรรม
+  return suggestions.sort((a, b) => b.score - a.score);
 }
 
 // กลุ่ม ORW เดียวกันที่ "จับคู่ยังไม่ครบ" — คนละครึ่งของบิลเดียว ควรรวม:
@@ -6106,7 +6112,14 @@ function renderMergeWarnBody() {
   if (!elements.mergeWarnBody) return;
   const certainCount = certainMergeGroups().length; // คู่/กลุ่มที่ ORW+BAR+AR ตรงครบ = แน่นอนซ้ำ
   const orwCount = orwComplementGroups().length;     // คู่ ORW ใบวางบิล↔ฝั่งยา
-  const moreNote = suggTotal > suggestions.length ? ` <span class="warn-more-note">(แสดง ${number(suggestions.length)} จาก ${number(suggTotal)})</span>` : "";
+  // clamp ทุกครั้งที่ render — จำนวนคู่ลดลงได้ตลอด (รวม/ซ่อนคู่ไปแล้ว) หน้าที่ค้างอยู่อาจเกินขอบ
+  const pairTotalPages = Math.max(1, Math.ceil(suggestions.length / MERGE_SUGGEST_PAGE_SIZE));
+  mergeSuggestPage = Math.min(Math.max(1, mergeSuggestPage), pairTotalPages);
+  const pairStart = (mergeSuggestPage - 1) * MERGE_SUGGEST_PAGE_SIZE;
+  const pairRows = suggestions.slice(pairStart, pairStart + MERGE_SUGGEST_PAGE_SIZE);
+  const moreNote = pairRows.length < suggestions.length
+    ? ` <span class="warn-more-note">(แสดง ${number(pairStart + 1)}–${number(pairStart + pairRows.length)} จาก ${number(suggestions.length)})</span>`
+    : "";
   const pairSection = suggestions.length ? `
     <h3 class="warn-section-title">น่าจะเป็นบิลเดียวกัน ${number(suggTotal)} คู่${moreNote}
       ${orwCount ? `<button class="ghost small" type="button" data-merge-orw title="รวมทุกคู่ที่ ORW ตรงกันแต่จับคู่ยังไม่ครบ (ใบวางบิล↔ฝั่งยา, รายการยาไม่มี MLP↔ไม่พบรายการยา) รวดเดียว">รวมคู่ ORW ทั้งหมด (${number(orwCount)})</button>` : ""}
@@ -6115,7 +6128,11 @@ function renderMergeWarnBody() {
     <table class="case-seq-table merge-pair-table">
       <thead><tr><th>%</th><th>คู่บิล</th><th>เหตุผล</th><th class="act-col">จัดการ</th></tr></thead>
       <tbody>
-        ${suggestions.map((item, index) => `
+        ${pairRows.map((item, offset) => {
+          // ⚠️ index ที่ส่งให้ปุ่มต้องเป็นตำแหน่งใน state.mergeSuggestions ทั้งก้อน ไม่ใช่ตำแหน่งในหน้า
+          // (handler หยิบด้วย state.mergeSuggestions[index] — ใช้ index ของหน้าจะรวมผิดคู่โดยไม่มีสัญญาณเตือน)
+          const index = pairStart + offset;
+          return `
         <tr>
           <td><span class="merge-suggest-score">${item.score}%</span></td>
           <td class="merge-warn-names">${htmlEscape(item.aLabel)} ↔ ${htmlEscape(item.bLabel)}</td>
@@ -6124,9 +6141,16 @@ function renderMergeWarnBody() {
             <button class="ghost small" type="button" data-warn-compare="${index}" title="เปิดตารางเทียบสองบิล">เทียบ</button>
             <button class="ghost small" type="button" data-warn-merge="${index}" title="รวมสองบิลนี้ (มีสรุปให้ยืนยันก่อน)">รวม</button>
           </td>
-        </tr>`).join("")}
+        </tr>`;
+        }).join("")}
       </tbody>
     </table>
+    ${pairTotalPages > 1 ? `
+    <div class="card-detail-pager">
+      <button class="ghost small" type="button" data-merge-page="prev" ${mergeSuggestPage <= 1 ? "disabled" : ""}>← ก่อนหน้า</button>
+      <span>หน้า ${number(mergeSuggestPage)}/${number(pairTotalPages)}</span>
+      <button class="ghost small" type="button" data-merge-page="next" ${mergeSuggestPage >= pairTotalPages ? "disabled" : ""}>ถัดไป →</button>
+    </div>` : ""}
     <p class="case-seq-hint">เทียบ = เปิดตารางเทียบสองบิล (มีปุ่มรวม/ซ่อนคู่พร้อมเหตุผลในนั้น) · รวม = เข้าขั้นตอนรวมบิล มีสรุปให้ยืนยันก่อนเสมอ</p>` : "";
   // ตัด key ที่เลือกไว้แต่ไม่อยู่ในรายการปัญหาแล้ว (ถูกแก้ไปแล้ว)
   const nhsoKeys = new Set(nhsoIssues.map((b) => b.billKey));
@@ -6233,6 +6257,7 @@ function updateNhsoPreview() {
 
 function openMergeWarnModal() {
   if (!elements.mergeWarnModal) return;
+  mergeSuggestPage = 1; // เปิดใหม่ = เริ่มจากคู่คะแนนสูงสุดเสมอ
   // คำนวณคู่แนะนำใหม่ให้สดก่อนเปิดเสมอ — กันรายการค้างที่อ้างบิลซึ่งถูกรวม/แก้/หายไปแล้ว
   renderMergeSuggestions();
   if (warnTotalCount() === 0) return;
@@ -10503,6 +10528,12 @@ elements.mergeWarnBody?.addEventListener("click", (event) => {
   if (openBill) {
     elements.mergeWarnModal?.close();
     openDetailDrawer(openBill.dataset.nhsoOpen);
+    return;
+  }
+  const pageBtn = event.target.closest("[data-merge-page]");
+  if (pageBtn) {
+    mergeSuggestPage += pageBtn.dataset.mergePage === "next" ? 1 : -1;
+    renderMergeWarnBody(); // clamp อยู่ในตัว render แล้ว ไม่ต้องเช็กขอบตรงนี้
     return;
   }
   const button = event.target.closest("[data-warn-compare], [data-warn-merge]");
