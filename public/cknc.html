@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="./cknc.css?v=20260804203444" />
+    <link rel="stylesheet" href="./cknc.css?v=20260804205239" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -171,14 +171,18 @@
             <div id="cardQuickFilters" class="card-quick-filters"></div>
             <div id="cardDetailBulkBar" class="card-detail-bulk-inline" hidden>
               <strong id="cardBulkCount">เลือก 0 บิล</strong>
+              <span class="bulk-sep" aria-hidden="true"></span>
               <select id="cardBulkBillingStage" aria-label="ตั้งงานวางบิลให้บิลที่เลือก"></select>
               <select id="cardBulkCaseType" aria-label="ตั้งประเภทเคสให้บิลที่เลือก"></select>
+              <span class="bulk-sep" aria-hidden="true"></span>
               <span class="bulk-bar-field">
                 <input id="cardBulkBarNo" type="text" placeholder="BAR-..." aria-label="เลขใบวางบิล (BAR)" />
                 <button id="cardBulkApplyBar" class="ghost small" type="button">ใส่ BAR</button>
               </span>
+              <span class="bulk-sep" aria-hidden="true"></span>
               <button id="cardBulkExclude" class="ghost small" type="button">Exclude</button>
               <button id="cardBulkInclude" class="ghost small" type="button">ยกเลิก Exclude</button>
+              <span class="bulk-sep" aria-hidden="true"></span>
               <button id="cardBulkClear" class="ghost small" type="button">ล้างการเลือก</button>
             </div>
             <button id="cardDetailFilterBtn" class="primary small card-filter-btn" type="button" hidden>กรองตารางตามนี้</button>
@@ -325,18 +329,27 @@
 
         <div id="bulkBar" class="bulk-bar" hidden>
           <strong id="bulkCount">เลือก 0 บิล</strong>
+          <span class="bulk-sep" aria-hidden="true"></span>
           <select id="bulkBillingStage" aria-label="ตั้งงานวางบิลให้บิลที่เลือก"></select>
           <select id="bulkCaseType" aria-label="ตั้งประเภทเคสให้บิลที่เลือก"></select>
+          <span class="bulk-sep" aria-hidden="true"></span>
           <span class="bulk-bar-field">
             <input id="bulkBarNo" type="text" placeholder="BAR-..." aria-label="เลขใบวางบิล (BAR)" />
             <button id="bulkApplyBarNo" class="ghost small" type="button">ใส่ BAR</button>
             <button id="bulkBarPickerBtn" class="ghost small" type="button" title="เปิดตัวเลือกบิลตาม AR (ไม่ต้องติ๊กในตาราง)">เลือกหลายบิล…</button>
           </span>
-          <button id="bulkMoneyBtn" class="ghost small" type="button" title="แก้ยอดขาย/ต้นทุนของบิลที่เลือกพร้อมกัน">แก้เงิน</button>
-          <button id="bulkMergeBills" class="ghost small" type="button">รวมบิล</button>
-          <button id="bulkDeleteBills" class="ghost small danger" type="button" title="ลบบิลที่เลือกออกจากงานบนจอ (ต้นฉบับใน session/ไฟล์เดิมไม่ถูกแก้)">ลบรายการ</button>
+          <span class="bulk-sep" aria-hidden="true"></span>
           <button id="bulkExclude" class="ghost small" type="button">Exclude</button>
           <button id="bulkInclude" class="ghost small" type="button">ยกเลิก Exclude</button>
+          <details id="bulkMore" class="bulk-more">
+            <summary class="ghost small">เพิ่มเติม</summary>
+            <div class="bulk-more-panel">
+              <button id="bulkMoneyBtn" class="ghost small" type="button" title="แก้ยอดขาย/ต้นทุนของบิลที่เลือกพร้อมกัน">แก้เงิน</button>
+              <button id="bulkMergeBills" class="ghost small" type="button">รวมบิล</button>
+              <button id="bulkDeleteBills" class="ghost small danger" type="button" title="ลบบิลที่เลือกออกจากงานบนจอ (ต้นฉบับใน session/ไฟล์เดิมไม่ถูกแก้)">ลบรายการ</button>
+            </div>
+          </details>
+          <span class="bulk-sep" aria-hidden="true"></span>
           <button id="bulkClear" class="ghost small" type="button">ล้างการเลือก</button>
         </div>
 
@@ -1041,7 +1054,7 @@
       </div>
     </dialog>
 
-    <script src="./cknc.js?v=20260804203444"></script>
+    <script src="./cknc.js?v=20260804205239"></script>
     <script>
       (function () {
         const btn = document.getElementById("themeToggleBtn");

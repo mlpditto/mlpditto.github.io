@@ -257,6 +257,7 @@ const elements = {
   barPickerClose: $("barPickerClose"),
   barPickerCancel: $("barPickerCancel"),
   barPickerApply: $("barPickerApply"),
+  bulkMore: $("bulkMore"),
   bulkMergeBills: $("bulkMergeBills"),
   bulkDeleteBills: $("bulkDeleteBills"),
   bulkExclude: $("bulkExclude"),
@@ -3154,6 +3155,7 @@ function renderCardBulkBar() {
   const count = cardBulkSelected.size;
   elements.cardDetailBulkBar.hidden = count === 0;
   if (elements.cardBulkCount) elements.cardBulkCount.textContent = `เลือก ${number(count)} บิล`;
+  applyBulkExcludeVisibility(cardBulkSelected, elements.cardBulkExclude, elements.cardBulkInclude);
   // sync select-all ตามสถานะแถวที่แสดง
   const picks = elements.cardDetailBody?.querySelectorAll(".card-row-pick") || [];
   const selectAll = elements.cardDetailBody?.closest(".modal-card")?.querySelector("#cardSelectAll") || document.getElementById("cardSelectAll");
@@ -3557,6 +3559,19 @@ function wasJustEdited(bill) {
   return elapsed >= 0 && elapsed < 2500;
 }
 
+// ซ่อนปุ่ม Exclude / ยกเลิก Exclude ที่ใช้ไม่ได้กับชุดที่เลือกอยู่
+// ⚠️ ธรรมเนียม Exclude เดิมไม่หาย — ยังกดได้ทุกเมื่อที่มีบิลให้กด แค่ไม่โชว์ปุ่มที่กดไปก็ไม่เกิดอะไร
+// ใช้ hidden ล้วน ๆ ได้เพราะปุ่ม .ghost ไม่ได้ตั้ง display ที่คลาส (ต่างจาก .bulk-bar ดู [hidden] pitfall)
+function applyBulkExcludeVisibility(keySet, excludeBtn, includeBtn) {
+  if (!excludeBtn && !includeBtn) return;
+  const picked = state.bills.filter((bill) => keySet.has(bill.billKey));
+  const hasIncluded = picked.some((bill) => !bill.excluded);
+  const hasExcluded = picked.some((bill) => bill.excluded);
+  // ไม่ได้เลือกอะไรเลย = แถบซ่อนอยู่แล้ว ไม่ต้องตัดสินใจ
+  if (excludeBtn) excludeBtn.hidden = picked.length > 0 && !hasIncluded;
+  if (includeBtn) includeBtn.hidden = picked.length > 0 && !hasExcluded;
+}
+
 function updateBulkBar() {
   if (!elements.bulkBar) return;
   // ตัดคีย์ของบิลที่ไม่อยู่แล้วออกจากการเลือก
@@ -3571,6 +3586,9 @@ function updateBulkBar() {
     elements.bulkMergeBills.disabled = count < 2;
     elements.bulkMergeBills.title = count < 2 ? "เลือกอย่างน้อย 2 บิลก่อนจึงรวมได้" : "รวมบิลที่เลือกเป็นบิลเดียว (เก็บข้อมูลมากที่สุด)";
   }
+  applyBulkExcludeVisibility(state.selectedBillKeys, elements.bulkExclude, elements.bulkInclude);
+  // เลือกชุดใหม่ = ปิดเมนูเพิ่มเติมที่อาจค้างเปิดอยู่
+  if (elements.bulkMore) elements.bulkMore.open = false;
   if (elements.selectAllRows) {
     const visible = [...document.querySelectorAll("#billTableBody .row-pick")];
     const checkedVisible = visible.filter((pick) => pick.checked).length;
@@ -10511,6 +10529,13 @@ function applyBulkMoneyEdit() {
   elements.statusText.textContent = `แก้เงิน (${note}) ให้ ${number(count)} บิลแล้ว`;
 }
 
+// เมนู "เพิ่มเติม" — <details> ไม่ปิดเองเวลาคลิกที่อื่น ต้องปิดให้
+// กดปุ่มในเมนูก็ปิด (ทุกปุ่มเปิดโมดัล/ทำงานทันที ไม่มีอันไหนต้องกดซ้ำ)
+document.addEventListener("click", (event) => {
+  const more = elements.bulkMore;
+  if (!more?.open) return;
+  if (!more.contains(event.target) || event.target.closest(".bulk-more-panel button")) more.open = false;
+});
 elements.bulkMoneyBtn?.addEventListener("click", openBulkMoneyModal);
 elements.closeBulkMoney?.addEventListener("click", () => elements.bulkMoneyModal.close());
 elements.cancelBulkMoney?.addEventListener("click", () => elements.bulkMoneyModal.close());
