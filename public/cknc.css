@@ -5469,6 +5469,21 @@ html.dark .dismiss-reason-chip:hover {
   background: rgba(22, 130, 80, 0.06);
   font-size: 12px;
 }
+/* หัวข้อคั่นสองส่วนในรายงาน (สรุปรายเดือน / รายวัน × ใบวางบิล) */
+.payout-section-title {
+  margin: 14px 12px 6px;
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+/* ตารางรายเดือนเป็นตัวสรุป — เน้นกว่าตารางรายวันเล็กน้อย ไม่ต้องไล่อ่านทีละแถว */
+.payout-month-table tbody td {
+  font-size: 13px;
+  font-weight: 700;
+}
+
 html.dark .payout-summary { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.12); }
 html.dark .payout-date-row td { background: rgba(22, 130, 80, 0.14); }
 

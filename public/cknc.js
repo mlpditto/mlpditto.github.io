@@ -10551,6 +10551,35 @@ function renderPayoutReport() {
   const rows = [...groups.values()].sort((a, b) => b.date.localeCompare(a.date) || a.bar.localeCompare(b.bar));
   const totalSale = round2(bills.reduce((s, b) => s + toNumeric(b.sale), 0));
   const totalProfit = round2(bills.reduce((s, b) => s + toNumeric(b.profit), 0));
+
+  // สรุปรายเดือน — คิดจากบิลตรง ๆ ไม่ใช่จาก rows เพราะ rows ยุบตาม วัน×BAR แล้ว
+  // นับ BAR แบบไม่ซ้ำต่อเดือน (ใบวางบิลใบเดียวอาจได้เงินหลายวัน)
+  const monthMap = new Map();
+  bills.forEach((bill) => {
+    const key = dateKey(bill.paidDate).slice(0, 7);
+    if (!key) return;
+    if (!monthMap.has(key)) monthMap.set(key, { month: key, count: 0, sale: 0, profit: 0, bars: new Set() });
+    const m = monthMap.get(key);
+    m.count += 1;
+    m.sale += toNumeric(bill.sale);
+    m.profit += toNumeric(bill.profit);
+    m.bars.add(clean(bill.barNo) || "(ไม่มี BAR)");
+  });
+  const months = [...monthMap.values()].sort((a, b) => b.month.localeCompare(a.month));
+  const monthSection = months.length ? `
+    <table class="case-seq-table payout-month-table">
+      <thead><tr><th>เดือนที่ได้รับเงิน</th><th>บิล</th><th>ใบวางบิล</th><th class="num">ยอดขาย</th><th class="num">กำไร</th></tr></thead>
+      <tbody>
+        ${months.map((m) => `
+        <tr>
+          <td><strong>${htmlEscape(monthChipLabel(m.month))}</strong></td>
+          <td>${number(m.count)}</td>
+          <td>${number(m.bars.size)}</td>
+          <td class="num">${money(round2(m.sale))}</td>
+          <td class="num">${money(round2(m.profit))}</td>
+        </tr>`).join("")}
+      </tbody>
+    </table>` : "";
   // ยอดต่อวัน (รวมทุก BAR) — โชว้เป็นหัวข้อคั่น
   let lastDate = null;
   const bodyRows = rows.map((g) => {
@@ -10570,6 +10599,9 @@ function renderPayoutReport() {
   }).join("");
   body.innerHTML = `
     <div class="payout-summary">รวม <strong>${number(bills.length)}</strong> บิล · ยอดขาย <strong>${money(totalSale)}</strong> · กำไร <strong>${money(totalProfit)}</strong> · ${number(rows.length)} รายการ (วัน × BAR)</div>
+    <h3 class="payout-section-title">สรุปรายเดือน</h3>
+    ${monthSection}
+    <h3 class="payout-section-title">รายวัน × ใบวางบิล</h3>
     <table class="case-seq-table">
       <thead><tr><th>ใบวางบิล (BAR)</th><th>บิล</th><th class="num">ยอดขาย</th><th class="num">กำไร</th></tr></thead>
       <tbody>${bodyRows}</tbody>
