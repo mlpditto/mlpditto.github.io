@@ -357,6 +357,10 @@
         /* หัวข้อที่มีชิป (รายละเอียดการสั่งซื้อ): จอแคบให้ชิปตกลงบรรทัดล่างเต็มความกว้าง
            แถวบนเลยเหลือที่พอโชว์ชื่อหัวข้อ */
         .section-header { flex-wrap: wrap; row-gap: 8px; }
+        /* หัวข้อที่ "ไม่มีชิป" (การชำระเงิน) ห้าม wrap — ไม่งั้นพอที่ไม่พอมันจะตกบรรทัดทั้งแถว
+           แทนที่จะปล่อยให้ชื่อหัวข้อย่อด้วย truncate ที่เตรียมไว้แล้ว (min-w-0 + truncate)
+           เดิมตกบรรทัดเป็นช่วง ๆ ตั้งแต่ ~560px ลงมาเวลาปุ่ม GP โชว์ยอดเงิน (สูงขึ้นเป็น 2 บรรทัด) */
+        .section-header:not(.has-chips) { flex-wrap: nowrap; }
         @media (max-width: 480px) {
             .section-header.has-chips .chip-group { order: 3; width: 100%; margin-left: 0; margin-right: 0; }
         }
