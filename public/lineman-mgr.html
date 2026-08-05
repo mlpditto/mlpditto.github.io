@@ -4770,7 +4770,8 @@
             bodyEl.classList.remove('hidden');
         }
 
-        // เปิด gp-calc.html แท็บใหม่ พร้อมเติมค่าจากโมดัล: cost=ทุนหลัก, sell=ราคา LINE MAN, store=ราคาปลีก
+        // เปิด gp-calc.html แท็บใหม่ พร้อมเติมค่าจากโมดัล:
+        // cost=ทุนหลัก, sell=ราคา LINE MAN, store=ราคาปลีก (RETAIL), whole=ราคาส่ง (WHOLESALE)
         function openGpCalc() {
             const num = (id) => parseFloat(document.getElementById(id)?.value) || 0;
             const params = new URLSearchParams();
@@ -4778,6 +4779,7 @@
             if (cost > 0) params.set('cost', cost);
             if (num('m-price') > 0) params.set('sell', num('m-price'));
             if (num('m-retail') > 0) params.set('store', num('m-retail'));
+            if (num('m-wholesale') > 0) params.set('whole', num('m-wholesale'));
             const qs = params.toString();
             window.open('gp-calc.html' + (qs ? '?' + qs : ''), '_blank', 'noopener');
         }

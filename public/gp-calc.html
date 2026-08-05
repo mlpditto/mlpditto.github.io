@@ -52,12 +52,14 @@
   .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
   .lab{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin:0 0 7px}
   .lab.cost{color:var(--loss)} .lab.sell{color:var(--accent)} .lab.store{color:var(--profit)}
+  .lab.whole{color:var(--star)}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   .field input{width:100%;border:none;border-bottom:2px solid var(--border);background:transparent;
     font:inherit;font-size:26px;font-weight:800;color:var(--ink);padding:2px 0 6px;outline:none;
     font-variant-numeric:tabular-nums;transition:border-color .15s}
   .field.cost input:focus{border-color:var(--loss)} .field.sell input:focus{border-color:var(--accent)}
   .field.store input:focus{border-color:var(--profit)}
+  .field.whole input:focus{border-color:var(--star)}
   .field input::placeholder{color:var(--faint);font-weight:700}
   .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
   .stat{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:11px 9px;text-align:center}
@@ -199,8 +201,12 @@
           <input id="sell" inputmode="decimal" placeholder="0" aria-label="ราคาขาย TELE">
         </div>
         <div class="field store">
-          <p class="lab store">ราคาขาย (หน้าร้าน)</p>
-          <input id="store" inputmode="decimal" placeholder="0" aria-label="ราคาขายหน้าร้าน">
+          <p class="lab store">ราคาขาย (หน้าร้าน/ปลีก)</p>
+          <input id="store" inputmode="decimal" placeholder="0" aria-label="ราคาขายหน้าร้าน (ราคาปลีก)">
+        </div>
+        <div class="field whole">
+          <p class="lab whole">ราคาส่ง</p>
+          <input id="whole" inputmode="decimal" placeholder="0" aria-label="ราคาส่ง (ขายส่ง)">
         </div>
       </div>
     </div>
@@ -348,13 +354,18 @@
     function n(id){var v=parseFloat($(id).value);return isFinite(v)?v:0;}
     function fmtSign(p){return (p<0?'−':'+')+money(Math.abs(p));}
     // 3 ช่องทางขายจริง เรียงกำไรมาก→น้อย (NO FEE เป็นค่าอ้างอิง ไม่ร่วมแข่ง)
-    function channels(cost,sell,store){
-      return [{k:'หน้าร้าน',p:store-cost},{k:'GP 30%',p:sell*0.70-cost},{k:'GP 35%',p:sell*0.65-cost}]
-        .sort(function(a,b){return b.p-a.p;});
+    // เทียบเฉพาะช่องทางที่กรอกราคามาจริง — ช่องที่เว้นว่างไม่ควรไปนั่งอันดับปนกับของจริง
+    // หน้าร้าน/ปลีก และ ส่ง ไม่มี GP (ขายเอง) · TELE โดน GP ของแพลตฟอร์ม
+    function channels(cost,sell,store,whole){
+      var out=[];
+      if(store>0) out.push({k:'หน้าร้าน/ปลีก',p:store-cost});
+      if(whole>0) out.push({k:'ส่ง',p:whole-cost});
+      if(sell>0){ out.push({k:'GP 30%',p:sell*0.70-cost}); out.push({k:'GP 35%',p:sell*0.65-cost}); }
+      return out.sort(function(a,b){return b.p-a.p;});
     }
 
     function render(){
-      var cost=n('cost'), sell=n('sell'), store=n('store'), cgp=parseInt($('cgp').value,10);
+      var cost=n('cost'), sell=n('sell'), store=n('store'), whole=n('whole'), cgp=parseInt($('cgp').value,10);
       $('cgpv').textContent=cgp;
       var margin=Math.min(95,Math.max(1,n('margin')||30))/100;
 
@@ -386,9 +397,9 @@
         '<div class="p '+scls+'">'+(readyStore?smg.toFixed(1)+'%':'')+'</div></div>';
       $('stats').innerHTML=s;
 
-      // ตัดสินช่องทางคุ้มสุด: เทียบเฉพาะช่องทางจริง (หน้าร้าน / TELE GP30 / TELE GP35)
-      if(cost>0 && sell>0 && store>0){
-        var opts=channels(cost,sell,store);
+      // ตัดสินช่องทางคุ้มสุด — ต้องมีอย่างน้อย 2 ช่องทางถึงจะเทียบได้
+      var opts=channels(cost,sell,store,whole);
+      if(cost>0 && opts.length>=2){
         if(opts[0].p<0){
           $('verdict').className='note warn';
           $('verdict').innerHTML='<span aria-hidden="true">⚠️</span><span>ขาดทุนทุกช่องทาง — เจ็บน้อยสุด: <b>'+opts[0].k+'</b> ('+fmtSign(opts[0].p)+')</span>';
@@ -442,20 +453,21 @@
       $('tgrid').innerHTML=tg;
     }
 
-    ['cost','sell','store','cgp','margin'].forEach(function(id){
+    ['cost','sell','store','whole','cgp','margin'].forEach(function(id){
       $(id).addEventListener('input',render);
     });
 
     // ---- ปุ่มคัดลอกสรุป: ข้อความสั้น ๆ เอาไปวางใน LINE ได้เลย ----
     function summaryText(){
-      var cost=n('cost'), sell=n('sell'), store=n('store');
+      var cost=n('cost'), sell=n('sell'), store=n('store'), whole=n('whole');
       var L=['คำนวณกำไร — ทุน ฿'+money(cost)];
       if(sell>0){
         L.push('TELE ฿'+money(sell)+' → GP30 รับ ฿'+money(sell*0.70)+' ('+fmtSign(sell*0.70-cost)+') · GP35 รับ ฿'+money(sell*0.65)+' ('+fmtSign(sell*0.65-cost)+')');
       }
-      if(store>0) L.push('หน้าร้าน ฿'+money(store)+' → '+fmtSign(store-cost));
-      if(sell>0 && store>0){
-        var opts=channels(cost,sell,store);
+      if(store>0) L.push('หน้าร้าน/ปลีก ฿'+money(store)+' → '+fmtSign(store-cost));
+      if(whole>0) L.push('ส่ง ฿'+money(whole)+' → '+fmtSign(whole-cost));
+      var opts=channels(cost,sell,store,whole);
+      if(opts.length>=2){
         L.push(opts[0].p<0 ? 'ขาดทุนทุกช่องทาง (เจ็บน้อยสุด: '+opts[0].k+')' : 'คุ้มสุด: '+opts[0].k+' ('+fmtSign(opts[0].p)+')');
       }
       return L.join('\n');
@@ -488,7 +500,7 @@
     // เติมค่าจาก URL (?cost=&sell=&store=) — ให้แอปอื่นลิงก์มาพร้อมตัวเลข เช่น modal Master ใน lineman-mgr
     (function(){
       var q=new URLSearchParams(location.search);
-      ['cost','sell','store'].forEach(function(id){
+      ['cost','sell','store','whole'].forEach(function(id){
         var v=parseFloat(q.get(id));
         if(isFinite(v)&&v>0) $(id).value=v;
       });
