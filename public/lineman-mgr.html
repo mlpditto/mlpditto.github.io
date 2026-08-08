@@ -1620,7 +1620,11 @@
                 const dateField = document.getElementById(mode === 'add' ? 'paidDate' : 'e-paidDate');
                 if (!dateField.value) {
                     const now = new Date();
-                    dateField.value = now.toISOString().split('T')[0];
+                    // ใช้ setDateInput (ไม่ใช่ .value = ตรง ๆ) เพื่อ refresh dmy-overlay ไปพร้อมกัน
+                    // ของเดิม: .value = ... เปลี่ยนค่าจริงแต่ overlay ยังโชว์ "วว/ดด/ปปปป" ค้าง (event input/change ไม่ยิงเมื่อ set ผ่าน JS)
+                    // ผลคือช่องดูเหมือนว่างตลอด กดวันนี้ในปฏิทินครั้งแรกเหมือนไม่ติด เพราะ native input มีค่า "วันนี้" อยู่แล้วจริง ๆ (ไม่เกิด change event ซ้ำค่าเดิม)
+                    // ต้องกดวันอื่นก่อนค่าถึงจะเปลี่ยนจริง แล้ว overlay ถึงอัปเดต — ตรงกับที่ user เจอ
+                    setDateInput(dateField.id, todayLocalKey(now));
                     document.getElementById(mode === 'add' ? 'transferHH' : 'e-transferHH').value = now.getHours().toString().padStart(2, '0');
                     document.getElementById(mode === 'add' ? 'transferMM' : 'e-transferMM').value = now.getMinutes().toString().padStart(2, '0');
                 }
@@ -2384,6 +2388,12 @@
             updateGpSegAmounts('add');
         }
 
+        // "วันนี้" แบบ YYYY-MM-DD จากเวลาเครื่อง (ไทย) — ห้ามใช้ toISOString().slice(0,10)
+        // เพราะเป็น UTC: ก่อน 07:00 น. เวลาไทยจะได้วันที่ของเมื่อวาน (เจอบั๊กเดียวกันมาแล้วใน cknc.js → todayKey())
+        function todayLocalKey(d = new Date()) {
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        }
+
         // ---- DD/MM/YYYY overlay สำหรับ native date input (paidDate / e-paidDate) ----
         // input เก็บค่า ISO (YYYY-MM-DD) เหมือนเดิม — overlay เป็นแค่ชั้นแสดงผล
         function isoToDMY(iso) {
@@ -2482,7 +2492,7 @@
 
         function initDefaults() {
             const now = new Date();
-            const today = now.toISOString().split('T')[0];
+            const today = todayLocalKey(now);
             document.getElementById('recordDate').value = today;
             document.getElementById('receivedDate').value = today;
             setDateInput('paidDate', today);
@@ -4072,7 +4082,7 @@
                 const record = salesData[idx];
 
                 const now = new Date();
-                const defaultDate = now.toISOString().slice(0, 10);
+                const defaultDate = todayLocalKey(now);
                 const defaultHH = now.getHours().toString().padStart(2, '0');
                 const defaultMM = now.getMinutes().toString().padStart(2, '0');
 
