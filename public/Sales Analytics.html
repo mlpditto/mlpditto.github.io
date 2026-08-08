@@ -339,7 +339,7 @@
                     <div class="bg-white/20 p-2 rounded-lg backdrop-blur-md"><i
                             class="ph-bold ph-chart-polar text-2xl"></i></div>
                     <div><span class="font-bold text-xl tracking-tight block leading-none">Sales Analytics</span><span
-                            class="text-xs text-indigo-100 font-light opacity-90">V136.24 Fixed 2</span></div>
+                            class="text-xs text-indigo-100 font-light opacity-90">V136.25 Dedup Fix</span></div>
                 </div>
                 <div class="flex items-center gap-3">
                     <button onclick="toggleTheme()"
@@ -1419,6 +1419,28 @@
         }
 
         // --- 4. DATA PROCESSING ---
+        // ป้องกันบิลซ้ำเลขที่ชนกันแล้วข้อมูลจริงหาย (เช่น มีบรรทัดหมายเหตุที่พิมพ์เลขที่บิลปนอยู่ในเนื้อความ
+        // แต่ไม่ใช่รายการขายจริง — parser จะเข้าใจผิดว่าเป็นบิลใหม่ ยอด 0.00 แล้วไปแย่ง key เลขที่บิลนั้น
+        // ก่อนบิลจริงที่มียอดเงินตามมาทีหลัง) — V136.25 FIX: ถ้าเลขที่ซ้ำกัน ให้เก็บตัวที่มียอดเงินจริงไว้ก่อนเสมอ
+        function dedupeByOrderId(list) {
+            const uniqueMap = new Map();
+            list.forEach(item => {
+                if (item.orderId === "-") {
+                    uniqueMap.set(item.id, item); // ไม่มีเลขที่บิล ไม่มีทางชนกัน เก็บทุกตัว
+                    return;
+                }
+                const existing = uniqueMap.get(item.orderId);
+                if (!existing) {
+                    uniqueMap.set(item.orderId, item);
+                } else if (existing.amountVal === 0 && item.amountVal !== 0) {
+                    // ตัวเก่ายอด 0 (น่าจะเป็นหมายเหตุ/โน้ตปนมา) ตัวใหม่มียอดจริง -> ใช้ตัวใหม่แทน
+                    uniqueMap.set(item.orderId, item);
+                }
+                // ถ้าทั้งคู่มียอด หรือทั้งคู่เป็น 0 เหมือนกัน ให้คงตัวแรกที่เจอไว้ (กันบิลซ้ำเลขที่จริง ๆ)
+            });
+            return Array.from(uniqueMap.values());
+        }
+
         function startProcessing() {
             const text = document.getElementById('inputData').value;
             if (!text.trim()) { showToast("ไม่พบข้อมูล", "error"); return; }
@@ -1512,15 +1534,7 @@
             });
 
             // Post-Process Deduplication (Final Safety Net)
-            const uniqueMap = new Map();
-            allData.forEach(item => {
-                if (item.orderId === "-") {
-                    uniqueMap.set(item.id, item); // Keep items without orderId
-                } else {
-                    if (!uniqueMap.has(item.orderId)) uniqueMap.set(item.orderId, item);
-                }
-            });
-            allData = Array.from(uniqueMap.values());
+            allData = dedupeByOrderId(allData);
 
             document.getElementById('resultSection').classList.remove('hidden');
             document.getElementById('emptyState').classList.add('hidden');
@@ -1556,12 +1570,7 @@
                 }
 
                 // Post-Process Deduplication for CSV
-                const uniqueMap = new Map();
-                allData.forEach(item => {
-                    if (item.orderId === "-") uniqueMap.set(item.id, item);
-                    else if (!uniqueMap.has(item.orderId)) uniqueMap.set(item.orderId, item);
-                });
-                allData = Array.from(uniqueMap.values());
+                allData = dedupeByOrderId(allData);
                 importedCount = allData.length;
 
                 if (importedCount > 0) {
