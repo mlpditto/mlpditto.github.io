@@ -260,6 +260,16 @@
         .date-dmy-swal > .dmy-overlay { left: 14px; font-size: 14px; font-weight: 700; }
         .date-dmy-swal > .dmy-cal-btn { right: 12px; }
 
+        /* ประวัติยอดเงินเข้า: ยอดรับจริง / ก่อนหัก GP บรรทัดเดียวกัน — คอลัมน์ขวาแคบมาก (~110px ที่ 375px) ย่อฟอนต์กันตัวเลขตัดบรรทัด */
+        .payout-amt-col { min-width: 0; }
+        .payout-amt-row { font-size: 16px; }
+        @media (max-width: 480px) {
+            .payout-amt-row { font-size: 11px; }
+        }
+        @media (max-width: 360px) {
+            .payout-amt-row { font-size: 10px; }
+        }
+
         /* Segmented GP control ในหัวข้อการชำระเงิน */
         .gp-seg-group { display: inline-flex; background: #f1f5f9; border-radius: 9999px; padding: 2px; }
         .dark .gp-seg-group { background: #0f172a; }
@@ -1560,7 +1570,10 @@
             <div class="bg-white dark:bg-slate-800 p-4 border-t border-slate-100 dark:border-slate-700 safe-pb">
                 <div class="flex justify-between items-end">
                     <span class="text-xs font-bold text-slate-400 uppercase">ยอดรวมเดือนนี้</span>
-                    <span id="payout-total-month" class="text-2xl font-black text-emerald-600">฿0.00</span>
+                    <div class="text-right">
+                        <span id="payout-total-month" class="text-2xl font-black text-emerald-600">฿0.00</span>
+                        <div class="text-[10px] text-slate-400 font-bold mt-0.5">ก่อนหัก GP: <span id="payout-total-month-gross">฿0.00</span></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2887,6 +2900,7 @@
                 const targetMonth = document.getElementById('payoutMonthFilter').value;
                 const groups = {};
                 let totalMonth = 0;
+                let totalGrossMonth = 0;
 
                 // Show loading state
                 if (container) {
@@ -2928,11 +2942,13 @@
                             groups[dateKey] = {
                                 date: dateKey,
                                 total: 0,
+                                grossTotal: 0,
                                 count: 0,
                                 items: []
                             };
                         }
                         groups[dateKey].total += (r.net || 0);
+                        groups[dateKey].grossTotal += (r.gross || 0);
                         groups[dateKey].count++;
                         groups[dateKey].items.push(r);
                     }
@@ -2956,6 +2972,7 @@
                     sortedDates.forEach(date => {
                         const g = groups[date];
                         totalMonth += g.total;
+                        totalGrossMonth += g.grossTotal;
 
                         // Format Date
                         const dateParts = String(date).split('-');
@@ -3006,8 +3023,9 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="text-right">
-                                        <div class="font-bold text-emerald-600 text-base">+${g.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                                    <div class="text-right payout-amt-col">
+                                        <div class="font-bold text-emerald-600 payout-amt-row whitespace-nowrap">+${g.total.toLocaleString(undefined, { minimumFractionDigits: 2 })} <span class="text-slate-400 dark:text-slate-500 font-bold">/ ${g.grossTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
+                                        <div class="text-[8px] text-slate-300 dark:text-slate-600 font-bold uppercase tracking-wide whitespace-nowrap">รับจริง / ก่อนหัก GP</div>
                                         <div class="text-[10px] text-slate-400 mt-0.5"><i class="fas fa-chevron-down text-[10px] ml-1 transition-transform" id="icon-${date}"></i></div>
                                     </div>
                                 </div>
@@ -3036,7 +3054,7 @@
                                                     Order: ${item.date} ${item.orderTime} ${noteHtml}
                                                 </div>
                                             </div>
-                                            <div class="font-bold text-slate-600 dark:text-slate-400 text-xs">+${(item.net || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                                            <div class="font-bold text-slate-600 dark:text-slate-400 text-xs">+${(item.net || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} <span class="text-slate-400 dark:text-slate-500 font-semibold">/ ${(item.gross || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
                                         </div>
                                     `}).join('')}
                                 </div>
@@ -3048,6 +3066,8 @@
 
                 const totalEl = document.getElementById('payout-total-month');
                 if (totalEl) totalEl.innerText = `฿${totalMonth.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+                const totalGrossEl = document.getElementById('payout-total-month-gross');
+                if (totalGrossEl) totalGrossEl.innerText = `฿${totalGrossMonth.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
             } catch (pErr) {
                 console.error("Payout Render error:", pErr);
             }
