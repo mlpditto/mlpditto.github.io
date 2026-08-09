@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sales Analytics V136.28 (LINE MAN-style Nav) - Privacy % vs Normal ฿</title>
+    <title>Sales Analytics V136.29 (Overview Day Pills) - Privacy % vs Normal ฿</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -339,7 +339,7 @@
                     <div class="bg-white/20 p-2 rounded-lg backdrop-blur-md"><i
                             class="ph-bold ph-chart-polar text-2xl"></i></div>
                     <div><span class="font-bold text-xl tracking-tight block leading-none">Sales Analytics</span><span
-                            class="text-xs text-indigo-100 font-light opacity-90">V136.28 LINE MAN Nav</span></div>
+                            class="text-xs text-indigo-100 font-light opacity-90">V136.29 Day Pills</span></div>
                 </div>
                 <div class="flex items-center gap-3">
                     <button onclick="toggleTheme()"
@@ -573,6 +573,8 @@
                                 </div>
                             </div>
                         </div>
+
+                        <div id="recentDayPills" class="flex items-center gap-1.5 flex-wrap"></div>
 
                         <div class="relative">
                             <i
@@ -1174,6 +1176,7 @@
                     }
                     if (ok) {
                         document.getElementById('authGate').classList.add('hidden');
+                        loadRecentDayPills(); // โหลดแถบวันล่าสุด ครั้งเดียวตอน auth ผ่าน (ไม่ await กันบล็อก resolve)
                         resolve(user);
                     } else {
                         document.getElementById('authGateDeniedMsg').textContent =
@@ -1214,6 +1217,8 @@
         const VIP_MIN_ORDER_COUNT = 1;    // กันชื่อเดียวโผล่ครั้งเดียวยอดสูงลิ่วจากบิลพิเศษ (ปรับเป็น 2 ได้ถ้าอยากเข้มกว่านี้)
         const VIP_EXCLUDED_NAMES = ['-', '', 'ลูกค้าทั่วไป', 'ทั่วไป']; // ชื่อ generic ที่ไม่ควรถูกนับเป็น "ลูกค้า" รายตัว
         let vipDayCache = {}; // key = docId (YYYY-MM-DD) → array ของ {customerName, amountVal, saleType, date, orderId} เฉพาะ field ที่ต้องใช้
+        let currentLoadedDocId = null; // docId ('YYYY-MM-DD') ของวันที่กำลังโหลดอยู่ ไว้ไฮไลต์ปุ่ม
+        let recentDayPillsCache = [];  // รายการ {id, date} ล่าสุดที่ query มา ไว้ re-render active state ไม่ต้อง query ซ้ำ
         let vipEndMonth = null;      // 'YYYY-MM' เดือนสิ้นสุดของช่วงที่ดู (ค่าเริ่มต้น = เดือนปัจจุบัน)
         let vipPeriodMonths = 3;     // 1 | 3 | 6 | 12 — ความยาวช่วงที่เลือก (ปุ่ม active)
         let vipLastFetchStart = null, vipLastFetchEnd = null; // เก็บช่วงที่ fetch ล่าสุด ไว้ให้ modal โปรไฟล์อ้างอิง label
@@ -1309,6 +1314,36 @@
             }
         }
 
+        async function loadRecentDayPills() {
+            try {
+                await authReady;
+                // orderBy(FieldPath.documentId()) ต้องมี composite index ที่ยังไม่ได้สร้างในโปรเจกต์นี้ (เจอจริงตอนทดสอบ)
+                // ใช้ where-range แทน (ไม่ต้องมี index พิเศษ) แล้วเรียง+ตัดสัก 10 รายการฝั่ง client
+                const cutoff = new Date();
+                cutoff.setDate(cutoff.getDate() - 30);
+                const cutoffStr = `${cutoff.getFullYear()}-${String(cutoff.getMonth() + 1).padStart(2, '0')}-${String(cutoff.getDate()).padStart(2, '0')}`;
+                const snapshot = await window.db.collection('sales_analytics')
+                    .where(firebase.firestore.FieldPath.documentId(), '>=', cutoffStr)
+                    .get();
+                recentDayPillsCache = snapshot.docs
+                    .map(doc => ({ id: doc.id, date: doc.data().date }))
+                    .sort((a, b) => b.id.localeCompare(a.id))
+                    .slice(0, 10);
+                renderRecentDayPills();
+            } catch (e) {
+                console.error("โหลดแถบวันล่าสุดไม่สำเร็จ", e);
+            }
+        }
+
+        function renderRecentDayPills() {
+            const container = document.getElementById('recentDayPills');
+            if (!container) return;
+            container.innerHTML = recentDayPillsCache.map(p => {
+                const active = p.id === currentLoadedDocId;
+                return `<button onclick="loadCloudData('${p.id}')" class="text-xs font-bold px-3 py-1.5 rounded-full transition-all ${active ? 'bg-brand-600 text-white' : 'bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}">${p.date}</button>`;
+            }).join('');
+        }
+
         async function loadCloudData(docId) {
             closeCloudLoadModal();
             document.getElementById('loadingOverlay').classList.remove('hidden');
@@ -1328,6 +1363,8 @@
                         refreshData();
                         filterCustomers();
                         showToast(`โหลดวันที่ ${data.date} สำเร็จ (${allData.length} รายการ)`);
+                        currentLoadedDocId = docId;
+                        renderRecentDayPills(); // ไฮไลต์ปุ่มใหม่ (ใช้ cache เดิม ไม่ query ซ้ำ)
                     } else {
                         showToast("ไม่พบข้อมูลในชุดนี้", "error");
                     }
