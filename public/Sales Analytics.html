@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sales Analytics V136.30 (Auto-load Latest Day) - Privacy % vs Normal ฿</title>
+    <title>Sales Analytics V136.31 (Overview Month Nav) - Privacy % vs Normal ฿</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -339,7 +339,7 @@
                     <div class="bg-white/20 p-2 rounded-lg backdrop-blur-md"><i
                             class="ph-bold ph-chart-polar text-2xl"></i></div>
                     <div><span class="font-bold text-xl tracking-tight block leading-none">Sales Analytics</span><span
-                            class="text-xs text-indigo-100 font-light opacity-90">V136.30 Auto-load</span></div>
+                            class="text-xs text-indigo-100 font-light opacity-90">V136.31 Month Nav</span></div>
                 </div>
                 <div class="flex items-center gap-3">
                     <button onclick="toggleTheme()"
@@ -572,6 +572,12 @@
                                     <span id="flagCountValue" class="font-bold text-xs">0</span>
                                 </div>
                             </div>
+                        </div>
+
+                        <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 rounded-lg px-1 self-start">
+                            <button onclick="shiftOverviewMonth(-1)" class="p-1.5 text-slate-500 hover:text-brand-600 dark:hover:text-brand-400"><i class="ph-bold ph-caret-left"></i></button>
+                            <span id="overview-month-label" class="text-xs font-bold text-slate-700 dark:text-slate-200 px-1 min-w-[90px] text-center">-</span>
+                            <button onclick="shiftOverviewMonth(1)" id="overview-month-next" class="p-1.5 text-slate-500 hover:text-brand-600 dark:hover:text-brand-400 disabled:opacity-30 disabled:cursor-not-allowed"><i class="ph-bold ph-caret-right"></i></button>
                         </div>
 
                         <div id="recentDayPills" class="flex items-center gap-1.5 flex-wrap"></div>
@@ -1219,6 +1225,7 @@
         let vipDayCache = {}; // key = docId (YYYY-MM-DD) → array ของ {customerName, amountVal, saleType, date, orderId} เฉพาะ field ที่ต้องใช้
         let currentLoadedDocId = null; // docId ('YYYY-MM-DD') ของวันที่กำลังโหลดอยู่ ไว้ไฮไลต์ปุ่ม
         let recentDayPillsCache = [];  // รายการ {id, date} ล่าสุดที่ query มา ไว้ re-render active state ไม่ต้อง query ซ้ำ
+        let overviewMonth = null; // 'YYYY-MM' เดือนที่กำลังดูอยู่ในแถบปุ่มวัน (เริ่มที่เดือนปัจจุบัน)
         let vipEndMonth = null;      // 'YYYY-MM' เดือนสิ้นสุดของช่วงที่ดู (ค่าเริ่มต้น = เดือนปัจจุบัน)
         let vipPeriodMonths = 3;     // 1 | 3 | 6 | 12 — ความยาวช่วงที่เลือก (ปุ่ม active)
         let vipLastFetchStart = null, vipLastFetchEnd = null; // เก็บช่วงที่ fetch ล่าสุด ไว้ให้ modal โปรไฟล์อ้างอิง label
@@ -1317,6 +1324,9 @@
         async function loadRecentDayPills() {
             try {
                 await authReady;
+                overviewMonth = currentMonthStr();
+                document.getElementById('overview-month-label').innerText = monthLabel(overviewMonth);
+                document.getElementById('overview-month-next').disabled = true; // อยู่เดือนปัจจุบันอยู่แล้ว
                 // orderBy(FieldPath.documentId()) ต้องมี composite index ที่ยังไม่ได้สร้างในโปรเจกต์นี้ (เจอจริงตอนทดสอบ)
                 // ใช้ where-range แทน (ไม่ต้องมี index พิเศษ) แล้วเรียง+ตัดสัก 10 รายการฝั่ง client
                 const cutoff = new Date();
@@ -1347,6 +1357,41 @@
                 const active = p.id === currentLoadedDocId;
                 return `<button onclick="loadCloudData('${p.id}')" class="text-xs font-bold px-3 py-1.5 rounded-full transition-all ${active ? 'bg-brand-600 text-white' : 'bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}">${p.date}</button>`;
             }).join('');
+        }
+
+        function getMonthDayRange(monthStr) {
+            const [y, m] = monthStr.split('-').map(Number);
+            const start = new Date(y, m - 1, 1);
+            const end = new Date(y, m, 0);
+            const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            return { start: fmt(start), end: fmt(end) };
+        }
+
+        async function loadOverviewMonthPills(monthStr) {
+            const { start, end } = getMonthDayRange(monthStr);
+            try {
+                const snapshot = await window.db.collection('sales_analytics')
+                    .where(firebase.firestore.FieldPath.documentId(), '>=', start)
+                    .where(firebase.firestore.FieldPath.documentId(), '<=', end)
+                    .get();
+                recentDayPillsCache = snapshot.docs
+                    .map(doc => ({ id: doc.id, date: doc.data().date }))
+                    .sort((a, b) => b.id.localeCompare(a.id));
+                renderRecentDayPills();
+            } catch (e) {
+                console.error("โหลดวันของเดือนที่เลือกไม่สำเร็จ", e);
+            }
+        }
+
+        function shiftOverviewMonth(delta) {
+            const [y, m] = overviewMonth.split('-').map(Number);
+            const d = new Date(y, m - 1 + delta, 1);
+            const next = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            if (next > currentMonthStr()) return; // กันเลื่อนไปอนาคต
+            overviewMonth = next;
+            document.getElementById('overview-month-label').innerText = monthLabel(overviewMonth);
+            document.getElementById('overview-month-next').disabled = (overviewMonth >= currentMonthStr());
+            loadOverviewMonthPills(overviewMonth);
         }
 
         async function loadCloudData(docId) {
