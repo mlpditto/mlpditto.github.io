@@ -144,6 +144,11 @@ service cloud.firestore {
       allow read, write: if isAdmin() || hasAreaAccess('analytics');
     }
 
+    // Sales Analytics: customer name merge aliases (heuristic dedup, v7) — สิทธิ์เดียวกับ sales_analytics
+    match /sales_analytics_customer_aliases/{aliasId} {
+      allow read, write: if isAdmin() || hasAreaAccess('analytics');
+    }
+
     // TMTP Manager: admin or users granted the 'tmtp' area
     match /tmtp_records/{docId} {
       allow read, write: if isAdmin() || hasAreaAccess('tmtp');
