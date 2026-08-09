@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sales Analytics V136.24 (Customer Tab Fixed) - Privacy % vs Normal ฿</title>
+    <title>Sales Analytics V136.26 (VIP Customer Ranking) - Privacy % vs Normal ฿</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -339,7 +339,7 @@
                     <div class="bg-white/20 p-2 rounded-lg backdrop-blur-md"><i
                             class="ph-bold ph-chart-polar text-2xl"></i></div>
                     <div><span class="font-bold text-xl tracking-tight block leading-none">Sales Analytics</span><span
-                            class="text-xs text-indigo-100 font-light opacity-90">V136.25 Dedup Fix</span></div>
+                            class="text-xs text-indigo-100 font-light opacity-90">V136.26 VIP Ranking</span></div>
                 </div>
                 <div class="flex items-center gap-3">
                     <button onclick="toggleTheme()"
@@ -787,6 +787,41 @@
             </div>
 
             <div id="view-customer" class="hidden space-y-6 animate-fade-in">
+                <div id="vipRankingCard"
+                    class="bg-white dark:bg-dark-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 animate-slide-up">
+                    <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
+                        <h4 class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                            <i class="ph-fill ph-trophy text-yellow-500"></i> อันดับลูกค้ากำลังซื้อสูง (สะสมข้ามวัน)
+                        </h4>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <input type="date" id="vip-start-date" class="text-xs border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1.5 bg-white dark:bg-slate-900 dark:text-white outline-none">
+                            <span class="text-xs text-slate-400">ถึง</span>
+                            <input type="date" id="vip-end-date" class="text-xs border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1.5 bg-white dark:bg-slate-900 dark:text-white outline-none">
+                            <button onclick="loadVipRanking()" id="btnLoadVip"
+                                class="bg-brand-600 hover:bg-brand-700 text-white font-medium py-1.5 px-4 rounded-lg text-xs transition-all flex items-center gap-1.5 shadow-sm">
+                                <i class="ph-bold ph-magnifying-glass"></i> ดึงข้อมูล
+                            </button>
+                        </div>
+                    </div>
+                    <div id="vipRangeInfo" class="text-xs text-slate-400 mb-3"></div>
+                    <div class="overflow-x-auto max-h-[400px] custom-scrollbar border border-slate-200 dark:border-slate-700 rounded-xl">
+                        <table class="w-full text-sm text-left whitespace-nowrap text-slate-600 dark:text-slate-300">
+                            <thead class="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-50 dark:bg-slate-800 sticky top-0 z-10">
+                                <tr>
+                                    <th class="px-4 py-2 text-center w-[50px]">#</th>
+                                    <th class="px-4 py-2">ชื่อลูกค้า</th>
+                                    <th class="px-4 py-2 text-right">ยอดสะสม</th>
+                                    <th class="px-4 py-2 text-center">จำนวนบิล</th>
+                                    <th class="px-4 py-2 text-right">เฉลี่ย/บิล</th>
+                                    <th class="px-4 py-2 text-center">ล่าสุด</th>
+                                </tr>
+                            </thead>
+                            <tbody id="vipTableBody" class="divide-y divide-slate-50 dark:divide-slate-700 bg-white dark:bg-dark-800">
+                                <tr><td colspan="6" class="text-center py-8 text-slate-400">เลือกช่วงวันที่แล้วกด "ดึงข้อมูล"</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
                 <div
                     class="bg-white dark:bg-dark-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 animate-slide-up">
                     <h4 class="font-bold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2"><i
@@ -1165,6 +1200,13 @@
             return "******" + name.substring(Math.max(0, name.length - 2));
         }
 
+        // --- VIP CUSTOMER RANKING consts (สะสมข้ามวัน) ---
+        const VIP_DEFAULT_LOOKBACK_DAYS = 90;
+        const VIP_SPEND_THRESHOLD = 5000; // บาท สะสมในช่วงที่เลือก → ติด badge VIP
+        const VIP_MIN_ORDER_COUNT = 1;    // กันชื่อเดียวโผล่ครั้งเดียวยอดสูงลิ่วจากบิลพิเศษ (ปรับเป็น 2 ได้ถ้าอยากเข้มกว่านี้)
+        const VIP_EXCLUDED_NAMES = ['-', '', 'ลูกค้าทั่วไป', 'ทั่วไป']; // ชื่อ generic ที่ไม่ควรถูกนับเป็น "ลูกค้า" รายตัว
+        let vipDayCache = {}; // key = docId (YYYY-MM-DD) → array ของ {customerName, amountVal, saleType, date, orderId} เฉพาะ field ที่ต้องใช้
+
         // --- Firebase Cloud Functions ---
         function formatDateForDoc(dateStr) {
             const parts = dateStr.split('/');
@@ -1289,6 +1331,118 @@
             }
         }
 
+        // --- VIP CUSTOMER RANKING (สะสมข้ามวัน) ---
+        function dateRangeToDocIds(startStr, endStr) {
+            const ids = [];
+            let cur = new Date(startStr);
+            const end = new Date(endStr);
+            while (cur <= end) {
+                ids.push(cur.toISOString().slice(0, 10)); // ตรงกับ formatDateForDoc() (YYYY-MM-DD) เพราะ docId ไม่ใช้ พ.ศ.
+                cur.setDate(cur.getDate() + 1);
+            }
+            return ids;
+        }
+
+        async function loadVipRanking() {
+            const startStr = document.getElementById('vip-start-date').value;
+            const endStr = document.getElementById('vip-end-date').value;
+            if (!startStr || !endStr || startStr > endStr) {
+                showToast("เลือกช่วงวันที่ให้ถูกต้องก่อน", "error");
+                return;
+            }
+            const docIds = dateRangeToDocIds(startStr, endStr);
+            const toFetch = docIds.filter(id => !(id in vipDayCache));
+
+            if (toFetch.length > 60) {
+                const proceed = confirm(`ช่วงที่เลือกต้องดึงข้อมูล ${toFetch.length} วัน (${toFetch.length} reads) อาจใช้เวลาสักครู่ ดำเนินการต่อ?`);
+                if (!proceed) return;
+            }
+
+            const btn = document.getElementById('btnLoadVip');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i> กำลังดึง...';
+            document.getElementById('vipRangeInfo').innerText = `กำลังดึง ${toFetch.length} วัน (cache ไว้แล้ว ${docIds.length - toFetch.length} วัน)...`;
+
+            try {
+                await authReady;
+                // ดึงทีละ doc (Firestore JS SDK ไม่มี "IN" query เกิน 30 ค่า และ doc อาจไม่ครบทุกวัน) — ยอมรับ N reads ตามช่วงที่เลือก
+                for (const docId of toFetch) {
+                    try {
+                        const doc = await window.db.collection('sales_analytics').doc(docId).get();
+                        const records = doc.exists ? (doc.data().records || []) : [];
+                        // เก็บเฉพาะ field ที่ต้องใช้ กัน memory/ขนาด cache บวมโดยไม่จำเป็น
+                        vipDayCache[docId] = records
+                            .filter(r => !r.isExcluded)
+                            .map(r => ({ customerName: r.customerName, amountVal: r.amountVal, saleType: r.saleType, date: r.date, orderId: r.orderId }));
+                    } catch (e) {
+                        console.error("VIP fetch error for " + docId, e);
+                        vipDayCache[docId] = []; // กันพลาดวันเดียวแล้วล้มทั้งช่วง
+                    }
+                }
+
+                const rangeRecords = docIds.flatMap(id => vipDayCache[id] || []);
+                const ranking = aggregateVipCustomers(rangeRecords);
+                renderVipRanking(ranking, rangeRecords.length, docIds.length);
+            } catch (e) {
+                showToast("ดึงข้อมูลไม่สำเร็จ: " + e.message, "error");
+                console.error(e);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ph-bold ph-magnifying-glass"></i> ดึงข้อมูล';
+            }
+        }
+
+        function aggregateVipCustomers(records) {
+            const map = new Map();
+            records.forEach(r => {
+                const name = (r.customerName || '').trim();
+                if (VIP_EXCLUDED_NAMES.includes(name)) return;
+                if (!map.has(name)) map.set(name, { name, total: 0, count: 0, lastDate: r.date });
+                const c = map.get(name);
+                c.total += r.amountVal;
+                c.count += 1;
+                if (new Date(r.date.split('/').reverse().join('-')) > new Date(c.lastDate.split('/').reverse().join('-'))) {
+                    c.lastDate = r.date;
+                }
+            });
+            return [...map.values()]
+                .filter(c => c.count >= VIP_MIN_ORDER_COUNT)
+                .sort((a, b) => b.total - a.total);
+        }
+
+        function renderVipRanking(ranking, recordCount, dayCount) {
+            document.getElementById('vipRangeInfo').innerText =
+                `รวม ${recordCount} บิล จาก ${dayCount} วัน → พบลูกค้า ${ranking.length} ราย (ไม่รวมชื่อทั่วไป/ว่าง)`;
+
+            const tbody = document.getElementById('vipTableBody');
+            if (ranking.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400">ไม่พบข้อมูลในช่วงนี้</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = ranking.map((c, i) => {
+                const isVip = c.total >= VIP_SPEND_THRESHOLD;
+                const displayName = isPrivacyMode ? maskCustomerName(c.name) : c.name;
+                return `
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer" onclick="filterCustomerTableByName('${c.name.replace(/'/g, "\\'")}')">
+                    <td class="px-4 py-2 text-center text-slate-400 text-xs font-mono">${i + 1}</td>
+                    <td class="px-4 py-2 text-sm dark:text-slate-300 flex items-center gap-1.5">
+                        ${isVip ? '<span title="VIP: ยอดสะสมเกิน ' + VIP_SPEND_THRESHOLD.toLocaleString() + ' บาท">👑</span>' : ''}
+                        ${displayName}
+                    </td>
+                    <td class="px-4 py-2 text-right font-bold text-slate-700 dark:text-slate-200 text-sm">${isPrivacyMode ? '•••' : c.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                    <td class="px-4 py-2 text-center text-xs">${c.count}</td>
+                    <td class="px-4 py-2 text-right text-xs text-slate-500">${isPrivacyMode ? '•••' : (c.total / c.count).toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                    <td class="px-4 py-2 text-center text-xs text-slate-400">${c.lastDate}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        function filterCustomerTableByName(name) {
+            // integration ราคาถูก: ใช้ตัวกรองบิลดิบเดิมที่มีอยู่แล้ว แทนที่จะสร้างตารางใหม่ซ้ำ
+            showToast(`กรองบิลของ "${name}" ในตารางด้านล่าง — ปรับ/เคลียร์ตัวกรองอื่นได้ตามปกติ`);
+            document.getElementById('customerTableBody').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
         function highlightText(t, q) {
             if (!q) return t;
             return String(t).replace(new RegExp(`(${q})`, 'gi'), '<mark>$1</mark>');
@@ -1393,6 +1547,13 @@
                 customer.classList.remove('hidden');
                 btnCust.className = "main-tab-btn main-tab-active";
                 filterCustomers(); // Auto-load customer data V136.24
+                if (!document.getElementById('vip-start-date').value) {
+                    const end = new Date();
+                    const start = new Date();
+                    start.setDate(start.getDate() - VIP_DEFAULT_LOOKBACK_DAYS);
+                    document.getElementById('vip-end-date').value = end.toISOString().slice(0, 10);
+                    document.getElementById('vip-start-date').value = start.toISOString().slice(0, 10);
+                }
             }
         }
 
