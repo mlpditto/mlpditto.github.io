@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sales Analytics V136.27 (Customer Profile Modal) - Privacy % vs Normal ฿</title>
+    <title>Sales Analytics V136.28 (LINE MAN-style Nav) - Privacy % vs Normal ฿</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -339,7 +339,7 @@
                     <div class="bg-white/20 p-2 rounded-lg backdrop-blur-md"><i
                             class="ph-bold ph-chart-polar text-2xl"></i></div>
                     <div><span class="font-bold text-xl tracking-tight block leading-none">Sales Analytics</span><span
-                            class="text-xs text-indigo-100 font-light opacity-90">V136.27 Customer Profile</span></div>
+                            class="text-xs text-indigo-100 font-light opacity-90">V136.28 LINE MAN Nav</span></div>
                 </div>
                 <div class="flex items-center gap-3">
                     <button onclick="toggleTheme()"
@@ -794,13 +794,17 @@
                             <i class="ph-fill ph-trophy text-yellow-500"></i> อันดับลูกค้ากำลังซื้อสูง (สะสมข้ามวัน)
                         </h4>
                         <div class="flex items-center gap-2 flex-wrap">
-                            <input type="date" id="vip-start-date" class="text-xs border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1.5 bg-white dark:bg-slate-900 dark:text-white outline-none">
-                            <span class="text-xs text-slate-400">ถึง</span>
-                            <input type="date" id="vip-end-date" class="text-xs border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1.5 bg-white dark:bg-slate-900 dark:text-white outline-none">
-                            <button onclick="loadVipRanking()" id="btnLoadVip"
-                                class="bg-brand-600 hover:bg-brand-700 text-white font-medium py-1.5 px-4 rounded-lg text-xs transition-all flex items-center gap-1.5 shadow-sm">
-                                <i class="ph-bold ph-magnifying-glass"></i> ดึงข้อมูล
-                            </button>
+                            <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 rounded-lg px-1">
+                                <button onclick="shiftVipMonth(-1)" class="p-1.5 text-slate-500 hover:text-brand-600 dark:hover:text-brand-400"><i class="ph-bold ph-caret-left"></i></button>
+                                <span id="vip-month-label" class="text-xs font-bold text-slate-700 dark:text-slate-200 px-1 min-w-[110px] text-center">-</span>
+                                <button onclick="shiftVipMonth(1)" id="vip-month-next" class="p-1.5 text-slate-500 hover:text-brand-600 dark:hover:text-brand-400 disabled:opacity-30 disabled:cursor-not-allowed"><i class="ph-bold ph-caret-right"></i></button>
+                            </div>
+                            <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 rounded-full p-0.5 text-[11px] font-bold">
+                                <button onclick="setVipPeriod(1)" id="vip-period-1" class="px-2.5 py-1 rounded-full transition-all">1 เดือน</button>
+                                <button onclick="setVipPeriod(3)" id="vip-period-3" class="px-2.5 py-1 rounded-full transition-all">3 เดือน</button>
+                                <button onclick="setVipPeriod(6)" id="vip-period-6" class="px-2.5 py-1 rounded-full transition-all">6 เดือน</button>
+                                <button onclick="setVipPeriod(12)" id="vip-period-12" class="px-2.5 py-1 rounded-full transition-all">12 เดือน</button>
+                            </div>
                         </div>
                     </div>
                     <div id="vipRangeInfo" class="text-xs text-slate-400 mb-3"></div>
@@ -1133,6 +1137,10 @@
         let retailChart = null; // New chart instance
         let wholesaleChart = null; // New chart instance
         let customerProfileChart = null; // instance กราฟรายเดือนใน modal โปรไฟล์ลูกค้า
+        let cpmAllOrders = [];       // order เต็มของลูกค้าที่เปิดอยู่ (ไม่ผ่านกรองเดือน/วัน)
+        let cpmMonths = [];          // เดือนที่ลูกค้าคนนี้มีบิลจริง เรียงเก่า→ใหม่ ['YYYY-MM', ...]
+        let cpmSelectedMonthIdx = -1; // index ใน cpmMonths ที่เลือกอยู่
+        let cpmSelectedDay = null;   // 'DD/MM/YYYY' ที่เลือก หรือ null = "ทั้งหมด" ของเดือนนั้น
         let sortDirection = 'none';
         let selectedIds = new Set();
         let isPrivacyMode = false;
@@ -1202,11 +1210,14 @@
         }
 
         // --- VIP CUSTOMER RANKING consts (สะสมข้ามวัน) ---
-        const VIP_DEFAULT_LOOKBACK_DAYS = 90;
         const VIP_SPEND_THRESHOLD = 5000; // บาท สะสมในช่วงที่เลือก → ติด badge VIP
         const VIP_MIN_ORDER_COUNT = 1;    // กันชื่อเดียวโผล่ครั้งเดียวยอดสูงลิ่วจากบิลพิเศษ (ปรับเป็น 2 ได้ถ้าอยากเข้มกว่านี้)
         const VIP_EXCLUDED_NAMES = ['-', '', 'ลูกค้าทั่วไป', 'ทั่วไป']; // ชื่อ generic ที่ไม่ควรถูกนับเป็น "ลูกค้า" รายตัว
         let vipDayCache = {}; // key = docId (YYYY-MM-DD) → array ของ {customerName, amountVal, saleType, date, orderId} เฉพาะ field ที่ต้องใช้
+        let vipEndMonth = null;      // 'YYYY-MM' เดือนสิ้นสุดของช่วงที่ดู (ค่าเริ่มต้น = เดือนปัจจุบัน)
+        let vipPeriodMonths = 3;     // 1 | 3 | 6 | 12 — ความยาวช่วงที่เลือก (ปุ่ม active)
+        let vipLastFetchStart = null, vipLastFetchEnd = null; // เก็บช่วงที่ fetch ล่าสุด ไว้ให้ modal โปรไฟล์อ้างอิง label
+        const THAI_MONTHS = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
 
         // --- Firebase Cloud Functions ---
         function formatDateForDoc(dateStr) {
@@ -1344,11 +1355,59 @@
             return ids;
         }
 
-        async function loadVipRanking() {
-            const startStr = document.getElementById('vip-start-date').value;
-            const endStr = document.getElementById('vip-end-date').value;
+        function monthLabel(monthStr) {
+            const [y, m] = monthStr.split('-').map(Number);
+            return `${THAI_MONTHS[m - 1]} ${y}`;
+        }
+
+        function getVipMonthRange(endMonthStr, months) {
+            const [ey, em] = endMonthStr.split('-').map(Number);
+            const endDate = new Date(ey, em, 0); // วันสุดท้ายของเดือนสิ้นสุด
+            const startDate = new Date(ey, em - months, 1); // วันแรกของเดือนเริ่ม
+            // ห้ามใช้ .toISOString() ตรงนี้ — แปลงเป็น UTC ก่อนตัดวันที่ ทำให้เพี้ยนถอยหลัง 1 วันสำหรับ timezone +7 (ไทย)
+            // ต้องดึง Y/M/D จาก local time ตรงๆ เหมือน currentMonthStr()/shiftVipMonth()
+            const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            return { start: fmt(startDate), end: fmt(endDate) };
+        }
+
+        function currentMonthStr() {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        }
+
+        function updateVipPeriodButtons() {
+            [1, 3, 6, 12].forEach(m => {
+                const btn = document.getElementById('vip-period-' + m);
+                btn.className = 'px-2.5 py-1 rounded-full transition-all' + (m === vipPeriodMonths ? ' bg-white dark:bg-slate-700 shadow-sm text-brand-600' : ' text-slate-400');
+            });
+        }
+
+        function shiftVipMonth(delta) {
+            const [y, m] = vipEndMonth.split('-').map(Number);
+            const d = new Date(y, m - 1 + delta, 1);
+            const next = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            if (next > currentMonthStr()) return; // กันเลื่อนไปอนาคต
+            vipEndMonth = next;
+            refreshVipPanel();
+        }
+
+        function setVipPeriod(months) {
+            vipPeriodMonths = months;
+            updateVipPeriodButtons();
+            refreshVipPanel();
+        }
+
+        async function refreshVipPanel() {
+            document.getElementById('vip-month-label').innerText = monthLabel(vipEndMonth);
+            document.getElementById('vip-month-next').disabled = (vipEndMonth >= currentMonthStr());
+            const { start, end } = getVipMonthRange(vipEndMonth, vipPeriodMonths);
+            vipLastFetchStart = start; vipLastFetchEnd = end;
+            await loadVipRanking(start, end);
+        }
+
+        async function loadVipRanking(startStr, endStr) {
             if (!startStr || !endStr || startStr > endStr) {
-                showToast("เลือกช่วงวันที่ให้ถูกต้องก่อน", "error");
+                showToast("ช่วงวันที่ไม่ถูกต้อง", "error");
                 return;
             }
             const docIds = dateRangeToDocIds(startStr, endStr);
@@ -1359,9 +1418,9 @@
                 if (!proceed) return;
             }
 
-            const btn = document.getElementById('btnLoadVip');
-            btn.disabled = true;
-            btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i> กำลังดึง...';
+            const periodBtnIds = ['vip-period-1', 'vip-period-3', 'vip-period-6', 'vip-period-12'];
+            periodBtnIds.forEach(id => document.getElementById(id).disabled = true);
+            document.getElementById('vip-month-label').innerText = 'กำลังโหลด...';
             document.getElementById('vipRangeInfo').innerText = `กำลังดึง ${toFetch.length} วัน (cache ไว้แล้ว ${docIds.length - toFetch.length} วัน)...`;
 
             try {
@@ -1388,8 +1447,8 @@
                 showToast("ดึงข้อมูลไม่สำเร็จ: " + e.message, "error");
                 console.error(e);
             } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="ph-bold ph-magnifying-glass"></i> ดึงข้อมูล';
+                periodBtnIds.forEach(id => document.getElementById(id).disabled = false);
+                document.getElementById('vip-month-label').innerText = monthLabel(vipEndMonth);
             }
         }
 
@@ -1453,13 +1512,19 @@
             const displayName = isPrivacyMode ? maskCustomerName(name) : name;
 
             document.getElementById('cpm-name').innerHTML = `<i class="ph-fill ph-user-circle"></i> ${displayName}`;
-            document.getElementById('cpm-range').innerText = `ข้อมูลในช่วงที่ดึงไว้: ${document.getElementById('vip-start-date').value} ถึง ${document.getElementById('vip-end-date').value}`;
+            document.getElementById('cpm-range').innerText = `ข้อมูลในช่วงที่ดึงไว้: ${vipLastFetchStart} ถึง ${vipLastFetchEnd}`;
             document.getElementById('cpm-total').innerText = isPrivacyMode ? '•••' : total.toLocaleString(undefined, { minimumFractionDigits: 2 });
             document.getElementById('cpm-count').innerText = count;
             document.getElementById('cpm-avg').innerText = isPrivacyMode ? '•••' : avg.toLocaleString(undefined, { maximumFractionDigits: 0 });
 
-            renderCustomerProfileChart(orders);
-            renderCustomerOrderList(orders);
+            cpmAllOrders = orders;
+            renderCustomerProfileChart(orders); // กราฟยังโชว์ทุกเดือนในช่วงเหมือนเดิม ไม่ผูกกับตัวกรองวัน
+
+            cpmMonths = [...new Set(orders.map(r => cpmMonthKey(r.date)))].sort();
+            cpmSelectedMonthIdx = cpmMonths.length - 1; // default = เดือนล่าสุดที่มีบิล
+            cpmSelectedDay = null;
+            renderCpmMonthNav();
+            renderCpmDayTabsAndOrders();
 
             document.getElementById('customerProfileModal').classList.remove('hidden');
             document.getElementById('customerProfileModal').classList.add('flex');
@@ -1495,6 +1560,53 @@
                     scales: { y: { ticks: { display: !isPrivacyMode } } }
                 }
             });
+        }
+
+        function cpmMonthKey(dateStr) {
+            const parts = dateStr.split('/'); // DD/MM/YYYY
+            return `${parts[2]}-${parts[1].padStart(2, '0')}`;
+        }
+
+        function cpmShiftMonth(delta) {
+            const next = cpmSelectedMonthIdx + delta;
+            if (next < 0 || next >= cpmMonths.length) return;
+            cpmSelectedMonthIdx = next;
+            cpmSelectedDay = null;
+            renderCpmMonthNav();
+            renderCpmDayTabsAndOrders();
+        }
+
+        function cpmSelectDay(dateStr) {
+            cpmSelectedDay = dateStr;
+            renderCpmDayTabsAndOrders();
+        }
+
+        function renderCpmMonthNav() {
+            const key = cpmMonths[cpmSelectedMonthIdx];
+            const [y, m] = key.split('-').map(Number);
+            document.getElementById('cpm-month-label').innerText = `${THAI_MONTHS[m - 1]} ${y}`;
+            document.getElementById('cpm-month-prev').disabled = (cpmSelectedMonthIdx <= 0);
+            document.getElementById('cpm-month-next').disabled = (cpmSelectedMonthIdx >= cpmMonths.length - 1);
+        }
+
+        function renderCpmDayTabsAndOrders() {
+            const monthKey = cpmMonths[cpmSelectedMonthIdx];
+            const monthOrders = cpmAllOrders.filter(r => cpmMonthKey(r.date) === monthKey);
+            const days = [...new Set(monthOrders.map(r => r.date))]
+                .sort((a, b) => new Date(b.split('/').reverse().join('-')) - new Date(a.split('/').reverse().join('-')));
+
+            const tabsEl = document.getElementById('cpm-day-tabs');
+            const pillClass = (active) => 'text-[11px] font-bold px-2.5 py-1 rounded-full transition-all' +
+                (active ? ' bg-brand-600 text-white' : ' bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800');
+            let html = `<button onclick="cpmSelectDay(null)" class="${pillClass(cpmSelectedDay === null)}">ทั้งหมด</button>`;
+            days.forEach(d => {
+                const short = d.split('/').slice(0, 2).join('/') + '/' + d.split('/')[2].slice(2); // DD/MM/YY
+                html += `<button onclick="cpmSelectDay('${d}')" class="${pillClass(cpmSelectedDay === d)}">${short}</button>`;
+            });
+            tabsEl.innerHTML = html;
+
+            const filtered = cpmSelectedDay ? monthOrders.filter(r => r.date === cpmSelectedDay) : monthOrders;
+            renderCustomerOrderList(filtered);
         }
 
         function renderCustomerOrderList(orders) {
@@ -1624,12 +1736,10 @@
                 customer.classList.remove('hidden');
                 btnCust.className = "main-tab-btn main-tab-active";
                 filterCustomers(); // Auto-load customer data V136.24
-                if (!document.getElementById('vip-start-date').value) {
-                    const end = new Date();
-                    const start = new Date();
-                    start.setDate(start.getDate() - VIP_DEFAULT_LOOKBACK_DAYS);
-                    document.getElementById('vip-end-date').value = end.toISOString().slice(0, 10);
-                    document.getElementById('vip-start-date').value = start.toISOString().slice(0, 10);
+                if (!vipEndMonth) {
+                    vipEndMonth = currentMonthStr();
+                    updateVipPeriodButtons();
+                    refreshVipPanel();
                 }
             }
         }
@@ -2829,7 +2939,15 @@
                 <h4 class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">ยอดซื้อรายเดือน</h4>
                 <div class="relative h-[180px] w-full mb-6"><canvas id="customerProfileChart"></canvas></div>
 
-                <h4 class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">ประวัติบิล</h4>
+                <div class="flex items-center justify-between mb-2">
+                    <h4 class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">ประวัติบิล</h4>
+                    <div class="flex items-center gap-1 text-xs">
+                        <button onclick="cpmShiftMonth(-1)" id="cpm-month-prev" class="p-1 text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 disabled:opacity-20 disabled:cursor-not-allowed"><i class="ph-bold ph-caret-left"></i></button>
+                        <span id="cpm-month-label" class="font-bold text-slate-600 dark:text-slate-300 px-1 min-w-[90px] text-center">-</span>
+                        <button onclick="cpmShiftMonth(1)" id="cpm-month-next" class="p-1 text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 disabled:opacity-20 disabled:cursor-not-allowed"><i class="ph-bold ph-caret-right"></i></button>
+                    </div>
+                </div>
+                <div id="cpm-day-tabs" class="flex items-center gap-1.5 flex-wrap mb-3"></div>
                 <div class="overflow-x-auto max-h-[240px] custom-scrollbar border border-slate-200 dark:border-slate-700 rounded-xl">
                     <table class="w-full text-sm text-left whitespace-nowrap text-slate-600 dark:text-slate-300">
                         <thead class="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-50 dark:bg-slate-800 sticky top-0">
