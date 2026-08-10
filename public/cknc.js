@@ -1107,10 +1107,13 @@ function extractRefs(value) {
   const text = clean(value).toUpperCase();
   // ตัดเลข BAR ออกก่อนหา AR — "BAR-00003-26-xxxx" มี "AR-..." ซ้อนอยู่ข้างใน จะได้ไม่กลายเป็นเลขเครดิตผี
   const arSource = text.replace(/BAR-\d{5}-\d{2}-\d+/g, " ");
+  // ท้ายเลขรับตั้งแต่ 3 หลัก (เดิม 4) — เลขรุ่นแรก ๆ ต้นปีมีสามหลักจริง เช่น ORW-00003-26-152 /
+  // INV-00003-26-142 (บิล ม.ค. 69 ของ บ.คลิกนิก เฮลท์) เดิมพาร์สได้ค่าว่างทั้งชุด = จับคู่ใบวางบิลไม่ติดตลอดกาล
+  // ฝั่ง BAR (extractBarNo) ใช้ \d+ อยู่แล้ว การรับ 3 หลักตรงนี้จึงทำให้สองฝั่งกติกาเดียวกัน
   return {
-    ar: arSource.match(/AR-\d{5}-\d{2}-\d{4,}/g) || [],
-    orw: text.match(/ORW-\d{5}-\d{2}-\d{4,}/g) || [],
-    inv: text.match(/INV-\d{5}-\d{2}-\d{4,}/g) || [],
+    ar: arSource.match(/AR-\d{5}-\d{2}-\d{3,}/g) || [],
+    orw: text.match(/ORW-\d{5}-\d{2}-\d{3,}/g) || [],
+    inv: text.match(/INV-\d{5}-\d{2}-\d{3,}/g) || [],
   };
 }
 
@@ -4629,8 +4632,8 @@ function parseScreenshotOcr(text) {
   const normalized = normalizeOcrText(text);
   return {
     orderId: findOrderId(normalized),
-    orw: normalized.match(/ORW-\d{5}-\d{2}-\d{4,}/)?.[0] || "",
-    inv: normalized.match(/INV-\d{5}-\d{2}-\d{4,}/)?.[0] || "",
+    orw: normalized.match(/ORW-\d{5}-\d{2}-\d{3,}/)?.[0] || "",
+    inv: normalized.match(/INV-\d{5}-\d{2}-\d{3,}/)?.[0] || "",
     date: parseOcrDate(normalized),
     medicines: parseMedicineLinesFromOcr(text),
     rawText: text,
