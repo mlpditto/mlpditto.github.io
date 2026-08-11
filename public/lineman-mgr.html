@@ -316,6 +316,15 @@
         .info-chip--hero .info-chip-ico { font-size: 13px; color: #60a5fa; }
         .info-chip--hero .info-chip-input { font-size: 18px; font-variant-numeric: tabular-nums; }
         .info-chip--quiet .info-chip-input { font-size: 12px; }
+        /* ชิปเบอร์ตอนยังไม่มีเบอร์ = ยุบเหลือไอคอนโทรศัพท์ คืนที่ให้ชื่อหัวข้อ/เลข 4 หลักท้าย
+           (เดิมกิน ~134px ทั้งที่ข้างในเป็น placeholder เปล่า) ขยายกลับทันทีเมื่อคลิกเข้าไปแก้
+           (:focus-within — กด Tab ก็ติด) หรือเมื่อมีเบอร์อยู่แล้ว (ไม่ใช่ :placeholder-shown)
+           กติกา: เบอร์ที่กรอกแล้วต้องเห็นเสมอ ห้ามซ่อนข้อมูลจริงไว้หลังการคลิก */
+        .info-chip-input { transition: width .15s ease; }
+        .info-chip--quiet:not(:focus-within) .info-chip-input:placeholder-shown { width: 0; }
+        .info-chip--quiet:not(:focus-within):has(.info-chip-input:placeholder-shown) {
+            gap: 0; padding-left: 10px; padding-right: 10px;
+        }
 
         /* แถบสรุปบนหัวโมดัลแก้ไข (ยอดรวม/สุทธิ/ต้นทุน/กำไร)
            เดิมตัวเลข 14px เท่ากันหมด 4 ตัว ต้องอ่านทีละตัวว่าอันไหนคืออะไร
@@ -1063,23 +1072,28 @@
                     </div>
                 </div>
                 <div class="flex items-center">
-                    <div class="hidden sm:flex items-center gap-2 md:gap-4 px-3 py-2 bg-slate-50 dark:bg-slate-800/50 rounded-2xl mr-4 border border-slate-100 dark:border-slate-700">
-                        <div class="text-center px-1 md:px-2">
+                    <!-- ระยะห่าง/ช่องไฟใช้สเต็ปเดียวกับที่ตัวเลขเปลี่ยนขนาด (lg = 1024px) ไม่ใช่ md
+                         เดิมตั้ง md: (768px) ทำให้ช่วง 768–1023px แถบกว้างขึ้นแต่การ์ดยังแคบ 672px
+                         หัวโมดัลเลยตกบรรทัดสองสูง 161px (จาก 116px) — วัดจริง 11 ส.ค. 2026
+                         ช่อง "ยอดรวม" ซ่อนต่ำกว่า md: เพราะช่วง 640–767px ที่แคบสุดยังไม่พออยู่ดี
+                         (เป็นตัวประกอบที่หาอ่านในตัวโมดัลได้ ต่างจากสุทธิ/ต้นทุน/กำไร) -->
+                    <div class="hidden sm:flex items-center gap-2 lg:gap-4 px-3 py-2 bg-slate-50 dark:bg-slate-800/50 rounded-2xl mr-4 border border-slate-100 dark:border-slate-700">
+                        <div class="hidden md:block text-center px-1 lg:px-2">
                             <p class="hsum-lbl text-slate-400 dark:text-slate-500">ยอดรวม</p>
                             <p id="h-e-gross" class="hsum-val text-slate-600 dark:text-slate-300">฿0.00</p>
                         </div>
-                        <div class="w-px h-9 bg-slate-200 dark:bg-slate-700"></div>
-                        <div class="text-center px-1 md:px-2">
+                        <div class="hidden md:block w-px h-9 bg-slate-200 dark:bg-slate-700"></div>
+                        <div class="text-center px-1 lg:px-2">
                             <p class="hsum-lbl hsum-lbl--mid text-blue-500">สุทธิ</p>
                             <p id="h-e-net" class="hsum-val hsum-val--mid text-blue-600">฿0.00</p>
                         </div>
                         <div class="w-px h-9 bg-slate-200 dark:bg-slate-700"></div>
-                        <div class="text-center px-1 md:px-2">
+                        <div class="text-center px-1 lg:px-2">
                             <p class="hsum-lbl text-rose-400/90">ต้นทุน</p>
                             <p id="h-e-cost" class="hsum-val text-rose-500">฿0.00</p>
                         </div>
                         <div class="w-px h-9 bg-slate-200 dark:bg-slate-700"></div>
-                        <div class="text-center px-1 md:px-2">
+                        <div class="text-center px-1 lg:px-2">
                             <p class="hsum-lbl hsum-lbl--hero text-emerald-600 dark:text-emerald-400">กำไร</p>
                             <p id="h-e-profit" class="hsum-val hsum-val--hero text-emerald-600">฿0.00</p>
                         </div>
