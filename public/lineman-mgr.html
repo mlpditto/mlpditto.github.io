@@ -320,8 +320,13 @@
         /* แถบสรุปบนหัวโมดัลแก้ไข (ยอดรวม/สุทธิ/ต้นทุน/กำไร)
            เดิมตัวเลข 14px เท่ากันหมด 4 ตัว ต้องอ่านทีละตัวว่าอันไหนคืออะไร
            ไล่ลำดับใหม่: กำไร (ตัวตัดสินใจ) > สุทธิ > ยอดรวม/ต้นทุน (ตัวประกอบ) */
-        .hsum-lbl { font-size: 8px; font-weight: 900; line-height: 1; margin-bottom: 3px;
+        /* ป้ายหัวก็ต้องไล่ลำดับตามตัวเลขด้วย — เดิมป้ายทั้ง 4 หนา 900 ขนาดเท่ากันหมด ต่างแค่สี
+           ตัวเลขไล่ 15/17/15/21 แต่ป้ายตะโกนเท่ากันหมด สายตาเลยไม่ได้ถูกพาไปที่ "กำไร" ก่อน
+           ไล่ด้วยน้ำหนัก+สีเป็นหลัก ไม่ใช่ขนาด (ป้าย 8-9px ถ้าขยายจะดันความสูงหัวโมดัล) */
+        .hsum-lbl { font-size: 8px; font-weight: 700; line-height: 1; margin-bottom: 3px;
                     text-transform: uppercase; letter-spacing: .03em; }
+        .hsum-lbl--mid  { font-weight: 800; }
+        .hsum-lbl--hero { font-weight: 900; letter-spacing: .06em; }
         .hsum-val { font-size: 12px; font-weight: 900; line-height: 1.1; white-space: nowrap;
                     font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
         .hsum-val--mid  { font-size: 13px; }
@@ -1060,22 +1065,22 @@
                 <div class="flex items-center">
                     <div class="hidden sm:flex items-center gap-2 md:gap-4 px-3 py-2 bg-slate-50 dark:bg-slate-800/50 rounded-2xl mr-4 border border-slate-100 dark:border-slate-700">
                         <div class="text-center px-1 md:px-2">
-                            <p class="hsum-lbl text-slate-400">ยอดรวม</p>
+                            <p class="hsum-lbl text-slate-400 dark:text-slate-500">ยอดรวม</p>
                             <p id="h-e-gross" class="hsum-val text-slate-600 dark:text-slate-300">฿0.00</p>
                         </div>
                         <div class="w-px h-9 bg-slate-200 dark:bg-slate-700"></div>
                         <div class="text-center px-1 md:px-2">
-                            <p class="hsum-lbl text-blue-400">สุทธิ</p>
+                            <p class="hsum-lbl hsum-lbl--mid text-blue-500">สุทธิ</p>
                             <p id="h-e-net" class="hsum-val hsum-val--mid text-blue-600">฿0.00</p>
                         </div>
                         <div class="w-px h-9 bg-slate-200 dark:bg-slate-700"></div>
                         <div class="text-center px-1 md:px-2">
-                            <p class="hsum-lbl text-rose-400">ต้นทุน</p>
+                            <p class="hsum-lbl text-rose-400/90">ต้นทุน</p>
                             <p id="h-e-cost" class="hsum-val text-rose-500">฿0.00</p>
                         </div>
                         <div class="w-px h-9 bg-slate-200 dark:bg-slate-700"></div>
                         <div class="text-center px-1 md:px-2">
-                            <p class="hsum-lbl text-emerald-400">กำไร</p>
+                            <p class="hsum-lbl hsum-lbl--hero text-emerald-600 dark:text-emerald-400">กำไร</p>
                             <p id="h-e-profit" class="hsum-val hsum-val--hero text-emerald-600">฿0.00</p>
                         </div>
                     </div>
