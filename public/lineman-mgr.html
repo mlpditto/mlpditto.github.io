@@ -801,7 +801,7 @@
                             <label class="info-chip info-chip--quiet" title="เบอร์โทร">
                                 <i class="fas fa-phone info-chip-ico"></i>
                                 <input type="tel" id="customerPhone" placeholder="0xx-xxx-xxxx"
-                                    class="info-chip-input w-[11ch]">
+                                    class="info-chip-input w-[12ch]">
                             </label>
                         </div>
                         <i
@@ -1105,7 +1105,7 @@
                                 <label class="info-chip info-chip--quiet" title="เบอร์โทร">
                                     <i class="fas fa-phone info-chip-ico"></i>
                                     <input type="tel" id="e-customerPhone" placeholder="0xx-xxx-xxxx"
-                                        class="info-chip-input w-[11ch]">
+                                        class="info-chip-input w-[12ch]">
                                 </label>
                             </div>
                             <i
@@ -1667,11 +1667,37 @@
             if (parseInt(el.value) > max) el.value = max;
         }
 
+        // เบอร์โทร: เก็บลงฐานข้อมูลเป็นตัวเลขล้วนเสมอ ขีดคั่นเป็นเรื่องของ "การแสดงผล" อย่างเดียว
+        // (ถ้าปล่อยให้ขีดไหลลงฐานข้อมูล เบอร์เดียวกันจะกลายเป็นคนละสตริงเวลาเทียบ/ค้นหา)
+        function phoneDigits(value) {
+            return String(value ?? '').replace(/\D/g, '');
+        }
+
+        // มือถือ 10 หลัก -> 062-594-9253 · เบอร์บ้าน 9 หลัก -> 02-123-4567
+        // ความยาวอื่น (เบอร์ต่างประเทศ/กรอกไม่ครบ) คืนค่าเดิมไปตรง ๆ ไม่ดัดให้ผิดรูป
+        function formatPhone(value) {
+            const d = phoneDigits(value);
+            if (d.length === 10) return `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`;
+            if (d.length === 9) return `${d.slice(0, 2)}-${d.slice(2, 5)}-${d.slice(5)}`;
+            return String(value ?? '').trim();
+        }
+
+        // จัดรูปให้ตอนละสายตาจากช่อง — ระหว่างพิมพ์ไม่ยุ่ง จะได้ไม่แย่งตำแหน่งเคอร์เซอร์
+        function setupPhoneFormatting() {
+            ['customerPhone', 'e-customerPhone'].forEach((id) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.addEventListener('blur', () => { el.value = formatPhone(el.value); });
+                el.addEventListener('focus', () => { el.value = phoneDigits(el.value) || el.value; });
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             initDefaults();
             checkAuth();
             loadDraft();
             setupAutosave();
+            setupPhoneFormatting();
         });
 
         async function syncMasterData() {
@@ -3382,7 +3408,7 @@
                         </td>
                         <td class="p-4 align-top min-w-[220px] max-w-[320px]">
                             <div class="font-bold text-xs text-slate-800 dark:text-slate-100">${record.customerName || 'ลูกค้าทั่วไป'}</div>
-                            <div class="text-[10px] text-slate-400 mb-1">${record.customerPhone || ''}</div>
+                            <div class="text-[10px] text-slate-400 mb-1">${formatPhone(record.customerPhone)}</div>
                             
                             <div class="space-y-1">
                                 ${(record.items || []).map(i => {
@@ -3633,7 +3659,7 @@
                     orderId: document.getElementById('orderId').value,
                     orderIdFull: document.getElementById('orderIdFull').value,
                     customerName: document.getElementById('customerName').value,
-                    customerPhone: document.getElementById('customerPhone').value,
+                    customerPhone: phoneDigits(document.getElementById('customerPhone').value),
                     gross: gross,
                     gp: gp,
                     net: net,
@@ -3762,7 +3788,7 @@
                     orderId: document.getElementById('e-orderId')?.value || '',
                     orderIdFull: document.getElementById('e-orderIdFull')?.value || '',
                     customerName: document.getElementById('e-customerName')?.value || '',
-                    customerPhone: document.getElementById('e-customerPhone')?.value || '',
+                    customerPhone: phoneDigits(document.getElementById('e-customerPhone')?.value || ''),
                     gross: gross,
                     gp: gp,
                     net: net,
@@ -3849,7 +3875,7 @@
                 orderId: document.getElementById('orderId').value,
                 orderIdFull: document.getElementById('orderIdFull').value,
                 customerName: document.getElementById('customerName').value,
-                customerPhone: document.getElementById('customerPhone').value,
+                customerPhone: phoneDigits(document.getElementById('customerPhone').value),
                 cost: document.getElementById('orderCost').value,
                 isManualNet: document.getElementById('isManualNet').checked,
                 manualNet: document.getElementById('manualNet').value,
@@ -3889,7 +3915,7 @@
             if (draft.orderIdFull) document.getElementById('orderIdFull').value = draft.orderIdFull;
             if (draft.orderId) document.getElementById('orderId').value = draft.orderId;
             if (draft.customerName) document.getElementById('customerName').value = draft.customerName;
-            if (draft.customerPhone) document.getElementById('customerPhone').value = draft.customerPhone;
+            if (draft.customerPhone) document.getElementById('customerPhone').value = formatPhone(draft.customerPhone);
             if (draft.cost) document.getElementById('orderCost').value = draft.cost;
 
             if (draft.items) {
@@ -3935,7 +3961,7 @@
 
             document.getElementById('e-orderIdFull').value = record.orderIdFull || '';
             document.getElementById('e-orderId').value = record.orderId;
-            document.getElementById('e-customerPhone').value = record.customerPhone || '';
+            document.getElementById('e-customerPhone').value = formatPhone(record.customerPhone);
             document.getElementById('e-customerName').value = record.customerName || '';
 
             const container = document.getElementById('e-items-container');
