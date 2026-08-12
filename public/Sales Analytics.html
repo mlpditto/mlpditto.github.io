@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sales Analytics V136.34 (Cloud Menu) - Privacy % vs Normal ฿</title>
+    <title>Sales Analytics V136.35 (Reconcile) - Privacy % vs Normal ฿</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -372,7 +372,7 @@
                     <div class="bg-white/20 p-2 rounded-lg backdrop-blur-md"><i
                             class="ph-bold ph-chart-polar text-2xl"></i></div>
                     <div><span class="font-bold text-xl tracking-tight block leading-none">Sales Analytics</span><span
-                            class="text-xs text-indigo-100 font-light opacity-90">V136.34 Cloud Menu</span></div>
+                            class="text-xs text-indigo-100 font-light opacity-90">V136.35 Reconcile</span></div>
                 </div>
                 <div class="flex items-center gap-3">
                     <button onclick="toggleTheme()"
@@ -723,6 +723,91 @@
                                         id="count-pocket"></span></div>
                                 <div id="amt-pocket" class="text-[10px] font-normal opacity-90 mt-0.5">0.00</div>
                             </button>
+                        </div>
+                    </div>
+
+                    <!-- RECONCILE BAR (V136.35) : เทียบยอดรายช่องทางกับรายงาน CW -->
+                    <div id="reconcileWrap" class="border-t border-slate-200 dark:border-slate-700 mb-3">
+                        <button onclick="toggleReconcileBar()"
+                            class="w-full flex items-center gap-2 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg px-2 transition-all">
+                            <i id="reconcileChevron"
+                                class="ph-bold ph-caret-right text-slate-400 text-sm transition-transform"></i>
+                            <span class="text-xs font-bold text-slate-600 dark:text-slate-300">กระทบยอดกับรายงาน
+                                CW</span>
+                            <span id="reconcileStatus"
+                                class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400">ยังไม่กรอก</span>
+                        </button>
+
+                        <div id="reconcileBar" class="hidden pb-3 px-2">
+                            <div id="reconcileLocked"
+                                class="hidden text-[11px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2 mb-2">
+                            </div>
+
+                            <div id="reconcileGrid" class="space-y-1.5">
+                                <!-- หัวตาราง: ซ่อนบนจอแคบเพราะแต่ละบรรทัดจะ stack เป็นการ์ดแทน -->
+                                <div
+                                    class="hidden sm:grid grid-cols-[1.4fr_1fr_1fr_1fr] gap-2 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase px-2">
+                                    <div>ช่องทาง</div>
+                                    <div class="text-right">ในระบบ</div>
+                                    <div class="text-right">ควรเป็น</div>
+                                    <div class="text-right">ผลต่าง</div>
+                                </div>
+                                <div id="reconcileRows" class="space-y-1.5"></div>
+
+                                <div id="rcPocketRow" class="hidden">
+                                    <button onclick="toggleReconcilePocketDetail()"
+                                        class="w-full grid grid-cols-1 sm:grid-cols-[1.4fr_1fr_1fr_1fr] gap-1 sm:gap-2 items-center px-2 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 text-left">
+                                        <div
+                                            class="text-[11px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                            <i id="rcPocketChevron"
+                                                class="ph-bold ph-caret-right text-[10px]"></i>
+                                            <i class="ph-fill ph-archive-box text-slate-400"></i> ใน Pocket
+                                            (ไม่นับรวม)
+                                        </div>
+                                        <div id="rc-sys-pocket"
+                                            class="text-right text-xs font-bold text-slate-500 dark:text-slate-400 tabular-nums">
+                                            0.00</div>
+                                        <div class="hidden sm:block"></div>
+                                        <div class="hidden sm:block"></div>
+                                    </button>
+                                    <div id="rcPocketDetail"
+                                        class="hidden text-[10px] text-slate-500 dark:text-slate-400 px-6 py-1.5 flex flex-wrap gap-x-4 gap-y-1"></div>
+                                </div>
+
+                                <div id="rcTotalRow"
+                                    class="grid grid-cols-1 sm:grid-cols-[1.4fr_1fr_1fr_1fr] gap-1 sm:gap-2 items-center px-2 py-2 rounded-lg border-t border-slate-200 dark:border-slate-700 mt-1">
+                                    <div class="text-[11px] font-bold text-slate-600 dark:text-slate-300">รวมทั้งวัน
+                                        <span id="rc-total-note"
+                                            class="font-normal text-slate-400 dark:text-slate-500"></span>
+                                    </div>
+                                    <div id="rc-sys-total"
+                                        class="text-right text-xs font-bold text-slate-700 dark:text-slate-200 tabular-nums">
+                                        0.00</div>
+                                    <div class="text-right">
+                                        <span
+                                            class="sm:hidden text-[9px] font-normal text-slate-400 dark:text-slate-500 mr-1">ควรเป็น</span>
+                                        <span id="rc-target-total"
+                                            class="text-xs font-bold text-slate-700 dark:text-slate-200 tabular-nums">—</span>
+                                    </div>
+                                    <div class="text-right">
+                                        <span
+                                            class="sm:hidden text-[9px] font-normal text-slate-400 dark:text-slate-500 mr-1">ผลต่าง</span>
+                                        <span id="rc-diff-total"
+                                            class="text-xs font-bold tabular-nums text-slate-400">—</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-wrap gap-2 mt-3">
+                                <button onclick="openReconcilePasteModal()"
+                                    class="text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/30 px-3 py-1.5 rounded-lg border border-brand-200 dark:border-brand-800 transition-all flex items-center gap-1.5">
+                                    <i class="ph-bold ph-clipboard-text"></i> วางยอดจากรายงาน
+                                </button>
+                                <button onclick="clearReconcile()"
+                                    class="text-[11px] font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 transition-all flex items-center gap-1.5">
+                                    <i class="ph-bold ph-eraser"></i> ล้างค่าที่กรอก
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -1196,6 +1281,40 @@
         </div>
     </div>
 
+    <!-- RECONCILE PASTE MODAL (V136.35) : วางข้อความรายงาน CW แล้วแปลงเป็นยอดเป้าหมาย -->
+    <div id="reconcilePasteModal" class="fixed inset-0 z-[100] hidden fade-in">
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="closeReconcilePasteModal()"></div>
+        <div class="flex items-center justify-center min-h-screen px-4 py-6 pointer-events-none">
+            <div
+                class="bg-white dark:bg-dark-800 rounded-2xl shadow-2xl z-10 w-full max-w-lg p-6 pointer-events-auto animate-slide-up relative">
+                <button onclick="closeReconcilePasteModal()"
+                    class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><i
+                        class="ph-bold ph-x text-lg"></i></button>
+                <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100 mb-1">วางยอดจากรายงาน CW</h3>
+                <p class="text-slate-500 dark:text-slate-400 text-xs mb-3">
+                    ก็อปข้อความจากรายงาน "การรับ-จ่ายเงินสรุปตามชนิดการชำระ" มาวางทั้งก้อนได้เลย
+                </p>
+                <textarea id="reconcilePasteInput" rows="8" placeholder="1. เงินสด(30)&#10;   6,916.00&#10;..."
+                    class="w-full text-xs font-mono border border-slate-200 dark:border-slate-600 rounded-lg p-3 bg-slate-50 dark:bg-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-brand-500/30 resize-y"></textarea>
+                <div id="reconcilePasteResult" class="mt-3"></div>
+                <div class="flex flex-wrap gap-2 mt-4">
+                    <button onclick="analyzeReconcilePaste()"
+                        class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-4 py-2 rounded-lg flex items-center gap-1.5 transition-all">
+                        <i class="ph-bold ph-magnifying-glass"></i> วิเคราะห์
+                    </button>
+                    <button id="reconcileApplyBtn" onclick="applyReconcilePaste()" disabled
+                        class="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold px-4 py-2 rounded-lg flex items-center gap-1.5 transition-all">
+                        <i class="ph-bold ph-check"></i> ใช้ค่านี้
+                    </button>
+                    <button onclick="fillReconcileSample()"
+                        class="text-slate-500 dark:text-slate-400 text-xs font-bold px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">
+                        ใช้ตัวอย่าง
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // --- 1. GLOBAL VARIABLES ---
         let allData = [];
@@ -1215,6 +1334,14 @@
         let currentEditId = null;
         let isBulkTransfer = false;
         let currentTransferId = null;
+
+        // --- RECONCILE (V136.35) : กระทบยอดกับรายงาน "รับ-จ่ายเงินสรุปตามชนิดการชำระ" ของ CW ---
+        // เป้าหมายเก็บใน memory ผูกกับวันที่ที่กำลังแสดง (ยังไม่ sync คลาวด์ — เป็นงาน Phase 5)
+        let reconcileTargets = {};   // { 'DD/MM/YYYY': { cash: 6916, trans: 29223, ... } }
+        let reconcileCounts = {};    // { 'DD/MM/YYYY': { cash: 30, trans: 78, ... } } เก็บไว้ให้ Phase 3 ใช้ต่อ
+        let reconcileOpen = false;
+        let reconcilePocketOpen = false;
+        let reconcileParsed = null;  // ผลวิเคราะห์ที่รอผู้ใช้กดยืนยันใน modal
 
         // 🔒 Auth gate: this page is usable only by an admin or a user granted access['analytics'].
         //    authReady resolves ONLY once an authorized user is signed in; every Firestore op
@@ -2032,17 +2159,24 @@
             setTimeout(() => { e.remove() }, 3000);
         }
 
-        function updateDateRange(data) {
-            const activeData = data.filter(r => !r.isExcluded);
-            const dates = activeData.map(r => r.date).filter(d => d && d !== '-');
-            if (dates.length === 0) {
-                document.getElementById('summaryDateRange').innerText = "-";
-                return;
-            }
-            const uniqueDates = [...new Set(dates)].sort((a, b) => {
+        // คืนวันที่ไม่ซ้ำ เรียงเก่า→ใหม่
+        // includePocket=true ใช้กับการกระทบยอด: บิลใน Pocket ก็ยังเป็นบิลของวันนั้น ถ้ากรองทิ้งก่อนนับ
+        // จะเผลอสรุปว่า "แสดงวันเดียว" ทั้งที่บิลที่แขวนไว้เป็นของอีกวัน → ล็อกวันเดียวหลุด
+        function getUniqueDates(data, includePocket = false) {
+            const rows = includePocket ? data : data.filter(r => !r.isExcluded);
+            const dates = rows.map(r => r.date).filter(d => d && d !== '-');
+            return [...new Set(dates)].sort((a, b) => {
                 const [d1, m1, y1] = a.split('/'); const [d2, m2, y2] = b.split('/');
                 return new Date(`${y1}-${m1}-${d1}`) - new Date(`${y2}-${m2}-${d2}`);
             });
+        }
+
+        function updateDateRange(data) {
+            const uniqueDates = getUniqueDates(data, false);
+            if (uniqueDates.length === 0) {
+                document.getElementById('summaryDateRange').innerText = "-";
+                return;
+            }
             let dateStr = "";
             if (uniqueDates.length === 1) dateStr = uniqueDates[0];
             else dateStr = `${uniqueDates[0]} - ${uniqueDates[uniqueDates.length - 1]}`;
@@ -2585,10 +2719,22 @@
                 let pocketTotal = 0;
                 let flagCount = 0;
 
+                // RECONCILE (V136.35): ยอด Pocket แยกรายช่องทาง + จำนวนบิลโอนแบบไม่นับซ้ำ
+                // g_transBills ต่างจาก g_l+g_f+g_s ตรงที่บิลเดียวจ่าย 2 แบงก์จะนับเป็น 1 ใบ
+                // (รายงาน CW นับ "บัญชีธนาคาร" เป็นรายบิล จึงต้องนับแบบนี้ถึงจะเทียบกันได้)
+                let pk_cash = 0, pk_trans = 0, pk_cred = 0, pk_ar = 0;
+                let g_transBills = 0;
+
                 allData.forEach(r => {
+                    const rTrans = r.breakdown.transfer_lpm + r.breakdown.transfer_fiscal + r.breakdown.transfer_scb;
+
                     if (r.isExcluded) {
                         pocketCount++;
                         pocketTotal += r.amountVal;
+                        pk_cash += r.breakdown.cash;
+                        pk_trans += rTrans;
+                        pk_cred += r.breakdown.credit;
+                        pk_ar += r.breakdown.credit_ar;
                     }
                     if (r.isFlagged) {
                         flagCount++;
@@ -2604,6 +2750,7 @@
                         if (r.breakdown.transfer_scb > 0) { g_s++; ga_s += r.breakdown.transfer_scb; }
                         if (r.breakdown.credit > 0) { g_cred++; ga_cred += r.breakdown.credit; }
                         if (r.breakdown.credit_ar > 0) { g_ar++; ga_ar += r.breakdown.credit_ar; }
+                        if (rTrans > 0) g_transBills++;
                     }
                 });
 
@@ -2834,6 +2981,21 @@
                     }
                 }
 
+                // RECONCILE (V136.35): ต้องใช้ ga_* / g_* (ยอดทั้งวัน) ห้ามใช้ tc/tlp/tf/ts/tcr/tar
+                // เพราะชุดหลังคิดจาก filteredData = โดนช่องค้นหาและแท็บที่เลือกกรองมาแล้ว
+                updateReconcileBar({
+                    cash: { amt: ga_c, cnt: g_c },
+                    trans: { amt: ga_l + ga_f + ga_s, cnt: g_transBills },
+                    credit: { amt: ga_cred, cnt: g_cred },
+                    ar: { amt: ga_ar, cnt: g_ar },
+                    other: { amt: 0, cnt: 0 },
+                    grandTotal: actualGlobalTotal,
+                    grandCount: allData.filter(r => !r.isExcluded).length
+                }, {
+                    cash: pk_cash, trans: pk_trans, credit: pk_cred, ar: pk_ar,
+                    total: pocketTotal, cnt: pocketCount
+                });
+
                 // **CRITICAL FIX V136.19: Renamed table row variable to rowEl to avoid conflict with tr**
                 const tbody = document.getElementById('resultTableBody');
                 tbody.innerHTML = '';
@@ -2899,6 +3061,374 @@
         }
 
         // --- 6. CHART RENDERING (FIXED) ---
+        // --- 6.5 RECONCILE BAR (V136.35) : เทียบยอดรายช่องทางกับรายงาน CW ---
+        // รายงาน CW เห็น "บัญชีธนาคาร" เป็นก้อนเดียว แยก LPM/FISCAL/SCB ไม่ได้ → บรรทัดโอนจึงรวม 3 บัญชีเสมอ
+        // ช่องทางที่แอปไม่มี (เช็ค/บัตรกำนัล/ธนาณัติ/อื่นๆ) ยุบเป็นบรรทัด "อื่นๆ" เพื่อให้ยอดปิดได้ครบ 100%
+        const RC_ROWS = [
+            { key: 'cash', label: 'เงินสด', icon: 'ph-fill ph-money', color: 'text-orange-500' },
+            { key: 'trans', label: 'โอน (รวม 3 บัญชี)', icon: 'ph-fill ph-bank', color: 'text-cyan-500' },
+            { key: 'credit', label: 'บัตรเครดิต', icon: 'ph-fill ph-credit-card', color: 'text-purple-500' },
+            { key: 'ar', label: 'ลูกหนี้', icon: 'ph-fill ph-user-list', color: 'text-teal-500' },
+            { key: 'other', label: 'อื่นๆ (แอปไม่มีช่อง)', icon: 'ph-fill ph-question', color: 'text-slate-400' }
+        ];
+
+        let rcLastSys = null, rcLastPocket = null; // เก็บยอดล่าสุดไว้ให้ตอนพิมพ์ในช่องกรอกวาดใหม่ได้โดยไม่ต้อง render ทั้งหน้า
+
+        function rcFmt(v) { return v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+        function rcNear(a, b) { return Math.abs(a - b) < 0.005; }
+        function rcParseNum(s) {
+            const v = parseFloat(String(s).replace(/,/g, '').trim());
+            return isNaN(v) ? null : v;
+        }
+
+        // วันที่ที่ใช้กระทบยอด — ต้องเป็น "วันเดียว" เท่านั้น เพราะรายงาน CW ออกเป็นรายวัน
+        // นับรวมบิลใน Pocket ด้วย (ดู getUniqueDates) ไม่งั้นบิลที่แขวนไว้คนละวันจะทำให้ล็อกนี้หลุด
+        function getReconcileDate() {
+            const dates = getUniqueDates(allData, true);
+            return dates.length === 1 ? dates[0] : null;
+        }
+
+        function toggleReconcileBar() {
+            reconcileOpen = !reconcileOpen;
+            document.getElementById('reconcileBar').classList.toggle('hidden', !reconcileOpen);
+            document.getElementById('reconcileChevron').classList.toggle('rotate-90', reconcileOpen);
+        }
+
+        function toggleReconcilePocketDetail() {
+            reconcilePocketOpen = !reconcilePocketOpen;
+            document.getElementById('rcPocketDetail').classList.toggle('hidden', !reconcilePocketOpen);
+            document.getElementById('rcPocketChevron').classList.toggle('rotate-90', reconcilePocketOpen);
+        }
+
+        function onReconcileInput(key, el) {
+            const date = getReconcileDate();
+            if (!date) return;
+            if (!reconcileTargets[date]) reconcileTargets[date] = {};
+            const raw = el.value.trim();
+            if (raw === '') delete reconcileTargets[date][key];      // ช่องว่าง = ไม่ตรวจช่องนี้
+            else {
+                const v = rcParseNum(raw);
+                if (v === null) return;                              // พิมพ์ค้างอยู่ ยังไม่เป็นตัวเลข — ไม่ต้องทำอะไร
+                reconcileTargets[date][key] = v;
+            }
+            if (rcLastSys) updateReconcileBar(rcLastSys, rcLastPocket);
+        }
+
+        function clearReconcile() {
+            const date = getReconcileDate();
+            if (!date) return;
+            delete reconcileTargets[date];
+            delete reconcileCounts[date];
+            if (rcLastSys) updateReconcileBar(rcLastSys, rcLastPocket);
+            showToast('ล้างยอดที่กรอกแล้ว');
+        }
+
+        // สร้างแถวครั้งเดียวแล้วใช้ซ้ำ — ถ้า re-render ทั้งก้อนทุกครั้ง ช่องกรอกจะหลุดโฟกัสระหว่างพิมพ์
+        function buildReconcileRows() {
+            const host = document.getElementById('reconcileRows');
+            if (host.dataset.built === '1') return;
+            host.innerHTML = RC_ROWS.map(r => `
+                <div id="rc-row-${r.key}" class="grid grid-cols-2 sm:grid-cols-[1.4fr_1fr_1fr_1fr] gap-1 sm:gap-2 items-center px-2 py-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                    <div class="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex flex-wrap items-center gap-x-1.5 min-w-0">
+                        <i class="${r.icon} ${r.color} shrink-0"></i>
+                        <span>${r.label}</span>
+                        <span id="rc-cnt-${r.key}" class="font-normal text-slate-400 dark:text-slate-500"></span>
+                    </div>
+                    <div id="rc-sys-${r.key}" class="text-right text-xs font-bold text-slate-700 dark:text-slate-200 tabular-nums">0.00</div>
+                    <div class="flex justify-end">
+                        <input type="text" inputmode="decimal" id="rc-target-${r.key}" placeholder="ควรเป็น"
+                            oninput="onReconcileInput('${r.key}', this)"
+                            class="w-full sm:w-24 text-right text-xs font-bold tabular-nums px-2 py-1 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-brand-500/30 disabled:opacity-50 disabled:cursor-not-allowed">
+                    </div>
+                    <div id="rc-diff-${r.key}" class="text-right text-xs font-bold tabular-nums text-slate-400">—</div>
+                </div>`).join('');
+            host.dataset.built = '1';
+        }
+
+        function updateReconcileBar(sys, pocket) {
+            rcLastSys = sys; rcLastPocket = pocket;
+            const wrap = document.getElementById('reconcileWrap');
+            if (!wrap) return;
+
+            // โหมดความเป็นส่วนตัวตั้งใจซ่อนตัวเลข — แถบนี้โชว์ยอดจริงล้วน จึงต้องซ่อนทั้งแถบ
+            if (isPrivacyMode || allData.length === 0) { wrap.classList.add('hidden'); return; }
+            wrap.classList.remove('hidden');
+
+            buildReconcileRows();
+
+            const date = getReconcileDate();
+            const locked = !date;
+            const lockEl = document.getElementById('reconcileLocked');
+            if (locked) {
+                const n = getUniqueDates(allData, true).length;
+                lockEl.innerHTML = `<i class="ph-bold ph-lock-simple"></i> ใช้ได้เมื่อแสดงข้อมูลวันเดียว (ตอนนี้มี ${n} วัน) — รายงาน CW ออกเป็นรายวัน`;
+                lockEl.classList.remove('hidden');
+            } else {
+                lockEl.classList.add('hidden');
+            }
+
+            const targets = (date && reconcileTargets[date]) || {};
+            const counts = (date && reconcileCounts[date]) || {};
+
+            let filled = 0, mismatched = 0;
+
+            RC_ROWS.forEach(r => {
+                const s = sys[r.key] || { amt: 0, cnt: 0 };
+                const rowEl = document.getElementById(`rc-row-${r.key}`);
+                const tgt = targets[r.key];
+                const hasTgt = typeof tgt === 'number';
+
+                // บรรทัด "อื่นๆ" ปกติร้านไม่มียอด — ซ่อนไว้จนกว่าจะมีอะไรให้ดูจริง
+                if (r.key === 'other' && s.amt === 0 && !hasTgt) { rowEl.classList.add('hidden'); return; }
+                rowEl.classList.remove('hidden');
+
+                document.getElementById(`rc-sys-${r.key}`).innerText = rcFmt(s.amt);
+                document.getElementById(`rc-cnt-${r.key}`).innerText =
+                    counts[r.key] != null && counts[r.key] !== s.cnt ? `(${s.cnt} / รายงาน ${counts[r.key]})` : `(${s.cnt})`;
+
+                const input = document.getElementById(`rc-target-${r.key}`);
+                input.disabled = locked;
+                if (document.activeElement !== input) input.value = hasTgt ? tgt.toFixed(2) : '';
+
+                const diffEl = document.getElementById(`rc-diff-${r.key}`);
+                if (!hasTgt) {
+                    diffEl.innerText = '—';
+                    diffEl.className = 'text-right text-xs font-bold tabular-nums text-slate-400 dark:text-slate-500';
+                    return;
+                }
+                filled++;
+                const diff = s.amt - tgt;
+                if (rcNear(diff, 0)) {
+                    diffEl.innerHTML = '<i class="ph-bold ph-check"></i>';
+                    diffEl.className = 'text-right text-xs font-bold tabular-nums text-emerald-600 dark:text-emerald-400';
+                } else {
+                    mismatched++;
+                    const over = diff > 0;
+                    diffEl.innerText = `${over ? '+' : '−'}${rcFmt(Math.abs(diff))}`;
+                    diffEl.className = `text-right text-xs font-bold tabular-nums ${over ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400'}`;
+                }
+            });
+
+            // บรรทัด Pocket: อ่านอย่างเดียว ไม่บวกเข้ายอดรายช่องทางด้านบน
+            const pocketRow = document.getElementById('rcPocketRow');
+            if (pocket && pocket.cnt > 0) {
+                pocketRow.classList.remove('hidden');
+                document.getElementById('rc-sys-pocket').innerText = `${rcFmt(pocket.total)} (${pocket.cnt})`;
+                const parts = [
+                    ['เงินสด', pocket.cash], ['โอน', pocket.trans],
+                    ['บัตรเครดิต', pocket.credit], ['ลูกหนี้', pocket.ar]
+                ].filter(p => p[1] > 0);
+                document.getElementById('rcPocketDetail').innerHTML = parts.length
+                    ? parts.map(p => `<span>${p[0]}: <b class="tabular-nums">${rcFmt(p[1])}</b></span>`).join('')
+                    : '<span>ไม่มียอดแยกช่องทาง</span>';
+            } else {
+                pocketRow.classList.add('hidden');
+            }
+
+            // บรรทัดรวม: ฝั่งระบบต้องบวก Pocket กลับ เพราะ CW นับบิลที่เราแขวนไว้ด้วย
+            // ถ้าไม่บวกกลับ บรรทัดนี้จะแดงทุกครั้งที่มีบิลใน Pocket ทั้งที่ไม่มีอะไรผิด
+            const pocketTot = pocket ? pocket.total : 0;
+            const pocketCnt = pocket ? pocket.cnt : 0;
+            const sysTotal = (sys.grandTotal || 0) + pocketTot;
+            const sysCount = (sys.grandCount || 0) + pocketCnt;
+            document.getElementById('rc-sys-total').innerText = `${rcFmt(sysTotal)} (${sysCount})`;
+            document.getElementById('rc-total-note').innerText = pocketCnt > 0 ? '(รวม Pocket)' : '';
+
+            const tgtTotalEl = document.getElementById('rc-target-total');
+            const diffTotalEl = document.getElementById('rc-diff-total');
+            const allFilled = RC_ROWS.every(r => typeof targets[r.key] === 'number');
+            if (allFilled) {
+                const tgtTotal = RC_ROWS.reduce((a, r) => a + targets[r.key], 0);
+                const rptCount = counts.total;
+                tgtTotalEl.innerText = rptCount != null ? `${rcFmt(tgtTotal)} (${rptCount})` : rcFmt(tgtTotal);
+                const dt = sysTotal - tgtTotal;
+                if (rcNear(dt, 0)) {
+                    diffTotalEl.innerHTML = '<i class="ph-bold ph-check"></i> 0.00';
+                    diffTotalEl.className = 'text-xs font-bold tabular-nums text-emerald-600 dark:text-emerald-400';
+                } else {
+                    diffTotalEl.innerText = `${dt > 0 ? '+' : '−'}${rcFmt(Math.abs(dt))}`;
+                    diffTotalEl.className = 'text-xs font-bold tabular-nums text-red-600 dark:text-red-400';
+                }
+            } else {
+                tgtTotalEl.innerText = '—';
+                diffTotalEl.innerText = filled > 0 ? 'กรอกไม่ครบ' : '—';
+                diffTotalEl.className = 'text-[10px] font-bold tabular-nums text-slate-400 dark:text-slate-500';
+            }
+
+            const status = document.getElementById('reconcileStatus');
+            if (locked) {
+                status.innerText = 'แสดงหลายวัน';
+                status.className = 'text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300';
+            } else if (filled === 0) {
+                status.innerText = 'ยังไม่กรอก';
+                status.className = 'text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400';
+            } else if (mismatched === 0) {
+                status.innerText = 'ตรงทุกช่อง ✓';
+                status.className = 'text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300';
+            } else {
+                status.innerText = `ไม่ตรง ${mismatched} ช่อง`;
+                status.className = 'text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300';
+            }
+        }
+
+        // --- 6.6 วางยอดจากรายงาน CW ---
+        const RC_SAMPLE = `รายงานการรับ-จ่ายเงินสรุปตามชนิดการชำระ
+ระหว่างวันที่ 11/08/2026 - 11/08/2026
+ชนิดการชำระ (จำนวนบิล)\tจำนวนเงิน
+1. เงินสด(30)\t6,916.00
+   รับ: เงินสด (30)\t6,916.00
+   จ่าย (0)\t0.00
+2. บัตรเครดิต(4)\t6,536.00
+3. เช็คธนาคาร(1)\t420.00
+4. เครดิตการค้า(12)\t576.00
+5. บัญชีธนาคาร(78)\t29,223.00
+6. บัตรกำนัล(0)\t0.00
+7. ธนาณัติ(0)\t0.00
+8. อื่นๆ(0)\t0.00
+รวมทั้งหมด (124)\t43,671.00`;
+
+        function openReconcilePasteModal() {
+            if (!getReconcileDate()) { showToast('ใช้ได้เมื่อแสดงข้อมูลวันเดียว', 'error'); return; }
+            reconcileParsed = null;
+            document.getElementById('reconcilePasteInput').value = '';
+            document.getElementById('reconcilePasteResult').innerHTML = '';
+            document.getElementById('reconcileApplyBtn').disabled = true;
+            document.getElementById('reconcilePasteModal').classList.remove('hidden');
+        }
+        function closeReconcilePasteModal() {
+            document.getElementById('reconcilePasteModal').classList.add('hidden');
+        }
+        function fillReconcileSample() {
+            document.getElementById('reconcilePasteInput').value = RC_SAMPLE;
+            analyzeReconcilePaste();
+        }
+
+        // จับคู่ด้วย "ชื่อ" เป็นหลัก ไม่ยึดลำดับข้อ (ลำดับในรายงานสลับได้ ชื่อไม่สลับ)
+        function rcMapChannel(name) {
+            const n = String(name).replace(/[\s ]/g, '');
+            if (n.includes('เงินสด')) return 'cash';
+            if (n.includes('บัญชีธนาคาร')) return 'trans';
+            if (n.includes('เครดิตการค้า')) return 'ar';
+            if (n.includes('บัตรเครดิต')) return 'credit';
+            return 'other';  // เช็คธนาคาร / บัตรกำนัล / ธนาณัติ / อื่นๆ
+        }
+
+        const RC_MONEY_RE = /-?\d{1,3}(?:,\d{3})*\.\d{2}|-?\d+\.\d{2}/g;
+        function rcMoneyIn(line) { return String(line).match(RC_MONEY_RE) || []; }
+
+        function analyzeReconcilePaste() {
+            const raw = document.getElementById('reconcilePasteInput').value;
+            const box = document.getElementById('reconcilePasteResult');
+            const applyBtn = document.getElementById('reconcileApplyBtn');
+            reconcileParsed = null;
+            applyBtn.disabled = true;
+
+            const lines = raw.split(/\r?\n/);
+            const headerRe = /^\s*(\d+)\s*[.．]\s*(.+)$/;
+            const entries = [];
+            let reportTotal = null, reportCount = null, hasPayout = false;
+
+            // ยอดของหัวข้ออาจอยู่บรรทัดเดียวกัน หรือหล่นไปบรรทัดถัดไปเวลาก็อปจากตัวอ่านรายงาน
+            const lookAheadMoney = (i) => {
+                for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
+                    const t = lines[j].trim();
+                    if (t === '') continue;
+                    if (headerRe.test(t)) break;                       // ชนหัวข้อถัดไปแล้ว เลิกหา
+                    const m = rcMoneyIn(t);
+                    if (m.length && t.replace(RC_MONEY_RE, '').trim() === '') return m[m.length - 1];
+                }
+                return null;
+            };
+
+            lines.forEach((line, i) => {
+                if (/^\s*จ่าย/.test(line)) {
+                    if (rcMoneyIn(line).some(m => rcParseNum(m) > 0)) hasPayout = true;
+                    return;
+                }
+                if (/รวมทั้งหมด/.test(line)) {
+                    const cm = line.match(/\((\d+)\)/);
+                    if (cm) reportCount = parseInt(cm[1], 10);
+                    const money = rcMoneyIn(line);
+                    const val = money.length ? money[money.length - 1] : lookAheadMoney(i);
+                    if (val != null) reportTotal = rcParseNum(val);
+                    return;
+                }
+                const hm = line.match(headerRe);
+                if (!hm) return;
+                const rest = hm[2];
+                const cm = rest.match(/\((\d+)\)/);
+                const money = rcMoneyIn(rest);
+                const val = money.length ? money[money.length - 1] : lookAheadMoney(i);
+                if (val == null) return;
+                const name = rest.replace(/\(\d+\)/, '').replace(RC_MONEY_RE, '').replace(/[\t]/g, ' ').trim();
+                entries.push({
+                    idx: parseInt(hm[1], 10),
+                    name,
+                    key: rcMapChannel(name),
+                    amt: rcParseNum(val) || 0,
+                    cnt: cm ? parseInt(cm[1], 10) : 0
+                });
+            });
+
+            const warn = (msg) => {
+                box.innerHTML = `<div class="text-[11px] text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2"><i class="ph-bold ph-warning"></i> ${msg}</div>`;
+            };
+
+            if (entries.length === 0) { warn('อ่านรายงานไม่ออก — ต้องมีบรรทัดหัวข้อแบบ <b>1. เงินสด(30) 6,916.00</b>'); return; }
+
+            const sum = entries.reduce((a, e) => a + e.amt, 0);
+            // ผลบวกทุกข้อต้องเท่ากับ "รวมทั้งหมด" ไม่งั้นแปลว่าอ่านมาไม่ครบ/เกิน — ไม่ยอมเติมค่าเด็ดขาด
+            if (reportTotal != null && !rcNear(sum, reportTotal)) {
+                warn(`อ่านรายงานไม่ครบ — ผลบวก ${entries.length} ข้อได้ <b>${rcFmt(sum)}</b> แต่บรรทัดรวมทั้งหมดคือ <b>${rcFmt(reportTotal)}</b> (ต่างกัน ${rcFmt(Math.abs(sum - reportTotal))}) ลองก็อปมาใหม่ทั้งก้อน`);
+                return;
+            }
+
+            const targets = { cash: 0, trans: 0, credit: 0, ar: 0, other: 0 };
+            const counts = { cash: 0, trans: 0, credit: 0, ar: 0, other: 0 };
+            entries.forEach(e => { targets[e.key] += e.amt; counts[e.key] += e.cnt; });
+            if (reportCount != null) counts.total = reportCount;
+
+            const notes = [];
+            if (reportTotal == null) notes.push('ไม่พบบรรทัด "รวมทั้งหมด" — ข้ามการตรวจยอดรวม ตรวจตาเองอีกรอบด้วย');
+            if (hasPayout) notes.push('รายงานมีรายการ "จ่าย" ที่ไม่เป็นศูนย์ — ยอดที่อ่านมาใช้ตัวเลขหัวข้อตรง ๆ ควรตรวจเอง');
+            const other = entries.filter(e => e.key === 'other' && e.amt > 0);
+            if (other.length) notes.push(`ช่องทางที่แอปไม่มี: ${other.map(e => `${e.name} ${rcFmt(e.amt)}`).join(', ')} → รวมไว้ในบรรทัด "อื่นๆ"`);
+
+            // เตือนถ้ารายงานคนละวันกับข้อมูลที่กำลังแสดง (กันวางผิดวัน)
+            const dm = raw.match(/(\d{2}\/\d{2}\/\d{4})\s*-\s*(\d{2}\/\d{2}\/\d{4})/);
+            const curDate = getReconcileDate();
+            if (dm) {
+                if (dm[1] !== dm[2]) notes.push(`รายงานครอบช่วง ${dm[1]} ถึง ${dm[2]} (ไม่ใช่วันเดียว)`);
+                else if (curDate && dm[1] !== curDate) notes.push(`รายงานเป็นของวันที่ <b>${dm[1]}</b> แต่หน้าจอกำลังแสดง <b>${curDate}</b>`);
+            }
+
+            reconcileParsed = { targets, counts };
+            box.innerHTML = `
+                <div class="border border-slate-200 dark:border-slate-600 rounded-lg overflow-hidden">
+                    <div class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase px-3 py-1.5 bg-slate-50 dark:bg-slate-900 flex justify-between">
+                        <span>จะเติมค่าให้วันที่ ${curDate || '-'}</span><span>รวม ${rcFmt(sum)}${reportCount != null ? ` (${reportCount} บิล)` : ''}</span>
+                    </div>
+                    ${RC_ROWS.map(r => `
+                        <div class="flex justify-between px-3 py-1 text-[11px] border-t border-slate-100 dark:border-slate-700">
+                            <span class="text-slate-600 dark:text-slate-300">${r.label}</span>
+                            <span class="font-bold tabular-nums text-slate-700 dark:text-slate-200">${rcFmt(targets[r.key])} <span class="font-normal text-slate-400">(${counts[r.key]})</span></span>
+                        </div>`).join('')}
+                </div>
+                ${notes.length ? `<div class="mt-2 text-[10px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2 space-y-1">${notes.map(n => `<div><i class="ph-bold ph-info"></i> ${n}</div>`).join('')}</div>` : ''}`;
+            applyBtn.disabled = false;
+        }
+
+        function applyReconcilePaste() {
+            const date = getReconcileDate();
+            if (!date || !reconcileParsed) return;
+            reconcileTargets[date] = { ...reconcileParsed.targets };
+            reconcileCounts[date] = { ...reconcileParsed.counts };
+            closeReconcilePasteModal();
+            if (!reconcileOpen) toggleReconcileBar();
+            if (rcLastSys) updateReconcileBar(rcLastSys, rcLastPocket);
+            showToast('เติมยอดจากรายงานแล้ว');
+        }
+
         function renderChart(staffStats) {
             const ctx = document.getElementById('salesChart');
             if (!ctx) return;
