@@ -607,7 +607,9 @@
                     style="animation-delay: 0.1s;">
                     <div
                         class="px-6 pt-5 pb-0 flex flex-col gap-4 bg-white dark:bg-dark-800 border-b border-slate-100 dark:border-slate-700">
-                        <div class="flex justify-between items-center">
+                        <!-- ป้ายวันที่ + ตัวเลื่อนเดือน เดิมคนละแถว (V136.35) รวมเป็นแถวเดียวด้วย justify-between
+                             ให้ประหยัดพื้นที่แนวตั้ง 1 บรรทัด — flex-wrap กันจอแคบ (ป้ายวันที่ + ธง อาจตกไปบรรทัดถัดไปเอง) -->
+                        <div class="flex justify-between items-center flex-wrap gap-2">
                             <div class="flex items-center gap-2">
                                 <div
                                     class="text-xs text-slate-500 font-medium bg-slate-100 dark:bg-slate-700 px-3 py-1.5 rounded-lg flex items-center gap-2">
@@ -621,12 +623,12 @@
                                     <span id="flagCountValue" class="font-bold text-xs">0</span>
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 rounded-lg px-1 self-start">
-                            <button onclick="shiftOverviewMonth(-1)" class="p-1.5 text-slate-500 hover:text-brand-600 dark:hover:text-brand-400"><i class="ph-bold ph-caret-left"></i></button>
-                            <span id="overview-month-label" class="text-xs font-bold text-slate-700 dark:text-slate-200 px-1 min-w-[90px] text-center">-</span>
-                            <button onclick="shiftOverviewMonth(1)" id="overview-month-next" class="p-1.5 text-slate-500 hover:text-brand-600 dark:hover:text-brand-400 disabled:opacity-30 disabled:cursor-not-allowed"><i class="ph-bold ph-caret-right"></i></button>
+                            <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 rounded-lg px-1">
+                                <button onclick="shiftOverviewMonth(-1)" class="p-1.5 text-slate-500 hover:text-brand-600 dark:hover:text-brand-400"><i class="ph-bold ph-caret-left"></i></button>
+                                <span id="overview-month-label" class="text-xs font-bold text-slate-700 dark:text-slate-200 px-1 min-w-[90px] text-center">-</span>
+                                <button onclick="shiftOverviewMonth(1)" id="overview-month-next" class="p-1.5 text-slate-500 hover:text-brand-600 dark:hover:text-brand-400 disabled:opacity-30 disabled:cursor-not-allowed"><i class="ph-bold ph-caret-right"></i></button>
+                            </div>
                         </div>
 
                         <div id="recentDayPills" class="flex items-center gap-1.5 flex-wrap"></div>
