@@ -1711,12 +1711,42 @@
             });
         }
 
+        // หาเบอร์โทรที่ปนอยู่ในข้อความที่วาง เช่น "ก้อย 0625838862" หรือ "ก้อย 062-583-8862"
+        // ต้องขึ้นต้นด้วย 0 แล้วนับหลักได้ 9 (บ้าน) หรือ 10 (มือถือ) พอดี ไม่งั้นไม่ใช่เบอร์ที่มั่นใจได้ ปล่อยผ่าน
+        function extractPhoneFromText(text) {
+            const match = String(text).match(/0[\d][\d\-\s]{7,13}\d/);
+            if (!match) return null;
+            const digits = phoneDigits(match[0]);
+            if (digits.length !== 9 && digits.length !== 10) return null;
+            return { raw: match[0], digits };
+        }
+
+        // วางข้อความ "ชื่อ เบอร์" ลงช่องชื่อลูกค้า -> ดึงเบอร์ไปลงช่องเบอร์โทรให้อัตโนมัติ เหลือแต่ชื่อในช่องเดิม
+        // (ไม่ทับเบอร์ที่กรอกไว้อยู่แล้ว กันวางซ้ำแล้วเบอร์เดิมหาย)
+        function setupCustomerNamePhoneSplit() {
+            [['customerName', 'customerPhone'], ['e-customerName', 'e-customerPhone']].forEach(([nameId, phoneId]) => {
+                const nameEl = document.getElementById(nameId);
+                const phoneEl = document.getElementById(phoneId);
+                if (!nameEl || !phoneEl) return;
+                nameEl.addEventListener('paste', (e) => {
+                    const text = (e.clipboardData || window.clipboardData)?.getData('text');
+                    if (!text) return;
+                    const found = extractPhoneFromText(text);
+                    if (!found) return; // ไม่มีเบอร์ปนมา -> ปล่อยให้วางตามปกติ
+                    e.preventDefault();
+                    nameEl.value = text.replace(found.raw, '').replace(/\s+/g, ' ').trim();
+                    if (!phoneDigits(phoneEl.value)) phoneEl.value = formatPhone(found.digits);
+                });
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             initDefaults();
             checkAuth();
             loadDraft();
             setupAutosave();
             setupPhoneFormatting();
+            setupCustomerNamePhoneSplit();
         });
 
         async function syncMasterData() {
