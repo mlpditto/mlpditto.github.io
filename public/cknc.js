@@ -2645,6 +2645,13 @@ function renderMergeAssistant() {
   const caseGroup = [
     { caseType: "unknown", label: "ยังไม่ทราบประเภท", value: metrics.caseUnknown || 0, tone: "warning", active: ct === "unknown" },
   ].filter((chip) => chip.value > 0);
+  // กลุ่ม 3.5: กำไรติดลบเกินเกณฑ์ (ดู ruleProfitTolerance) — ตัวช่วยกรอง ไม่ใช่ปัญหาจับคู่/วางบิล เกณฑ์เดียวกับ badge NGP ในตาราง
+  // ไม่นับบิล excluded (ตั้งใจไม่นับคำนวณอยู่แล้ว ไปเตือนซ้ำจะเข้าใจผิดว่าต้องแก้)
+  const negativeProfitCount = state.bills.filter(isWithinDateRange)
+    .filter((bill) => !bill.excluded && bill.profit < -Math.max(0, toNumeric(activeRuleConfig().negativeProfitTolerance))).length;
+  const profitGroup = [
+    { status: "negative-profit", label: "กำไรติดลบ", value: negativeProfitCount, tone: "danger", active: state.activeStatus === "negative-profit" },
+  ].filter((chip) => chip.value > 0);
   // กลุ่ม 4: WARN (เปิด popup)
   const warnCount = warnTotalCount();
   const warnHtml = warnCount > 0
@@ -2659,6 +2666,7 @@ function renderMergeAssistant() {
     matchGroup.map(chipHtml).join(""),
     billingGroup.map(chipHtml).join(""),
     caseGroup.map(chipHtml).join(""),
+    profitGroup.map(chipHtml).join(""),
     warnHtml,
     repeatHtml,
   ].filter(Boolean);
@@ -3360,7 +3368,8 @@ function billMatchesNonDateFilters(bill, { status, caseType, billingStage, query
               : status === "pending-billing" ? isPendingBillingOpen(bill)
                 : status === "clicknic-only" ? (bill.status === "clicknic-only" && !isReconciledClicknicOnly(bill))
                   : status === "matched" ? (bill.status === "matched" || isReconciledClicknicOnly(bill))
-                    : bill.status === status);
+                    : status === "negative-profit" ? (!bill.excluded && bill.profit < -Math.max(0, toNumeric(activeRuleConfig().negativeProfitTolerance)))
+                      : bill.status === status);
   if (!matchesStatus) return false;
   if (!(caseType === "all" || (bill.caseType || "unknown") === caseType)) return false;
   if (!(billingStage === "all" || (bill.billingStage || "pending-review") === billingStage)) return false;
@@ -3487,7 +3496,7 @@ function renderTable() {
     // บอกว่าติดตัวกรองไหนอยู่ + ปุ่มล้างในตัว — กันงงเวลาแท็บนับได้แต่ตารางว่าง (แท็บไม่นับ dropdown งานวางบิล/ค้นหา)
     const activeFilters = [];
     if (state.activeStatus !== "all") {
-      activeFilters.push(`แท็บ: ${state.activeStatus === "excluded" ? "Exclude" : state.activeStatus === "paid" ? "PAID" : state.activeStatus === "case-insurance" ? "ประกัน" : state.activeStatus === "case-nhso" ? "สปสช" : statusLabel(state.activeStatus)}`);
+      activeFilters.push(`แท็บ: ${state.activeStatus === "excluded" ? "Exclude" : state.activeStatus === "paid" ? "PAID" : state.activeStatus === "case-insurance" ? "ประกัน" : state.activeStatus === "case-nhso" ? "สปสช" : state.activeStatus === "negative-profit" ? "กำไรติดลบ" : state.activeStatus === "repeat-customers" ? "มาหลายครั้ง" : statusLabel(state.activeStatus)}`);
     }
     const caseTypeValue = elements.caseTypeFilter?.value || "all";
     if (caseTypeValue !== "all") activeFilters.push(`ประเภทเคส: ${caseTypeLabel(caseTypeValue)}`);
@@ -6888,7 +6897,7 @@ function reportScopeLabel() {
     billingDueDate: "ครบกำหนดใบวางบิล",
   }[elements.dateField.value] || "ทุกชนิดวันที่";
   const parts = [
-    `สถานะ: ${state.activeStatus === "all" ? "ทั้งหมด" : state.activeStatus === "excluded" ? "Exclude" : state.activeStatus === "paid" ? "PAID" : state.activeStatus === "case-insurance" ? "เคสประกัน" : state.activeStatus === "case-nhso" ? "เคส สปสช" : statusLabel(state.activeStatus)}`,
+    `สถานะ: ${state.activeStatus === "all" ? "ทั้งหมด" : state.activeStatus === "excluded" ? "Exclude" : state.activeStatus === "paid" ? "PAID" : state.activeStatus === "case-insurance" ? "เคสประกัน" : state.activeStatus === "case-nhso" ? "เคส สปสช" : state.activeStatus === "negative-profit" ? "กำไรติดลบ" : state.activeStatus === "repeat-customers" ? "มาหลายครั้ง" : statusLabel(state.activeStatus)}`,
     `วันที่: ${dateFieldLabel}`,
   ];
   if (elements.dateFrom.value || elements.dateTo.value) {
