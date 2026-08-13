@@ -1359,7 +1359,7 @@
 
                     <div
                         class="flex gap-4 pt-4 sticky bottom-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md pb-2 -mx-2 px-2">
-                        <button type="submit"
+                        <button type="submit" id="editSubmitBtn"
                             class="flex-1 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black shadow-xl shadow-blue-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-3">
                             <i class="fas fa-save text-xl"></i> บันทึกการแก้ไข
                         </button>
@@ -2166,6 +2166,16 @@
                 Swal.fire({ icon: 'success', title: 'รวมทั้งหมดสำเร็จ', text: `รวม ${done} กลุ่ม ลบตัวซ้ำ ${totalDelete} รายการแล้ว`, timer: 2600, showConfirmButton: false });
             }
         }
+
+        // รหัสเฉพาะของแต่ละบิล — ป้องกัน recordedAt (ms) ชนกันแล้วลบ/แก้ผิดรายการ
+        // ของเก่าที่ไม่มี id (สร้างก่อนแพตช์นี้) fallback ไป recordedAt เหมือนเดิม ไม่กระทบข้อมูลเดิม
+        function genRecordId() {
+            return (typeof crypto !== 'undefined' && crypto.randomUUID)
+                ? crypto.randomUUID()
+                : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        }
+        function recKey(r) { return r ? (r.id || r.recordedAt) : undefined; }
+        function matchesKey(r, uid) { return String(recKey(r)) === String(uid); }
 
         function autoFillShortOrderId() {
             const full = document.getElementById('orderIdFull').value.trim();
@@ -3119,7 +3129,7 @@
                                 }
                             }
                             return `
-                                        <div class="p-3 pl-16 pr-4 flex justify-between items-center border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group" onclick="editRecord(${item.recordedAt}); event.stopPropagation();">
+                                        <div class="p-3 pl-16 pr-4 flex justify-between items-center border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group" onclick="editRecord('${recKey(item)}'); event.stopPropagation();">
                                             <div class="text-xs">
                                                 <div class="font-bold text-slate-700 dark:text-slate-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-1">
                                                     <i class="fas fa-edit mr-1 opacity-0 group-hover:opacity-100 transition-opacity"></i>
@@ -3486,7 +3496,7 @@
                                         <span class="flex flex-col items-end flex-shrink-0 leading-tight">
                                             <span class="flex items-center gap-1.5">
                                                 ${priceHtml}
-                                                <button onclick="openMasterEditFromBill(this)" data-item-name="${String(i.name || '').replace(/"/g, '&quot;')}" data-bill-uid="${record.recordedAt}" tabindex="-1" title="แก้ข้อมูล MASTER ของสินค้านี้ (ราคา/ต้นทุน)" class="text-slate-300 hover:text-blue-500 transition-colors"><i class="fas fa-info-circle"></i></button>
+                                                <button onclick="openMasterEditFromBill(this)" data-item-name="${String(i.name || '').replace(/"/g, '&quot;')}" data-bill-uid="${recKey(record)}" tabindex="-1" title="แก้ข้อมูล MASTER ของสินค้านี้ (ราคา/ต้นทุน)" class="text-slate-300 hover:text-blue-500 transition-colors"><i class="fas fa-info-circle"></i></button>
                                             </span>
                                             ${costHtml}
                                         </span>
@@ -3523,11 +3533,11 @@
                         </td>
                         <td class="p-4 text-center relative max-w-[140px]">
                             <div class="grid grid-cols-2 gap-1.5 w-[118px] mx-auto">
-                                <button onclick="quickToggleNoFee(${record.recordedAt})" class="h-8 rounded-lg ${record.isNoFee ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/30' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-rose-500'} text-[9px] font-black transition-all whitespace-nowrap">
+                                <button onclick="quickToggleNoFee('${recKey(record)}')" class="h-8 rounded-lg ${record.isNoFee ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/30' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-rose-500'} text-[9px] font-black transition-all whitespace-nowrap">
                                     NO FEE
                                 </button>
                                 ${record.isPaid ? `
-                                    <button onclick="quickUnsetPaid(${record.recordedAt})" class="h-8 rounded-lg cursor-pointer bg-emerald-100/80 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 text-[9px] font-black shadow-sm flex items-center justify-center gap-1 border border-emerald-200 dark:border-emerald-700 hover:scale-105 active:scale-95 transition-all whitespace-nowrap">
+                                    <button onclick="quickUnsetPaid('${recKey(record)}')" class="h-8 rounded-lg cursor-pointer bg-emerald-100/80 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 text-[9px] font-black shadow-sm flex items-center justify-center gap-1 border border-emerald-200 dark:border-emerald-700 hover:scale-105 active:scale-95 transition-all whitespace-nowrap">
                                         <i class="fas fa-check-circle"></i> PAID
                                     </button>
                                 ` : (() => {
@@ -3536,15 +3546,15 @@
                                         ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border-orange-300 dark:border-orange-700'
                                         : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800';
                                     return `
-                                    <button onclick="quickSetPaid(${record.recordedAt})" title="ยังไม่ได้รับโอน — กดเพื่อบันทึก PAID" class="h-8 rounded-lg cursor-pointer ${cls} text-[9px] font-black border hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 hover:scale-105 active:scale-95 transition-all whitespace-nowrap flex items-center justify-center gap-1">
+                                    <button onclick="quickSetPaid('${recKey(record)}')" title="ยังไม่ได้รับโอน — กดเพื่อบันทึก PAID" class="h-8 rounded-lg cursor-pointer ${cls} text-[9px] font-black border hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 hover:scale-105 active:scale-95 transition-all whitespace-nowrap flex items-center justify-center gap-1">
                                         <i class="fas fa-clock"></i> ${wait.label}
                                     </button>
                                 `;
                                 })()}
-                                <button onclick="editRecord(${record.recordedAt})" class="h-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-400 hover:text-blue-600 transition-all flex items-center justify-center">
+                                <button onclick="editRecord('${recKey(record)}')" class="h-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-400 hover:text-blue-600 transition-all flex items-center justify-center">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button onclick="deleteRecord(${record.recordedAt})" class="h-8 rounded-lg bg-rose-50 dark:bg-rose-900/20 text-rose-400 hover:text-rose-600 transition-all flex items-center justify-center">
+                                <button onclick="deleteRecord('${recKey(record)}')" class="h-8 rounded-lg bg-rose-50 dark:bg-rose-900/20 text-rose-400 hover:text-rose-600 transition-all flex items-center justify-center">
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
                                 ${record.isPaid ? `<div class="col-span-2 text-[8px] font-bold text-slate-400">${record.paidDate || record.date} | ${record.paidTime || '--:--'}</div>` : ''}
@@ -3731,7 +3741,8 @@
                     ref1: document.getElementById('ref1').value,
                     ref2: document.getElementById('ref2').value,
                     notes: document.getElementById('notes').value,
-                    recordedAt: new Date().getTime()
+                    recordedAt: new Date().getTime(),
+                    id: genRecordId()
                 };
 
                 showLoading(true);
@@ -3744,7 +3755,7 @@
                 // Save to per-month document
                 const recordMonth = record.date.slice(0, 7);
                 let monthlyRecs = await getMonthRecords(recordMonth);
-                monthlyRecs = monthlyRecs.filter(r => r.recordedAt !== record.recordedAt);
+                monthlyRecs = monthlyRecs.filter(r => !matchesKey(r, record.id));
                 monthlyRecs.unshift(record);
                 monthlyRecs.sort((a, b) => b.date.localeCompare(a.date) || b.recordedAt - a.recordedAt);
                 await saveMonthRecords(recordMonth, monthlyRecs);
@@ -3772,6 +3783,7 @@
         };
 
         // Modal Form Submit (Edit)
+        let isSavingEditForm = false; // กันกดบันทึกการแก้ไขซ้ำ (ปัญหาเดียวกับฟอร์มบันทึกยอดขาย)
         document.getElementById('editForm').onsubmit = async (e) => {
             e.preventDefault();
             console.log("Edit Form Submit Triggered - UID:", editingUid);
@@ -3780,6 +3792,13 @@
                 Swal.fire('Error', 'Session Expired: กรุณาปิดแล้วเปิดการแก้ไขใหม่อีกครั้ง', 'warning');
                 return;
             }
+            if (isSavingEditForm) return;
+            isSavingEditForm = true;
+            const editSubmitBtnEl = document.getElementById('editSubmitBtn');
+            const editSubmitBtnOriginalHtml = editSubmitBtnEl.innerHTML;
+            editSubmitBtnEl.disabled = true;
+            editSubmitBtnEl.classList.add('opacity-60', 'cursor-not-allowed');
+            editSubmitBtnEl.innerHTML = '<i class="fas fa-spinner fa-spin text-xl"></i> กำลังบันทึก...';
 
             try {
                 showLoading(true);
@@ -3811,7 +3830,7 @@
                 }
 
                 // Find target index
-                const targetIdx = salesData.findIndex(r => r.recordedAt === editingUid);
+                const targetIdx = salesData.findIndex(r => matchesKey(r, editingUid));
                 if (targetIdx === -1) throw new Error("ไม่พบข้อมูลรายการที่ต้องการแก้ไขในระบบ (Index Error)");
 
                 const gross = parseFloat(grossVal) || 0;
@@ -3878,14 +3897,14 @@
 
                 if (originalMonth === newRecordMonth) {
                     let monthRecs = await getMonthRecords(originalMonth);
-                    const ei = monthRecs.findIndex(r => r.recordedAt === editingUid);
+                    const ei = monthRecs.findIndex(r => matchesKey(r, editingUid));
                     if (ei !== -1) monthRecs[ei] = updatedRecord; else monthRecs.unshift(updatedRecord);
                     monthRecs.sort(sortFn);
                     await saveMonthRecords(originalMonth, monthRecs);
                 } else {
                     // Date moved to different month
                     let oldRecs = await getMonthRecords(originalMonth);
-                    oldRecs = oldRecs.filter(r => r.recordedAt !== editingUid);
+                    oldRecs = oldRecs.filter(r => !matchesKey(r, editingUid));
                     oldRecs.sort(sortFn);
                     await saveMonthRecords(originalMonth, oldRecs);
 
@@ -3915,6 +3934,10 @@
                 });
             } finally {
                 showLoading(false);
+                isSavingEditForm = false;
+                editSubmitBtnEl.disabled = false;
+                editSubmitBtnEl.classList.remove('opacity-60', 'cursor-not-allowed');
+                editSubmitBtnEl.innerHTML = editSubmitBtnOriginalHtml;
             }
         };
 
@@ -4003,7 +4026,7 @@
         }
 
         function editRecord(uid) {
-            const actualIndex = salesData.findIndex(r => r.recordedAt === uid);
+            const actualIndex = salesData.findIndex(r => matchesKey(r, uid));
             if (actualIndex === -1) return;
 
             editIndex = actualIndex;
@@ -4143,7 +4166,7 @@
 
         async function quickToggleNoFee(uid) {
             try {
-                const idx = salesData.findIndex(r => r.recordedAt === uid);
+                const idx = salesData.findIndex(r => matchesKey(r, uid));
                 if (idx === -1) return;
 
                 const record = salesData[idx];
@@ -4152,7 +4175,7 @@
 
                 showLoading(true);
                 let monthRecs = await getMonthRecords(recMonth);
-                const targetIdx = monthRecs.findIndex(r => r.recordedAt === uid);
+                const targetIdx = monthRecs.findIndex(r => matchesKey(r, uid));
 
                 if (targetIdx !== -1) {
                     const r = monthRecs[targetIdx];
@@ -4184,7 +4207,7 @@
 
         async function quickSetPaid(uid) {
             try {
-                const idx = salesData.findIndex(r => r.recordedAt === uid);
+                const idx = salesData.findIndex(r => matchesKey(r, uid));
                 if (idx === -1) return;
                 const record = salesData[idx];
 
@@ -4241,7 +4264,7 @@
                     showLoading(true);
                     const recMonth = String(record.date || '').slice(0, 7) || currentMonth;
                     let monthRecs = await getMonthRecords(recMonth);
-                    const targetIdx = monthRecs.findIndex(r => r.recordedAt === uid);
+                    const targetIdx = monthRecs.findIndex(r => matchesKey(r, uid));
                     if (targetIdx !== -1) {
                         const r = monthRecs[targetIdx];
                         r.isPaid = true;
@@ -4280,14 +4303,14 @@
 
             if (res.isConfirmed) {
                 try {
-                    const idx = salesData.findIndex(r => r.recordedAt === uid);
+                    const idx = salesData.findIndex(r => matchesKey(r, uid));
                     if (idx === -1) return;
                     const record = salesData[idx];
                     const recMonth = String(record.date || '').slice(0, 7) || currentMonth;
 
                     showLoading(true);
                     let monthRecs = await getMonthRecords(recMonth);
-                    const targetIdx = monthRecs.findIndex(r => r.recordedAt === uid);
+                    const targetIdx = monthRecs.findIndex(r => matchesKey(r, uid));
                     if (targetIdx !== -1) {
                         const r = monthRecs[targetIdx];
                         r.isPaid = false;
@@ -4314,12 +4337,12 @@
             });
 
             if (res.isConfirmed) {
-                const idx = salesData.findIndex(r => r.recordedAt === uid);
+                const idx = salesData.findIndex(r => matchesKey(r, uid));
                 if (idx !== -1) {
                     const recMonth = String(salesData[idx]?.date || '').slice(0, 7) || currentMonth;
                     showLoading(true);
                     let monthRecs = await getMonthRecords(recMonth);
-                    monthRecs = monthRecs.filter(r => r.recordedAt !== uid);
+                    monthRecs = monthRecs.filter(r => !matchesKey(r, uid));
                     await saveMonthRecords(recMonth, monthRecs);
                     showLoading(false);
                 }
@@ -4465,7 +4488,8 @@
                         paidTime: '',
                         items: items, // Added split items
                         notes: itemName,
-                        recordedAt: new Date().getTime() + index
+                        recordedAt: new Date().getTime() + index,
+                        id: genRecordId()
                     });
                 }
             });
@@ -4559,7 +4583,8 @@
                                     isPaid: existingRecs[existIdx].isPaid || newRec.isPaid,
                                     paidDate: existingRecs[existIdx].paidDate || newRec.paidDate,
                                     paidTime: existingRecs[existIdx].paidTime || newRec.paidTime,
-                                    recordedAt: existingRecs[existIdx].recordedAt
+                                    recordedAt: existingRecs[existIdx].recordedAt,
+                                    id: existingRecs[existIdx].id || newRec.id
                                 };
                                 updatedCount++;
                             } else { ignoredCount++; }
@@ -4665,7 +4690,8 @@
         let masterEditBillUid = null;
 
         function openMasterEditFromBill(btn) {
-            openMasterEdit(btn.dataset.itemName, Number(btn.dataset.billUid));
+            // เดิม Number(...) — แต่ id ใหม่เป็น UUID string เทียบด้วย matchesKey (String ทั้งคู่) อยู่แล้ว ไม่ต้องแปลงเป็นเลข
+            openMasterEdit(btn.dataset.itemName, btn.dataset.billUid);
         }
 
         // รวมต้นทุนจาก MASTER ของทุกรายการในบิล + รายชื่อตัวที่ยังไม่มีทุน
@@ -4684,7 +4710,7 @@
         // ถามอัปเดตต้นทุนบิลหลังบันทึก MASTER — โชว์ทุนเก่า/ใหม่+กำไรใหม่ก่อนยืนยัน กันเขียนทับเงียบ ๆ
         async function offerApplyMasterCost(uid) {
             try {
-                const record = salesData.find(r => r.recordedAt === uid);
+                const record = salesData.find(r => matchesKey(r, uid));
                 if (!record) return;
                 const { total, missing } = masterCostForItems(record.items);
                 if (!(total > 0)) return; // ยังไม่มีทุนใน MASTER สักตัว — ไม่มีอะไรให้อัปเดต
@@ -4716,7 +4742,7 @@
                 showLoading(true);
                 const recMonth = String(record.date || '').slice(0, 7) || currentMonth;
                 const monthRecs = await getMonthRecords(recMonth);
-                const t = monthRecs.findIndex(r => r.recordedAt === uid);
+                const t = monthRecs.findIndex(r => matchesKey(r, uid));
                 if (t !== -1) {
                     const r = monthRecs[t];
                     r.cost = total;
