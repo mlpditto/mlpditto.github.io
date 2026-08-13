@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="./cknc.css?v=20260813072941" />
+    <link rel="stylesheet" href="./cknc.css?v=20260813081917" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -387,6 +387,11 @@
           <p class="mapping-status">สรุปบิลที่ PAID ตามวันที่ได้รับเงิน (และใบวางบิล BAR)</p>
           <button id="openPayoutBtn" class="primary small" type="button">ดูรายงานยอดเงินเข้า</button>
         </article>
+        <article class="insight">
+          <h2><i class="fa-solid fa-file-invoice-dollar"></i> ต้นทุน MLP จากรายงานขาย</h2>
+          <p class="mapping-status">นำเข้าไฟล์ "รายงานการขายและรับคืนสินค้า" (Rep_SaleReturn) จากระบบ POS MLP — จับคู่บิลด้วยเลขที่ ORW แล้วเติม/แก้ต้นทุน MLP + คำนวณกำไรใหม่ให้ (ต่างจากไฟล์ STEP 2 ที่จับคู่ด้วยเลขที่ออเดอร์)</p>
+          <button id="openMlpCostImportBtn" class="primary small" type="button">นำเข้าต้นทุน MLP จาก Excel</button>
+        </article>
         <article class="insight rule-tuning-panel">
           <div class="rule-head">
             <div>
@@ -692,6 +697,23 @@
           <button id="payoutClose" class="icon-button" type="button" aria-label="ปิด">×</button>
         </div>
         <div id="payoutBody" class="case-seq-modal-body"></div>
+      </form>
+    </dialog>
+
+    <dialog id="mlpCostImportModal" class="clipboard-modal">
+      <form method="dialog" class="clipboard-card case-seq-card">
+        <div class="modal-head">
+          <div>
+            <p class="eyebrow">นำเข้าจาก Excel</p>
+            <h2>ต้นทุน MLP จากรายงานการขายและรับคืนสินค้า</h2>
+          </div>
+          <button id="mlpCostImportClose" class="icon-button" type="button" aria-label="ปิด">×</button>
+        </div>
+        <div class="case-seq-modal-body">
+          <p class="case-seq-hint">เลือกไฟล์ .xlsx จากระบบ POS MLP (ชีต Rep_SaleReturn) — เลือกได้หลายไฟล์ จับคู่บิลในตารางด้วยเลขที่ ORW เท่านั้น (ไฟล์นี้ไม่มีเลขที่ออเดอร์)</p>
+          <input id="mlpCostImportFile" type="file" accept=".xlsx,.xls" multiple />
+          <div id="mlpCostImportBody" class="case-seq-modal-body"></div>
+        </div>
       </form>
     </dialog>
 
@@ -1054,7 +1076,7 @@
       </div>
     </dialog>
 
-    <script src="./cknc.js?v=20260813072941"></script>
+    <script src="./cknc.js?v=20260813081917"></script>
     <script>
       (function () {
         const btn = document.getElementById("themeToggleBtn");

@@ -199,6 +199,11 @@ const elements = {
   payoutBody: $("payoutBody"),
   payoutClose: $("payoutClose"),
   openPayoutBtn: $("openPayoutBtn"),
+  mlpCostImportModal: $("mlpCostImportModal"),
+  mlpCostImportFile: $("mlpCostImportFile"),
+  mlpCostImportBody: $("mlpCostImportBody"),
+  mlpCostImportClose: $("mlpCostImportClose"),
+  openMlpCostImportBtn: $("openMlpCostImportBtn"),
   editClicknicDate: $("editClicknicDate"),
   editMlpDate: $("editMlpDate"),
   editBillingDueDate: $("editBillingDueDate"),
@@ -1533,6 +1538,130 @@ function parseMlpWorkbook(workbook, sourceName) {
       rowNumber: index + 1,
     };
   }).filter((row) => row && (row.orderId || row.orw || row.detail) && mlpCompanyImportable(row.company));
+}
+
+// ===== ต้นทุน MLP จากรายงาน "รายงานการขายและรับคืนสินค้า" (Rep_SaleReturn) — คนละไฟล์กับ STEP 2 (MLPCKNC) =====
+// โครงสร้างไฟล์: แถวหัวกลุ่มขึ้นต้นคอลัมน์ A ด้วย "$N", คอลัมน์ B = "ORW-... วว/ดด/ปปปป HH:MM:SS"
+// คอลัมน์ O(14)=ราคาสุทธิรวม, P(15)=รวมทุน, Q(16)=กำไรรวม ของกลุ่มนั้น ตามด้วยแถวรายการยาย่อยไม่ต้องอ่าน (เอาแค่ยอดรวมกลุ่มพอ)
+// ไฟล์นี้ไม่มีเลขที่ออเดอร์ (020...) เลย — ต่างจาก STEP 2 ที่จับคู่บิลด้วยเลขที่ออเดอร์เป็นหลัก จึงต้องจับคู่ด้วย ORW แทน
+// (ดู bill.orw ที่มาจากเลขอ้างอิงฝั่ง STEP 2 อยู่แล้ว — ใช้ฟิลด์เดียวกันจับคู่ ไม่ต้องเพิ่มฟิลด์ใหม่)
+function isSaleReturnWorkbook(rows) {
+  return rows.some((row) => Array.isArray(row) && row.some((cell) => clean(cell) === "รวมทุน"));
+}
+
+function parseSaleReturnGroups(workbook) {
+  const rows = sheetToRows(workbook);
+  const groups = [];
+  rows.forEach((row) => {
+    if (!Array.isArray(row)) return;
+    if (!/^\$\d+$/.test(clean(row[0]))) return; // แถวหัวกลุ่มเท่านั้น ข้ามแถวรายการยาย่อย
+    const headerText = clean(row[1]).toUpperCase();
+    const orwMatch = headerText.match(/ORW-\d{5}-\d{2}-\d{3,}/);
+    if (!orwMatch) return;
+    groups.push({
+      orw: orwMatch[0],
+      mlpCost: toNumeric(row[15]),
+      saleTotal: toNumeric(row[14]),
+    });
+  });
+  return groups;
+}
+
+// จับคู่กลุ่มที่อ่านได้กับบิลบนจอด้วย ORW (bill.orw อาจมีหลายเลขคั่นด้วย ", " ถ้าบิลถูกรวมมาจากหลาย ORW)
+// ไม่นับบิล excluded — ตั้งใจไม่นับคำนวณอยู่แล้ว แก้ทุนให้ไม่มีประโยชน์
+function matchSaleReturnGroupsToBills(groups) {
+  const byOrw = new Map();
+  groups.forEach((g) => byOrw.set(g.orw, g)); // ORW ซ้ำข้ามไฟล์ (อัปโหลดไฟล์เดิมซ้ำ) — เอาไฟล์หลังสุดที่อ่าน
+  const unmatchedOrw = new Set(byOrw.keys());
+  const matches = [];
+  state.bills.forEach((bill) => {
+    if (bill.excluded) return;
+    const billOrws = clean(bill.orw).toUpperCase().split(",").map((s) => s.trim()).filter(Boolean);
+    const hit = billOrws.find((orw) => byOrw.has(orw));
+    if (!hit) return;
+    const group = byOrw.get(hit);
+    unmatchedOrw.delete(hit);
+    matches.push({
+      billKey: bill.billKey,
+      orw: hit,
+      label: bill.patient || bill.orderId || hit,
+      oldCost: toNumeric(bill.mlpCost),
+      newCost: group.mlpCost,
+      oldProfit: toNumeric(bill.profit),
+      newProfit: toNumeric(bill.sale) - toNumeric(bill.cost) - group.mlpCost,
+      changed: Math.abs(toNumeric(bill.mlpCost) - group.mlpCost) >= 0.005,
+    });
+  });
+  return { matches, unmatchedOrw: [...unmatchedOrw] };
+}
+
+function renderMlpCostImportPreview() {
+  const body = elements.mlpCostImportBody;
+  if (!body) return;
+  const preview = state.mlpCostImportPreview;
+  if (!preview) { body.innerHTML = ""; return; }
+  const changedMatches = preview.matches.filter((m) => m.changed);
+  const sameCount = preview.matches.length - changedMatches.length;
+  const summary = `<p class="case-seq-hint">พบบิลตรงกัน ${number(preview.matches.length)} ใบ · ทุนเปลี่ยนจริง ${number(changedMatches.length)} ใบ${sameCount ? ` · ทุนตรงกับที่มีอยู่แล้ว ${number(sameCount)} ใบ (ไม่ต้องแก้)` : ""}${preview.unmatchedOrw.length ? ` · ไม่พบบิลคู่ ${number(preview.unmatchedOrw.length)} ORW ในไฟล์` : ""}</p>`;
+  if (!changedMatches.length) {
+    body.innerHTML = `${summary}<p class="case-seq-hint">ไม่มีบิลไหนที่ต้องแก้ทุน</p>`;
+    return;
+  }
+  const rows = changedMatches.map((m) => `
+    <tr>
+      <td>${htmlEscape(m.label)}</td>
+      <td class="case-seq-code">${htmlEscape(m.orw)}</td>
+      <td>${money(m.oldCost)} → <b>${money(m.newCost)}</b></td>
+      <td class="${m.newProfit < 0 ? "profit-negative-text" : ""}">${money(m.oldProfit)} → <b>${money(m.newProfit)}</b></td>
+    </tr>`).join("");
+  body.innerHTML = `
+    ${summary}
+    <table class="case-seq-table">
+      <thead><tr><th>ผู้รับบริการ</th><th>ORW</th><th>ทุน MLP เดิม → ใหม่</th><th>กำไรเดิม → ใหม่</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <button class="primary small" type="button" data-mlp-cost-apply>อัปเดตทุน MLP ที่เปลี่ยน (${number(changedMatches.length)} บิล)</button>
+  `;
+}
+
+async function handleMlpCostImportFiles() {
+  const files = [...(elements.mlpCostImportFile?.files || [])];
+  if (!files.length) return;
+  elements.mlpCostImportBody.innerHTML = "<p class=\"case-seq-hint\">กำลังอ่านไฟล์...</p>";
+  try {
+    let groups = [];
+    for (const file of files) {
+      const workbook = await readWorkbookFromFile(file);
+      const rows = sheetToRows(workbook);
+      if (!isSaleReturnWorkbook(rows)) {
+        elements.mlpCostImportBody.innerHTML = `<p class="case-seq-hint">⚠️ ไฟล์ "${htmlEscape(file.name)}" ไม่ใช่รูปแบบรายงาน Rep_SaleReturn (ไม่เจอคอลัมน์ "รวมทุน") ข้ามไฟล์นี้</p>`;
+        continue;
+      }
+      groups.push(...parseSaleReturnGroups(workbook));
+    }
+    state.mlpCostImportPreview = matchSaleReturnGroupsToBills(groups);
+    renderMlpCostImportPreview();
+  } catch (error) {
+    console.error(error);
+    elements.mlpCostImportBody.innerHTML = `<p class="case-seq-hint">อ่านไฟล์ไม่สำเร็จ: ${htmlEscape(error.message || "")}</p>`;
+  }
+}
+
+function applyMlpCostImport() {
+  const preview = state.mlpCostImportPreview;
+  if (!preview) return;
+  const changed = preview.matches.filter((m) => m.changed);
+  if (!changed.length) return;
+  const ok = confirm([
+    `อัปเดตต้นทุน MLP ให้ ${number(changed.length)} บิล ตามไฟล์รายงานการขายและรับคืนสินค้า?`,
+    "",
+    "จับคู่ด้วยเลขที่ ORW — ทุนเดิม (ถ้ามี) จะถูกแทนที่ด้วยค่าจากไฟล์ กำไรจะคำนวณใหม่ทันที",
+  ].join("\n"));
+  if (!ok) return;
+  const costByKey = new Map(changed.map((m) => [m.billKey, m.newCost]));
+  applyBulkOverride((bill) => ({ mlpCost: costByKey.get(bill.billKey) }), "นำเข้าทุน MLP จากรายงานขาย (Rep_SaleReturn, อิงจาก ORW)", new Set(costByKey.keys()));
+  elements.statusText.textContent = `อัปเดตทุน MLP จากรายงานขายแล้ว ${number(changed.length)} บิล`;
+  elements.mlpCostImportModal?.close();
 }
 
 function billingDueDateFromCells(cells) {
@@ -10672,6 +10801,20 @@ elements.openPayoutBtn?.addEventListener("click", openPayoutModal);
 elements.payoutClose?.addEventListener("click", () => elements.payoutModal?.close());
 elements.payoutModal?.addEventListener("click", (event) => {
   if (event.target === elements.payoutModal) elements.payoutModal.close();
+});
+elements.openMlpCostImportBtn?.addEventListener("click", () => {
+  state.mlpCostImportPreview = null;
+  if (elements.mlpCostImportFile) elements.mlpCostImportFile.value = "";
+  if (elements.mlpCostImportBody) elements.mlpCostImportBody.innerHTML = "";
+  if (elements.mlpCostImportModal && !elements.mlpCostImportModal.open) elements.mlpCostImportModal.showModal();
+});
+elements.mlpCostImportClose?.addEventListener("click", () => elements.mlpCostImportModal?.close());
+elements.mlpCostImportModal?.addEventListener("click", (event) => {
+  if (event.target === elements.mlpCostImportModal) elements.mlpCostImportModal.close();
+});
+elements.mlpCostImportFile?.addEventListener("change", handleMlpCostImportFiles);
+elements.mlpCostImportBody?.addEventListener("click", (event) => {
+  if (event.target.closest("[data-mlp-cost-apply]")) applyMlpCostImport();
 });
 elements.mergeWarnBody?.addEventListener("click", (event) => {
   if (event.target.closest("[data-merge-certain]")) {
