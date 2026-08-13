@@ -470,7 +470,7 @@
 
     <!-- Loading Overlay -->
     <div id="loading"
-        class="fixed inset-0 bg-white/80 dark:bg-black/80 z-[100] flex flex-col items-center justify-center backdrop-blur-sm">
+        class="fixed inset-0 bg-white/80 dark:bg-black/80 z-[200] flex flex-col items-center justify-center backdrop-blur-sm">
         <div class="w-12 h-12 border-4 border-lineman border-t-transparent rounded-full animate-spin"></div>
         <p class="mt-4 font-bold text-lineman animate-pulse">กำลังโหลดระบบบันทึกยอดขาย...</p>
     </div>
@@ -3642,8 +3642,16 @@
             container.innerHTML = html;
         }
 
+        let isSavingSalesForm = false; // กันกดบันทึกซ้ำ (double-click) สร้างรายการซ้ำ — ดู PATCH-lineman-duplicate-submit
         document.getElementById('salesForm').onsubmit = async (e) => {
             e.preventDefault();
+            if (isSavingSalesForm) return; // กำลังบันทึกอยู่ ไม่รับคลิกซ้ำ
+            isSavingSalesForm = true;
+            const submitBtnEl = document.getElementById('submitBtn');
+            const submitBtnOriginalHtml = submitBtnEl.innerHTML;
+            submitBtnEl.disabled = true;
+            submitBtnEl.classList.add('opacity-60', 'cursor-not-allowed');
+            submitBtnEl.innerHTML = '<i class="fas fa-spinner fa-spin text-xl"></i> กำลังบันทึก...';
             try {
                 const vDate = document.getElementById('recordDate').value;
                 const oId = document.getElementById('orderId').value;
@@ -3756,6 +3764,10 @@
                 Swal.fire('Error', 'ไม่สามารถบันทึกข้อมูลได้: ' + error.message, 'error');
             } finally {
                 showLoading(false);
+                isSavingSalesForm = false;
+                submitBtnEl.disabled = false;
+                submitBtnEl.classList.remove('opacity-60', 'cursor-not-allowed');
+                submitBtnEl.innerHTML = submitBtnOriginalHtml;
             }
         };
 
