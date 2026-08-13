@@ -6177,15 +6177,20 @@ function nhsoCostIssues() {
   return activeBills().filter((bill) => bill.caseType === "nhso" && Math.abs(toNumeric(bill.mlpCost)) >= 0.005);
 }
 
-// สถานะ "รอ..." ที่ยกขึ้นเป็นวางบิลแล้วได้เมื่อเลขครบ — ไม่รวม paid/billed/cancelled/billing-only/no-mlp
-// (paid = ปลายทางแล้ว, cancelled = ตั้งใจยกเลิก, อีกสองตัวเป็นผลการจับคู่ไม่ใช่สถานะงาน)
+// สถานะ "รอ..." ที่ยกขึ้นเป็นวางบิลแล้วได้เมื่อเลขครบ — ไม่รวม paid/billed/cancelled/billing-only
+// (paid = ปลายทางแล้ว, cancelled = ตั้งใจยกเลิก, billing-only เป็นผลการจับคู่ไม่ใช่สถานะงาน)
 const BILLED_PROMOTABLE_STAGES = new Set(["pending-review", "insurance-review", "nhso-pending", "general-pending"]);
 
 // บิลที่มีเลขครบทั้ง BAR และ AR แล้ว แต่สถานะงานยังค้างที่ "รอ..." — ปกติ deriveBillingStage ยกให้เอง
 // แต่ถ้า billingStageSource เป็น manual ทุกจุด re-derive จะข้ามไป ค่าจึงค้างอยู่อย่างนั้นตลอด
+//
+// รวม "no-mlp" (clicknic-only) ที่ isReconciledClicknicOnly() ยืนยันว่าครบจริงด้วย — เดิม deriveBillingStage()
+// เช็ก status==="clicknic-only" ก่อนเช็ก barNo/creditNos เสมอ เลยล็อกเป็น no-mlp ถาวรแม้กรอก BAR+AR มือครบแล้ว
+// (สปสช: isReconciledClicknicOnly ไม่ต้องมีต้นทุน MLP ก็ถือว่าครบ — ปกติของสปสชคือทุน 0 CLICKNIC ส่งยาฟรี
+//  ประกัน: ยังต้องมีต้นทุนจริงถึงจะนับครบ กันเคสประกันที่จับคู่ไม่สำเร็จจริง ๆ หลุดเข้ามานับเป็นรายได้)
 function billedReadyBills() {
   return activeBills().filter((bill) => clean(bill.barNo) && clean(bill.creditNos)
-    && BILLED_PROMOTABLE_STAGES.has(bill.billingStage || ""));
+    && (BILLED_PROMOTABLE_STAGES.has(bill.billingStage || "") || isReconciledClicknicOnly(bill)));
 }
 
 // จำนวนคู่แนะนำจริง (ไม่ตัดเหลือ 8) — ใช้โชว์ progress ให้เห็นว่าลดลงจริงตอนรวม
