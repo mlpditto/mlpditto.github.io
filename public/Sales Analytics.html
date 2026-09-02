@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sales Analytics V136.37 (Day Highlight) - Privacy % vs Normal ฿</title>
+    <title>Sales Analytics V136.38 (Split Day Pills) - Privacy % vs Normal ฿</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -372,7 +372,7 @@
                     <div class="bg-white/20 p-2 rounded-lg backdrop-blur-md"><i
                             class="ph-bold ph-chart-polar text-2xl"></i></div>
                     <div><span class="font-bold text-xl tracking-tight block leading-none">Sales Analytics</span><span
-                            class="text-xs text-indigo-100 font-light opacity-90">V136.37 Day Highlight</span></div>
+                            class="text-xs text-indigo-100 font-light opacity-90">V136.38 Split Day Pills</span></div>
                 </div>
                 <div class="flex items-center gap-3">
                     <button onclick="toggleTheme()"
@@ -1638,20 +1638,22 @@
             if (!container) return;
             container.innerHTML = recentDayPillsCache.map(p => {
                 const active = p.id === currentLoadedDocId;
-                const dateClass = active
-                    ? 'bg-brand-600 text-white'
-                    : 'bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800';
+                const pillClass = active
+                    ? 'bg-brand-600 text-white shadow-sm'
+                    : 'bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400';
                 const flagClass = p.highlighted
                     ? 'bg-yellow-400 text-yellow-950 hover:bg-yellow-500'
                     : p.partiallyHighlighted
                         ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/40 dark:text-yellow-300 dark:hover:bg-yellow-900/60'
-                        : 'bg-slate-100 text-slate-400 hover:bg-yellow-100 hover:text-yellow-600 dark:bg-slate-900 dark:text-slate-500 dark:hover:bg-yellow-900/40 dark:hover:text-yellow-300';
+                        : active
+                            ? 'text-white/70 hover:bg-brand-700 hover:text-white'
+                            : 'text-slate-400 hover:bg-slate-200 hover:text-yellow-600 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-yellow-300';
                 const flagTitle = p.highlighted
                     ? `ยกเลิก Highlight ทั้งวัน ${p.date}`
                     : `Highlight ทุกรายการของวันที่ ${p.date}`;
-                return `<div class="inline-flex items-center gap-1 rounded-full">
-                    <button onclick="loadCloudData('${p.id}')" class="text-xs font-bold px-3 py-1.5 rounded-full transition-all ${dateClass}">${p.date}</button>
-                    <button onclick="toggleDayHighlight('${p.id}')" class="w-7 h-7 min-h-0 p-0 rounded-full transition-colors flex items-center justify-center ${flagClass}" title="${flagTitle}" aria-label="${flagTitle}"><i class="ph-fill ph-flag"></i></button>
+                return `<div class="inline-flex items-center overflow-hidden rounded-full transition-all ${pillClass}">
+                    <button onclick="loadCloudData('${p.id}')" class="text-xs font-bold px-3 py-1.5 min-h-0 transition-colors ${active ? 'hover:bg-brand-700' : 'hover:bg-slate-200 dark:hover:bg-slate-800'}">${p.date}</button>
+                    <button onclick="toggleDayHighlight('${p.id}')" class="w-7 h-7 min-h-0 p-0 border-l border-current/15 transition-colors flex items-center justify-center ${flagClass}" title="${flagTitle}" aria-label="${flagTitle}"><i class="ph-fill ph-flag"></i></button>
                 </div>`;
             }).join('');
         }
