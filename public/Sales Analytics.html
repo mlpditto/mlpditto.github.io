@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sales Analytics V136.36 (Bulk Delete + Edit Date) - Privacy % vs Normal ฿</title>
+    <title>Sales Analytics V136.37 (Day Highlight) - Privacy % vs Normal ฿</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -372,7 +372,7 @@
                     <div class="bg-white/20 p-2 rounded-lg backdrop-blur-md"><i
                             class="ph-bold ph-chart-polar text-2xl"></i></div>
                     <div><span class="font-bold text-xl tracking-tight block leading-none">Sales Analytics</span><span
-                            class="text-xs text-indigo-100 font-light opacity-90">V136.36 Bulk Delete + Edit Date</span></div>
+                            class="text-xs text-indigo-100 font-light opacity-90">V136.37 Day Highlight</span></div>
                 </div>
                 <div class="flex items-center gap-3">
                     <button onclick="toggleTheme()"
@@ -1619,7 +1619,7 @@
                     .where(firebase.firestore.FieldPath.documentId(), '>=', cutoffStr)
                     .get();
                 recentDayPillsCache = snapshot.docs
-                    .map(doc => ({ id: doc.id, date: doc.data().date }))
+                    .map(dayPillFromDoc)
                     .sort((a, b) => b.id.localeCompare(a.id))
                     .slice(0, 10);
                 renderRecentDayPills();
@@ -1638,8 +1638,71 @@
             if (!container) return;
             container.innerHTML = recentDayPillsCache.map(p => {
                 const active = p.id === currentLoadedDocId;
-                return `<button onclick="loadCloudData('${p.id}')" class="text-xs font-bold px-3 py-1.5 rounded-full transition-all ${active ? 'bg-brand-600 text-white' : 'bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}">${p.date}</button>`;
+                const dateClass = active
+                    ? 'bg-brand-600 text-white'
+                    : 'bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800';
+                const flagClass = p.highlighted
+                    ? 'bg-yellow-400 text-yellow-950 hover:bg-yellow-500'
+                    : p.partiallyHighlighted
+                        ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/40 dark:text-yellow-300 dark:hover:bg-yellow-900/60'
+                        : 'bg-slate-100 text-slate-400 hover:bg-yellow-100 hover:text-yellow-600 dark:bg-slate-900 dark:text-slate-500 dark:hover:bg-yellow-900/40 dark:hover:text-yellow-300';
+                const flagTitle = p.highlighted
+                    ? `ยกเลิก Highlight ทั้งวัน ${p.date}`
+                    : `Highlight ทุกรายการของวันที่ ${p.date}`;
+                return `<div class="inline-flex items-center gap-1 rounded-full">
+                    <button onclick="loadCloudData('${p.id}')" class="text-xs font-bold px-3 py-1.5 rounded-full transition-all ${dateClass}">${p.date}</button>
+                    <button onclick="toggleDayHighlight('${p.id}')" class="w-7 h-7 min-h-0 p-0 rounded-full transition-colors flex items-center justify-center ${flagClass}" title="${flagTitle}" aria-label="${flagTitle}"><i class="ph-fill ph-flag"></i></button>
+                </div>`;
             }).join('');
+        }
+
+        // ปุ่มธงของวันเป็น shortcut: กดครั้งเดียว = ติดธงทุกรายการในเอกสารวันนั้น
+        // ถ้ามีธงครบทุกแถวแล้ว กดซ้ำ = เอาออกทั้งหมด (กรณีติดบางแถว จะเติมให้ครบก่อน)
+        function dayPillFromDoc(doc) {
+            const data = doc.data();
+            const records = data.records || [];
+            const flaggedCount = records.filter(r => r.isFlagged).length;
+            return {
+                id: doc.id,
+                date: data.date,
+                highlighted: records.length > 0 && flaggedCount === records.length,
+                partiallyHighlighted: flaggedCount > 0 && flaggedCount < records.length
+            };
+        }
+
+        async function toggleDayHighlight(docId) {
+            const pill = recentDayPillsCache.find(p => p.id === docId);
+            if (!pill || !window.db) return;
+            try {
+                await flushCloudSync(); // ป้องกันการเขียนทับการแก้ค้างของวันที่กำลังเปิดอยู่
+                await authReady;
+                const ref = window.db.collection('sales_analytics').doc(docId);
+                const doc = await ref.get();
+                if (!doc.exists) throw new Error('ไม่พบข้อมูลของวันนี้บนคลาวด์');
+
+                const data = doc.data();
+                const records = data.records || [];
+                if (records.length === 0) { showToast('วันนี้ไม่มีรายการให้ Highlight', 'error'); return; }
+
+                const makeHighlighted = !records.every(r => r.isFlagged);
+                const updatedRecords = records.map(r => ({ ...r, isFlagged: makeHighlighted }));
+                await ref.set({
+                    records: updatedRecords,
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+
+                const nextPill = dayPillFromDoc({ id: docId, data: () => ({ ...data, records: updatedRecords }) });
+                recentDayPillsCache = recentDayPillsCache.map(p => p.id === docId ? nextPill : p);
+                if (currentLoadedDocId === docId) {
+                    allData = updatedRecords;
+                    refreshData();
+                }
+                renderRecentDayPills();
+                showToast(makeHighlighted ? `Highlight ทั้งวัน ${data.date} แล้ว` : `ยกเลิก Highlight วันที่ ${data.date} แล้ว`);
+            } catch (e) {
+                showToast('เปลี่ยน Highlight ไม่สำเร็จ: ' + e.message, 'error');
+                console.error(e);
+            }
         }
 
         function getMonthDayRange(monthStr) {
@@ -1658,7 +1721,7 @@
                     .where(firebase.firestore.FieldPath.documentId(), '<=', end)
                     .get();
                 recentDayPillsCache = snapshot.docs
-                    .map(doc => ({ id: doc.id, date: doc.data().date }))
+                    .map(dayPillFromDoc)
                     .sort((a, b) => b.id.localeCompare(a.id));
                 renderRecentDayPills();
             } catch (e) {
