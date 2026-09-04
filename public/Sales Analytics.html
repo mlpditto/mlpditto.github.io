@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sales Analytics V136.38 (Split Day Pills) - Privacy % vs Normal ฿</title>
+    <title>Sales Analytics V136.39 (BE Date Guard) - Privacy % vs Normal ฿</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -372,7 +372,7 @@
                     <div class="bg-white/20 p-2 rounded-lg backdrop-blur-md"><i
                             class="ph-bold ph-chart-polar text-2xl"></i></div>
                     <div><span class="font-bold text-xl tracking-tight block leading-none">Sales Analytics</span><span
-                            class="text-xs text-indigo-100 font-light opacity-90">V136.38 Split Day Pills</span></div>
+                            class="text-xs text-indigo-100 font-light opacity-90">V136.39 BE Date Guard</span></div>
                 </div>
                 <div class="flex items-center gap-3">
                     <button onclick="toggleTheme()"
@@ -2476,7 +2476,14 @@
                     const l = lines[i];
                     if (l.match(/OR[RW]-[\d-]+/i)) orderId = l.match(/OR[RW]-[\d-]+/i)[0].toUpperCase();
                     if (l.match(/(IN[VS]-[\d-]+)/)) invoiceId = l.match(/(IN[VS]-[\d-]+)/)[0];
-                    if (l.match(/(\d{1,2}\/\d{1,2}\/\d{4})/)) date = l.match(/(\d{1,2}\/\d{1,2}\/\d{4})/)[0];
+                    // วันที่: เอา "ตัวแรก" ที่เจอเท่านั้น (คอลัมน์เวลาอยู่ถัดจากเลขออเดอร์เสมอ) และต้องเป็น ค.ศ.
+                    // เดิมวนทับทุกบรรทัด → หมายเหตุบิล สปสช. ที่ลงท้ายด้วยวันที่ พ.ศ. ("... 02/09/2569 15:01")
+                    // ชนะคอลัมน์วันที่จริง ทำให้บิลถูกจัดเป็นวันที่ 2569 (แยกไปอีก doc บนคลาวด์, ล็อกกระทบยอดหลุด
+                    // และชื่อลูกค้าเพี้ยนเพราะบรรทัดเวลาไม่ถูกกรองออก) — เจอจริง 1-2 ก.ย. 2026
+                    if (date === "-") {
+                        const dm = l.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+                        if (dm && parseInt(dm[3], 10) < 2400) date = dm[0];
+                    }
                     // ยอดเงิน: เอาเฉพาะบรรทัดที่เป็น "ตัวเลขล้วน" (คอลัมน์ยอด) — กัน regex ไปจับวันที่ในหมายเหตุ
                     // เช่น "เข้ารับบริการ 14.07.26" ที่ทำให้ยอด 81.00 เพี้ยนเป็น 14.07
                     if (/^[\d,]+\.\d{2}$/.test(l)) {
