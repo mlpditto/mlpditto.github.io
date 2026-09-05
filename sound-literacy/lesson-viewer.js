@@ -9,6 +9,31 @@ function findLesson(id){
   return null;
 }
 
+function getAllLessons(){
+  return SOUND_WORLDS.flatMap(world=>world.lessons);
+}
+
+function renderNavigation(){
+  const lessons=getAllLessons();
+  const index=lessons.findIndex(l=>l.id===lessonId);
+  const current=index+1;
+  const percent=Math.round((current/lessons.length)*100);
+
+  const nav=document.getElementById('lesson-nav');
+  if(!nav) return;
+
+  nav.innerHTML=`
+  <div class="card">
+    <div>📚 Lesson ${current}/${lessons.length}</div>
+    <div>Progress ${percent}%</div>
+    <div style="background:#111827;border:2px solid #475569;height:14px;margin:8px 0">
+      <div style="background:#22d3ee;height:100%;width:${percent}%"></div>
+    </div>
+    ${index>0?`<a class="btn" href="?id=${lessons[index-1].id}">⬅ Previous</a>`:''}
+    ${index<lessons.length-1?`<a class="btn" href="?id=${lessons[index+1].id}">Next ➡</a>`:''}
+  </div>`;
+}
+
 async function renderLesson(){
   const lesson=findLesson(lessonId);
   const title=document.getElementById('title');
@@ -35,6 +60,7 @@ async function renderLesson(){
     content.innerHTML=`<div class="card">🎧 Lesson Viewer<br><br>${lesson.title}<br>ไม่พบไฟล์บทเรียน</div>`;
   }
 
+  renderNavigation();
   renderQuiz();
   renderCompleteButton();
 }
