@@ -1,0 +1,51 @@
+/* Interactive Markdown Block Styling - Sound Literacy 8-bit Theme */
+
+.interactive-block{
+  margin:20px 0;
+  padding:18px;
+  border:4px solid #334155;
+  box-shadow:0 6px 0 #020617;
+  background:#1e293b;
+  line-height:1.8;
+}
+
+.interactive-title{
+  font-weight:bold;
+  font-size:18px;
+  margin-bottom:10px;
+}
+
+.concept-block{
+  border-color:#22d3ee;
+  background:#082f49;
+}
+.concept-block .interactive-title{color:#67e8f9}
+
+.pixel-block{
+  border-color:#facc15;
+  background:#422006;
+}
+.pixel-block .interactive-title{color:#fde047}
+
+.ethics-block{
+  border-color:#fb7185;
+  background:#4c0519;
+}
+.ethics-block .interactive-title{color:#fda4af}
+
+.reflection-block{
+  border-color:#a78bfa;
+  background:#2e1065;
+}
+.reflection-block .interactive-title{color:#c4b5fd}
+
+.audio-block{
+  border-color:#4ade80;
+  background:#052e16;
+}
+.audio-block .interactive-title{color:#86efac}
+
+.block-icon{
+  font-size:24px;
+  margin-right:8px;
+}
