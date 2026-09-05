@@ -1,10 +1,11 @@
-// 🎧 DigitalMindLab Lesson Engine v4
-// Dynamic lesson loading + progress + unlock + section tracking + badges
+// 🎧 DigitalMindLab Lesson Engine v5
+// Dynamic lesson loading + progress + unlock + quiz completion
 
 const LessonEngine = {
   progressKey: 'sound-literacy-progress',
   sectionKey: 'sound-literacy-section-progress',
   xpKey: 'sound-literacy-xp',
+  quizKey: 'sound-literacy-quiz-result',
   totalLessons: 12,
 
   async loadLesson(lesson){
@@ -13,56 +14,39 @@ const LessonEngine = {
     return await response.text();
   },
 
-  renderProgress(current,total){
-    const percent = Math.round((current/total)*100);
-    const bars = Math.round(percent/10);
-    return `📚 Course Progress ${current}/${total} (${percent}%)\n${'█'.repeat(bars)}${'░'.repeat(10-bars)}`;
-  },
-
-  renderSectionProgress(section,current,total){
-    const percent = Math.round((current/total)*100);
-    const bars = Math.round(percent/10);
-    return `📖 ${section}: ${percent}%\n${'█'.repeat(bars)}${'░'.repeat(10-bars)}`;
-  },
-
-  completeSection(lessonId, sectionId){
-    let data = JSON.parse(localStorage.getItem(this.sectionKey) || '{}');
-    if(!data[lessonId]) data[lessonId] = [];
-    if(!data[lessonId].includes(sectionId)){
-      data[lessonId].push(sectionId);
-      localStorage.setItem(this.sectionKey, JSON.stringify(data));
+  completeFromQuiz(lessonId, score, passed){
+    this.saveQuizResult(lessonId, score, passed);
+    if(passed){
+      this.completeLesson(Number(lessonId));
+      return {status:'completed', message:'🎉 Quiz Passed! Lesson Completed'};
     }
-    return data[lessonId];
+    return {status:'retry', message:'🔄 Try Again'};
   },
 
-  getSectionProgress(lessonId){
-    const data = JSON.parse(localStorage.getItem(this.sectionKey) || '{}');
-    return data[lessonId] || [];
+  saveQuizResult(lessonId, score, passed){
+    let results = JSON.parse(localStorage.getItem(this.quizKey) || '{}');
+    results[lessonId] = {
+      score: score,
+      passed: passed,
+      completedAt: new Date().toISOString()
+    };
+    localStorage.setItem(this.quizKey, JSON.stringify(results));
+    return results[lessonId];
   },
 
   completeLesson(id){
     let progress = this.getProgress();
-
     if(!progress.includes(id)){
       progress.push(id);
       localStorage.setItem(this.progressKey, JSON.stringify(progress));
       this.addXP(50);
-
-      if(typeof BadgeSystem !== 'undefined'){
-        BadgeSystem.check(progress);
-      }
+      if(typeof BadgeSystem !== 'undefined') BadgeSystem.check(progress);
     }
-
     return progress;
   },
 
   getProgress(){
     return JSON.parse(localStorage.getItem(this.progressKey) || '[]');
-  },
-
-  isUnlocked(id){
-    if(id===1) return true;
-    return this.getProgress().includes(id-1);
   },
 
   addXP(amount){
