@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DigitalMindLab Login</title>
+<style>
+body{
+ background:#111827;
+ color:white;
+ font-family:Arial,sans-serif;
+ display:flex;
+ justify-content:center;
+ align-items:center;
+ min-height:100vh;
+}
+.card{
+ background:#1f2937;
+ border:4px solid #334155;
+ padding:32px;
+ text-align:center;
+ border-radius:12px;
+}
+button{
+ background:#4285f4;
+ color:white;
+ border:0;
+ padding:12px 20px;
+ cursor:pointer;
+ font-weight:bold;
+}
+</style>
+</head>
+<body>
+<div class="card">
+<h1>🧠 DigitalMindLab</h1>
+<p>Sign in to save your learning progress</p>
+<div id="user-area">
+<button onclick="signInGoogle()">🔐 Sign in with Google</button>
+</div>
+</div>
+
+<!-- Firebase SDK: add before production deployment -->
+<!-- auth.js -->
+<script src="./auth.js"></script>
+</body>
+</html>
