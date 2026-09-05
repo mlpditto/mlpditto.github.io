@@ -1,5 +1,5 @@
-// 🎧 DigitalMindLab Lesson Engine v3
-// Dynamic lesson loading + progress + unlock + section tracking
+// 🎧 DigitalMindLab Lesson Engine v4
+// Dynamic lesson loading + progress + unlock + section tracking + badges
 
 const LessonEngine = {
   progressKey: 'sound-literacy-progress',
@@ -27,14 +27,11 @@ const LessonEngine = {
 
   completeSection(lessonId, sectionId){
     let data = JSON.parse(localStorage.getItem(this.sectionKey) || '{}');
-
     if(!data[lessonId]) data[lessonId] = [];
-
     if(!data[lessonId].includes(sectionId)){
       data[lessonId].push(sectionId);
       localStorage.setItem(this.sectionKey, JSON.stringify(data));
     }
-
     return data[lessonId];
   },
 
@@ -50,6 +47,10 @@ const LessonEngine = {
       progress.push(id);
       localStorage.setItem(this.progressKey, JSON.stringify(progress));
       this.addXP(50);
+
+      if(typeof BadgeSystem !== 'undefined'){
+        BadgeSystem.check(progress);
+      }
     }
 
     return progress;
