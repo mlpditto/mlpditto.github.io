@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>DigitalMindLab Player Profile</title>
+</head>
+<body>
+<h1>🧠 DigitalMindLab Profile</h1>
+
+<div id="xp">🎮 XP: 0</div>
+<div id="badges">🏆 Loading Badges...</div>
+
+<script src="lesson-engine.js"></script>
+<script src="badge-display.js"></script>
+<script>
+const completed = LessonEngine.getProgress();
+document.getElementById('xp').innerHTML = `🎮 XP: ${LessonEngine.getXP()}`;
+document.getElementById('badges').innerHTML = BadgeDisplay.render(completed).replace(/\n/g,'<br>');
+</script>
+</body>
+</html>
