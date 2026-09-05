@@ -22,7 +22,10 @@ async function renderLesson(){
   title.textContent=`${lesson.code}: ${lesson.title}`;
 
   try{
-    const markdown = await loadMarkdownFile(lesson.file);
+    const markdown = (typeof LessonEngine !== 'undefined')
+      ? await LessonEngine.loadLesson(lesson)
+      : await loadMarkdownFile(lesson.file);
+
     let html = markdownToHTML(markdown);
     if(typeof renderInteractiveBlocks === 'function'){
       html = renderInteractiveBlocks(html);
@@ -33,6 +36,19 @@ async function renderLesson(){
   }
 
   renderQuiz();
+  renderCompleteButton();
+}
+
+function renderCompleteButton(){
+  const content=document.getElementById('content');
+  content.innerHTML += `<div class="card"><button class="btn" onclick="completeLesson()">✅ Mark Lesson Complete</button></div>`;
+}
+
+function completeLesson(){
+  if(typeof LessonEngine !== 'undefined'){
+    LessonEngine.completeLesson(lessonId);
+    alert('Lesson Completed 🎉');
+  }
 }
 
 function renderQuiz(){
