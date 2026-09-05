@@ -23,14 +23,13 @@ async function renderLesson(){
 
   try{
     const markdown = await loadMarkdownFile(lesson.file);
-    content.innerHTML = markdownToHTML(markdown);
+    let html = markdownToHTML(markdown);
+    if(typeof renderInteractiveBlocks === 'function'){
+      html = renderInteractiveBlocks(html);
+    }
+    content.innerHTML = html;
   }catch(error){
-    content.innerHTML=`
-      <div class="card">
-      🎧 Lesson Viewer<br><br>
-      ${lesson.title}<br>
-      ไม่พบไฟล์บทเรียน กรุณาตรวจสอบ ${lesson.file}
-      </div>`;
+    content.innerHTML=`<div class="card">🎧 Lesson Viewer<br><br>${lesson.title}<br>ไม่พบไฟล์บทเรียน</div>`;
   }
 
   renderQuiz();
@@ -43,48 +42,18 @@ function renderQuiz(){
   if(!quiz) return;
 
   const content=document.getElementById('content');
-
   let html=`<div class="card"><h2>📝 Mini Quiz</h2>`;
 
   quiz.forEach((q,index)=>{
-    html += `<div class="quiz-item">
-    <p><b>${index+1}. ${q.question}</b></p>`;
-
+    html += `<div class="quiz-item"><p><b>${index+1}. ${q.question}</b></p>`;
     q.options.forEach((option,optIndex)=>{
-      html += `<label>
-      <input type="radio" name="q${index}" value="${optIndex}">
-      ${option}
-      </label><br>`;
+      html += `<label><input type="radio" name="q${index}" value="${optIndex}">${option}</label><br>`;
     });
-
     html += `</div>`;
   });
 
   html += `<button class="btn" onclick="checkQuiz()">Submit Quiz</button></div>`;
-
   content.innerHTML += html;
-}
-
-function checkQuiz(){
-  const quiz=SOUND_QUIZZES[lessonId];
-  let score=0;
-
-  quiz.forEach((q,index)=>{
-    const selected=document.querySelector(`input[name="q${index}"]:checked`);
-    if(selected && Number(selected.value)===q.answer){
-      score++;
-    }
-  });
-
-  alert(`Score: ${score}/${quiz.length} 🎉`);
-}
-
-function markComplete(){
-  const key='sound-literacy-progress-v2';
-  let data=JSON.parse(localStorage.getItem(key)||'[]');
-  if(!data.includes(lessonId)) data.push(lessonId);
-  localStorage.setItem(key,JSON.stringify(data));
-  alert('Lesson Completed! 🎉');
 }
 
 document.addEventListener('DOMContentLoaded',renderLesson);
