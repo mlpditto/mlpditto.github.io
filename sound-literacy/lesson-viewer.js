@@ -9,7 +9,7 @@ function findLesson(id){
   return null;
 }
 
-function renderLesson(){
+async function renderLesson(){
   const lesson=findLesson(lessonId);
   const title=document.getElementById('title');
   const content=document.getElementById('content');
@@ -20,15 +20,18 @@ function renderLesson(){
   }
 
   title.textContent=`${lesson.code}: ${lesson.title}`;
-  content.innerHTML=`
-  <h2>${lesson.title}</h2>
-  <p>${lesson.subtitle}</p>
-  <div class="card">
-  🎧 Lesson Viewer<br><br>
-  ระบบเรียนบทเรียน Sound Literacy<br>
-  เตรียมพื้นที่สำหรับเนื้อหา Audio Example และ Quiz
-  </div>
-  <pre>Lesson File:\n${lesson.file}</pre>`;
+
+  try{
+    const markdown = await loadMarkdownFile(lesson.file);
+    content.innerHTML = markdownToHTML(markdown);
+  }catch(error){
+    content.innerHTML=`
+      <div class="card">
+      🎧 Lesson Viewer<br><br>
+      ${lesson.title}<br>
+      ไม่พบไฟล์บทเรียน กรุณาตรวจสอบ ${lesson.file}
+      </div>`;
+  }
 
   renderQuiz();
 }
