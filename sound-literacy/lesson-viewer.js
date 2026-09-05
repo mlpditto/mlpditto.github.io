@@ -18,84 +18,61 @@ function renderNavigation(){
   const index=lessons.findIndex(l=>l.id===lessonId);
   const current=index+1;
   const percent=Math.round((current/lessons.length)*100);
-
   const nav=document.getElementById('lesson-nav');
   if(!nav) return;
-
-  nav.innerHTML=`
-  <div class="card">
-    <div>📚 Lesson ${current}/${lessons.length}</div>
-    <div>Progress ${percent}%</div>
-    <div style="background:#111827;border:2px solid #475569;height:14px;margin:8px 0">
-      <div style="background:#22d3ee;height:100%;width:${percent}%"></div>
-    </div>
-    ${index>0?`<a class="btn" href="?id=${lessons[index-1].id}">⬅ Previous</a>`:''}
-    ${index<lessons.length-1?`<a class="btn" href="?id=${lessons[index+1].id}">Next ➡</a>`:''}
+  nav.innerHTML=`<div class="card">
+  <div>📚 Lesson ${current}/${lessons.length}</div>
+  <div>Progress ${percent}%</div>
+  <div style="background:#111827;border:2px solid #475569;height:14px;margin:8px 0"><div style="background:#22d3ee;height:100%;width:${percent}%"></div></div>
+  ${index>0?`<a class="btn" href="?id=${lessons[index-1].id}">⬅ Previous</a>`:''}
+  ${index<lessons.length-1?`<a class="btn" href="?id=${lessons[index+1].id}">Next ➡</a>`:''}
   </div>`;
 }
 
 async function renderLesson(){
-  const lesson=findLesson(lessonId);
-  const title=document.getElementById('title');
-  const content=document.getElementById('content');
-
-  if(!lesson){
-    title.textContent='Lesson not found';
-    return;
-  }
-
-  title.textContent=`${lesson.code}: ${lesson.title}`;
-
-  try{
-    const markdown = (typeof LessonEngine !== 'undefined')
-      ? await LessonEngine.loadLesson(lesson)
-      : await loadMarkdownFile(lesson.file);
-
-    let html = markdownToHTML(markdown);
-    if(typeof renderInteractiveBlocks === 'function'){
-      html = renderInteractiveBlocks(html);
-    }
-    content.innerHTML = html;
-  }catch(error){
-    content.innerHTML=`<div class="card">🎧 Lesson Viewer<br><br>${lesson.title}<br>ไม่พบไฟล์บทเรียน</div>`;
-  }
-
-  renderNavigation();
-  renderQuiz();
-  renderCompleteButton();
-}
-
-function renderCompleteButton(){
-  const content=document.getElementById('content');
-  content.innerHTML += `<div class="card"><button class="btn" onclick="completeLesson()">✅ Mark Lesson Complete</button></div>`;
-}
-
-function completeLesson(){
-  if(typeof LessonEngine !== 'undefined'){
-    LessonEngine.completeLesson(lessonId);
-    alert('Lesson Completed 🎉');
-  }
+ const lesson=findLesson(lessonId);
+ const title=document.getElementById('title');
+ const content=document.getElementById('content');
+ if(!lesson){title.textContent='Lesson not found';return;}
+ title.textContent=`${lesson.code}: ${lesson.title}`;
+ try{
+  const markdown=(typeof LessonEngine!=='undefined')?await LessonEngine.loadLesson(lesson):await loadMarkdownFile(lesson.file);
+  let html=markdownToHTML(markdown);
+  if(typeof renderInteractiveBlocks==='function') html=renderInteractiveBlocks(html);
+  content.innerHTML=html;
+ }catch(error){content.innerHTML=`<div class="card">ไม่พบไฟล์บทเรียน</div>`;}
+ renderNavigation();
+ renderQuiz();
 }
 
 function renderQuiz(){
-  if(typeof SOUND_QUIZZES === 'undefined') return;
-
-  const quiz = SOUND_QUIZZES[lessonId];
-  if(!quiz) return;
-
-  const content=document.getElementById('content');
-  let html=`<div class="card"><h2>📝 Mini Quiz</h2>`;
-
-  quiz.forEach((q,index)=>{
-    html += `<div class="quiz-item"><p><b>${index+1}. ${q.question}</b></p>`;
-    q.options.forEach((option,optIndex)=>{
-      html += `<label><input type="radio" name="q${index}" value="${optIndex}">${option}</label><br>`;
-    });
-    html += `</div>`;
+ const container=document.getElementById('quiz-container');
+ if(!container || typeof SOUND_QUIZZES==='undefined') return;
+ const quiz=SOUND_QUIZZES[lessonId];
+ if(!quiz) return;
+ let html='<div class="card"><h2>📝 Mini Quiz</h2>';
+ quiz.forEach((q,index)=>{
+  html+=`<div><b>${index+1}. ${q.question}</b></div>`;
+  q.options.forEach((option,optIndex)=>{
+   html+=`<label class="quiz-option"><input type="radio" name="q${index}" value="${optIndex}"> ${option}</label>`;
   });
+ });
+ html+='<button class="btn" onclick="checkQuiz()">Submit Quiz</button><div id="quiz-result"></div></div>';
+ container.innerHTML=html;
+}
 
-  html += `<button class="btn" onclick="checkQuiz()">Submit Quiz</button></div>`;
-  content.innerHTML += html;
+function checkQuiz(){
+ if(typeof QuizEngine==='undefined') return;
+ const result=QuizEngine.check(lessonId);
+ const box=document.getElementById('quiz-result');
+ if(!box)return;
+ box.innerHTML=`<h3>Score: ${result.score}%</h3>`;
+ if(result.passed){
+  box.innerHTML+='🎉 Quiz Passed! Lesson Completed';
+  if(typeof LessonEngine!=='undefined') LessonEngine.completeLesson(lessonId);
+ }else{
+  box.innerHTML+='ลองทบทวนบทเรียนอีกครั้ง';
+ }
 }
 
 document.addEventListener('DOMContentLoaded',renderLesson);
