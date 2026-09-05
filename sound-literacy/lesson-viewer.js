@@ -9,7 +9,38 @@ function findLesson(id){
   return null;
 }
 
-function renderLesson(){
+function markdownToHTML(md){
+  return md
+    .replace(/^### (.*)$/gm,'<h3>$1</h3>')
+    .replace(/^## (.*)$/gm,'<h2>$1</h2>')
+    .replace(/^# (.*)$/gm,'<h1>$1</h1>')
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\n- (.*)/g,'<li>$1</li>')
+    .replace(/\n\n/g,'<br><br>');
+}
+
+async function loadLessonContent(file){
+  try{
+    const response = await fetch(file);
+    if(!response.ok) throw new Error('Cannot load lesson');
+    const markdown = await response.text();
+    return markdownToHTML(markdown);
+  }catch(error){
+    return `<div class="card">⚠️ ไม่สามารถโหลดเนื้อหาบทเรียนได้<br>${file}</div>`;
+  }
+}
+
+function getAdjacentLesson(){
+  const all=[];
+  SOUND_WORLDS.forEach(w=>w.lessons.forEach(l=>all.push(l)));
+  const index=all.findIndex(l=>l.id===lessonId);
+  return {
+    prev:index>0?all[index-1]:null,
+    next:index<all.length-1?all[index+1]:null
+  };
+}
+
+async function renderLesson(){
   const lesson=findLesson(lessonId);
   const title=document.getElementById('title');
   const content=document.getElementById('content');
@@ -20,15 +51,21 @@ function renderLesson(){
   }
 
   title.textContent=`${lesson.code}: ${lesson.title}`;
-  content.innerHTML=`
-  <h2>${lesson.title}</h2>
-  <p>${lesson.subtitle}</p>
-  <div class="card">
-  🎧 Lesson Viewer Prototype<br><br>
-  เชื่อมต่อกับเนื้อหา Markdown ของบทเรียนในขั้นถัดไป<br>
-  ระบบนี้เตรียมไว้สำหรับเพิ่ม Quiz, Audio Example และ Progress Tracking
-  </div>
-  <pre>Lesson File:\n${lesson.file}</pre>`;
+
+  const html = await loadLessonContent(lesson.file);
+  content.innerHTML = html;
+
+  const nav=document.createElement('div');
+  nav.className='card';
+  const adjacent=getAdjacentLesson();
+
+  nav.innerHTML=`
+  ${adjacent.prev ? `<a class="btn" href="lesson-viewer.html?id=${adjacent.prev.id}">⬅ Previous</a>`:''}
+  <a class="btn" href="lesson-map.html">🗺 Lesson Map</a>
+  ${adjacent.next ? `<a class="btn" href="lesson-viewer.html?id=${adjacent.next.id}">Next ➡</a>`:''}
+  `;
+
+  content.appendChild(nav);
 }
 
 function markComplete(){
