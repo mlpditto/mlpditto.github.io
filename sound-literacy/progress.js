@@ -1,0 +1,1 @@
+const KEY='sound-literacy-progress';function completeLesson(id){let p=JSON.parse(localStorage.getItem(KEY)||'[]');if(!p.includes(id)){p.push(id)}localStorage.setItem(KEY,JSON.stringify(p));}function getProgress(){return JSON.parse(localStorage.getItem(KEY)||'[]');}
