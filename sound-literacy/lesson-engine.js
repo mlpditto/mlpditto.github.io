@@ -1,8 +1,9 @@
-// 🎧 DigitalMindLab Lesson Engine v2
-// Dynamic lesson loading + progress + unlock foundation
+// 🎧 DigitalMindLab Lesson Engine v3
+// Dynamic lesson loading + progress + unlock + section tracking
 
 const LessonEngine = {
   progressKey: 'sound-literacy-progress',
+  sectionKey: 'sound-literacy-section-progress',
   xpKey: 'sound-literacy-xp',
   totalLessons: 12,
 
@@ -15,7 +16,31 @@ const LessonEngine = {
   renderProgress(current,total){
     const percent = Math.round((current/total)*100);
     const bars = Math.round(percent/10);
-    return `📚 Progress ${current}/${total} (${percent}%)\n${'█'.repeat(bars)}${'░'.repeat(10-bars)}`;
+    return `📚 Course Progress ${current}/${total} (${percent}%)\n${'█'.repeat(bars)}${'░'.repeat(10-bars)}`;
+  },
+
+  renderSectionProgress(section,current,total){
+    const percent = Math.round((current/total)*100);
+    const bars = Math.round(percent/10);
+    return `📖 ${section}: ${percent}%\n${'█'.repeat(bars)}${'░'.repeat(10-bars)}`;
+  },
+
+  completeSection(lessonId, sectionId){
+    let data = JSON.parse(localStorage.getItem(this.sectionKey) || '{}');
+
+    if(!data[lessonId]) data[lessonId] = [];
+
+    if(!data[lessonId].includes(sectionId)){
+      data[lessonId].push(sectionId);
+      localStorage.setItem(this.sectionKey, JSON.stringify(data));
+    }
+
+    return data[lessonId];
+  },
+
+  getSectionProgress(lessonId){
+    const data = JSON.parse(localStorage.getItem(this.sectionKey) || '{}');
+    return data[lessonId] || [];
   },
 
   completeLesson(id){
