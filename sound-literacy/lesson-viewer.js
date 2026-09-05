@@ -9,38 +9,7 @@ function findLesson(id){
   return null;
 }
 
-function markdownToHTML(md){
-  return md
-    .replace(/^### (.*)$/gm,'<h3>$1</h3>')
-    .replace(/^## (.*)$/gm,'<h2>$1</h2>')
-    .replace(/^# (.*)$/gm,'<h1>$1</h1>')
-    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
-    .replace(/\n- (.*)/g,'<li>$1</li>')
-    .replace(/\n\n/g,'<br><br>');
-}
-
-async function loadLessonContent(file){
-  try{
-    const response = await fetch(file);
-    if(!response.ok) throw new Error('Cannot load lesson');
-    const markdown = await response.text();
-    return markdownToHTML(markdown);
-  }catch(error){
-    return `<div class="card">⚠️ ไม่สามารถโหลดเนื้อหาบทเรียนได้<br>${file}</div>`;
-  }
-}
-
-function getAdjacentLesson(){
-  const all=[];
-  SOUND_WORLDS.forEach(w=>w.lessons.forEach(l=>all.push(l)));
-  const index=all.findIndex(l=>l.id===lessonId);
-  return {
-    prev:index>0?all[index-1]:null,
-    next:index<all.length-1?all[index+1]:null
-  };
-}
-
-async function renderLesson(){
+function renderLesson(){
   const lesson=findLesson(lessonId);
   const title=document.getElementById('title');
   const content=document.getElementById('content');
@@ -51,21 +20,60 @@ async function renderLesson(){
   }
 
   title.textContent=`${lesson.code}: ${lesson.title}`;
+  content.innerHTML=`
+  <h2>${lesson.title}</h2>
+  <p>${lesson.subtitle}</p>
+  <div class="card">
+  🎧 Lesson Viewer<br><br>
+  ระบบเรียนบทเรียน Sound Literacy<br>
+  เตรียมพื้นที่สำหรับเนื้อหา Audio Example และ Quiz
+  </div>
+  <pre>Lesson File:\n${lesson.file}</pre>`;
 
-  const html = await loadLessonContent(lesson.file);
-  content.innerHTML = html;
+  renderQuiz();
+}
 
-  const nav=document.createElement('div');
-  nav.className='card';
-  const adjacent=getAdjacentLesson();
+function renderQuiz(){
+  if(typeof SOUND_QUIZZES === 'undefined') return;
 
-  nav.innerHTML=`
-  ${adjacent.prev ? `<a class="btn" href="lesson-viewer.html?id=${adjacent.prev.id}">⬅ Previous</a>`:''}
-  <a class="btn" href="lesson-map.html">🗺 Lesson Map</a>
-  ${adjacent.next ? `<a class="btn" href="lesson-viewer.html?id=${adjacent.next.id}">Next ➡</a>`:''}
-  `;
+  const quiz = SOUND_QUIZZES[lessonId];
+  if(!quiz) return;
 
-  content.appendChild(nav);
+  const content=document.getElementById('content');
+
+  let html=`<div class="card"><h2>📝 Mini Quiz</h2>`;
+
+  quiz.forEach((q,index)=>{
+    html += `<div class="quiz-item">
+    <p><b>${index+1}. ${q.question}</b></p>`;
+
+    q.options.forEach((option,optIndex)=>{
+      html += `<label>
+      <input type="radio" name="q${index}" value="${optIndex}">
+      ${option}
+      </label><br>`;
+    });
+
+    html += `</div>`;
+  });
+
+  html += `<button class="btn" onclick="checkQuiz()">Submit Quiz</button></div>`;
+
+  content.innerHTML += html;
+}
+
+function checkQuiz(){
+  const quiz=SOUND_QUIZZES[lessonId];
+  let score=0;
+
+  quiz.forEach((q,index)=>{
+    const selected=document.querySelector(`input[name="q${index}"]:checked`);
+    if(selected && Number(selected.value)===q.answer){
+      score++;
+    }
+  });
+
+  alert(`Score: ${score}/${quiz.length} 🎉`);
 }
 
 function markComplete(){
