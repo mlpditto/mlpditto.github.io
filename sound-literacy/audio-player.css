@@ -1,0 +1,26 @@
+.audio-player-card{
+  margin:20px 0;
+  padding:18px;
+  background:#052e16;
+  border:4px solid #4ade80;
+  box-shadow:0 6px 0 #020617;
+  color:#f8fafc;
+}
+
+.audio-title{
+  color:#86efac;
+  font-size:18px;
+  font-weight:bold;
+  margin-bottom:10px;
+}
+
+.audio-description{
+  color:#d1fae5;
+  margin-bottom:14px;
+  font-size:14px;
+}
+
+audio{
+  width:100%;
+  image-rendering:pixelated;
+}
