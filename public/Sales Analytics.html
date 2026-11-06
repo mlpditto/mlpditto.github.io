@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sales Analytics V136.40 (Fiscal Date Guard) - Privacy % vs Normal ฿</title>
+    <title>Sales Analytics V136.41 (AMED Fiscal) - Privacy % vs Normal ฿</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -372,7 +372,7 @@
                     <div class="bg-white/20 p-2 rounded-lg backdrop-blur-md"><i
                             class="ph-bold ph-chart-polar text-2xl"></i></div>
                     <div><span class="font-bold text-xl tracking-tight block leading-none">Sales Analytics</span><span
-                            class="text-xs text-indigo-100 font-light opacity-90">V136.40 Fiscal Date Guard</span></div>
+                            class="text-xs text-indigo-100 font-light opacity-90">V136.41 AMED Fiscal</span></div>
                 </div>
                 <div class="flex items-center gap-3">
                     <button onclick="toggleTheme()"
@@ -2522,7 +2522,10 @@
                 // เดิม block.includes("1/2") ไปจับคอลัมน์วันที่ของเดือน 11 ("06/11/2026" มี "1/2" ซ่อนอยู่ใน "11/2026")
                 // → ทุกบิลเงินสด/บัตรเครดิต/SCB ของเดือน พ.ย. กลายเป็น Fiscal ทั้งหมด (เจอจริง 6 พ.ย. 2026, V136.40)
                 const memoLines = amountIdx !== -1 ? lines.slice(amountIdx + 1, salesIdx !== -1 ? salesIdx : lines.length) : [];
-                const isFiscal = memoLines.some(l => /(^|[^\d\/])1\/2(?![\d\/])/.test(l));
+                // AMED ในหมายเหตุ (บิลเบิก AMED "AMED D2716xxxxxx เข้ารับบริการ ...") = จ่ายผ่าน Fiscal เป็นส่วนใหญ่ (user ยืนยัน 7 พ.ย. 2026, V136.41)
+                // ดูเฉพาะ memo ไม่ดูชื่อลูกค้า ("AMED เด็กหญิง..." ซื้อเองจ่ายเงินสดได้)
+                const isAmedMemo = /\bamed\b/i.test(memo);
+                const isFiscal = memoLines.some(l => /(^|[^\d\/])1\/2(?![\d\/])/.test(l)) || isAmedMemo;
 
                 if (isCheewi) breakdown.credit_ar = amountVal;
                 else if (isExplicitLPM) breakdown.transfer_lpm = amountVal;
