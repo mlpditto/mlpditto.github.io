@@ -384,7 +384,7 @@
                                 class="text-blue-500 dark:text-blue-400">Manager</span></h1>
                         <p onclick="openChangelog()"
                             class="text-[10px] text-slate-400 font-medium uppercase tracking-wider cursor-pointer hover:text-blue-500 transition-colors">
-                            v6.12 <i class="fa-solid fa-circle-info ml-1"></i></p>
+                            v6.13 <i class="fa-solid fa-circle-info ml-1"></i></p>
                     </div>
                 </div>
                 <div class="flex items-center gap-3">
@@ -2140,6 +2140,19 @@
             document.getElementById('emailPreviewMed').innerHTML = generateEmailHtml(medItems, 'TELEMEDICINE', dateStr);
             document.getElementById('emailPreviewPharm').innerHTML = generateEmailHtml(pharmItems, 'TELEPHARMACY', dateStr);
             document.getElementById('emailPreviewNhso').innerHTML = generateEmailHtml(nhsoItems, 'NHSO (สปสช)', dateStr);
+            orderEmailColumnsByTotal({ emailPreviewMed: medItems, emailPreviewPharm: pharmItems, emailPreviewNhso: nhsoItems });
+        }
+
+        // เรียงคอลัมน์ Draft Email: ฝั่งที่ยอดรวมสูงสุดอยู่ซ้ายสุด (ยอดเท่ากัน → คงลำดับเดิม MED/PHARM/NHSO)
+        function orderEmailColumnsByTotal(itemsById) {
+            const ranked = Object.entries(itemsById)
+                .map(([id, items], idx) => ({ id, idx, total: items.reduce((s, i) => s + (Number(i.total) || 0), 0) }))
+                .sort((a, b) => b.total - a.total || a.idx - b.idx);
+            ranked.forEach((r, rank) => {
+                const col = document.getElementById(r.id).parentElement;
+                col.style.order = rank;
+                col.classList.toggle('border-r', rank < ranked.length - 1);
+            });
         }
 
         function closeEmailModal() { document.getElementById('emailModal').classList.add('hidden'); }
