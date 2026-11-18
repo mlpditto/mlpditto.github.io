@@ -161,6 +161,18 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
+    // TMTP settings (Draft Email recipients To/CC, etc.) — same gate as tmtp_records.
+    // Shape locked to what TMTP-Manager.html saveRecipients() writes; never deletable.
+    match /tmtp_settings/{docId} {
+      allow read: if isAdmin() || hasAreaAccess('tmtp');
+      allow create, update: if (isAdmin() || hasAreaAccess('tmtp'))
+        && request.resource.data.keys().hasOnly(['to', 'cc', 'updatedAt', 'updatedBy'])
+        && request.resource.data.to is list && request.resource.data.to.size() >= 1
+        && request.resource.data.cc is list
+        && request.resource.data.updatedBy is string;
+      allow delete: if false;
+    }
+
     // LINE MAN Sales Backups (auto-backup snapshots)
     match /lineman_backups/{docId} {
       allow read, write: if isAdmin();

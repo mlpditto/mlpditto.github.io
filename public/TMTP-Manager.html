@@ -384,7 +384,7 @@
                                 class="text-blue-500 dark:text-blue-400">Manager</span></h1>
                         <p onclick="openChangelog()"
                             class="text-[10px] text-slate-400 font-medium uppercase tracking-wider cursor-pointer hover:text-blue-500 transition-colors">
-                            v6.10 <i class="fa-solid fa-circle-info ml-1"></i></p>
+                            v6.11 <i class="fa-solid fa-circle-info ml-1"></i></p>
                     </div>
                 </div>
                 <div class="flex items-center gap-3">
@@ -605,6 +605,49 @@
 
     </main>
 
+    <!-- Email recipients editor (To / CC) — stored in Firestore tmtp_settings/email -->
+    <div id="recipientsModal"
+        class="fixed inset-0 bg-black/50 hidden z-[70] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div
+            class="bg-white dark:bg-dark-card rounded-2xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden border border-slate-200 dark:border-slate-700">
+            <div
+                class="px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800">
+                <h3 class="font-bold text-slate-700 dark:text-slate-200"><i
+                        class="fa-solid fa-user-pen text-purple-500 mr-2"></i>ผู้รับอีเมล</h3>
+                <button onclick="closeRecipientsEditor()"
+                    class="text-slate-400 hover:text-red-500 text-xl transition-colors"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-4 space-y-3 text-sm">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">To <span
+                            class="font-normal">(บรรทัดละ 1 อีเมล หรือคั่นด้วย , )</span></label>
+                    <textarea id="recipTo" rows="5" spellcheck="false"
+                        class="w-full font-mono text-xs border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"></textarea>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">CC</label>
+                    <textarea id="recipCc" rows="2" spellcheck="false"
+                        class="w-full font-mono text-xs border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"></textarea>
+                </div>
+                <p class="text-[11px] text-slate-400">ใช้ชุดเดียวกันทั้ง MED / PHARMACY / NHSO · บันทึกแล้วทุกเครื่องเห็นเหมือนกัน</p>
+            </div>
+            <div
+                class="px-4 py-3 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800">
+                <button onclick="resetRecipientsEditor()"
+                    class="text-xs text-slate-500 hover:text-purple-600 transition-colors"><i
+                        class="fa-solid fa-rotate-left mr-1"></i>คืนค่าเริ่มต้น</button>
+                <div class="flex gap-2">
+                    <button onclick="closeRecipientsEditor()"
+                        class="text-sm px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">ยกเลิก</button>
+                    <button onclick="saveRecipients()"
+                        class="text-sm px-4 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-bold transition-colors"><i
+                            class="fa-solid fa-floppy-disk mr-1"></i>บันทึก</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="emailModal"
         class="fixed inset-0 bg-black/60 hidden z-[60] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
         <div
@@ -618,6 +661,9 @@
                         class="text-sm border border-slate-300 rounded-lg px-3 py-1 bg-white dark:bg-slate-700 dark:border-slate-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500">
                         <option value="">เลือกวันที่...</option>
                     </select>
+                    <button onclick="openRecipientsEditor()" title="แก้ไขผู้รับอีเมล (To / CC)"
+                        class="text-sm px-3 py-1 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-200 hover:border-purple-400 hover:text-purple-600 transition-colors">
+                        <i class="fa-solid fa-user-pen mr-1 text-purple-500"></i>ผู้รับ <span id="recipientsCount" class="text-xs text-slate-400"></span></button>
                 </div>
                 <button onclick="closeEmailModal()"
                     class="text-slate-400 hover:text-red-500 text-xl transition-colors"><i
@@ -1170,6 +1216,86 @@
             taxid: "0105562016335"
         };
 
+        // --- EMAIL RECIPIENTS (To/CC) — Firestore: tmtp_settings/email, cache: localStorage ---
+        const RECIPIENTS_DOC = db.collection('tmtp_settings').doc('email');
+        const RECIPIENTS_CACHE_KEY = 'tmtp_email_recipients';
+        const defaultRecipients = {
+            to: ['thanyarat.c@chiiwii.com', 'preecha.p@chiiwii.com', 'sakchai.nga@truedigital.com', 'napaporn.t@chiiwii.com', 'suratporn.k@chiiwii.com'],
+            cc: ['accounting@chiiwii.com']
+        };
+        let emailRecipients = (() => {
+            try {
+                const c = JSON.parse(localStorage.getItem(RECIPIENTS_CACHE_KEY) || 'null');
+                if (c && Array.isArray(c.to) && Array.isArray(c.cc)) return c;
+            } catch (e) { /* cache เสีย → ใช้ค่าเริ่มต้น */ }
+            return { to: [...defaultRecipients.to], cc: [...defaultRecipients.cc] };
+        })();
+
+        // "a@x.com, b@y.com\nc@z.com" → ['a@x.com','b@y.com','c@z.com'] (trim, lower, ตัดซ้ำ, ต้องมี @)
+        function parseEmailList(text) {
+            const seen = new Set();
+            return String(text || '').split(/[\s,;]+/)
+                .map(s => s.trim().toLowerCase())
+                .filter(s => s && s.includes('@') && !seen.has(s) && seen.add(s));
+        }
+
+        function applyRecipients(data) {
+            emailRecipients = {
+                to: Array.isArray(data.to) ? data.to : [],
+                cc: Array.isArray(data.cc) ? data.cc : []
+            };
+            localStorage.setItem(RECIPIENTS_CACHE_KEY, JSON.stringify(emailRecipients));
+            const badge = document.getElementById('recipientsCount');
+            if (badge) badge.textContent = `(${emailRecipients.to.length + emailRecipients.cc.length})`;
+            // ถ้า Draft Email เปิดอยู่ ให้ preview อัปเดตทันที
+            const modal = document.getElementById('emailModal');
+            const sel = document.getElementById('emailDateSelect');
+            if (modal && !modal.classList.contains('hidden') && sel && sel.value) updateEmailDraft(sel.value);
+        }
+
+        async function loadRecipients() {
+            try {
+                await authReady;
+                const snap = await RECIPIENTS_DOC.get();
+                applyRecipients(snap.exists ? snap.data() : emailRecipients);
+            } catch (err) {
+                console.warn('Recipients load error', err);
+                applyRecipients(emailRecipients); // ใช้ cache/ค่าเริ่มต้นไปก่อน
+            }
+        }
+
+        function openRecipientsEditor() {
+            document.getElementById('recipTo').value = emailRecipients.to.join('\n');
+            document.getElementById('recipCc').value = emailRecipients.cc.join('\n');
+            document.getElementById('recipientsModal').classList.remove('hidden');
+            document.getElementById('recipTo').focus();
+        }
+        function closeRecipientsEditor() { document.getElementById('recipientsModal').classList.add('hidden'); }
+        function resetRecipientsEditor() {
+            document.getElementById('recipTo').value = defaultRecipients.to.join('\n');
+            document.getElementById('recipCc').value = defaultRecipients.cc.join('\n');
+        }
+
+        async function saveRecipients() {
+            const to = parseEmailList(document.getElementById('recipTo').value);
+            const cc = parseEmailList(document.getElementById('recipCc').value);
+            if (to.length === 0) return showToast('ต้องมีผู้รับ (To) อย่างน้อย 1 คน', true);
+            try {
+                await authReady;
+                await RECIPIENTS_DOC.set({
+                    to, cc,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedBy: (auth.currentUser && auth.currentUser.email) || ''
+                });
+                applyRecipients({ to, cc });
+                closeRecipientsEditor();
+                showToast(`บันทึกผู้รับแล้ว (To ${to.length} · CC ${cc.length})`);
+            } catch (err) {
+                console.error('Recipients save error', err);
+                showToast('บันทึกไม่สำเร็จ: ' + (err.code || err.message), true);
+            }
+        }
+
         const staffToRemove = ["T. Trayaporn", "STAFF รัตนา ศิริโชคชัยมงคล", "Thipnaree J", "สุพิชญา โกศลกิตติพงศ์", "กัญญาณัฐ ต่อพันธ์"];
 
         function getDocId(name) { if (!name) return ""; return name.replace(/\//g, '_'); }
@@ -1230,6 +1356,7 @@
             document.getElementById('emailDateSelect').addEventListener('change', (e) => updateEmailDraft(e.target.value));
             document.getElementById('rawData').addEventListener('paste', handleAutoBackup);
             loadSellerInfo();
+            loadRecipients();
             fetchMasterData();
 
             const savedData = localStorage.getItem('tmtp_data');
@@ -2050,8 +2177,8 @@
 
             return `
                 <div class="email-content" style="font-family: 'Prompt', sans-serif; font-size: 12px; color: #000;">
-                    <p style="margin: 4px 0;">thanyarat.c@chiiwii.com, preecha.p@chiiwii.com, sakchai.nga@truedigital.com, napaporn.t@chiiwii.com</p>
-                    <p style="margin: 4px 0;">accounting@chiiwii.com</p>
+                    <p style="margin: 4px 0;">${escapeHtml(emailRecipients.to.join(', '))}</p>
+                    ${emailRecipients.cc.length ? `<p style="margin: 4px 0;">${escapeHtml(emailRecipients.cc.join(', '))}</p>` : ''}
                     <p style="margin: 4px 0;">สรุปยอด ${safeDate} --- ${title}</p>
                     <p style="margin: 4px 0;">BAR-00003-26-</p>
                     <p style="margin: 4px 0;">ค่ายา 💊 และค่าส่งสินค้า ยอดรวมชำระเข้า บัญชี บจก. เมดไลฟ์ พลัส</p>
