@@ -384,7 +384,7 @@
                                 class="text-blue-500 dark:text-blue-400">Manager</span></h1>
                         <p onclick="openChangelog()"
                             class="text-[10px] text-slate-400 font-medium uppercase tracking-wider cursor-pointer hover:text-blue-500 transition-colors">
-                            v6.13 <i class="fa-solid fa-circle-info ml-1"></i></p>
+                            v6.14 <i class="fa-solid fa-circle-info ml-1"></i></p>
                     </div>
                 </div>
                 <div class="flex items-center gap-3">
@@ -2144,14 +2144,18 @@
         }
 
         // เรียงคอลัมน์ Draft Email: ฝั่งที่ยอดรวมสูงสุดอยู่ซ้ายสุด (ยอดเท่ากัน → คงลำดับเดิม MED/PHARM/NHSO)
+        // ฝั่งที่ยอด 0 ซ่อนไว้ให้ฝั่งอื่นขยายเต็ม (ถ้า 0 ทั้งหมด → โชว์ครบตามเดิม)
         function orderEmailColumnsByTotal(itemsById) {
             const ranked = Object.entries(itemsById)
                 .map(([id, items], idx) => ({ id, idx, total: items.reduce((s, i) => s + (Number(i.total) || 0), 0) }))
                 .sort((a, b) => b.total - a.total || a.idx - b.idx);
+            const anyTotal = ranked.some(r => r.total > 0);
+            const visible = ranked.filter(r => !anyTotal || r.total > 0);
             ranked.forEach((r, rank) => {
                 const col = document.getElementById(r.id).parentElement;
                 col.style.order = rank;
-                col.classList.toggle('border-r', rank < ranked.length - 1);
+                col.classList.toggle('hidden', !visible.includes(r));
+                col.classList.toggle('border-r', visible.indexOf(r) !== visible.length - 1);
             });
         }
 
